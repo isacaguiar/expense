@@ -23,6 +23,9 @@ jobs:
           extensions: mbstring, bcmath, ctype, fileinfo, json, openssl, pdo, tokenizer, xml, curl, gd
           coverage: none
 
+      - name: 📦 Diretório
+        run: pwd
+
       - name: 📦 Instalar dependências
         run: cd expense/backend-php && composer install --no-dev --optimize-autoloader
         #run: composer install --no-dev --optimize-autoloader
