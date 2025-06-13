@@ -29,9 +29,6 @@ jobs:
       - name: 📦 Instalar dependências
         run: composer install --no-dev --optimize-autoloader
 
-      - name: 🔍 Verificar valor do host (temporário)
-        run: echo "Deploy para ${{ secrets.ENV_DB_HOST }}"
-
       - name: 🔐 Gerar arquivo .env
         run: |
           echo "APP_NAME=SCD" > .env
@@ -77,7 +74,7 @@ jobs:
           server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
-          server-dir: /home1/isacag00/isacaguiar.com.br
+          server-dir: /home1/isacag00/isacaguiar.com.br/
           local-dir: expense/backend-php/
 
 
