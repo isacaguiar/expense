@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: expense/backend-php
+        working-directory: backend-php
 
     steps:
       - name: 📥 Clonar o repositório
