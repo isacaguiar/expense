@@ -66,6 +66,17 @@ jobs:
           php artisan route:cache
           php artisan view:cache
 
+      - name: 📦 Preparar diretório de build
+        run: |
+          mkdir build-laravel
+          rsync -av --exclude='.git*' \
+                    --exclude='tests' \
+                    --exclude='storage/logs' \
+                    --exclude='node_modules' \
+                    --exclude='*.yml' \
+                    --exclude='.env.example' \
+                    backend-php/ build-laravel/
+
       - name: 🚀 Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
@@ -73,4 +84,5 @@ jobs:
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
           server-dir: /expense/backend-php/
-          local-dir: ./
+          local-dir: build-laravel/
+
