@@ -28,6 +28,9 @@ jobs:
       - name: 📦 Instalar dependências
         run: composer install --no-dev --optimize-autoloader
 
+      - name: 🔍 Verificar valor do host (temporário)
+        run: echo "Deploy para ${{ secrets.ENV_DB_HOST }}"
+
       - name: 🔐 Gerar arquivo .env
         run: |
           echo "APP_NAME=SCD" > .env
