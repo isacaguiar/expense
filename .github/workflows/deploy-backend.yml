@@ -40,16 +40,14 @@ jobs:
           php artisan route:cache
           php artisan view:cache
 
-      # [Opcional] DEPLOY VIA SFTP — configure os secrets
-      - name: 🚀 Deploy via SFTP
-        uses: pressidium/lftp-action@v1.0.2
+      - name: 🚀 Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@4.3.4
         with:
-          host: ${{ secrets.SFTP_HOST }}
-          user: ${{ secrets.SFTP_USER }}
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
-          localDir: 'expense/backend-php/'
-          remoteDir: '/home1/isacag00/novemax/'
-          args: '-e -n'
+          server-dir: /home/seusite.com/backend/
+          local-dir: expense/backend-php/
 
       - name: 🔐 Gerar arquivo .env
         run: |
