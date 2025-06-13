@@ -1,0 +1,56 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: expense
+
+  datasource:
+    url: 'jdbc:mysql://${MYSQL_HOST:localhost}:3306/ex-db?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC'
+    username: root
+    password: 3xp3ns1v3 #ENC(o0LqacZd+1e5PxHE/PkyIiKMj74CQrMZ)
+    driverClassName: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 10
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        ddl-auto: update
+    generate-ddl: true
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ENC(CgCKOHyG9EueAkD8KREyjkYMxOUZEdsjSMbZfoMZxhrcAPPTcAkrLpO6i0IJt7VtS3CMm1JzJNf31X33tUEkhxMM60J5ei3VdrQ6pBzLkCg=)
+            client-secret: ENC(JYVTY2Izb1BRGSoqOJALzDti09d+xhy5Qlqr2wk5cIrgqSL+u19w8pM2O7WlUuxc)
+            scope:
+              - openid
+              - profile
+              - email
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+        provider:
+          google:
+            authorization-uri: "https://accounts.google.com/o/oauth2/auth"
+            token-uri: https://oauth2.googleapis.com/token
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            user-name-attribute: sub
+
+logging:
+  level:
+    org.springdoc: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.boot.autoconfigure.web: DEBUG
+    org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping: TRACE
+    com.novemax: DEBUG  # sua base de pacotes
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method

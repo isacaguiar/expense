@@ -1,0 +1,51 @@
+name: Build e Deploy Laravel Backend
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  laravel-deploy:
+    name: Build Laravel app (backend-php)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: expense/backend-php
+
+    steps:
+      - name: 📥 Clonar o repositório
+        uses: actions/checkout@v3
+
+      - name: 🧰 Configurar PHP com Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, bcmath, ctype, fileinfo, json, openssl, pdo, tokenizer, xml, curl, gd
+          coverage: none
+
+      - name: 📦 Instalar dependências
+        run: composer install --no-dev --optimize-autoloader
+
+      - name: 🔐 Copiar .env de produção
+        run: cp .env.production .env
+
+      - name: 🔑 Gerar chave do aplicativo
+        run: php artisan key:generate
+
+      - name: 🧠 Gerar caches Laravel
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      # [Opcional] DEPLOY VIA SFTP — configure os secrets
+      - name: 🚀 Deploy via SFTP
+        uses: pressidium/lftp-action@v1.0.2
+        with:
+          host: ${{ secrets.SFTP_HOST }}
+          user: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          localDir: 'expense/backend-php/'
+          remoteDir: '/home1/isacag00/novemax/'
+          args: '-e -n'

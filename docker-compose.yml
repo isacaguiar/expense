@@ -1,0 +1,39 @@
+version: '3.3'
+
+services:
+  mysql-db:
+    image: mysql:8.0.17
+    container_name: mysql-expense-db
+    environment:
+      MYSQL_ROOT_PASSWORD: 3xp3ns1v3
+      MYSQL_DATABASE: ex-db
+      MYSQL_ROOT_HOST: '%'
+      MYSQL_TCP_PORT: 3306
+    ports:
+      - "3306:3306"
+    expose:
+      - "3306"
+    networks:
+      - ex-network
+    command:
+      - --table_definition_cache=100
+      - --performance_schema=0
+      - --default-authentication-plugin=mysql_native_password
+      - --innodb_use_native_aio=0
+    volumes:
+      - ./assets/db:/docker-entrypoint-initdb.d
+      - ./assets/db/charset.sql:/docker-entrypoint-initdb.d/charset.sql
+
+  admin:
+    image: adminer
+    ports:
+      - "8081:8081"
+    container_name: adminerex
+    networks:
+      - ex-network
+
+networks:
+  ex-network:
+    driver: bridge
+
+
