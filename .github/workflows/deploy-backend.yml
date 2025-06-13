@@ -75,7 +75,7 @@ jobs:
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
           server-dir: /home1/isacag00/isacaguiar.com.br/
-          local-dir: expense/backend-php/
+          local-dir: ./
 
 
 
