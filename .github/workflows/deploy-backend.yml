@@ -72,5 +72,5 @@ jobs:
           server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
-          server-dir: ../expense/backend-php/
-          local-dir: /
+          server-dir: /backend-php/
+          local-dir: ./
