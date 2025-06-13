@@ -28,29 +28,6 @@ jobs:
       - name: 📦 Instalar dependências
         run: composer install --no-dev --optimize-autoloader
 
-      - name: 🔐 Copiar .env de produção
-        run: cp .env.production .env
-
-      - name: 🔑 Gerar chave do aplicativo
-        run: php artisan key:generate
-
-      - name: 🧠 Gerar caches Laravel
-        run: |
-          php artisan config:cache
-          php artisan route:cache
-          php artisan view:cache
-
-      - name: 🚀 Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USER }}
-          password: ${{ secrets.SFTP_PASS }}
-          server-dir: /home1/isacag00/isacaguiar.com.br
-          local-dir: expense/backend-php/
-
-
-
       - name: 🔐 Gerar arquivo .env
         run: |
           echo "APP_NAME=SCD" > .env
@@ -77,3 +54,25 @@ jobs:
 
           echo "JWT_SECRET=${{ secrets.ENV_JWT_KEY }}" >> .env
           echo "PIX_KEY=${{ secrets.ENV_PIX_KEY }}" >> .env
+
+      - name: 🔑 Gerar chave do aplicativo
+        run: php artisan key:generate
+
+      - name: 🧠 Gerar caches Laravel
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+      - name: 🚀 Deploy via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          server-dir: /home1/isacag00/isacaguiar.com.br
+          local-dir: expense/backend-php/
+
+
+
+      
