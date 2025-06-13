@@ -64,6 +64,9 @@ jobs:
           php artisan route:cache
           php artisan view:cache
 
+      - name: 🔍 Verificar valor do host (temporário)
+        run: echo "Deploy para ${{ secrets.SFTP_HOST }}"
+
       - name: 🚀 Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
