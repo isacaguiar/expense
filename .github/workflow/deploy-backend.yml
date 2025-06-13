@@ -49,3 +49,30 @@ jobs:
           localDir: 'expense/backend-php/'
           remoteDir: '/home1/isacag00/novemax/'
           args: '-e -n'
+
+      - name: 🔐 Gerar arquivo .env
+        run: |
+          echo "APP_NAME=SCD" > .env
+          echo "APP_ENV=production" >> .env
+          echo "APP_KEY=${{ secrets.ENV_APP_KEY }}" >> .env
+          echo "APP_DEBUG=false" >> .env
+          echo "APP_URL=https://scd.novemax.com.br" >> .env
+
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=${{ secrets.ENV_DB_HOST }}" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=${{ secrets.ENV_DB_DATABASE }}" >> .env
+          echo "DB_USERNAME=${{ secrets.ENV_DB_USERNAME }}" >> .env
+          echo "DB_PASSWORD=${{ secrets.ENV_DB_PASSWORD }}" >> .env
+
+          echo "MAIL_MAILER=smtp" >> .env
+          echo "MAIL_HOST=${{ secrets.ENV_MAIL_HOST }}" >> .env
+          echo "MAIL_PORT=587" >> .env
+          echo "MAIL_USERNAME=${{ secrets.ENV_MAIL_USERNAME }}" >> .env
+          echo "MAIL_PASSWORD=${{ secrets.ENV_MAIL_PASSWORD }}" >> .env
+          echo "MAIL_ENCRYPTION=tls" >> .env
+          echo "MAIL_FROM_ADDRESS=no-reply@scd.novemax.com.br" >> .env
+          echo "MAIL_FROM_NAME=\"SCD Novemax\"" >> .env
+
+          echo "JWT_SECRET=${{ secrets.ENV_JWT_KEY }}" >> .env
+          echo "PIX_KEY=${{ secrets.ENV_PIX_KEY }}" >> .env
