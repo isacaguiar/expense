@@ -41,13 +41,14 @@ jobs:
           php artisan view:cache
 
       - name: 🚀 Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
           server-dir: /home/seusite.com/backend/
           local-dir: expense/backend-php/
+
 
 
       - name: 🔐 Gerar arquivo .env
