@@ -8,9 +8,9 @@ Versão: 1.0 · Criado em: 20260818
 |---|---|---|---|---|---|
 | TASK-033 | Corrigir leitura do parâmetro de rota (`id`, não `groupId`) em `ExpenseManager.tsx` | frontend | plan.md §1 | nenhum | Concluída (PR #12 mergeado em `dev`) |
 | TASK-034 | Criar `GET /api/groups/{groupId}/expenses` (listagem individual por mês) com checagem de membership | backend | plan.md §2 | nenhum | Concluída (PR #14 mergeado em `dev`) |
-| TASK-035 | Consumir o endpoint novo em `ExpenseManager.tsx` (troca a URL de origem dos dados da tabela) | frontend | plan.md §2 | nenhum | PR aberto |
-| TASK-036 | Adicionar checagem de membership e forçar `user_creator_id` do usuário autenticado em `ExpenseController::store` | backend | plan.md §3 | nenhum | Pendente |
-| TASK-037 | Alinhar formulário "Nova Despesa" ao payload real de `POST /api/expenses` (seletor de pagador + campos obrigatórios) | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-035 | Consumir o endpoint novo em `ExpenseManager.tsx` (troca a URL de origem dos dados da tabela) | frontend | plan.md §2 | nenhum | Concluída (PR #15 mergeado em `dev`) |
+| TASK-036 | Adicionar checagem de membership e forçar `user_creator_id` do usuário autenticado em `ExpenseController::store` | backend | plan.md §3 | nenhum | Concluída (PR #17 mergeado em `dev`) |
+| TASK-037 | Alinhar formulário "Nova Despesa" ao payload real de `POST /api/expenses` (seletor de pagador + campos obrigatórios) | frontend | plan.md §3 | nenhum | PR aberto |
 | TASK-038 | Criar rota `/expenses` com seleção/redirect automático de grupo (`ExpensesEntry.tsx`) | frontend | plan.md §4 | nenhum | Pendente |
 
 ## Critérios de aceite
