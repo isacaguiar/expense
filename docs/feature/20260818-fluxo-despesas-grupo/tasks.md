@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20260818
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-033 | Corrigir leitura do parâmetro de rota (`id`, não `groupId`) em `ExpenseManager.tsx` | frontend | plan.md §1 | nenhum | Pendente |
+| TASK-033 | Corrigir leitura do parâmetro de rota (`id`, não `groupId`) em `ExpenseManager.tsx` | frontend | plan.md §1 | nenhum | PR aberto |
 | TASK-034 | Criar `GET /api/groups/{groupId}/expenses` (listagem individual por mês) com checagem de membership | backend | plan.md §2 | nenhum | Pendente |
 | TASK-035 | Consumir o endpoint novo em `ExpenseManager.tsx` (troca a URL de origem dos dados da tabela) | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-036 | Adicionar checagem de membership e forçar `user_creator_id` do usuário autenticado em `ExpenseController::store` | backend | plan.md §3 | nenhum | Pendente |
