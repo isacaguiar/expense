@@ -45,6 +45,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 007 | [storage-cache-logs-versionados-backend.md](storage-cache-logs-versionados-backend.md) | Cache e logs do Laravel versionados no repositório | config-url-api-frontend | 2026-08-17 | BAIXA | Aberto |
 | 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Aberto |
 | 009 | [despesas-menu-tela-branco-frontend.md](despesas-menu-tela-branco-frontend.md) | Tela de despesas abre em branco ao clicar no menu | (solicitação direta) | 2026-08-18 | ALTA | Promovido para TASK-033 |
+| 010 | [expense-store-sem-checagem-membership-payer.md](expense-store-sem-checagem-membership-payer.md) | POST /api/expenses não checa se user_payer_id/payers são membros do grupo | fluxo-despesas-grupo (achado na TASK-036, revisão security-reviewer) | 2026-08-18 | ALTA | Aberto |
 
 ## Itens concluídos
 
