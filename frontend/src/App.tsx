@@ -7,6 +7,7 @@ import InternalLayout from './layouts/InternalLayout';
 import GroupMembersForm from './pages/GroupMembersForm';
 import GroupList from './pages/GroupList';
 import ExpenseManager from './pages/ExpenseManager';
+import RequireAuth from './components/RequireAuth';
 
 const App = () => {
   return (
@@ -15,17 +16,18 @@ const App = () => {
 
 
       {/* Rotas privadas com layout */}
-      <Route element={<InternalLayout />}>
-        <Route path="/dashboard" element={<Dashboard />} />
+      <Route element={<RequireAuth />}>
+        <Route element={<InternalLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
 
-        {/* Rota de grupo */}
-        <Route path="/groups" element={<GroupList />} />
-        <Route path="/groups/new" element={<GroupForm />} />
-        <Route path="/groups/:id/edit" element={<GroupForm />} />
-        <Route path="/groups/:id/members" element={<GroupMembersForm />} />
+          {/* Rota de grupo */}
+          <Route path="/groups" element={<GroupList />} />
+          <Route path="/groups/new" element={<GroupForm />} />
+          <Route path="/groups/:id/edit" element={<GroupForm />} />
+          <Route path="/groups/:id/members" element={<GroupMembersForm />} />
 
-        <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
-
+          <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
+        </Route>
       </Route>
 
       {/* rota “catch-all” opcional */}
