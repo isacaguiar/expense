@@ -1,5 +1,6 @@
 # Configuração de URL da API via variável de ambiente
 
+ID: 001
 Origem: docs/feature/20260817-migracao-frontend-expo/specify.md §2.1
 Criado em: 2026-08-17
 Prioridade: MEDIA

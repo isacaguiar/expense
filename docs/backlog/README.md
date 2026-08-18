@@ -16,6 +16,7 @@ Um arquivo por ideia, nome curto em kebab-case:
 ```
 # <Título curto>
 
+ID: <numérico sequencial, 3 dígitos — próximo livre está no Índice abaixo>
 Origem: docs/feature/<AAAAMMDD>-<slug>/specify.md §<n> (ou onde foi identificado)
 Criado em: <AAAA-MM-DD>
 Prioridade: ALTA | MEDIA | BAIXA
@@ -32,11 +33,13 @@ Tipo sugerido: frontend | backend | infra | doc
 
 Critério de prioridade: **ALTA** = risco/custo cresce com o tempo (segurança, dado incorreto, bloqueia outro trabalho em breve); **MEDIA** = vale fazer antes de um marco conhecido (ex.: antes de um corte de produção), mas não urge; **BAIXA** = manutenção/DX, sem prazo natural.
 
+O `ID` é só numérico e sequencial (não reaproveita número de item removido/promovido), diferente do `TASK-0xx` — existe só para referenciar um item do backlog de forma curta antes dele virar task.
+
 ## Índice
 
-| Arquivo | Título | Origem | Criado em | Prioridade | Status |
-|---|---|---|---|---|---|
-| [config-url-api-frontend.md](config-url-api-frontend.md) | Configuração de URL da API via variável de ambiente | migracao-frontend-expo | 2026-08-17 | MEDIA | Aberto |
-| [infra-testes-frontend.md](infra-testes-frontend.md) | Infraestrutura de testes no frontend | migracao-frontend-expo | 2026-08-17 | MEDIA | Aberto |
-| [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
-| [auth-guard-redirect-frontend.md](auth-guard-redirect-frontend.md) | Auth guard / redirect automático | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
+| ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
+|---|---|---|---|---|---|---|
+| 001 | [config-url-api-frontend.md](config-url-api-frontend.md) | Configuração de URL da API via variável de ambiente | migracao-frontend-expo | 2026-08-17 | MEDIA | Aberto |
+| 002 | [infra-testes-frontend.md](infra-testes-frontend.md) | Infraestrutura de testes no frontend | migracao-frontend-expo | 2026-08-17 | MEDIA | Aberto |
+| 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
+| 004 | [auth-guard-redirect-frontend.md](auth-guard-redirect-frontend.md) | Auth guard / redirect automático | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
