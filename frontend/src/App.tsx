@@ -7,6 +7,7 @@ import InternalLayout from './layouts/InternalLayout';
 import GroupMembersForm from './pages/GroupMembersForm';
 import GroupList from './pages/GroupList';
 import ExpenseManager from './pages/ExpenseManager';
+import ExpensesEntry from './pages/ExpensesEntry';
 import RequireAuth from './components/RequireAuth';
 
 const App = () => {
@@ -27,6 +28,7 @@ const App = () => {
           <Route path="/groups/:id/members" element={<GroupMembersForm />} />
 
           <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
+          <Route path="/expenses" element={<ExpensesEntry />} />
         </Route>
       </Route>
 
