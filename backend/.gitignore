@@ -31,3 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Stray PHP/Laravel artifacts (not part of this Java project) ###
+/vendor
+/bootstrap
+/storage
