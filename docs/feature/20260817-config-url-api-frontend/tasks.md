@@ -7,8 +7,8 @@ Versão: 1.0 · Criado em: 20260817
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-027 | Introduzir `VITE_API_BASE_URL` (`frontend/src/config.ts` + `.env`/`.env.example`) e substituir a URL da API hardcoded em todas as chamadas de `frontend/src/pages` e em `frontend/src/api.ts` | frontend | plan.md §1 | nenhum | Concluída (PR #4 mergeado em `main`) |
-| TASK-028 | Criar guard de rota (`RequireAuth`) e aplicá-lo às rotas privadas de `frontend/src/App.tsx`, redirecionando para `/` quando não houver token de acesso | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-029 | Redirecionar automaticamente para `/` quando uma chamada autenticada retornar 401 em `GroupList.tsx` e `ExpenseManager.tsx`, em vez de só exibir mensagem de erro | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-028 | Criar guard de rota (`RequireAuth`) e aplicá-lo às rotas privadas de `frontend/src/App.tsx`, redirecionando para `/` quando não houver token de acesso | frontend | plan.md §2 | nenhum | PR aberto |
+| TASK-029 | Redirecionar automaticamente para `/` quando uma chamada autenticada retornar 401 em `GroupList.tsx` e `ExpenseManager.tsx`, em vez de só exibir mensagem de erro | frontend | plan.md §3 | nenhum | PR aberto |
 
 ## Critérios de aceite
 
