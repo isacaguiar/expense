@@ -4,7 +4,7 @@ ID: 010
 Origem: docs/feature/20260818-fluxo-despesas-grupo/plan.md §3 (achado durante execução da TASK-036, confirmado por revisão do agent security-reviewer)
 Criado em: 2026-08-18
 Prioridade: ALTA
-Status: Aberto
+Status: Promovido para TASK-039
 
 ## Descrição
 
