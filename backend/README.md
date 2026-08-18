@@ -1,146 +1,111 @@
-# 💰 Shared Expense Management System
+# Despesa Compartilhada (Backend)
 
-This system aims to facilitate **control of fixed and variable monthly expenses** among user groups, with equal distribution of values among the assigned payers.
-
----
-
-## 📘 Domain Concepts and Entities
-
-### 🔹 `User`
-Represents a system user.
-
-- `name`
-- `email`
-- `password` (stored as hash)
+API RESTful em Laravel para gerenciar despesas compartilhadas em grupos de usuários.
 
 ---
 
-### 🔹 `Group`
-A group for sharing expenses, such as a family, republic, or group of friends.
+## 📋 Sumário
 
-- `name`
-- `description`
-- `create_date`
-- **Relationship**: contains multiple `Users`
-
----
-
-### 🔹 `Expense`
-A record of an expense assigned to a group.
-
-- `description`
-- `total_value`
-- `expense_type`: `ONE_TIME` or `INSTALLMENT`
-- `quota_number` (if INSTALLMENT)
-- `date_payment`
-- `user_creator_id`
-- `group_id`
-- `payer_users` (direct list of users)
+- [Pré-requisitos](#-pré-requisitos)  
+- [Instalação](#-instalação)  
+- [Configuração do Ambiente](#-configuração-do-ambiente)  
+- [Banco de Dados](#-banco-de-dados)  
+- [Executando em Desenvolvimento](#-executando-em-desenvolvimento)  
+- [Rotas Principais](#-rotas-principais)  
+- [Exemplos de Requisições](#-exemplos-de-requisições)  
+- [Testes](#-testes)  
+- [Contribuindo](#-contribuindo)  
+- [Licença](#-licença)  
 
 ---
 
-### 🔹 `Quota`
-Represents a quota (installment) of the expense (if `expense_type = INSTALLMENT`).
+## 🔧 Pré-requisitos
 
-- `number`
-- `valueQuota`
-- `data_expected`
-- `paid`
-
----
-
-### 🔹 `Participation`
-Represents how much each `User` must pay in a `Quota`.
-
-- `quota_id`
-- `user_id`
-- `value_participation`
-- `status`: `PENDING` or `PAID`
+- PHP ≥ 8.1  
+- Composer  
+- MySQL (ou outro banco suportado pelo Laravel)  
+- Git  
 
 ---
 
-## 🔄 Expense Registration Flow
+## ⚙️ Instalação
 
-1. A `User` creates a new `Expense`.
-2. Selects the `Group` and the `payer_users`.
-3. Fills in the total value, payment type, and date.
-4. The system:
-   - Creates the `Quotas` (if needed)
-   - Splits the amount equally among the payers
-   - Generates the `Participations` for each quota
+1. Clone o repositório  
 
----
-
-## 🧮 Example
-
-**Group:** `República da Praça`  
-**Members:** João, Maria, Pedro  
-**Payers:** João, Maria  
-**Expense:** Internet - R$100.00 - à vista
-
-**Result:**  
-Each payer will have a `Participation` of R$50.00 marked as `PENDING` until payment is made.
-
----
-
-## 📌 Future Considerations
-
-- Possibility to assign custom weights per payer
-- Monthly report generation by group or user
-- Integration with notifications (email, WhatsApp, etc.)
-
----
-
-## 📂 Entity-Relationship Diagram (ER)
-
-```mermaid
-erDiagram
-    USER ||--o{ GROUP : member_of
-    GROUP ||--o{ EXPENSE : owns
-    USER ||--o{ EXPENSE : creates
-    EXPENSE ||--|{ QUOTA : generates
-    QUOTA ||--o{ PARTICIPATION : contains
-    USER ||--o{ PARTICIPATION : pays
-
-    USER {
-        UUID id
-        String name
-        String email
-        String password
-    }
-
-    GROUP {
-        UUID id
-        String name
-        String description
-        DateTime create_date
-    }
-
-    EXPENSE {
-        UUID id
-        String description
-        Decimal total_value
-        Enum expense_type
-        Int quota_number
-        Date date_payment
-        UUID user_creator_id
-        UUID group_id
-    }
-
-    QUOTA {
-        UUID id
-        UUID expense_id
-        Int number
-        Decimal valueQuota
-        Date data_expected
-        Boolean paid
-    }
-
-    PARTICIPATION {
-        UUID id
-        UUID quota_id
-        UUID user_id
-        Decimal value_participation
-        Enum status
-    }
+```bash
+git clone https://github.com/SEU_USUARIO/despesa-compartilhada-backend.git
+cd despesa-compartilhada-backend
 ```
+
+2. Instale dependências PHP
+```bash
+composer install
+```
+
+3. Copie o arquivo de ambiente e gere uma chave de aplicação
+```bash
+cp .env.example .env
+php artisan key:generate
+```
+
+4. Configure as variáveis no .env (veja seção abaixo).
+
+---
+
+### 📝 Configuração do Ambiente
+```dotenv
+No arquivo .env, ajuste as seguintes variáveis:
+APP_NAME="Despesa Compartilhada"
+APP_ENV=local
+APP_KEY=base64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+APP_DEBUG=true
+APP_URL=http://localhost:8000
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=desa_compartilhada
+DB_USERNAME=root
+DB_PASSWORD=
+
+# Outras variáveis (Mail, Cache, Queue, etc.)
+```
+
+---
+
+### 💾 Banco de Dados
+
+---
+
+### 🚀 Executando em Desenvolvimento
+
+Inicie o servidor embutido do Laravel:
+```bash
+php artisan serve
+```
+Por padrão, a aplicação ficará disponível em http://127.0.0.1:8000.
+
+---
+
+### 📚 Rotas Principais
+
+Todas as rotas estão prefixadas por /api
+
+| Recurso   | Método | Endpoint                  | Descrição                       |
+| --------- | ------ | ------------------------- | ------------------------------- |
+| Login     | POST   | `/api/login`              | Acessar o aplicativo            |
+| Logout    | POST   | `/api/logout`             | Desconectar do aplicativo       |
+| DashBoard | GET    | `/api/dashboard`          | Abrir o dashboard               |
+| Grupos    | GET    | `/api/groups`             | Listar todos os grupos          |
+|           | POST   | `/api/groups`             | Criar novo grupo                |
+| Grupo     | GET    | `/api/groups/{id}`        | Obter detalhes de um grupo      |
+| Despesas  | GET    | `/api/expenses`           | Listar todas as despesas        |
+|           | POST   | `/api/expenses`           | Criar nova despesa              |
+| Despesa   | GET    | `/api/expenses/{id}`      | Obter detalhes de uma despesa   |
+| Relatório | GET    | `/api/groups/{id}/report` | Gerar relatório mensal do grupo |
+
+---
+
+### 🔍 Exemplos de Requisições
+
+Autenticação
