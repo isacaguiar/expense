@@ -43,6 +43,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 002 | [infra-testes-frontend.md](infra-testes-frontend.md) | Infraestrutura de testes no frontend | migracao-frontend-expo | 2026-08-17 | MEDIA | Aberto |
 | 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
 | 004 | [auth-guard-redirect-frontend.md](auth-guard-redirect-frontend.md) | Auth guard / redirect automático | migracao-frontend-expo | 2026-08-17 | BAIXA | Promovido para TASK-028 |
+| 005 | [node-modules-versionado-frontend.md](node-modules-versionado-frontend.md) | node_modules do frontend versionado no repositório | config-url-api-frontend | 2026-08-17 | BAIXA | Aberto |
 
 ## Itens concluídos
 
