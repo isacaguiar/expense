@@ -30,6 +30,12 @@ A partir de 2026-08-17, `02-plan.md`, `03-tasks.md` e `04-implementation.md` dei
 
 Para criar a pasta de uma feature nova sem redigir os 4 documentos do zero, use `docs/sdd/templates/` (esqueleto em branco de cada documento) ou o slash command `/nova-feature <slug-curto>` (cria a pasta e copia os templates automaticamente). Decisões de stack/arquitetura ficam registradas separadamente em `docs/sdd/decisions/` (formato ADR) — ver `00-constitution.md` §5.1.
 
+## Backlog de ideias não bloqueantes (`docs/backlog/`)
+
+Toda feature encontra, no caminho, achados que não bloqueiam nenhuma task dela (ex.: um débito técnico tangencial, uma melhoria de DX, uma ideia de produto fora do `specify.md` atual). Esse tipo de achado **não fica preso à pasta da feature que o encontrou** — vai para `docs/backlog/` (diretório único, compartilhado por todo o projeto), um arquivo por ideia, com um `README.md` de índice. Formato e critério completos em `docs/backlog/README.md`; regra curta: se bloqueia uma task da feature atual, vira `TASK-0xx` ali mesmo; se não bloqueia, vira um arquivo em `docs/backlog/`, e só ganha `TASK-0xx` quando alguém decidir de fato executá-lo (nesse momento, promova o conteúdo para o `tasks.md` da feature/épico que for tocá-lo).
+
+Essa separação existe porque um achado não-bloqueante costuma sobreviver à feature que o descobriu — ele é conhecimento do projeto, não artefato descartável de uma pasta de trabalho.
+
 ## Skills e portabilidade
 
 `05-context-frontend.md` e `06-context-backend.md` são markdown puro, sem nada específico de ferramenta — contêm o que carregar antes de codar, convenções fixas e os gates human-in-the-loop de cada frente. Hoje eles são referenciados por duas skills do Claude Code (`expense/.claude/skills/expense-frontend` e `expense-backend`), que são só **adaptadores finos**: frontmatter com a `description` que dispara a auto-invocação + uma linha apontando pra cá. Se o projeto trocar de ferramenta de IA no futuro, só o adaptador precisa ser reescrito (no formato da ferramenta nova); o conteúdo real permanece nestes dois arquivos.

@@ -30,8 +30,9 @@ Padrão de trabalho:
 4. Para codar, use a skill correspondente ao domínio — `expense-backend` ou `expense-frontend` — que carrega automaticamente o contexto certo (`06-context-backend.md` ou `05-context-frontend.md`: convenções, arquivos de referência e gates human-in-the-loop daquela frente). Não é preciso invocar isso manualmente fora das skills. Para revisão de segurança de mudanças em rotas/controllers/middleware de auth, ou para conferir o checklist pré-PR, use os agents `security-reviewer` e `pr-readiness-checker` (`.claude/agents/`, catálogo em `docs/sdd/agents-roadmap.md`).
 5. Siga o fluxo de execução descrito em `docs/sdd/04-implementation.md` (branch por task, checklist antes de abrir PR com os comandos reais de validação) e registre o log em `docs/feature/<AAAAMMDD>-<slug>/implementation.md`, citando comando executado + resultado.
 6. Nunca contradiga `00-constitution.md`. Se a task exigir isso, pare e sinalize — editar a Constitution é sempre gate humano. Mudança de stack/arquitetura vira ADR em `docs/sdd/decisions/`.
-7. Avance somente se o gate human-in-the-loop da etapa estiver aprovado (ver tabela abaixo).
-8. Finalize com relatório curto: task/objetivo, arquivos consultados/criados/modificados, validações rodadas (pint/phpunit/tsc), gates pendentes de aprovação humana, próximas ações recomendadas.
+7. Achado que não bloqueia nenhuma task da feature atual (débito técnico tangencial, ideia de melhoria) não vira task nem fica solto só na conversa — vira um arquivo em `docs/backlog/` (ver `docs/sdd/README.md` §"Backlog de ideias não bloqueantes"), pra virar `TASK-0xx` só quando alguém decidir executá-lo de fato.
+8. Avance somente se o gate human-in-the-loop da etapa estiver aprovado (ver tabela abaixo).
+9. Finalize com relatório curto: task/objetivo, arquivos consultados/criados/modificados, validações rodadas (pint/phpunit/tsc), gates pendentes de aprovação humana, próximas ações recomendadas.
 
 ## Gates human-in-the-loop (resumo — tabela completa em `00-constitution.md` §5.2)
 
