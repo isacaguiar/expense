@@ -23,20 +23,7 @@ Regra de atomicidade: uma task deve ser completável, revisável e testável **i
 
 ## Épico A — Migração do frontend para React Native (Expo)
 
-Ref: `02-plan.md` §2. Ordem sequencial — cada task assume a anterior concluída.
-
-| ID | Título | Tipo | Gate humano |
-|---|---|---|---|
-| TASK-001 | Scaffold do projeto Expo (TypeScript) em `expense/app`, com Expo Router configurado e uma rota placeholder — sem telas de negócio ainda | frontend | nenhum |
-| TASK-002 | Instalar e configurar `react-native-paper`, com tema (`MD3Theme`) espelhando cores/tipografia de `frontend/src/theme.ts` | frontend | nenhum |
-| TASK-003 | Portar client HTTP (`api.ts`) para `expense/app`, trocando armazenamento do JWT de `localStorage` (web) para `expo-secure-store`, com fallback web funcional via `react-native-web` | frontend | nenhum |
-| TASK-004 | Implementar fluxo de login (`LoginPage` → tela Expo Router com RN Paper), incluindo persistência/leitura do token via TASK-003 | frontend | nenhum |
-| TASK-005 | Navegação principal: portar `Navbar`/`InternalLayout` para layout do Expo Router (tabs ou drawer, a definir na task) | frontend | nenhum |
-| TASK-006 | Tela Dashboard | frontend | nenhum |
-| TASK-007 | Telas de Grupo: `GroupList`, `GroupForm`, `GroupMembersForm` | frontend | nenhum |
-| TASK-008 | Tela de Despesas: `ExpenseManager` (criação de despesa, seleção de pagadores, parcelas) | frontend | nenhum |
-| TASK-009 | Validar build web do Expo (`react-native-web`) rodando em porta separada da atual (5173 é do `expense/frontend`), com todas as telas das TASK-004..008 navegáveis | frontend | nenhum |
-| TASK-010 | Decisão de corte: apontar produção para `expense/app` no lugar de `expense/frontend` (ou manter os dois) | infra | **antes do deploy** |
+**Migrado para `docs/feature/20260817-migracao-frontend-expo/` em 2026-08-17.** TASK-001 a TASK-010 (+ TASK-022 a TASK-026, criadas ao migrar) têm specify/plan/tasks/implementation próprios lá — ver `docs/feature/20260817-migracao-frontend-expo/tasks.md` para status atualizado. Este épico não recebe mais tasks novas aqui.
 
 ## Épico B — Segurança
 
