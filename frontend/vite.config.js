@@ -18,6 +18,17 @@ export default defineConfig({
       },
     },
   },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./src/setupTests.ts'],
+    // Node 22+ expõe `localStorage`/`sessionStorage` globais nativos (flag
+    // --experimental-webstorage) que colidem com o polyfill do jsdom e
+    // lançam SecurityError ao acessar localStorage nos testes. Desliga a
+    // flag nos processos worker do Vitest, sem depender de NODE_OPTIONS
+    // no shell (cross-platform).
+    execArgv: ['--no-experimental-webstorage'],
+  },
 });
 
 

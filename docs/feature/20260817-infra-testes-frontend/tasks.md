@@ -6,9 +6,9 @@ Versão: 1.0 · Criado em: 20260817
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-030 | Instalar e configurar Vitest + Testing Library no frontend web (`vite.config.js`, `setupTests.ts`, `tsconfig.json`, scripts `test`/`test:watch`) | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-031 | Criar `RequireAuth.test.tsx` cobrindo os dois casos (sem token → login; com token → conteúdo protegido) | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-032 | Criar `GroupList.test.tsx` cobrindo o redirect automático em resposta 401 (mock de `axios` + `useNavigate`) | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-030 | Instalar e configurar Vitest + Testing Library no frontend web (`vite.config.js`, `setupTests.ts`, `tsconfig.json`, scripts `test`/`test:watch`) | frontend | plan.md §1 | nenhum | Concluída (PR #9 mergeado em `dev`) |
+| TASK-031 | Criar `RequireAuth.test.tsx` cobrindo os dois casos (sem token → login; com token → conteúdo protegido) | frontend | plan.md §2 | nenhum | Concluída (PR #8 mergeado em `dev`) |
+| TASK-032 | Criar `GroupList.test.tsx` cobrindo o redirect automático em resposta 401 (mock de `axios` + `useNavigate`) | frontend | plan.md §3 | nenhum | Concluída (PR #10 mergeado em `dev`) |
 
 ## Critérios de aceite
 

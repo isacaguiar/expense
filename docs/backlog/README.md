@@ -43,6 +43,8 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 005 | [node-modules-versionado-frontend.md](node-modules-versionado-frontend.md) | node_modules do frontend versionado no repositório | config-url-api-frontend | 2026-08-17 | BAIXA | Aberto |
 | 006 | [expense-manager-groupid-param-mismatch.md](expense-manager-groupid-param-mismatch.md) | ExpenseManager nunca carrega despesas (nome de param de rota errado) | config-url-api-frontend | 2026-08-17 | ALTA | Aberto |
 | 007 | [storage-cache-logs-versionados-backend.md](storage-cache-logs-versionados-backend.md) | Cache e logs do Laravel versionados no repositório | config-url-api-frontend | 2026-08-17 | BAIXA | Aberto |
+| 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Aberto |
+| 009 | [despesas-menu-tela-branco-frontend.md](despesas-menu-tela-branco-frontend.md) | Tela de despesas abre em branco ao clicar no menu | (solicitação direta) | 2026-08-18 | ALTA | Aberto |
 
 ## Itens concluídos
 
