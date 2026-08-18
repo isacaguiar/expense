@@ -4,7 +4,7 @@ ID: 002
 Origem: docs/feature/20260817-migracao-frontend-expo/specify.md §2.4
 Criado em: 2026-08-17
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-030
 
 ## Descrição
 
