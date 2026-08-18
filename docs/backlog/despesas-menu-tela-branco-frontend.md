@@ -4,7 +4,7 @@ ID: 009
 Origem: solicitação direta do usuário (conversa), 2026-08-18
 Criado em: 2026-08-18
 Prioridade: ALTA
-Status: Aberto
+Status: Promovido para TASK-033
 
 ## Descrição
 

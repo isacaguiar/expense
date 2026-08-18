@@ -4,7 +4,7 @@ ID: 006
 Origem: docs/feature/20260817-config-url-api-frontend/implementation.md (achado durante validação da TASK-029)
 Criado em: 2026-08-17
 Prioridade: ALTA
-Status: Aberto
+Status: Promovido para TASK-033
 
 ## Descrição
 
