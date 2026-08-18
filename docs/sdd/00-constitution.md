@@ -48,6 +48,8 @@ Trava as versões/peças abaixo. Trocar qualquer uma é decisão de **Governanç
 ## 5. Governança
 
 1. Todo trabalho de negócio segue as 5 fases do SDD **nesta ordem**: `Constitution → Specify → Plan → Tasks → Implementation`. Uma Task só é aceita se rastreável até um item do Plan, e o Plan até o Specify. Decisões de stack/arquitetura (ex.: item da tabela abaixo ou mudança do que está travado em §3) ficam registradas com contexto e alternativas descartadas em `docs/sdd/decisions/` (formato ADR) — esta Constitution registra a regra vigente, `decisions/` registra o porquê.
+
+1.1. **Fluxo de branch/PR** (a partir de 2026-08-17, primeira feature a segui-lo por completo é a que vier depois de `docs/feature/20260817-config-url-api-frontend/` — essa continua no fluxo antigo, branch/PR por task direto pra `main`, pra não trocar o processo no meio da execução): `main` é a branch de produção (dispara `deploy-backend.yml` a cada push) — equivalente ao "master" de um Gitflow clássico, sem renomear a branch. `dev` é a branch de integração, criada a partir de `main`. Toda branch de task nasce de `dev` atualizada, nomeada `<tipo>/<AAAAMMDD>-<slug-da-feature>-TASK-0xx` (nomenclatura da pasta da feature em `docs/feature/`, com o ID da task no final) — ver `04-implementation.md` §1 para o passo a passo completo, incluindo quando abrir o PR de promoção `dev` → `main`.
 2. **Gates human-in-the-loop** — o que pode ser feito de forma autônoma vs. o que exige aprovação humana explícita antes de executar:
 
 | Ação | Autônomo (IA/dev em branch) | Exige aprovação humana |
@@ -58,9 +60,11 @@ Trava as versões/peças abaixo. Trocar qualquer uma é decisão de **Governanç
 | Rodar migration em banco **local/dev** | ✅ | — |
 | Rodar migration em banco **compartilhado/produção** | ❌ | ✅ |
 | Migration **destrutiva** (drop/rename/alterar tipo) em qualquer ambiente além do local | ❌ | ✅ |
-| Abrir Pull Request | ✅ | — |
-| Merge em `main` | ❌ | ✅ (revisão humana do PR) |
-| Deploy (workflow `deploy-backend.yml`, EAS build do Expo) | ❌ | ✅ |
+| Abrir Pull Request (branch de task → `dev`) | ✅ | — |
+| Merge de PR em `dev` | ❌ | ✅ (revisão humana do PR) |
+| Abrir PR de promoção (`dev` → `main`), após validação/teste em `dev` | ✅ | — |
+| Merge em `main` (produção) | ❌ | ✅ (revisão humana do PR de promoção) |
+| Deploy (workflow `deploy-backend.yml`, EAS build do Expo) | ❌ | ✅ — na prática, o próprio merge em `main` já dispara `deploy-backend.yml`; não fazer merge em `main` sem essa consequência estar clara |
 | Rotacionar, expor ou remover segredo/credencial | ❌ | ✅ |
 | Apagar dado definitivamente (hard delete) | ❌ | ✅ |
 | Corte de produção do frontend novo (`expense/app`) substituindo `expense/frontend` | ❌ | ✅ |
