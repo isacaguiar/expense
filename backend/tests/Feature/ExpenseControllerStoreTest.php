@@ -65,6 +65,39 @@ class ExpenseControllerStoreTest extends TestCase
         $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
     }
 
+    public function test_payer_must_be_member_of_group(): void
+    {
+        $member = User::factory()->create();
+        $outsider = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'user_payer_id' => $outsider->id,
+                'payers' => [$outsider->id],
+            ]));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_all_payers_must_be_members_of_group(): void
+    {
+        $member = User::factory()->create();
+        $outsider = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'payers' => [$member->id, $outsider->id],
+            ]));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
     public function test_user_creator_id_is_always_the_authenticated_user(): void
     {
         $member = User::factory()->create();

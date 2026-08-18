@@ -4,9 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Expense;
 use App\Models\Group;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
 
 class GroupExpenseReportController extends Controller
 {
@@ -15,16 +14,18 @@ class GroupExpenseReportController extends Controller
         Log::info("Iniciando relatório para o grupo {$groupId} no ano {$year}");
 
         $group = Group::find($groupId);
-        if (!$group) {
+        if (! $group) {
             Log::warning("Grupo {$groupId} não encontrado.");
+
             return response()->json(['message' => 'Grupo não encontrado'], 404);
         }
+        $this->authorizeGroupMembership($group);
 
         $expenses = Expense::with(['payer', 'payers'])
             ->where('group_id', $groupId)
             ->get();
 
-        Log::info("Despesas encontradas: " . $expenses->count());
+        Log::info('Despesas encontradas: '.$expenses->count());
 
         if ($expenses->isEmpty()) {
             return response()->json(['message' => 'Nenhuma despesa encontrada para este ano'], 404);
@@ -34,7 +35,7 @@ class GroupExpenseReportController extends Controller
         $annualReceivedSummary = [];
 
         foreach ($expenses as $expense) {
-            Log::info("----------------------------------");
+            Log::info('----------------------------------');
             $startDate = Carbon::parse($expense->date_payment)->addMonth(); // começa a contar no mês seguinte
             $installments = ($expense->expense_type === 'IN_INSTALLMENTS') ? max((int) $expense->installments, 1) : 1;
             $installmentValue = $expense->total_value / $installments;
@@ -45,7 +46,9 @@ class GroupExpenseReportController extends Controller
                 $date = $startDate->copy()->addMonths($i);
                 $yearKey = $date->format('Y');
 
-                if ($yearKey != $year) continue;
+                if ($yearKey != $year) {
+                    continue;
+                }
 
                 $month = $date->format('m');
                 $payerName = $expense->payer->name ?? 'Desconhecido';
@@ -55,18 +58,20 @@ class GroupExpenseReportController extends Controller
 
                 // 1. Lista de despesas
                 $monthlyReport[$month]['expenses'][] = [
-                    'description' => $expense->description . ($installments > 1 ? " (Parcela " . ($i + 1) . "/$installments)" : ''),
+                    'description' => $expense->description.($installments > 1 ? ' (Parcela '.($i + 1)."/$installments)" : ''),
                     'value' => round($installmentValue, 2),
                     'payer' => $payerName,
                     'type' => $expense->expense_type,
                     'installments' => $installments,
                     'participants' => $participantNames,
-                    'participants_count' => $participantsCount
+                    'participants_count' => $participantsCount,
                 ];
 
                 // 2. receivedSummary (exclui o pagador)
                 foreach ($participantNames as $participant) {
-                    if ($participant === $payerName) continue;
+                    if ($participant === $payerName) {
+                        continue;
+                    }
 
                     $monthlyReport[$month]['receivedSummary'][$payerName][$participant] =
                         ($monthlyReport[$month]['receivedSummary'][$payerName][$participant] ?? 0) + $valuePerPerson;
@@ -96,16 +101,17 @@ class GroupExpenseReportController extends Controller
 
         return response()->json([
             $year => $monthlyReport,
-            //'finalSettlement' => $finalSettlement
+            // 'finalSettlement' => $finalSettlement
         ]);
     }
 
     public function reportByGroupAndYearMonthlySettlement($groupId, $year)
     {
         $group = Group::find($groupId);
-        if (!$group) {
+        if (! $group) {
             return response()->json(['message' => 'Grupo não encontrado'], 404);
         }
+        $this->authorizeGroupMembership($group);
 
         $expenses = Expense::with(['payer', 'payers'])
             ->where('group_id', $groupId)
@@ -126,7 +132,9 @@ class GroupExpenseReportController extends Controller
                 $date = $startDate->copy()->addMonths($i);
                 $yearKey = $date->format('Y');
 
-                if ($yearKey != $year) continue;
+                if ($yearKey != $year) {
+                    continue;
+                }
 
                 $month = $date->format('m');
                 $payerName = $expense->payer->name ?? 'Desconhecido';
@@ -136,18 +144,20 @@ class GroupExpenseReportController extends Controller
 
                 // 1. Lista de despesas
                 $monthlyReport[$month]['expenses'][] = [
-                    'description' => $expense->description . ($installments > 1 ? " (Parcela " . ($i + 1) . "/$installments)" : ''),
+                    'description' => $expense->description.($installments > 1 ? ' (Parcela '.($i + 1)."/$installments)" : ''),
                     'value' => round($installmentValue, 2),
                     'payer' => $payerName,
                     'type' => $expense->expense_type,
                     'installments' => $installments,
                     'participants' => $participantNames,
-                    'participants_count' => $participantsCount
+                    'participants_count' => $participantsCount,
                 ];
 
                 // 2. receivedSummary
                 foreach ($participantNames as $participant) {
-                    if ($participant === $payerName) continue;
+                    if ($participant === $payerName) {
+                        continue;
+                    }
 
                     $monthlyReport[$month]['receivedSummary'][$payerName][$participant] =
                         ($monthlyReport[$month]['receivedSummary'][$payerName][$participant] ?? 0) + $valuePerPerson;
@@ -162,7 +172,9 @@ class GroupExpenseReportController extends Controller
 
             foreach ($receivedSummary as $receiver => $payerList) {
                 foreach ($payerList as $payer => $amount) {
-                    if ($payer === $receiver) continue;
+                    if ($payer === $receiver) {
+                        continue;
+                    }
 
                     $reverse = $receivedSummary[$payer][$receiver] ?? 0;
                     $netAmount = round($amount - $reverse, 2);
@@ -177,8 +189,7 @@ class GroupExpenseReportController extends Controller
         }
 
         return response()->json([
-            $year => $monthlyReport
+            $year => $monthlyReport,
         ]);
     }
-
 }

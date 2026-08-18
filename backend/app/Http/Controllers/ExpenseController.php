@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Expense;
 use App\Models\Group;
-use App\Models\Quota;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
+use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
 {
@@ -43,40 +42,43 @@ class ExpenseController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'date_payment'     => 'required|date',
-            'description'      => 'required|string|max:255',
-            'expense_type'     => 'required|in:IN_CASH,IN_INSTALLMENTS',
-            'installments'     => 'required|integer|min:1',
-            'total_value'      => 'required|numeric|min:0',
-            'group_id'         => 'required|exists:ex_groups,id',
-            'user_creator_id'  => 'required|exists:ex_users,id',
-            'user_payer_id'    => 'required|exists:ex_users,id',
-            'payers'           => 'required|array|min:1',
-            'payers.*'         => 'exists:ex_users,id',
-            'quotas'           => 'required|array|min:1',
-            'quotas.*.date_expected' => 'required|date',
-            'quotas.*.number'        => 'required|integer',
-            'quotas.*.paid'          => 'required|boolean',
-            'quotas.*.value_quota'   => 'required|numeric|min:0',
+            'group_id' => 'required|exists:ex_groups,id',
         ]);
 
         $group = Group::findOrFail($request->group_id);
         $this->authorizeGroupMembership($group);
 
+        $request->validate([
+            'date_payment' => 'required|date',
+            'description' => 'required|string|max:255',
+            'expense_type' => 'required|in:IN_CASH,IN_INSTALLMENTS',
+            'installments' => 'required|integer|min:1',
+            'total_value' => 'required|numeric|min:0',
+            'user_creator_id' => 'required|exists:ex_users,id',
+            'user_payer_id' => ['required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $request->group_id)],
+            'payers' => 'required|array|min:1',
+            'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $request->group_id),
+            'quotas' => 'required|array|min:1',
+            'quotas.*.date_expected' => 'required|date',
+            'quotas.*.number' => 'required|integer',
+            'quotas.*.paid' => 'required|boolean',
+            'quotas.*.value_quota' => 'required|numeric|min:0',
+        ]);
+
         DB::beginTransaction();
 
         try {
             $expense = Expense::create([
-                'create_date'      => now(),
-                'date_payment'     => $request->date_payment,
-                'description'      => $request->description,
-                'expense_type'     => $request->expense_type,
-                'installments'     => $request->installments,
-                'total_value'      => $request->total_value,
-                'group_id'         => $request->group_id,
-                'user_creator_id'  => auth()->id(),
-                'user_payer_id'    => $request->user_payer_id,
-                'deleted'          => false,
+                'create_date' => now(),
+                'date_payment' => $request->date_payment,
+                'description' => $request->description,
+                'expense_type' => $request->expense_type,
+                'installments' => $request->installments,
+                'total_value' => $request->total_value,
+                'group_id' => $request->group_id,
+                'user_creator_id' => auth()->id(),
+                'user_payer_id' => $request->user_payer_id,
+                'deleted' => false,
             ]);
 
             // Pagadores
@@ -86,9 +88,9 @@ class ExpenseController extends Controller
             foreach ($request->quotas as $quotaData) {
                 $expense->quotas()->create([
                     'date_expected' => $quotaData['date_expected'],
-                    'number'        => $quotaData['number'],
-                    'paid'          => $quotaData['paid'],
-                    'value_quota'   => $quotaData['value_quota'],
+                    'number' => $quotaData['number'],
+                    'paid' => $quotaData['paid'],
+                    'value_quota' => $quotaData['value_quota'],
                 ]);
             }
 
@@ -98,12 +100,16 @@ class ExpenseController extends Controller
 
         } catch (\Throwable $e) {
             DB::rollBack();
+
             return response()->json(['error' => 'Erro ao criar despesa', 'details' => $e->getMessage()], 500);
         }
     }
 
     public function getMonthlyExpenses($groupId)
     {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
         $expenses = DB::table('ex_expenses')
             ->selectRaw('
                 YEAR(date_payment) as year,
