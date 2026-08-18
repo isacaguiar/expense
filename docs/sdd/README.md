@@ -36,6 +36,8 @@ Toda feature encontra, no caminho, achados que não bloqueiam nenhuma task dela 
 
 Essa separação existe porque um achado não-bloqueante costuma sobreviver à feature que o descobriu — ele é conhecimento do projeto, não artefato descartável de uma pasta de trabalho.
 
+Quando alguém decide de fato executar um item do backlog, o slash command `/promover-backlog <ID>` conduz o processo completo — scaffold da feature, depois Specify → Tech Plan → Tasks → execução de cada task, pedindo aprovação humana explícita entre cada etapa (mesmo espírito do `/nova-feature`, só que partindo de um item já existente e indo até a execução). Ver `.claude/commands/promover-backlog.md`.
+
 ## Skills e portabilidade
 
 `05-context-frontend.md` e `06-context-backend.md` são markdown puro, sem nada específico de ferramenta — contêm o que carregar antes de codar, convenções fixas e os gates human-in-the-loop de cada frente. Hoje eles são referenciados por duas skills do Claude Code (`expense/.claude/skills/expense-frontend` e `expense-backend`), que são só **adaptadores finos**: frontmatter com a `description` que dispara a auto-invocação + uma linha apontando pra cá. Se o projeto trocar de ferramenta de IA no futuro, só o adaptador precisa ser reescrito (no formato da ferramenta nova); o conteúdo real permanece nestes dois arquivos.
