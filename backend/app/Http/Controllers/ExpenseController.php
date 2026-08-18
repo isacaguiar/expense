@@ -4,12 +4,42 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Expense;
+use App\Models\Group;
 use App\Models\Quota;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 
 class ExpenseController extends Controller
 {
+    public function indexByGroup($groupId, Request $request)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $data = $request->validate([
+            'year' => 'required|integer',
+            'month' => 'required|integer|between:1,12',
+        ]);
+
+        $expenses = Expense::where('group_id', $groupId)
+            ->where('deleted', false)
+            ->whereYear('date_payment', $data['year'])
+            ->whereMonth('date_payment', $data['month'])
+            ->with('payers')
+            ->get()
+            ->map(function (Expense $expense) {
+                return [
+                    'id' => $expense->id,
+                    'description' => $expense->description,
+                    'date' => $expense->date_payment,
+                    'value' => $expense->total_value,
+                    'payerName' => $expense->payers->pluck('name')->implode(', '),
+                ];
+            });
+
+        return response()->json($expenses);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
