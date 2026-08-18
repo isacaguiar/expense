@@ -18,7 +18,8 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  IconButton
+  IconButton,
+  MenuItem
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
@@ -32,6 +33,11 @@ type Expense = {
   value: number;
   date: string;        // ISO string
   payerName?: string;  // opcional, se vier do backend
+};
+
+type GroupMember = {
+  id: number;
+  name: string;
 };
 
 const ExpenseManager: React.FC = () => {
@@ -52,6 +58,11 @@ const ExpenseManager: React.FC = () => {
     const today = new Date();
     return today.toISOString().slice(0, 10); // yyyy-MM-dd
   });
+  const [newPayerId, setNewPayerId] = useState<string>('');
+
+  // Membros do grupo (seletor de pagador) e usuário autenticado
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   // Helpers de mês/ano
   const year = currentDate.getFullYear();
@@ -103,11 +114,29 @@ const ExpenseManager: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId, year, month]);
 
+  useEffect(() => {
+    if (!groupId) return;
+
+    const token = localStorage.getItem('accessToken');
+    const headers = { Authorization: token ? `Bearer ${token}` : '' };
+
+    axios
+      .get<GroupMember[]>(`${API_BASE_URL}/api/groups/${groupId}/members`, { headers })
+      .then(res => setMembers(res.data))
+      .catch(err => console.error('Erro ao carregar membros do grupo:', err));
+
+    axios
+      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers })
+      .then(res => setCurrentUserId(res.data.id))
+      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
+  }, [groupId]);
+
   const handleOpenModal = () => {
     setNewDescription('');
     setNewValue('');
     const today = new Date();
     setNewDate(today.toISOString().slice(0, 10));
+    setNewPayerId(currentUserId ? String(currentUserId) : '');
     setOpenModal(true);
   };
 
@@ -122,22 +151,34 @@ const ExpenseManager: React.FC = () => {
       newValue.replace('.', '').replace(',', '.')
     );
 
-    if (!newDescription || isNaN(valueNumber)) {
-      alert('Preencha descrição e valor corretamente.');
+    if (!newDescription || isNaN(valueNumber) || !newPayerId) {
+      alert('Preencha descrição, valor e pagador corretamente.');
       return;
     }
 
     const token = localStorage.getItem('accessToken');
+    const payerId = Number(newPayerId);
 
     const payload = {
+      date_payment: newDate,
       description: newDescription,
-      value: valueNumber,
-      date: newDate
-      // inclua outros campos aqui se sua API exigir (ex: payer_id, participants etc.)
+      expense_type: 'IN_CASH',
+      installments: 1,
+      total_value: valueNumber,
+      group_id: Number(groupId),
+      user_creator_id: currentUserId,
+      user_payer_id: payerId,
+      payers: [payerId],
+      quotas: [{
+        date_expected: newDate,
+        number: 1,
+        paid: true,
+        value_quota: valueNumber
+      }]
     };
 
     axios
-      .post(`${API_BASE_URL}/api/groups/${groupId}/expenses`, payload, {
+      .post(`${API_BASE_URL}/api/expenses`, payload, {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
       .then(() => {
@@ -266,6 +307,20 @@ const ExpenseManager: React.FC = () => {
               onChange={e => setNewDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
+
+            <TextField
+              label="Pagador"
+              select
+              fullWidth
+              value={newPayerId}
+              onChange={e => setNewPayerId(e.target.value)}
+            >
+              {members.map(member => (
+                <MenuItem key={member.id} value={String(member.id)}>
+                  {member.name}
+                </MenuItem>
+              ))}
+            </TextField>
           </Box>
         </DialogContent>
         <DialogActions>
