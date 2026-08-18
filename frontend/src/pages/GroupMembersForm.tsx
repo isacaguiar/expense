@@ -13,6 +13,7 @@ import {
   ListItemText
 } from '@mui/material';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 type User = { id: number; email: string };
 type Group = { id: number; name: string; description: string };
@@ -39,8 +40,8 @@ const GroupMembersForm: React.FC = () => {
     const fetchData = async () => {
       try {
         const [groupRes, membersRes] = await Promise.all([
-          axios.get<Group>(`http://localhost:8000/api/groups/${id}`, config),
-          axios.get<User[]>(`http://localhost:8000/api/groups/${id}/members`, config)
+          axios.get<Group>(`${API_BASE_URL}/api/groups/${id}`, config),
+          axios.get<User[]>(`${API_BASE_URL}/api/groups/${id}/members`, config)
         ]);
         setGroup(groupRes.data);
         setMembers(membersRes.data);
@@ -61,12 +62,12 @@ const GroupMembersForm: React.FC = () => {
     setSubmitting(true);
     try {
       await axios.post(
-        `http://localhost:8000/api/groups/${id}/members`,
+        `${API_BASE_URL}/api/groups/${id}/members`,
         { email },
         config
       );
       setEmail('');
-      const membersRes = await axios.get<User[]>(`http://localhost:8000/api/groups/${id}/members`, config);
+      const membersRes = await axios.get<User[]>(`${API_BASE_URL}/api/groups/${id}/members`, config);
       setMembers(membersRes.data);
     } catch {
       setError('Erro ao adicionar membro.');

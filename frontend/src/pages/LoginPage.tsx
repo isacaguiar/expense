@@ -11,6 +11,7 @@ import Typography from '@mui/material/Typography';
 import Container from '@mui/material/Container';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -29,7 +30,7 @@ export default function LoginPage() {
       alert('Erro ao realizar login. Verifique suas credenciais.');
     }*/
     try {
-      const res = await fetch('http://localhost:8000/api/login', {
+      const res = await fetch(`${API_BASE_URL}/api/login`, {
         method: 'POST',
         credentials: 'include',    // para mandar cookies/token de sessão
         headers: { 'Content-Type': 'application/json' },
