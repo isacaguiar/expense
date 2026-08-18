@@ -47,7 +47,7 @@ Trava as versões/peças abaixo. Trocar qualquer uma é decisão de **Governanç
 
 ## 5. Governança
 
-1. Todo trabalho de negócio segue as 5 fases do SDD **nesta ordem**: `Constitution → Specify → Plan → Tasks → Implementation`. Uma Task só é aceita se rastreável até um item do Plan, e o Plan até o Specify.
+1. Todo trabalho de negócio segue as 5 fases do SDD **nesta ordem**: `Constitution → Specify → Plan → Tasks → Implementation`. Uma Task só é aceita se rastreável até um item do Plan, e o Plan até o Specify. Decisões de stack/arquitetura (ex.: item da tabela abaixo ou mudança do que está travado em §3) ficam registradas com contexto e alternativas descartadas em `docs/sdd/decisions/` (formato ADR) — esta Constitution registra a regra vigente, `decisions/` registra o porquê.
 2. **Gates human-in-the-loop** — o que pode ser feito de forma autônoma vs. o que exige aprovação humana explícita antes de executar:
 
 | Ação | Autônomo (IA/dev em branch) | Exige aprovação humana |

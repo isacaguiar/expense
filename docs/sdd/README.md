@@ -28,9 +28,13 @@ A partir de 2026-08-17, `02-plan.md`, `03-tasks.md` e `04-implementation.md` dei
 
 Épicos que já existiam em `03-tasks.md` antes dessa data e ainda não foram tocados continuam lá até alguém começar a trabalhar neles; nesse momento migram para uma pasta em `docs/feature/` (primeiro caso: Épico B → `docs/feature/20260817-seguranca-api/`).
 
+Para criar a pasta de uma feature nova sem redigir os 4 documentos do zero, use `docs/sdd/templates/` (esqueleto em branco de cada documento) ou o slash command `/nova-feature <slug-curto>` (cria a pasta e copia os templates automaticamente). Decisões de stack/arquitetura ficam registradas separadamente em `docs/sdd/decisions/` (formato ADR) — ver `00-constitution.md` §5.1.
+
 ## Skills e portabilidade
 
 `05-context-frontend.md` e `06-context-backend.md` são markdown puro, sem nada específico de ferramenta — contêm o que carregar antes de codar, convenções fixas e os gates human-in-the-loop de cada frente. Hoje eles são referenciados por duas skills do Claude Code (`expense/.claude/skills/expense-frontend` e `expense-backend`), que são só **adaptadores finos**: frontmatter com a `description` que dispara a auto-invocação + uma linha apontando pra cá. Se o projeto trocar de ferramenta de IA no futuro, só o adaptador precisa ser reescrito (no formato da ferramenta nova); o conteúdo real permanece nestes dois arquivos.
+
+Além das skills, o projeto tem agents nativos do Claude Code em `.claude/agents/` (`security-reviewer`, `pr-readiness-checker`) — cada um construído só quando um gatilho concreto justificou. Ver `docs/sdd/agents-roadmap.md` para o que já existe e o que é candidato futuro.
 
 ## Gates human-in-the-loop (resumo — versão completa em `00-constitution.md` §5)
 
