@@ -15,3 +15,9 @@ Páginas que exigem autenticação hoje apenas exibem um texto de erro ("Usuári
 Não bloqueia nenhuma task da migração, mas melhora a experiência em ambas as plataformas e evita reimplementar essa checagem página a página conforme novas telas forem criadas.
 
 Tipo sugerido: frontend
+
+## Resolução
+Concluído em: 2026-08-17
+Feature: docs/feature/20260817-config-url-api-frontend/
+Tasks: TASK-028, TASK-029
+PRs: #6, #5

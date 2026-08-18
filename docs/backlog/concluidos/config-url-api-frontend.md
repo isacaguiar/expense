@@ -15,3 +15,9 @@ A URL base da API está hardcoded como string em cada arquivo do frontend (`http
 Não bloqueia nenhuma task da migração para React Native, mas é necessário antes do corte de produção (`TASK-010` em `docs/feature/20260817-migracao-frontend-expo/tasks.md`) — sem isso, apontar `expense/app` para um backend de produção exigiria editar código-fonte em vez de configuração.
 
 Tipo sugerido: frontend
+
+## Resolução
+Concluído em: 2026-08-17
+Feature: docs/feature/20260817-config-url-api-frontend/
+Tasks: TASK-027
+PRs: #4
