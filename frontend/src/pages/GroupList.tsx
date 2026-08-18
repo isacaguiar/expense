@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 // Tipo do grupo conforme API
 type Group = {
@@ -38,7 +39,7 @@ const GroupList: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     axios
-      .get<Group[]>('http://localhost:8000/api/groups', {
+      .get<Group[]>(`${API_BASE_URL}/api/groups`, {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
       .then(res => setGroups(res.data))

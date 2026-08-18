@@ -9,6 +9,7 @@ import {
   Typography
 } from '@mui/material';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 
 // Tipo do grupo conforme API
 type Group = {
@@ -34,7 +35,7 @@ const GroupForm: React.FC = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       axios
-        .get<Group>(`http://localhost:8000/api/groups/${id}`, {
+        .get<Group>(`${API_BASE_URL}/api/groups/${id}`, {
           headers: { Authorization: token ? `Bearer ${token}` : '' }
         })
         .then(res => {
@@ -67,9 +68,9 @@ const GroupForm: React.FC = () => {
     try {
       let response;
       if (isEdit && id) {
-        response = await axios.put(`http://localhost:8000/api/groups/${id}`, payload, config);
+        response = await axios.put(`${API_BASE_URL}/api/groups/${id}`, payload, config);
       } else {
-        response = await axios.post('http://localhost:8000/api/groups', payload, config);
+        response = await axios.post(`${API_BASE_URL}/api/groups`, payload, config);
       }
       const groupId = (response.data as Group).id;
       navigate('/dashboard');

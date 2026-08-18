@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from '../config';
 import {
   Box,
   Button,
@@ -77,7 +78,7 @@ const ExpenseManager: React.FC = () => {
     const token = localStorage.getItem('accessToken');
     console.error('Load expenses for groupId: ${groupId}');
     axios
-      .get<Expense[]>(`http://localhost:8000/api/groups/${groupId}/expenses`, {
+      .get<Expense[]>(`${API_BASE_URL}/api/groups/${groupId}/expenses`, {
         headers: { Authorization: token ? `Bearer ${token}` : '' },
         params: {
           year,
@@ -135,7 +136,7 @@ const ExpenseManager: React.FC = () => {
     };
 
     axios
-      .post(`http://localhost:8000/api/groups/${groupId}/expenses`, payload, {
+      .post(`${API_BASE_URL}/api/groups/${groupId}/expenses`, payload, {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
       .then(() => {

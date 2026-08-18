@@ -15,6 +15,7 @@ import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ReceiptIcon from '@mui/icons-material/Receipt';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '../config';
 
 type Group = {
   id: number;
@@ -30,7 +31,7 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
-    axios.get('http://localhost:8000/api/groups', {
+    axios.get(`${API_BASE_URL}/api/groups`, {
       headers: { Authorization: token ? `Bearer ${token}` : '' }
     })
       .then(res => setGroups(res.data))
