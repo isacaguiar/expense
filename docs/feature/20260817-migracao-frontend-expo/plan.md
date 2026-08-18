@@ -37,18 +37,19 @@ Mesmo conjunto de `frontend/src/pages` (ver `01-specify.md` §3.7 e `specify.md`
 
 ## 2. Débitos técnicos do `specify.md` §2 — o que vira task agora vs. backlog
 
-Critério: um débito vira task **agora** (bloqueante) quando o trabalho de portar autenticação para RN (TASK-003/004) não tem como ser feito de forma limpa sem resolvê-lo primeiro — senão o mesmo problema (duplicação, leitura síncrona) só seria replicado em mais um lugar (o app). Os demais entram em `00-futuras-implementacoes.md`.
+Critério: um débito vira task **agora** (bloqueante) quando o trabalho de portar autenticação para RN (TASK-003/004) não tem como ser feito de forma limpa sem resolvê-lo primeiro — senão o mesmo problema (duplicação, leitura síncrona) só seria replicado em mais um lugar (o app). Os demais entram em `docs/backlog/` (diretório de ideias/débitos não agendados, compartilhado entre todas as features — ver `docs/backlog/README.md`).
 
 ### 2.1 Bloqueantes → viram task, executadas antes/junto de TASK-003
 
 - **specify.md §2.1** (client HTTP morto/duplicado) → `tasks.md` TASK-022: consolidar `frontend/src/api.ts` como client único, com interceptor de `Authorization`, substituindo as chamadas axios/fetch diretas nas 6 páginas listadas. Sem isso, TASK-003 (portar o client para `expense/app`) portaria a duplicação em vez de um client único.
 - **specify.md §2.2 + §2.3** (leitura síncrona de token em 8 lugares, sem contexto compartilhado) → `tasks.md` TASK-023: introduzir uma abstração de storage assíncrona (`getToken`/`setToken`/`clearToken`) e um `AuthContext` que a usa, substituindo a leitura direta de `localStorage`. Essa abstração é o ponto de troca real entre web (`localStorage`) e native (`expo-secure-store`) citado no mapeamento §1.1 — sem ela, TASK-004 (login no app) não tem uma base para reaproveitar.
 
-### 2.2 Não-bloqueantes → `00-futuras-implementacoes.md`
+### 2.2 Não-bloqueantes → `docs/backlog/`
 
-- **specify.md §2.4** (infraestrutura de teste ausente): não bloqueia nenhuma tela específica; adicionar depois, quando houver decisão de qual runner usar em cada plataforma.
-- **specify.md §2.5** (tipos duplicados): melhora a manutenção, mas nenhuma tela trava sem isso — pode ser feito de forma incremental durante o port de cada tela.
-- Configuração de URL da API via variável de ambiente (hoje hardcoded): relevante antes do corte de produção (TASK-010), não antes.
+- **specify.md §2.4** (infraestrutura de teste ausente) → `docs/backlog/infra-testes-frontend.md`: não bloqueia nenhuma tela específica; adicionar depois, quando houver decisão de qual runner usar em cada plataforma.
+- **specify.md §2.5** (tipos duplicados) → `docs/backlog/tipos-duplicados-frontend.md`: melhora a manutenção, mas nenhuma tela trava sem isso — pode ser feito de forma incremental durante o port de cada tela.
+- **specify.md §2.3** (sem redirect automático quando não autenticado) → `docs/backlog/auth-guard-redirect-frontend.md`.
+- Configuração de URL da API via variável de ambiente (hoje hardcoded) → `docs/backlog/config-url-api-frontend.md`: relevante antes do corte de produção (TASK-010), não antes.
 
 ## 3. Ordem de execução
 
