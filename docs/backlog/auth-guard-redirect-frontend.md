@@ -2,6 +2,7 @@
 
 Origem: docs/feature/20260817-migracao-frontend-expo/specify.md §2.3
 Criado em: 2026-08-17
+Prioridade: BAIXA
 Status: Aberto
 
 ## Descrição
