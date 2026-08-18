@@ -39,7 +39,6 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 
 | ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
 |---|---|---|---|---|---|---|
-| 002 | [infra-testes-frontend.md](infra-testes-frontend.md) | Infraestrutura de testes no frontend | migracao-frontend-expo | 2026-08-17 | MEDIA | Promovido para TASK-030 |
 | 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
 | 005 | [node-modules-versionado-frontend.md](node-modules-versionado-frontend.md) | node_modules do frontend versionado no repositório | config-url-api-frontend | 2026-08-17 | BAIXA | Aberto |
 | 006 | [expense-manager-groupid-param-mismatch.md](expense-manager-groupid-param-mismatch.md) | ExpenseManager nunca carrega despesas (nome de param de rota errado) | config-url-api-frontend | 2026-08-17 | ALTA | Aberto |
@@ -55,3 +54,4 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 |---|---|---|---|---|---|
 | 001 | [config-url-api-frontend.md](concluidos/config-url-api-frontend.md) | Configuração de URL da API via variável de ambiente | 2026-08-17 | config-url-api-frontend | TASK-027 |
 | 004 | [auth-guard-redirect-frontend.md](concluidos/auth-guard-redirect-frontend.md) | Auth guard / redirect automático | 2026-08-17 | config-url-api-frontend | TASK-028, TASK-029 |
+| 002 | [infra-testes-frontend.md](concluidos/infra-testes-frontend.md) | Infraestrutura de testes no frontend | 2026-08-18 | infra-testes-frontend | TASK-030, TASK-031, TASK-032 |

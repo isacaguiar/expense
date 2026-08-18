@@ -15,3 +15,10 @@ Não existe nenhum teste automatizado no frontend hoje: `package.json` não tem 
 Não bloqueia nenhuma task específica da migração para React Native, mas a ausência de testes aumenta o risco de regressão conforme o mesmo conjunto de telas passa a existir em duas plataformas (web e app) consumindo a mesma API.
 
 Tipo sugerido: frontend/infra
+
+## Resolução
+
+Concluído em: 2026-08-18
+Feature: docs/feature/20260817-infra-testes-frontend/
+Tasks: TASK-030, TASK-031, TASK-032
+PRs: https://github.com/isacaguiar/expense/pull/9 (TASK-030), https://github.com/isacaguiar/expense/pull/8 (TASK-031), https://github.com/isacaguiar/expense/compare/dev...frontend/20260817-infra-testes-frontend-TASK-032 (TASK-032, aberto)
