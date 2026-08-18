@@ -34,6 +34,7 @@ Route::middleware('jwt.auth')->group(function () {
 
     Route::apiResource('expenses', ExpenseController::class);
 
+    Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
     Route::get('/groups/{groupId}/expenses/monthly', [ExpenseController::class, 'getMonthlyExpenses']);
 
     Route::get('/groups/{groupId}/expenses/report/{year}', [GroupExpenseReportController::class, 'reportByGroupAndYear']);
