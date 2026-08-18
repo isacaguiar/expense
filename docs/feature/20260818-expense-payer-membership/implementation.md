@@ -1,14 +1,14 @@
-# Implementation — <Nome da Feature>
+# Implementation — Checagem de membership em despesas (criação e leitura)
 
 > Como as tasks de `tasks.md` viram código. O fluxo (branch, checklist pré-PR, gates) é o de `docs/sdd/04-implementation.md` — só documente aqui um desvio específico desta feature, se houver.
 
-Versão: 1.0 · Criado em: <AAAAMMDD>
+Versão: 1.0 · Criado em: 20260818
 
 ---
 
 ## 1. Desvios do fluxo padrão (se houver)
 
-<Deixe vazio/apague esta seção se a feature segue `04-implementation.md` sem exceção.>
+Feature segue `04-implementation.md`/`ADR-003` sem exceção (branch única da feature, tasks seguintes mergeadas nela localmente sem PR, PR único no final contra `dev`).
 
 ## 2. Log de implementação
 
@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-039 | Implementada, integrada na branch da feature | 2026-08-18 | IA (Claude Code) | `./vendor/bin/pint app/Http/Controllers/ExpenseController.php tests/Feature/ExpenseControllerGetMonthlyExpensesTest.php` — FIXED, 2 files, limpo depois. `php artisan test --filter=ExpenseControllerGetMonthlyExpensesTest` — 2/2 verde. `php artisan test` (suíte completa) — 23/23 verde. | Branch `backend/20260818-expense-payer-membership` (primeira task, direto na branch da feature, sem sub-branch). |
