@@ -8,7 +8,7 @@ on:
 
 jobs:
   laravel-deploy:
-    name: Build Laravel app (backend-php)
+    name: Build Laravel app (backend)
     runs-on: ubuntu-latest
     environment: PROD
 
@@ -24,11 +24,11 @@ jobs:
           coverage: none
 
       - name: 📦 Instalar dependências
-        working-directory: backend-php
+        working-directory: backend
         run: composer install --no-dev --optimize-autoloader
 
       - name: 🔐 Gerar arquivo .env
-        working-directory: backend-php
+        working-directory: backend
         run: |
           echo "APP_NAME=SCD" > .env
           echo "APP_ENV=production" >> .env
@@ -56,11 +56,11 @@ jobs:
           echo "PIX_KEY=${{ secrets.ENV_PIX_KEY }}" >> .env
 
       - name: 🔑 Gerar chave do aplicativo
-        working-directory: backend-php
+        working-directory: backend
         run: php artisan key:generate
 
       - name: 🧠 Gerar caches Laravel
-        working-directory: backend-php
+        working-directory: backend
         run: |
           php artisan config:cache
           php artisan route:cache
@@ -75,7 +75,7 @@ jobs:
                     --exclude='node_modules' \
                     --exclude='*.yml' \
                     --exclude='.env.example' \
-                    backend-php/ build-laravel/
+                    backend/ build-laravel/
 
       - name: 🚀 Deploy via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
@@ -83,6 +83,6 @@ jobs:
           server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
-          server-dir: /expense/backend-php/
+          server-dir: /expense/backend/
           local-dir: build-laravel/
 
