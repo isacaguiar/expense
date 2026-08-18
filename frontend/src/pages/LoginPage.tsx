@@ -19,14 +19,35 @@ export default function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    try {
-      const response = await axios.post('http://localhost:8080/auth/login', { email, password });
+    /*try {
+      const response = await axios.post('http://localhost:8000/auth/login', { email, password });
       localStorage.setItem('accessToken', response.data.accessToken);
       localStorage.setItem('refreshToken', response.data.refreshToken);
       navigate('/dashboard');
     } catch (error) {
       console.error('Erro ao realizar login:', error);
       alert('Erro ao realizar login. Verifique suas credenciais.');
+    }*/
+    try {
+      const res = await fetch('http://localhost:8000/api/login', {
+        method: 'POST',
+        credentials: 'include',    // para mandar cookies/token de sessão
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      if (!res.ok) throw new Error(`Erro ${res.status}`);
+
+      const data = await res.json();
+      localStorage.setItem('accessToken', data.access_token);
+      localStorage.setItem('refreshToken', data.refresh_token);
+      
+      console.log('Após setItem, storage:', localStorage.getItem('accessToken'));
+      
+      console.log('Logado!', data);
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Falha no login:', err);
     }
   };
 
