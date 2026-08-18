@@ -60,6 +60,9 @@ class ExpenseController extends Controller
             'quotas.*.value_quota'   => 'required|numeric|min:0',
         ]);
 
+        $group = Group::findOrFail($request->group_id);
+        $this->authorizeGroupMembership($group);
+
         DB::beginTransaction();
 
         try {
@@ -71,7 +74,7 @@ class ExpenseController extends Controller
                 'installments'     => $request->installments,
                 'total_value'      => $request->total_value,
                 'group_id'         => $request->group_id,
-                'user_creator_id'  => $request->user_creator_id,
+                'user_creator_id'  => auth()->id(),
                 'user_payer_id'    => $request->user_payer_id,
                 'deleted'          => false,
             ]);
