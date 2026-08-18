@@ -38,7 +38,7 @@ Só depois do `plan.md` aprovado. Preencha `tasks.md`:
 
 Apresente e peça aprovação explícita, mesma regra dos passos anteriores.
 
-Depois de aprovado: atualize a linha do item em `docs/backlog/README.md` — `Status` vira `Promovido para TASK-0xx` (primeira task criada a partir dele) — e o mesmo campo no arquivo individual do item. Não apague o arquivo do backlog; ele fica como histórico de origem.
+Depois de aprovado: atualize a linha do item em `docs/backlog/README.md` — `Status` vira `Promovido para TASK-0xx` (primeira task criada a partir dele) — e o mesmo campo no arquivo individual do item. Nesta etapa o arquivo ainda **permanece** em `docs/backlog/` (as tasks ainda não foram executadas) — ele só é movido na etapa 6, quando a execução terminar.
 
 ## 5. Execução de cada task
 
@@ -53,4 +53,17 @@ Só depois do `tasks.md` aprovado. Para cada task, na ordem do arquivo:
 
 ## 6. Fechamento
 
-Finalize com um resumo curto: pasta da feature, o que foi aprovado em cada etapa, quais tasks foram executadas/têm PR aberto, quais ainda faltam, e quaisquer gates humanos pendentes (merge, deploy).
+Quando **todas** as tasks de `tasks.md` já tiverem PR aberto (não é preciso esperar merge/deploy — esses são gates humanos separados e podem demorar):
+
+1. Para cada item de backlog que originou esta feature (um ou mais, se agrupados no passo 0.3), acrescente ao final do arquivo em `docs/backlog/<arquivo>.md` uma seção:
+   ```
+   ## Resolução
+   Concluído em: <AAAA-MM-DD>
+   Feature: docs/feature/<AAAAMMDD>-<slug>/
+   Tasks: TASK-0xx, TASK-0yy
+   PRs: <link(s)>
+   ```
+2. Mova o arquivo de `docs/backlog/<arquivo>.md` para `docs/backlog/concluidos/<arquivo>.md` (mesmo nome, só muda de pasta — histórico do "porquê" preservado no próprio arquivo).
+3. Em `docs/backlog/README.md`: remova a linha do item da tabela "Índice" (itens abertos) e adicione uma linha equivalente na tabela "Concluídos" (criar essa segunda tabela se ainda não existir), apontando para `concluidos/<arquivo>.md`.
+
+Finalize com um resumo curto: pasta da feature, o que foi aprovado em cada etapa, quais tasks foram executadas/têm PR aberto, quais ainda faltam, itens de backlog movidos para `concluidos/`, e quaisquer gates humanos pendentes (merge, deploy).

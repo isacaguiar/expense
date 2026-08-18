@@ -1,6 +1,6 @@
 # Backlog — Ideias e débitos técnicos não agendados
 
-> Achados e ideias de implementação encontrados durante o trabalho em uma feature, que não bloqueiam nenhuma task dela, mas não devem ser esquecidos. Um item aqui só ganha um `TASK-0xx` quando alguém decidir de fato executá-lo — nesse momento, use `/promover-backlog <ID>` (ver `.claude/commands/promover-backlog.md`) para conduzir o processo completo (Specify → Tech Plan → Tasks → execução, com aprovação humana entre cada etapa) e marque o status abaixo como "Promovido".
+> Achados e ideias de implementação encontrados durante o trabalho em uma feature, que não bloqueiam nenhuma task dela, mas não devem ser esquecidos. Um item aqui só ganha um `TASK-0xx` quando alguém decidir de fato executá-lo — nesse momento, use `/promover-backlog <ID>` (ver `.claude/commands/promover-backlog.md`) para conduzir o processo completo (Specify → Tech Plan → Tasks → execução, com aprovação humana entre cada etapa) e marque o status abaixo como "Promovido". Quando a execução terminar (todas as tasks com PR aberto), o item sai da tabela "Índice" abaixo e vai para `concluidos/`, com um resumo do porquê — ver "Itens concluídos" mais abaixo.
 
 ## Quando adicionar um item aqui
 
@@ -39,7 +39,15 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 
 | ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
 |---|---|---|---|---|---|---|
-| 001 | [config-url-api-frontend.md](config-url-api-frontend.md) | Configuração de URL da API via variável de ambiente | migracao-frontend-expo | 2026-08-17 | MEDIA | Aberto |
+| 001 | [config-url-api-frontend.md](config-url-api-frontend.md) | Configuração de URL da API via variável de ambiente | migracao-frontend-expo | 2026-08-17 | MEDIA | Promovido para TASK-027 |
 | 002 | [infra-testes-frontend.md](infra-testes-frontend.md) | Infraestrutura de testes no frontend | migracao-frontend-expo | 2026-08-17 | MEDIA | Aberto |
 | 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
-| 004 | [auth-guard-redirect-frontend.md](auth-guard-redirect-frontend.md) | Auth guard / redirect automático | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
+| 004 | [auth-guard-redirect-frontend.md](auth-guard-redirect-frontend.md) | Auth guard / redirect automático | migracao-frontend-expo | 2026-08-17 | BAIXA | Promovido para TASK-028 |
+
+## Itens concluídos
+
+Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks executadas (PR aberto) saem da tabela acima e vêm para cá. O arquivo original é movido para `concluidos/<arquivo>.md` e ganha uma seção `## Resolução` com data, feature, tasks e PR(s) — histórico de por que a ideia existiu, preservado mesmo depois de implementada.
+
+| ID | Arquivo | Título | Resolvido em | Feature | Tasks |
+|---|---|---|---|---|---|
+| — | — | (nenhum item concluído ainda) | — | — | — |
