@@ -35,7 +35,7 @@ type Expense = {
 };
 
 const ExpenseManager: React.FC = () => {
-  const { groupId } = useParams<{ groupId: string }>();
+  const { id: groupId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
