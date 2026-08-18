@@ -45,9 +45,11 @@ const GroupList: React.FC = () => {
       .then(res => setGroups(res.data))
       .catch(err => {
         console.error('Erro ao carregar grupos:', err);
-        setError(err.response?.status === 401
-          ? 'Usuário não autenticado. Faça login novamente.'
-          : 'Falha ao carregar grupos.');
+        if (err.response?.status === 401) {
+          navigate('/', { replace: true });
+          return;
+        }
+        setError('Falha ao carregar grupos.');
       })
       .finally(() => setLoading(false));
   }, []);

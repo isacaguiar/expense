@@ -20,7 +20,7 @@ import {
   TextField,
   IconButton
 } from '@mui/material';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AddIcon from '@mui/icons-material/Add';
@@ -36,6 +36,7 @@ type Expense = {
 
 const ExpenseManager: React.FC = () => {
   const { groupId } = useParams<{ groupId: string }>();
+  const navigate = useNavigate();
 
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -88,11 +89,11 @@ const ExpenseManager: React.FC = () => {
       .then(res => setExpenses(res.data))
       .catch(err => {
         console.error('Erro ao carregar despesas:', err);
-        setError(
-          err.response?.status === 401
-            ? 'Usuário não autenticado. Faça login novamente.'
-            : 'Falha ao carregar despesas.'
-        );
+        if (err.response?.status === 401) {
+          navigate('/', { replace: true });
+          return;
+        }
+        setError('Falha ao carregar despesas.');
       })
       .finally(() => setLoading(false));
   };
