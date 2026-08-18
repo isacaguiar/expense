@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Models\Group;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
 {
@@ -41,25 +42,28 @@ class ExpenseController extends Controller
     public function store(Request $request)
     {
         $request->validate([
+            'group_id' => 'required|exists:ex_groups,id',
+        ]);
+
+        $group = Group::findOrFail($request->group_id);
+        $this->authorizeGroupMembership($group);
+
+        $request->validate([
             'date_payment' => 'required|date',
             'description' => 'required|string|max:255',
             'expense_type' => 'required|in:IN_CASH,IN_INSTALLMENTS',
             'installments' => 'required|integer|min:1',
             'total_value' => 'required|numeric|min:0',
-            'group_id' => 'required|exists:ex_groups,id',
             'user_creator_id' => 'required|exists:ex_users,id',
-            'user_payer_id' => 'required|exists:ex_users,id',
+            'user_payer_id' => ['required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $request->group_id)],
             'payers' => 'required|array|min:1',
-            'payers.*' => 'exists:ex_users,id',
+            'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $request->group_id),
             'quotas' => 'required|array|min:1',
             'quotas.*.date_expected' => 'required|date',
             'quotas.*.number' => 'required|integer',
             'quotas.*.paid' => 'required|boolean',
             'quotas.*.value_quota' => 'required|numeric|min:0',
         ]);
-
-        $group = Group::findOrFail($request->group_id);
-        $this->authorizeGroupMembership($group);
 
         DB::beginTransaction();
 
