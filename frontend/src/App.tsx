@@ -9,6 +9,7 @@ import GroupList from './pages/GroupList';
 import ExpenseManager from './pages/ExpenseManager';
 import ExpensesEntry from './pages/ExpensesEntry';
 import GroupSummary from './pages/GroupSummary';
+import SummaryEntry from './pages/SummaryEntry';
 import RequireAuth from './components/RequireAuth';
 
 const App = () => {
@@ -31,6 +32,7 @@ const App = () => {
           <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
           <Route path="/expenses" element={<ExpensesEntry />} />
           <Route path="/groups/:id/summary" element={<GroupSummary />} />
+          <Route path="/summary" element={<SummaryEntry />} />
         </Route>
       </Route>
 
