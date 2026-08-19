@@ -20,6 +20,7 @@ const Navbar = () => {
           <Button color="inherit" component={RouterLink} to="/dashboard">Dashboard</Button>
           <Button color="inherit" component={RouterLink} to="/groups">Grupos</Button>
           <Button color="inherit" component={RouterLink} to="/expenses">Despesas</Button>
+          <Button color="inherit" component={RouterLink} to="/summary">Resumo</Button>
           <Button color="inherit" onClick={handleLogout}>Sair</Button>
         </Box>
       </Toolbar>
