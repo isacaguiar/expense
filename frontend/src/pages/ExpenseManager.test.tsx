@@ -152,6 +152,46 @@ describe('ExpenseManager - Nova Despesa', () => {
     expect(payload.payers).toEqual([1]);
   });
 
+  it('defaults all participants checked even when members resolve after the modal is already open (regression)', async () => {
+    let resolveMembers: (value: { data: typeof members }) => void = () => {};
+    const membersPromise = new Promise<{ data: typeof members }>(resolve => {
+      resolveMembers = resolve;
+    });
+
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/members')) {
+        return membersPromise;
+      }
+      if (url.includes('/me')) {
+        return Promise.resolve({ data: { id: 1 } });
+      }
+      if (url.includes('/expenses')) {
+        return Promise.resolve({ data: [] });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(screen.getByRole('button', { name: /nova despesa/i }));
+    await screen.findByText('Cadastrar nova despesa');
+
+    resolveMembers({ data: members });
+    await screen.findByRole('checkbox', { name: 'João' });
+
+    await userEvent.type(screen.getByLabelText('Descrição'), 'Cinema');
+    await userEvent.type(screen.getByLabelText('Valor'), '50,00');
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    const [, payload] = lastPostCall<ExpensePayload>();
+    expect(payload.payers).toEqual([1, 2]);
+  });
+
   it('blocks saving when no participant is selected', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     await openNewExpenseModal();

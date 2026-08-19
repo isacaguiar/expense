@@ -189,6 +189,15 @@ const ExpenseManager: React.FC = () => {
     setOpenModal(true);
   };
 
+  // Se o modal já estiver aberto quando `members` chegar (ex.: usuário clicou "Nova
+  // Despesa" antes do GET /members responder), garante o default de todos marcados.
+  useEffect(() => {
+    if (openModal) {
+      setParticipantIds(members.map(member => member.id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [members]);
+
   const handleCloseModal = () => {
     setOpenModal(false);
   };

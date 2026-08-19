@@ -210,4 +210,46 @@ class ExpenseControllerStoreTest extends TestCase
         $response->assertStatus(422);
         $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id, 'expense_type' => 'FIXED']);
     }
+
+    public function test_installments_expense_rejects_quotas_count_different_from_installments(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 3,
+                'total_value' => 300,
+                'quotas' => [
+                    ['date_expected' => '2026-08-15', 'number' => 1, 'paid' => false, 'value_quota' => 150],
+                    ['date_expected' => '2026-09-15', 'number' => 2, 'paid' => false, 'value_quota' => 150],
+                ],
+            ]));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id, 'expense_type' => 'IN_INSTALLMENTS']);
+    }
+
+    public function test_installments_expense_rejects_quotas_sum_different_from_total_value(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 2,
+                'total_value' => 300,
+                'quotas' => [
+                    ['date_expected' => '2026-08-15', 'number' => 1, 'paid' => false, 'value_quota' => 100],
+                    ['date_expected' => '2026-09-15', 'number' => 2, 'paid' => false, 'value_quota' => 100],
+                ],
+            ]));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id, 'expense_type' => 'IN_INSTALLMENTS']);
+    }
 }
