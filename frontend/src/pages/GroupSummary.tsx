@@ -22,6 +22,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import GroupSummarySidebar from './summary/GroupSummarySidebar';
 
 type SummaryCycle = { start: string; end: string };
 type SummaryTotals = { total: number; paid: number; pending: number };
@@ -120,7 +121,9 @@ const GroupSummary: React.FC = () => {
   };
 
   return (
-    <Container sx={{ mt: 4, mb: 4 }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <GroupSummarySidebar groupId={groupId ?? ''} />
+      <Container component="main" sx={{ flex: 1, mt: 4, mb: 4 }}>
       <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={2}>
         <Typography variant="h4">Resumo do Grupo</Typography>
         {groups.length > 0 && groupId && (
@@ -257,7 +260,8 @@ const GroupSummary: React.FC = () => {
           </Paper>
         </>
       ) : null}
-    </Container>
+      </Container>
+    </Box>
   );
 };
 
