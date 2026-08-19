@@ -15,14 +15,13 @@ import {
   ListItem,
   ListItemText,
   Chip,
-  Select,
-  MenuItem,
   SelectChangeEvent
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import GroupSummarySidebar from './summary/GroupSummarySidebar';
+import GroupSummaryHeader from './summary/GroupSummaryHeader';
 
 type SummaryCycle = { start: string; end: string };
 type SummaryTotals = { total: number; paid: number; pending: number };
@@ -76,6 +75,7 @@ const GroupSummary: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [cyclesAgo, setCyclesAgo] = useState<number>(0);
   const [groups, setGroups] = useState<GroupOption[]>([]);
+  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!groupId) return;
@@ -116,6 +116,16 @@ const GroupSummary: React.FC = () => {
       .catch(err => console.error('Erro ao carregar grupos:', err));
   }, []);
 
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    axios
+      .get<{ name: string; email: string }>(`${API_BASE_URL}/api/me`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(res => setUserName(res.data.name))
+      .catch(err => console.error('Erro ao carregar usuário logado:', err));
+  }, []);
+
   const handleGroupChange = (event: SelectChangeEvent<number>) => {
     navigate(`/groups/${event.target.value}/summary`);
   };
@@ -124,23 +134,12 @@ const GroupSummary: React.FC = () => {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <GroupSummarySidebar groupId={groupId ?? ''} />
       <Container component="main" sx={{ flex: 1, mt: 4, mb: 4 }}>
-      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={2}>
-        <Typography variant="h4">Resumo do Grupo</Typography>
-        {groups.length > 0 && groupId && (
-          <Select
-            value={Number(groupId)}
-            onChange={handleGroupChange}
-            size="small"
-            sx={{ minWidth: 200 }}
-          >
-            {groups.map(group => (
-              <MenuItem key={group.id} value={group.id}>
-                {group.name}
-              </MenuItem>
-            ))}
-          </Select>
-        )}
-      </Box>
+      <GroupSummaryHeader
+        groups={groups}
+        groupId={groupId ?? ''}
+        onGroupChange={handleGroupChange}
+        userName={userName}
+      />
 
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
