@@ -19,12 +19,19 @@ import {
   DialogActions,
   TextField,
   IconButton,
-  MenuItem
+  MenuItem,
+  FormGroup,
+  FormControlLabel,
+  Checkbox,
+  FormLabel
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+
+type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
 
 // Tipo de despesa (ajuste conforme sua API)
 type Expense = {
@@ -33,11 +40,44 @@ type Expense = {
   value: number;
   date: string;        // ISO string
   payerName?: string;  // opcional, se vier do backend
+  isFixed?: boolean;
 };
 
 type GroupMember = {
   id: number;
   name: string;
+};
+
+const pad = (n: number): string => String(n).padStart(2, '0');
+
+// Soma `months` meses a uma data 'YYYY-MM-DD', preservando o dia (com clamp pro fim do mês).
+const addMonthsClamped = (dateStr: string, months: number): string => {
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const totalMonths = (y * 12) + (m - 1) + months;
+  const targetYear = Math.floor(totalMonths / 12);
+  const targetMonthIndex = ((totalMonths % 12) + 12) % 12;
+  const lastDayOfTargetMonth = new Date(targetYear, targetMonthIndex + 1, 0).getDate();
+  const day = Math.min(d, lastDayOfTargetMonth);
+  return `${targetYear}-${pad(targetMonthIndex + 1)}-${pad(day)}`;
+};
+
+type Quota = { number: number; date_expected: string; paid: boolean; value_quota: number };
+
+// Divide o valor total em N parcelas mensais iguais, arredondamento absorvido na última.
+const buildInstallmentQuotas = (totalValue: number, installmentsCount: number, startDate: string): Quota[] => {
+  const totalCents = Math.round(totalValue * 100);
+  const baseCents = Math.floor(totalCents / installmentsCount);
+  const remainderCents = totalCents - (baseCents * installmentsCount);
+
+  return Array.from({ length: installmentsCount }, (_, i) => {
+    const cents = baseCents + (i === installmentsCount - 1 ? remainderCents : 0);
+    return {
+      number: i + 1,
+      date_expected: addMonthsClamped(startDate, i),
+      paid: false,
+      value_quota: cents / 100
+    };
+  });
 };
 
 const ExpenseManager: React.FC = () => {
@@ -59,6 +99,12 @@ const ExpenseManager: React.FC = () => {
     return today.toISOString().slice(0, 10); // yyyy-MM-dd
   });
   const [newPayerId, setNewPayerId] = useState<string>('');
+  const [newExpenseType, setNewExpenseType] = useState<ExpenseType>('IN_CASH');
+  const [newInstallmentsCount, setNewInstallmentsCount] = useState<string>('');
+  const [participantIds, setParticipantIds] = useState<number[]>([]);
+
+  // Diálogo de remoção de despesa Fixa
+  const [removeExpenseId, setRemoveExpenseId] = useState<number | null>(null);
 
   // Membros do grupo (seletor de pagador) e usuário autenticado
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -137,11 +183,20 @@ const ExpenseManager: React.FC = () => {
     const today = new Date();
     setNewDate(today.toISOString().slice(0, 10));
     setNewPayerId(currentUserId ? String(currentUserId) : '');
+    setNewExpenseType('IN_CASH');
+    setNewInstallmentsCount('');
+    setParticipantIds(members.map(member => member.id));
     setOpenModal(true);
   };
 
   const handleCloseModal = () => {
     setOpenModal(false);
+  };
+
+  const toggleParticipant = (memberId: number) => {
+    setParticipantIds(prev =>
+      prev.includes(memberId) ? prev.filter(id => id !== memberId) : [...prev, memberId]
+    );
   };
 
   const handleSaveExpense = () => {
@@ -156,25 +211,42 @@ const ExpenseManager: React.FC = () => {
       return;
     }
 
+    if (participantIds.length === 0) {
+      alert('Selecione ao menos um participante da divisão.');
+      return;
+    }
+
+    let installments = 1;
+    let quotas: Quota[];
+
+    if (newExpenseType === 'IN_INSTALLMENTS') {
+      const installmentsCount = parseInt(newInstallmentsCount, 10);
+      if (!Number.isInteger(installmentsCount) || installmentsCount < 2) {
+        alert('Informe uma quantidade de parcelas válida (mínimo 2 — para 1 parcela use À Vista).');
+        return;
+      }
+      installments = installmentsCount;
+      quotas = buildInstallmentQuotas(valueNumber, installmentsCount, newDate);
+    } else if (newExpenseType === 'FIXED') {
+      quotas = [{ number: 1, date_expected: newDate, paid: false, value_quota: valueNumber }];
+    } else {
+      quotas = [{ number: 1, date_expected: newDate, paid: true, value_quota: valueNumber }];
+    }
+
     const token = localStorage.getItem('accessToken');
     const payerId = Number(newPayerId);
 
     const payload = {
       date_payment: newDate,
       description: newDescription,
-      expense_type: 'IN_CASH',
-      installments: 1,
+      expense_type: newExpenseType,
+      installments,
       total_value: valueNumber,
       group_id: Number(groupId),
       user_creator_id: currentUserId,
       user_payer_id: payerId,
-      payers: [payerId],
-      quotas: [{
-        date_expected: newDate,
-        number: 1,
-        paid: true,
-        value_quota: valueNumber
-      }]
+      payers: participantIds,
+      quotas
     };
 
     axios
@@ -190,6 +262,42 @@ const ExpenseManager: React.FC = () => {
         alert('Falha ao salvar despesa.');
       });
   };
+
+  const stopFixedRecurrence = (cutoffYear: number, cutoffMonth: number) => {
+    if (removeExpenseId === null) return;
+
+    const token = localStorage.getItem('accessToken');
+
+    axios
+      .post(
+        `${API_BASE_URL}/api/expenses/${removeExpenseId}/stop-recurrence`,
+        { year: cutoffYear, month: cutoffMonth },
+        { headers: { Authorization: token ? `Bearer ${token}` : '' } }
+      )
+      .then(() => {
+        setRemoveExpenseId(null);
+        loadExpenses();
+      })
+      .catch(err => {
+        console.error('Erro ao remover recorrência da despesa fixa:', err);
+        alert('Falha ao remover despesa fixa.');
+      });
+  };
+
+  const handleRemoveFromThisMonth = () => stopFixedRecurrence(year, month);
+
+  const handleRemoveFromNextMonth = () => {
+    const next = new Date(currentDate);
+    next.setMonth(next.getMonth() + 1);
+    stopFixedRecurrence(next.getFullYear(), next.getMonth() + 1);
+  };
+
+  const dateFieldLabel =
+    newExpenseType === 'IN_INSTALLMENTS'
+      ? 'Mês de início das parcelas'
+      : newExpenseType === 'FIXED'
+      ? 'Data de início'
+      : 'Data';
 
   return (
     <Container sx={{ mt: 4, mb: 4 }}>
@@ -256,6 +364,7 @@ const ExpenseManager: React.FC = () => {
                 <TableCell>Descrição</TableCell>
                 <TableCell align="right">Valor (R$)</TableCell>
                 <TableCell>Pagador</TableCell>
+                <TableCell align="right">Ações</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -272,6 +381,17 @@ const ExpenseManager: React.FC = () => {
                     })}
                   </TableCell>
                   <TableCell>{exp.payerName || '-'}</TableCell>
+                  <TableCell align="right">
+                    {exp.isFixed && (
+                      <IconButton
+                        aria-label="Remover despesa fixa"
+                        size="small"
+                        onClick={() => setRemoveExpenseId(exp.id)}
+                      >
+                        <DeleteOutlineIcon fontSize="small" />
+                      </IconButton>
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -300,13 +420,36 @@ const ExpenseManager: React.FC = () => {
             />
 
             <TextField
-              label="Data"
+              label="Tipo de despesa"
+              select
+              fullWidth
+              value={newExpenseType}
+              onChange={e => setNewExpenseType(e.target.value as ExpenseType)}
+            >
+              <MenuItem value="IN_CASH">À Vista</MenuItem>
+              <MenuItem value="IN_INSTALLMENTS">Parcelada</MenuItem>
+              <MenuItem value="FIXED">Fixa</MenuItem>
+            </TextField>
+
+            <TextField
+              label={dateFieldLabel}
               type="date"
               fullWidth
               value={newDate}
               onChange={e => setNewDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
+
+            {newExpenseType === 'IN_INSTALLMENTS' && (
+              <TextField
+                label="Quantidade de parcelas"
+                type="number"
+                fullWidth
+                value={newInstallmentsCount}
+                onChange={e => setNewInstallmentsCount(e.target.value)}
+                inputProps={{ min: 2 }}
+              />
+            )}
 
             <TextField
               label="Pagador"
@@ -321,12 +464,47 @@ const ExpenseManager: React.FC = () => {
                 </MenuItem>
               ))}
             </TextField>
+
+            <Box>
+              <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
+              <FormGroup>
+                {members.map(member => (
+                  <FormControlLabel
+                    key={member.id}
+                    control={
+                      <Checkbox
+                        checked={participantIds.includes(member.id)}
+                        onChange={() => toggleParticipant(member.id)}
+                      />
+                    }
+                    label={member.name}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleCloseModal}>Cancelar</Button>
           <Button variant="contained" onClick={handleSaveExpense}>
             Salvar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Diálogo de remoção de despesa Fixa */}
+      <Dialog open={removeExpenseId !== null} onClose={() => setRemoveExpenseId(null)}>
+        <DialogTitle>Remover despesa fixa</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            A partir de quando esta despesa deve deixar de aparecer?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRemoveExpenseId(null)}>Cancelar</Button>
+          <Button onClick={handleRemoveFromThisMonth}>A partir deste mês</Button>
+          <Button variant="contained" onClick={handleRemoveFromNextMonth}>
+            A partir do mês que vem
           </Button>
         </DialogActions>
       </Dialog>
