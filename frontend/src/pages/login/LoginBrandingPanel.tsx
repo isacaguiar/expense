@@ -6,7 +6,7 @@ import PieChartOutlineOutlinedIcon from '@mui/icons-material/PieChartOutlineOutl
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import logoIcon from '../../assets/images/logo-expense.png';
 import loginHero from '../../assets/illustrations/login-hero.png';
-import { loginColors } from './colors';
+import { brandColors } from '../../theme/brandColors';
 
 const differentials = [
   {
@@ -38,7 +38,7 @@ export default function LoginBrandingPanel() {
         flexDirection: 'column',
         justifyContent: 'flex-start',
         pt: 6,
-        background: `linear-gradient(180deg, ${loginColors.primaryLight} 0%, #FFFFFF 100%)`,
+        background: `linear-gradient(180deg, ${brandColors.primaryLight} 0%, #FFFFFF 100%)`,
       }}
     >
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, px: 5 }}>
@@ -51,20 +51,20 @@ export default function LoginBrandingPanel() {
             fontSize: '1.875rem',
           }}
         >
-          <Box component="span" sx={{ color: loginColors.textDark }}>
+          <Box component="span" sx={{ color: brandColors.textDark }}>
             Shared
           </Box>{' '}
-          <Box component="span" sx={{ color: loginColors.primary }}>
+          <Box component="span" sx={{ color: brandColors.primary }}>
             Expense
           </Box>
         </Typography>
       </Box>
 
       <Box>
-        <Typography sx={{ fontSize: '1.375rem', fontWeight: 'bold', lineHeight: 1.3, color: loginColors.textDark }}>
+        <Typography sx={{ fontSize: '1.375rem', fontWeight: 'bold', lineHeight: 1.3, color: brandColors.textDark }}>
           Despesas compartilhadas,
         </Typography>
-        <Typography sx={{ fontSize: '1.375rem', fontWeight: 'bold', lineHeight: 1.3, color: loginColors.primary }}>
+        <Typography sx={{ fontSize: '1.375rem', fontWeight: 'bold', lineHeight: 1.3, color: brandColors.primary }}>
           contas em dia.
         </Typography>
       </Box>
@@ -90,10 +90,10 @@ export default function LoginBrandingPanel() {
                 flexShrink: 0,
               }}
             >
-              <Icon sx={{ color: loginColors.primary, fontSize: '1.25rem' }} />
+              <Icon sx={{ color: brandColors.primary, fontSize: '1.25rem' }} />
             </Box>
             <Box>
-              <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold', color: loginColors.textDark }}>
+              <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold', color: brandColors.textDark }}>
                 {title}
               </Typography>
               <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
