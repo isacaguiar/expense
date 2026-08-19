@@ -13,6 +13,9 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
+import Divider from '@mui/material/Divider';
+import googleLogo from '../../assets/illustrations/google-logo.svg';
+import microsoftLogo from '../../assets/illustrations/microsoft-logo.svg';
 
 interface LoginFormCardProps {
   email: string;
@@ -126,7 +129,39 @@ export default function LoginFormCard({
         <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 2, mb: 1 }}>
           Entrar
         </Button>
+
+        <Divider sx={{ my: 2 }}>
+          <Typography variant="caption" color="text.secondary">
+            ou continue com
+          </Typography>
+        </Divider>
+
+        <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button
+            href="#"
+            variant="outlined"
+            fullWidth
+            startIcon={<img src={googleLogo} alt="" width={18} height={18} />}
+          >
+            Google
+          </Button>
+          <Button
+            href="#"
+            variant="outlined"
+            fullWidth
+            startIcon={<img src={microsoftLogo} alt="" width={18} height={18} />}
+          >
+            Microsoft
+          </Button>
+        </Box>
       </Box>
+
+      <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+        Ainda não tem uma conta?{' '}
+        <Link href="#" underline="hover">
+          Cadastre-se
+        </Link>
+      </Typography>
     </Box>
   );
 }
