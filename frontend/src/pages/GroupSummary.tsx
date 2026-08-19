@@ -201,6 +201,23 @@ const GroupSummary: React.FC = () => {
               </List>
             </Paper>
           )}
+
+          <Typography variant="h6" gutterBottom>
+            Saldos por pessoa
+          </Typography>
+          <Paper elevation={3}>
+            <List disablePadding>
+              {summary.balances.map(balance => (
+                <ListItem key={balance.user_id} divider>
+                  <ListItemText primary={balance.name} />
+                  <Typography color={balance.balance > 0 ? 'success.main' : balance.balance < 0 ? 'error.main' : 'text.secondary'}>
+                    R$ {formatMoney(Math.abs(balance.balance))}
+                    {balance.balance > 0 ? ' a receber' : balance.balance < 0 ? ' a pagar' : ''}
+                  </Typography>
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
         </>
       ) : null}
     </Container>
