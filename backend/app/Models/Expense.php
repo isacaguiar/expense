@@ -22,6 +22,7 @@ class Expense extends Model
         'user_creator_id',
         'user_payer_id',
         'deleted',
+        'fixed_recurrence_ends_at',
     ];
 
     protected $casts = [
@@ -29,6 +30,7 @@ class Expense extends Model
         'date_payment'   => 'date',
         'total_value'    => 'decimal:2',
         'deleted'        => 'boolean',
+        'fixed_recurrence_ends_at' => 'date',
     ];
 
     /**
