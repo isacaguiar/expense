@@ -6,20 +6,20 @@ Versão: 1.2 · Criado em: 20260818
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-056 | Migration: coluna `closing_day` (nullable) em `ex_groups` + fillable/cast em `Group` | backend | plan.md §1 | nenhum (migration aditiva local) | Pendente |
-| TASK-057 | `GroupController::store`/`update` valida e persiste `closing_day` | backend | plan.md §1 | nenhum | Pendente |
-| TASK-058 | Campo "Dia de fechamento" em `GroupForm.tsx` (criação e edição) | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-059 | Classe `BillingCycle` — cálculo do ciclo fechado (default calendário, `closing_day` custom, clamp de mês curto, navegação `cyclesAgo`) | backend | plan.md §2 | nenhum | Pendente |
-| TASK-060 | Testes unitários de `BillingCycle` | backend | plan.md §2 | nenhum | Pendente |
-| TASK-061 | Endpoint novo `GET /groups/{groupId}/expenses/summary` (totais + despesas do ciclo com status + saldos por pessoa) | backend | plan.md §3 | nenhum | Pendente |
-| TASK-062 | Testes backend do endpoint `summary` (status por tipo de despesa, saldos, navegação `cycles_ago`, membership) | backend | plan.md §3 | nenhum | Pendente |
-| TASK-063 | Rota `/groups/:id/summary` + esqueleto `GroupSummary.tsx`: cabeçalho do ciclo, navegação entre ciclos fechados, cards Total/Pago/A pagar | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-064 | Lista "Despesas do ciclo" em `GroupSummary.tsx` com status (`Chip` Paga/Pendente) | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-065 | Bloco "Saldos por pessoa" em `GroupSummary.tsx` | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-066 | Dropdown de troca de grupo dentro de `GroupSummary.tsx` | frontend | plan.md §5 | nenhum | Pendente |
-| TASK-067 | Rota `/summary` + `SummaryEntry.tsx` + link "Resumo" no `Navbar` | frontend | plan.md §5 | nenhum | Pendente |
-| TASK-068 | Ícone "Resumo" adicional no card de grupo em `Dashboard.tsx` | frontend | plan.md §5 | nenhum | Pendente |
-| TASK-069 | Testes frontend (`GroupSummary`: cards/lista/saldos/navegação de ciclo/dropdown; `SummaryEntry` nos 3 cenários; `GroupForm` com `closing_day`) | frontend | plan.md §1, §4, §5 | nenhum | Pendente |
+| TASK-056 | Migration: coluna `closing_day` (nullable) em `ex_groups` + fillable/cast em `Group` | backend | plan.md §1 | nenhum (migration aditiva local) | Concluída (commit `182b78fa`, direto na branch da feature) |
+| TASK-057 | `GroupController::store`/`update` valida e persiste `closing_day` | backend | plan.md §1 | nenhum | Concluída (merge `08597a3a`) |
+| TASK-058 | Campo "Dia de fechamento" em `GroupForm.tsx` (criação e edição) | frontend | plan.md §1 | nenhum | Concluída (merge `cd737203`) |
+| TASK-059 | Classe `BillingCycle` — cálculo do ciclo fechado (default calendário, `closing_day` custom, clamp de mês curto, navegação `cyclesAgo`) | backend | plan.md §2 | nenhum | Concluída (merge `6b860eb6`) |
+| TASK-060 | Testes unitários de `BillingCycle` | backend | plan.md §2 | nenhum | Concluída (merge `6b860eb6`) |
+| TASK-061 | Endpoint novo `GET /groups/{groupId}/expenses/summary` (totais + despesas do ciclo com status + saldos por pessoa) | backend | plan.md §3 | nenhum | Concluída (merge `18917591`) |
+| TASK-062 | Testes backend do endpoint `summary` (status por tipo de despesa, saldos, navegação `cycles_ago`, membership) | backend | plan.md §3 | nenhum | Concluída (merge `18917591`) |
+| TASK-063 | Rota `/groups/:id/summary` + esqueleto `GroupSummary.tsx`: cabeçalho do ciclo, navegação entre ciclos fechados, cards Total/Pago/A pagar | frontend | plan.md §4 | nenhum | Concluída (merge `d86420b6`) |
+| TASK-064 | Lista "Despesas do ciclo" em `GroupSummary.tsx` com status (`Chip` Paga/Pendente) | frontend | plan.md §4 | nenhum | Concluída (merge `e7265967`) |
+| TASK-065 | Bloco "Saldos por pessoa" em `GroupSummary.tsx` | frontend | plan.md §4 | nenhum | Concluída (merge `6c645fa4`) |
+| TASK-066 | Dropdown de troca de grupo dentro de `GroupSummary.tsx` | frontend | plan.md §5 | nenhum | Concluída (merge `def8005a`) |
+| TASK-067 | Rota `/summary` + `SummaryEntry.tsx` + link "Resumo" no `Navbar` | frontend | plan.md §5 | nenhum | Concluída (merge `6ae770a9`) |
+| TASK-068 | Ícone "Resumo" adicional no card de grupo em `Dashboard.tsx` | frontend | plan.md §5 | nenhum | Concluída (merge `5af19d55`) |
+| TASK-069 | Testes frontend (`GroupSummary`: cards/lista/saldos/navegação de ciclo/dropdown; `SummaryEntry` nos 3 cenários; `GroupForm` com `closing_day`) | frontend | plan.md §1, §4, §5 | nenhum | Concluída (merge `4753c810`) |
 
 ## Critérios de aceite
 
