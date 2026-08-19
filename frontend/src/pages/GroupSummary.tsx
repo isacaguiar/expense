@@ -66,6 +66,9 @@ const formatDate = (dateStr: string): string => {
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const percentOf = (part: number, total: number): number =>
+  total > 0 ? Math.round((part / total) * 100) : 0;
+
 const GroupSummary: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -182,6 +185,9 @@ const GroupSummary: React.FC = () => {
                     Total de despesas
                   </Typography>
                   <Typography variant="h5">R$ {formatMoney(summary.totals.total)}</Typography>
+                  <Typography variant="caption" color="text.secondary" textTransform="capitalize">
+                    {formatDate(summary.cycle.start)} – {formatDate(summary.cycle.end)}
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -194,6 +200,9 @@ const GroupSummary: React.FC = () => {
                   <Typography variant="h5" color="success.main">
                     R$ {formatMoney(summary.totals.paid)}
                   </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {percentOf(summary.totals.paid, summary.totals.total)}% do total
+                  </Typography>
                 </CardContent>
               </Card>
             </Grid>
@@ -205,6 +214,9 @@ const GroupSummary: React.FC = () => {
                   </Typography>
                   <Typography variant="h5" color="warning.main">
                     R$ {formatMoney(summary.totals.pending)}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {percentOf(summary.totals.pending, summary.totals.total)}% do total
                   </Typography>
                 </CardContent>
               </Card>
