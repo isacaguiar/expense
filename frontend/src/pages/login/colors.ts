@@ -1,6 +1,6 @@
 export const loginColors = {
-  primary: '#1FA64A',
-  primaryDark: '#168A3D',
+  primary: '#17A37F',
+  primaryDark: '#128468',
   primaryLight: '#E8F5E9',
   textDark: '#122B4F',
 };

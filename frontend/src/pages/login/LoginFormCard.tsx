@@ -72,7 +72,11 @@ export default function LoginFormCard({
           autoFocus
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
-          sx={{ '& .MuiOutlinedInput-root': { height: 46 } }}
+          sx={{
+            '& .MuiOutlinedInput-root': { height: 46, fontSize: '0.875rem' },
+            '& .MuiOutlinedInput-input': { padding: '10px 12px' },
+            '& .MuiInputLabel-root': { fontSize: '0.875rem' },
+          }}
           slotProps={{
             input: {
               startAdornment: (
@@ -95,7 +99,11 @@ export default function LoginFormCard({
           autoComplete="current-password"
           value={password}
           onChange={(e) => onPasswordChange(e.target.value)}
-          sx={{ '& .MuiOutlinedInput-root': { height: 46 } }}
+          sx={{
+            '& .MuiOutlinedInput-root': { height: 46, fontSize: '0.875rem' },
+            '& .MuiOutlinedInput-input': { padding: '10px 12px' },
+            '& .MuiInputLabel-root': { fontSize: '0.875rem' },
+          }}
           slotProps={{
             input: {
               startAdornment: (
@@ -129,8 +137,9 @@ export default function LoginFormCard({
               />
             }
             label="Lembrar de mim"
+            sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.8rem' } }}
           />
-          <Link href="#" variant="body2" underline="hover" sx={{ color: loginColors.primary }}>
+          <Link href="#" underline="hover" sx={{ color: loginColors.primary, fontSize: '0.8rem' }}>
             Esqueci minha senha
           </Link>
         </Box>
@@ -143,6 +152,7 @@ export default function LoginFormCard({
           sx={{
             mt: 2,
             mb: 1,
+            fontSize: '0.8rem',
             bgcolor: loginColors.primary,
             '&:hover': { bgcolor: loginColors.primaryDark },
           }}
@@ -161,6 +171,7 @@ export default function LoginFormCard({
             href="#"
             variant="outlined"
             fullWidth
+            sx={{ fontSize: '0.8rem' }}
             startIcon={<img src={googleLogo} alt="" width={18} height={18} />}
           >
             Google
@@ -169,6 +180,7 @@ export default function LoginFormCard({
             href="#"
             variant="outlined"
             fullWidth
+            sx={{ fontSize: '0.8rem' }}
             startIcon={<img src={microsoftLogo} alt="" width={18} height={18} />}
           >
             Microsoft
@@ -176,7 +188,7 @@ export default function LoginFormCard({
         </Box>
       </Box>
 
-      <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
+      <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 3 }}>
         Ainda não tem uma conta?{' '}
         <Link href="#" underline="hover" sx={{ color: loginColors.primary }}>
           Cadastre-se

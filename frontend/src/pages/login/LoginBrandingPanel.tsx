@@ -35,21 +35,48 @@ export default function LoginBrandingPanel() {
         flexGrow: 0,
         flexShrink: 0,
         minWidth: 0,
-        flexDirection: 'column',
-        justifyContent: 'center',
-        gap: 2.5,
-        px: 5,
-        py: 4,
+        position: 'relative',
+        overflow: 'hidden',
         background: `linear-gradient(180deg, ${loginColors.primaryLight} 0%, #FFFFFF 100%)`,
       }}
     >
+      <Box
+        aria-hidden
+        sx={{
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: '55%',
+          backgroundImage: `url(${loginHero})`,
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'bottom center',
+          backgroundSize: '100% auto',
+          zIndex: 0,
+        }}
+      />
+
+      <Box
+        sx={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'flex-start',
+          gap: 2.5,
+          px: 5,
+          pt: 6,
+          pb: 4,
+          height: '100%',
+        }}
+      >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box component="img" src={logoIcon} alt="" sx={{ width: 40, height: 40, objectFit: 'contain' }} />
+        <Box component="img" src={logoIcon} alt="" sx={{ width: 64, height: 64, objectFit: 'contain' }} />
         <Typography
           sx={{
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 700,
-            fontSize: '1.25rem',
+            fontSize: '1.875rem',
           }}
         >
           <Box component="span" sx={{ color: loginColors.textDark }}>
@@ -62,10 +89,10 @@ export default function LoginBrandingPanel() {
       </Box>
 
       <Box>
-        <Typography sx={{ fontSize: '1.125rem', fontWeight: 'bold', lineHeight: 1.3, color: loginColors.textDark }}>
+        <Typography sx={{ fontSize: '1.375rem', fontWeight: 'bold', lineHeight: 1.3, color: loginColors.textDark }}>
           Despesas compartilhadas,
         </Typography>
-        <Typography sx={{ fontSize: '1.125rem', fontWeight: 'bold', lineHeight: 1.3, color: loginColors.primary }}>
+        <Typography sx={{ fontSize: '1.375rem', fontWeight: 'bold', lineHeight: 1.3, color: loginColors.primary }}>
           contas em dia.
         </Typography>
       </Box>
@@ -105,12 +132,7 @@ export default function LoginBrandingPanel() {
         ))}
       </Box>
 
-      <Box
-        component="img"
-        src={loginHero}
-        alt=""
-        sx={{ width: '100%', maxWidth: 320, alignSelf: 'center' }}
-      />
+      </Box>
     </Box>
   );
 }
