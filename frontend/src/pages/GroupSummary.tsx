@@ -14,7 +14,10 @@ import {
   List,
   ListItem,
   ListItemText,
-  Chip
+  Chip,
+  Select,
+  MenuItem,
+  SelectChangeEvent
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
@@ -38,6 +41,11 @@ type SummaryBalance = {
   user_id: number;
   name: string;
   balance: number;
+};
+
+type GroupOption = {
+  id: number;
+  name: string;
 };
 
 type Summary = {
@@ -66,6 +74,7 @@ const GroupSummary: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [cyclesAgo, setCyclesAgo] = useState<number>(0);
+  const [groups, setGroups] = useState<GroupOption[]>([]);
 
   useEffect(() => {
     if (!groupId) return;
@@ -96,11 +105,39 @@ const GroupSummary: React.FC = () => {
     setCyclesAgo(0);
   }, [groupId]);
 
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    axios
+      .get<GroupOption[]>(`${API_BASE_URL}/api/groups`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(res => setGroups(res.data))
+      .catch(err => console.error('Erro ao carregar grupos:', err));
+  }, []);
+
+  const handleGroupChange = (event: SelectChangeEvent<number>) => {
+    navigate(`/groups/${event.target.value}/summary`);
+  };
+
   return (
     <Container sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Resumo do Grupo
-      </Typography>
+      <Box display="flex" alignItems="center" justifyContent="space-between" mb={2} flexWrap="wrap" gap={2}>
+        <Typography variant="h4">Resumo do Grupo</Typography>
+        {groups.length > 0 && groupId && (
+          <Select
+            value={Number(groupId)}
+            onChange={handleGroupChange}
+            size="small"
+            sx={{ minWidth: 200 }}
+          >
+            {groups.map(group => (
+              <MenuItem key={group.id} value={group.id}>
+                {group.name}
+              </MenuItem>
+            ))}
+          </Select>
+        )}
+      </Box>
 
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
