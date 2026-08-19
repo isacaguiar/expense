@@ -4,7 +4,7 @@ import Typography from '@mui/material/Typography';
 import GroupsOutlinedIcon from '@mui/icons-material/GroupsOutlined';
 import PieChartOutlineOutlinedIcon from '@mui/icons-material/PieChartOutlineOutlined';
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
-import logo from '../../assets/images/expense.png';
+import logoIcon from '../../assets/images/logo-expense.png';
 import loginHero from '../../assets/illustrations/login-hero.png';
 import { loginColors } from './colors';
 
@@ -40,12 +40,23 @@ export default function LoginBrandingPanel() {
         background: `linear-gradient(180deg, ${loginColors.primaryLight} 0%, #FFFFFF 100%)`,
       }}
     >
-      <Box
-        component="img"
-        src={logo}
-        alt="Shared Expense"
-        sx={{ width: 220, objectFit: 'contain' }}
-      />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+        <Box component="img" src={logoIcon} alt="" sx={{ width: 48, height: 48, objectFit: 'contain' }} />
+        <Typography
+          sx={{
+            fontFamily: "'Poppins', sans-serif",
+            fontWeight: 700,
+            fontSize: '1.5rem',
+          }}
+        >
+          <Box component="span" sx={{ color: loginColors.textDark }}>
+            Shared
+          </Box>{' '}
+          <Box component="span" sx={{ color: loginColors.primary }}>
+            Expense
+          </Box>
+        </Typography>
+      </Box>
 
       <Box>
         <Typography variant="h4" fontWeight="bold" sx={{ color: loginColors.textDark }}>
