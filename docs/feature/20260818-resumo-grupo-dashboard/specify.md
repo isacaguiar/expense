@@ -1,60 +1,74 @@
 # Specify — Resumo do Grupo (Dashboard)
 
-> Feature: nova tela "Resumo do grupo" no frontend web (`expense/frontend`), com cards de totais do mês (Total de despesas / Pago / A pagar), lista de despesas do mês com pagador e status, e saldos por pessoa — no estilo do mockup anexado pelo usuário. Origem: pedido novo do usuário nesta conversa (sem task/épico prévio em `03-tasks.md`).
+> Feature: fechamento mensal de contas por grupo — cada grupo tem uma data de fechamento configurável (estilo fatura de cartão de crédito); ao virar o ciclo, a tela "Resumo do grupo" mostra o ciclo fechado mais recente com cards de totais e, principalmente, quanto cada pessoa precisa pagar ou tem a receber dos demais membros. Origem: pedido novo do usuário nesta conversa (sem task/épico prévio em `03-tasks.md`); escopo revisado após o primeiro rascunho deste `specify.md` mostrar um "resumo ao vivo do mês corrente" que não era o objetivo real.
 
-Versão: 1.0 · Criado em: 20260818
+Versão: 1.1 · Criado em: 20260818
 
 ---
 
 ## 1. Problema
 
-Hoje não existe nenhuma tela que dê uma visão consolidada de um grupo específico. `Dashboard.tsx` lista todos os grupos do usuário (cards "Meus Grupos", sem nenhum número financeiro) e `ExpenseManager.tsx` lista despesas de um grupo mês a mês, mas sem totais agregados, sem status de pagamento por despesa e sem saldo por pessoa — quem deve quanto para quem só existe hoje nos relatórios anuais (`report/{year}`, `report-monthly/{year}`), que não são pensados para uma visão rápida de "situação do grupo agora".
+Hoje não existe nenhum conceito de "fechamento" de contas do grupo. Despesas são lançadas e consultadas por mês calendário (`year`/`month`) em `ExpenseManager.tsx`/`indexByGroup`, mas nada consolida, ao final de um ciclo, "quem precisa pagar quanto para quem" e apresenta isso de forma definitiva — o único cálculo equivalente (`GroupExpenseReportController::reportByGroupAndYearMonthlySettlement`) exige varrer o ano inteiro e não tem noção de ciclo por grupo, só mês calendário fixo (dia 1 a dia 1). O usuário quer que cada grupo defina sua própria data de fechamento (como uma fatura de cartão — ex.: "fecha todo dia 10"), e que, a partir do primeiro dia após esse fechamento, a tela de Resumo mostre o ciclo recém-fechado com foco em pagar/receber entre os membros.
 
 ## 2. Achados confirmados
 
-### 2.1 Não existe hoje uma tela de resumo por grupo — só lista de grupos e lista de despesas
+### 2.1 Não existe hoje tela de resumo, nem noção de "ciclo"/fechamento — só mês calendário
 
-`Dashboard.tsx:44-72` renderiza cards de grupo (nome, descrição, botões editar/membros/despesas) vindos de `GET /api/groups`, sem nenhum dado financeiro. `ExpenseManager.tsx:302-400` mostra uma tabela de despesas do mês (data, descrição, valor, pagador) vinda de `GET /api/groups/{groupId}/expenses`, sem cards de total, sem status de pagamento e sem saldo por pessoa. Nenhuma das duas telas se parece com o mockup (cards de Total/Pago/A pagar + lista com status + bloco de saldos).
+`Dashboard.tsx:44-72` lista grupos sem dado financeiro. `ExpenseManager.tsx` e `ExpenseController::indexByGroup` (`backend/app/Http/Controllers/ExpenseController.php:14-67`) trabalham só com `year`/`month` (mês calendário, dia 1 a fim do mês) — não existe em nenhum lugar do código um conceito de ciclo com data de corte diferente do dia 1.
 
-### 2.2 Layout atual é uma barra superior (`Navbar`), não a sidebar do mockup
+### 2.2 `Group` não tem campo de data de fechamento — precisa de migration aditiva
 
-`InternalLayout.tsx:5-14` renderiza só `<Navbar />` (AppBar horizontal, `Navbar.tsx:13-27`) + `<Outlet />`, sem sidebar. O mockup mostra uma sidebar fixa à esquerda com itens "Resumo / Despesas / Participantes / Pagamentos / Relatórios / Configurações" — nenhum desses itens (Pagamentos, Relatórios, Configurações) tem tela ou rota hoje em `App.tsx`. Reproduzir a sidebar inteira do mockup é uma mudança de navegação global da aplicação, não desta tela isolada.
+`ex_groups` (`backend/database/migrations/2025_06_07_033033_create_ex_groups_table.php`) só tem `name`, `description`, `deleted`, `create_date`. Model `Group` (`backend/app/Models/Group.php:11-16`) só expõe esses campos em `$fillable`. `GroupController@store`/`update` (`backend/app/Http/Controllers/GroupController.php:39-42,70`) só validam/persistem `name`/`description`. Nenhum lugar guarda um "dia de fechamento" por grupo — precisa de coluna nova (migration aditiva, dentro do gate autônomo de `00-constitution.md` §5.2 para ambiente local/branch).
 
-### 2.3 Tema atual não é o do mockup (paleta azul/rosa padrão MUI, não verde)
+### 2.3 `GroupForm.tsx` não tem campo para configurar isso
 
-`theme.ts:4-17` define `primary.main: '#1976d2'` (azul MUI) e `secondary.main: '#dc004e'` (rosa MUI), sem nenhuma customização de verde/marca. O mockup usa uma identidade visual própria (logo "$" verde, paleta verde, ilustrações na tela de login). Repaginar o tema global da aplicação (`theme.ts`) e a tela de login não foi pedido além do mockup de referência visual — tratado como decisão de design a confirmar, não como achado que já determina um requisito.
+`GroupForm.tsx:94-130` só tem os campos "Nome" e "Descrição" no formulário de criar/editar grupo — não há onde o usuário informaria a data de fechamento do grupo.
 
-### 2.4 `GET /groups/{groupId}/expenses` (`indexByGroup`) já devolve a lista de despesas do mês, mas sem status de pagamento
+### 2.4 Padrão de "clamp" de dia-do-mês para datas recorrentes já existe no código (referência para o cálculo de ciclo)
 
-`ExpenseController::indexByGroup` (`backend/app/Http/Controllers/ExpenseController.php:14-67`) devolve, para um `year`/`month`, cada despesa do mês (direta ou projeção de despesa Fixa) com `id`, `description`, `date`, `value`, `payerName`, `isFixed` (`mapRow`, linhas 26-35) — não inclui nenhum campo de status ("Paga"/"Pendente" no mockup). O tipo `Expense` do frontend (`ExpenseManager.tsx:37-44`) espelha exatamente esses campos, sem `paid`/`status`.
+Duas rotinas já lidam com "dia do mês que pode não existir em todo mês" (ex.: dia 31 em fevereiro), um padrão direto para o cálculo de fechamento tipo cartão de crédito:
+- `ExpenseController::indexByGroup` (linhas 58-59): `$day = min($expense->date_payment->day, $monthStart->daysInMonth);` para projetar despesa Fixa.
+- `ExpenseManager.tsx:54-62` (`addMonthsClamped`): mesma lógica no frontend, para gerar `date_expected` das parcelas.
 
-### 2.5 Status de pagamento (`Quota.paid`) existe na base, mas com lacunas que impedem reaproveitar direto
+### 2.5 `GET /groups/{groupId}/expenses` (`indexByGroup`) já devolve despesas do mês, mas sem status de pagamento nem noção de ciclo custom
 
-- Tabela `ex_quotas` (`backend/database/migrations/2025_06_12_022708_create_ex_quotas_table.php`) tem coluna `paid` (boolean). Model `Quota` (`backend/app/Models/Quota.php`) expõe `paid` e pertence a uma `Expense` via `expense_id`.
-- No cadastro de despesa (`ExpenseManager.tsx:219-234`), a quota criada já nasce com `paid` diferente por tipo: **À Vista** nasce `paid: true` (linha 233); **Parcelada** nasce cada parcela com `paid: false` (`buildInstallmentQuotas`, `ExpenseManager.tsx:67-81`, linha 77); **Fixa** nasce com uma única quota `paid: false` (linha 231).
-- Não existe, em nenhum lugar do backend, um jeito de marcar uma quota como paga depois de criada: `QuotaController` (`backend/app/Http/Controllers/QuotaController.php`) e `ParticipationController` (`backend/app/Http/Controllers/ParticipationController.php`) são stubs vazios (todos os métodos só têm `//`) e **não estão registrados em `routes/api.php`** (confirmado por `grep "Route::" backend/routes/api.php` — só aparecem rotas de `groups`, `groups/{groupId}/members`, `expenses`, `expenses/{expenseId}/stop-recurrence`, relatórios; nada de `quotas` nem `participations`). Ou seja, hoje uma parcela ou despesa fixa nunca muda de "Pendente" para "Paga" depois de criada.
-- Para despesas **Fixa**, a recorrência de meses futuros é só uma projeção virtual em `indexByGroup` (`ExpenseController.php:46-64`, `$projectedFixed`) — não existe uma `Quota` de verdade para cada mês projetado, só para o mês de criação. Não há hoje nenhuma coluna/registro para dizer se a "cópia" de fevereiro de uma despesa Fixa criada em janeiro está paga ou não.
+`mapRow` (`ExpenseController.php:26-35`) devolve `id`, `description`, `date`, `value` (sempre `total_value`, não o valor da parcela — ver achado 2.9), `payerName`, `isFixed` — sem nenhum campo de status ("paga"/"pendente"). Além disso, filtra estritamente por mês calendário (`whereYear`/`whereMonth`, linhas 40-41), incompatível com um ciclo que atravessa dois meses calendário (ex.: fechamento dia 10 → ciclo de 11/dez a 10/jan).
 
-### 2.6 Nenhum endpoint agregado devolve "Total do mês / Pago / A pagar" prontos
+### 2.6 Status de pagamento (`Quota.paid`) existe, mas nasce fixo por tipo e nunca muda depois
 
-Nem `indexByGroup` nem `getMonthlyExpenses` (`ExpenseController.php:176-195`, agregados por mês mas sem quebra pago/pendente) somam valores pagos vs. pendentes. Dado o achado 2.5, mesmo somando `value_quota` por `paid`, o resultado hoje seria sempre "tudo pago" para despesas À Vista e "tudo pendente" para Parceladas/Fixas — não reflete uso real (ninguém nunca marca uma parcela como paga).
+- `ex_quotas` (`backend/database/migrations/2025_06_12_022708_create_ex_quotas_table.php`) tem coluna `paid` (boolean).
+- No cadastro (`ExpenseManager.tsx:219-234`): À Vista nasce `paid:true`; Parcelada nasce cada parcela `paid:false` (`buildInstallmentQuotas`, linhas 67-81); Fixa nasce com 1 quota `paid:false`.
+- Não existe endpoint para mudar isso depois: `QuotaController` e `ParticipationController` (`backend/app/Http/Controllers/QuotaController.php`, `ParticipationController.php`) são stubs vazios e **não estão registrados em `routes/api.php`** (confirmado via `grep "Route::"` — só `groups`, `groups/{groupId}/members`, `expenses`, `expenses/{expenseId}/stop-recurrence`, relatórios).
+- Para despesas Fixa projetadas em meses além do de criação, não existe nenhuma `Quota` real — a projeção em `indexByGroup` é só virtual (linhas 46-64).
 
-### 2.7 Saldo por pessoa já é calculado para relatório anual, mas como par a par, não como saldo líquido único por pessoa
+### 2.7 Saldo por pessoa já é calculado par a par para o ano inteiro, não como fechamento de ciclo por grupo
 
-`GroupExpenseReportController::reportByGroupAndYearMonthlySettlement` (`backend/app/Http/Controllers/GroupExpenseReportController.php:108-194`) já calcula, mês a mês, `finalSettlement[receiver][payer] = valor` (líquido entre cada par de pessoas, linhas 169-189) a partir de `payer`/`payers` de cada despesa. O mockup pede um número único por pessoa ("Isac: R$ 230,00 a receber"), que é a soma de tudo que essa pessoa recebe de todo mundo menos tudo que ela deve a todo mundo — essa agregação (par a par → líquido por pessoa) não existe hoje em nenhum endpoint; teria que ser calculada a partir de `finalSettlement` ou de uma consulta nova equivalente, filtrada para o mês corrente (o endpoint atual exige um `{year}` inteiro e retorna 404 se o grupo não tiver nenhuma despesa naquele ano).
+`GroupExpenseReportController::reportByGroupAndYearMonthlySettlement` (`backend/app/Http/Controllers/GroupExpenseReportController.php:108-194`) calcula `finalSettlement[receiver][payer] = valor` por mês calendário (par a par, não um saldo líquido único por pessoa), exige `{year}` inteiro e retorna 404 se o grupo não tiver despesa nenhuma naquele ano — não tem noção de "ciclo fechado de um grupo específico" nem devolve membro com saldo zero.
 
 ### 2.8 Endpoints reaproveitáveis sem mudança
 
-- `GET /api/groups` (`GroupController@index`) — já usado por `Dashboard.tsx` e `ExpensesEntry.tsx`; serve para popular o seletor de grupo do cabeçalho do mockup ("Casa dos Amigos ▾").
-- `GET /api/groups/{groupId}/members` (`GroupMemberController@index`) — já usado por `ExpenseManager.tsx:170`; dá nome de cada participante, necessário para o bloco "Saldos por pessoa".
-- `GET /api/me` (`AuthController@me`, `backend/app/Http/Controllers/AuthController.php:57-60`) — retorna o usuário autenticado. Não há campo de avatar/foto em `User` (`backend/app/Models/User.php`, sem coluna `avatar`/`photo` em `$fillable`) — os avatares do mockup não têm dado de origem hoje.
-- `GET /groups/{groupId}/expenses?year&month` (`indexByGroup`) — base para a lista "Despesas do mês" (data, descrição, valor, pagador, `isFixed`), faltando só o status de pagamento (achado 2.4/2.5).
+- `GET /api/groups` — lista de grupos do usuário, para dropdown de troca de grupo.
+- `GET /api/groups/{groupId}/members` — nomes dos membros, para a lista de saldos.
+- `GET /api/me` — usuário autenticado.
 
-## 3. Fora de escopo desta feature
+### 2.9 Achado tangencial (não bloqueia esta feature, registrado em backlog)
 
-- Redesenho da navegação global para sidebar (itens "Despesas", "Participantes", "Pagamentos", "Relatórios", "Configurações" do mockup) — mantém-se o `Navbar`/`InternalLayout` atual; a tela nova é só mais uma rota dentro do layout existente. Uma sidebar de verdade, com todas aquelas seções, é mudança de navegação de toda a aplicação, não desta feature.
-- Rebrand visual da aplicação (paleta verde, logo "$", ilustrações da tela de login) — `theme.ts` e `LoginPage.tsx` continuam como estão; o mockup serve de referência de layout/conteúdo da tela de Resumo, não de redesign de marca.
-- Qualquer fluxo para **marcar uma quota/parcela como paga** (endpoint novo em `QuotaController`/`ParticipationController`, ou toggle na UI) — os achados 2.5/2.6 mostram que isso não existe hoje; esta feature consome o status que existir no banco no momento da consulta (mesmo que hoje isso signifique "sempre pago" para À Vista e "sempre pendente" para Parcelada/Fixa), sem adicionar o mecanismo de alterá-lo. Vira ideia de backlog se confirmado como necessário.
-- Registrar `paid`/status por mês para despesas Fixa projetadas (achado 2.5, terceiro bullet) — a projeção de meses futuros continua só virtual; esta feature no máximo decide como *exibir* essa lacuna (ex.: status fixo "Pendente" para meses projetados), não cria tabela/coluna nova para rastrear isso mês a mês.
-- Tela/menu "Pagamentos", "Relatórios" e "Configurações" do mockup — não existem hoje e não fazem parte desta feature (só "Resumo" e o que já existe em "Despesas"/"Participantes" via `ExpenseManager`/`GroupMembersForm`).
-- Saldos por pessoa no acumulado histórico do grupo — o mockup mostra números que parecem ser do mês corrente (mesmo período dos cards e da lista); saldo acumulado desde o início do grupo, se for isso que o mockup quer dizer, precisa ser decidido no `plan.md` a partir de confirmação do usuário, não assumido aqui.
+`indexByGroup` nunca projeta despesas `IN_INSTALLMENTS` além do mês de criação, e nesse único mês mostra `total_value` (valor cheio) em vez do valor da parcela — debt pré-existente, também presente em `ExpenseManager.tsx` hoje. Registrado como item 012 do backlog (`docs/backlog/expense-manager-installments-nao-projetadas-por-mes.md`).
+
+## 3. Requisitos
+
+- **R1**: Grupo passa a ter uma "data/dia de fechamento" configurável (estilo fatura de cartão de crédito — um dia do mês, ex. 10), definido na criação do grupo e editável depois. Grupo sem valor definido mantém o comportamento equivalente a hoje (ciclo = mês calendário, fecha no fim do mês, disponível a partir do dia 1 seguinte — mesma linguagem do pedido original do usuário).
+- **R2**: Um "ciclo" de um grupo é o intervalo entre dois fechamentos consecutivos (ex.: fechamento dia 10 → ciclo de 11 do mês anterior a 10 do mês atual, inclusive), com o mesmo tratamento de "clamp" para meses mais curtos já usado em despesas Fixa/Parceladas (achado 2.4). Um ciclo só é considerado "fechado" a partir do dia seguinte à sua data de fechamento — antes disso, é o ciclo "em andamento".
+- **R3**: A tela "Resumo do grupo" abre, por padrão, no **ciclo fechado mais recente** do grupo selecionado, com foco em quanto cada membro deve pagar ou tem a receber dos demais (não no ciclo em andamento). Deve ser possível navegar para ciclos fechados anteriores (setas, mesmo padrão de navegação de mês já usado em `ExpenseManager.tsx`).
+- **R4**: A tela mostra, para o ciclo selecionado: cards de totais (Total de despesas / Pago / A pagar), lista de despesas do ciclo (data, descrição, valor, pagador, status Paga/Pendente a partir de `Quota.paid` onde existir — default "Pendente" quando não houver `Quota` real, ex. despesa Fixa projetada) e um bloco "Saldos por pessoa" com o saldo líquido de cada membro do grupo (positivo = a receber, negativo = a pagar), incluindo membros com saldo zero.
+- **R5**: Backend expõe um endpoint novo que devolve, para um ciclo (o fechado mais recente por padrão, ou um ciclo anterior via parâmetro), os totais, a lista de despesas com status e os saldos por pessoa — calculado a partir do intervalo de datas do ciclo (não de `year`/`month` calendário), reaproveitando a lógica de projeção de despesa Fixa já existente em `indexByGroup`, adaptada para um intervalo de datas.
+
+## 4. Fora de escopo desta feature
+
+- Redesenho da navegação global para sidebar (mockup mostrava "Despesas/Participantes/Pagamentos/Relatórios/Configurações") — mantém-se `Navbar`/`InternalLayout` atual.
+- Rebrand visual (paleta verde, logo, ilustrações do mockup) — `theme.ts`/`LoginPage.tsx` inalterados.
+- Qualquer fluxo para marcar uma quota/parcela como paga (endpoint novo em `QuotaController`/`ParticipationController`) — esta feature só lê o status que já existir no banco (achado 2.6), sem adicionar o mecanismo de alterá-lo.
+- Rastrear `paid` por mês para despesas Fixa projetadas além do mês de criação — segue exibida como "Pendente" por padrão quando não há `Quota` real (mesma lacuna do achado 2.6, último bullet).
+- Mudar `ExpenseController::indexByGroup`, `ExpenseManager.tsx` ou `GroupExpenseReportController` para usar o conceito de ciclo — eles continuam em mês calendário; só o endpoint novo desta feature (R5) usa ciclo. Unificar tudo em torno de ciclo, se fizer sentido no futuro, é decisão maior de arquitetura, não desta feature.
+- Notificação/e-mail avisando que o ciclo fechou — a tela só mostra o dado quando o usuário a acessa, não há push/e-mail nesta feature.
+- Projeção de `IN_INSTALLMENTS` além do mês de criação (achado 2.9) — backlog item 012.
