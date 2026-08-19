@@ -29,7 +29,7 @@ O usuário forneceu um mockup de referência (duas colunas: branding/ilustraçã
   1. "Grupos organizados" — "Crie grupos e convide amigos, familiares ou colegas."
   2. "Divisão igualitária" — "O sistema divide os valores igualmente entre os membros."
   3. "Seguro e confiável" — "Seus dados são protegidos com segurança e privacidade garantida."
-- Ilustração na parte inferior: três pessoas em torno de uma mesa com notebook/celulares, mais três badges flutuantes decorativos (gráfico de barras, ícone de cifrão em círculo verde, gráfico de pizza) — ilustração original a ser criada como asset SVG do projeto (sem usar imagem de terceiros/stock com direitos autorais).
+- Ilustração na parte inferior: três pessoas em torno de uma mesa com notebook/celulares, mais três badges flutuantes decorativos (gráfico de barras, ícone de cifrão em círculo verde, gráfico de pizza) — asset fornecido pelo usuário (`assets/images/img_login.png` na raiz do projeto, copiado para `frontend/src/assets/illustrations/login-hero.png`), não gerado pela IA.
 - Rodapé da coluna esquerda: selo "🛡 Seguro e confiável · Seus dados protegidos".
 
 ### 2.3 Coluna direita — card de login

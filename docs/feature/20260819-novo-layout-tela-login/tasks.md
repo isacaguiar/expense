@@ -9,8 +9,8 @@ Versão: 1.0 · Criado em: 20260819
 | TASK-070 | Estrutura de duas colunas em `LoginPage.tsx` (subcomponentes `LoginBrandingPanel`/`LoginFormCard`/`LoginPageFooter`), seletor de idioma estático e rodapé global | frontend | plan.md §1 | nenhum | Concluída |
 | TASK-071 | Reestilizar `LoginFormCard` — ícone de cadeado, título/subtítulo, campos e-mail/senha com ícones e alternância de visibilidade, "Lembrar de mim" + "Esqueci minha senha" (`href="#"`), botão "Entrar" — mantendo `handleSubmit` existente | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-072 | Divisor "ou continue com" + botões "Google"/"Microsoft" (`href="#"`, sem OAuth) + link "Cadastre-se" (`href="#"`) em `LoginFormCard` | frontend | plan.md §3 | nenhum | Concluída |
-| TASK-073 | Criar asset SVG original da ilustração (pessoas + badges decorativos) em `frontend/src/assets/illustrations/login-hero.svg` | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-074 | `LoginBrandingPanel`: logo/wordmark, headline, texto de apoio, 3 diferenciais com ícones, ilustração (TASK-073) e selo de rodapé | frontend | plan.md §2 | nenhum | Pendente |
+| TASK-073 | Ilustração do painel de branding: `frontend/src/assets/illustrations/login-hero.png` (asset fornecido pelo usuário, substituiu o SVG original criado nesta task) | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-074 | `LoginBrandingPanel`: logo/wordmark, headline, texto de apoio, 3 diferenciais com ícones, ilustração (TASK-073) e selo de rodapé | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-075 | Aplicar paleta de cores do mockup nos componentes de login via constantes locais (`loginColors`), sem alterar `theme.ts` global | frontend | plan.md §4 | nenhum | Pendente |
 | TASK-076 | Responsividade: ocultar `LoginBrandingPanel` abaixo do breakpoint `md`, `LoginFormCard` ocupa largura total | frontend | plan.md §5 | nenhum | Pendente |
 | TASK-077 | Testes frontend de `LoginPage` (campos/botões renderizados, submit ainda chama `/api/login`, elementos do novo layout presentes) | frontend | plan.md §6 | nenhum | Pendente |
