@@ -5351,3 +5351,70 @@ Did you mean this?
 [2026-08-18 00:33:52] local.INFO: Login bem-sucedido para o usuário {"user_id":1,"email":"isac@email.com"} 
 [2026-08-18 00:33:53] local.INFO: User authenticated with ID: 1  
 [2026-08-18 00:33:54] local.INFO: User authenticated with ID: 1  
+[2026-08-18 21:58:40] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 21:58:41] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 21:58:42] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 21:58:43] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:03:40] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:03:41] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:03:44] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:03:44] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:05:11] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:05:12] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:06:29] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:06:29] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:06:30] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:06:31] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:07:29] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:07:30] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:07:30] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:07:30] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:12:40] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:12:41] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:14:43] local.INFO: Tentativa de login recebida {"email":"joao@email.com"} 
+[2026-08-18 22:14:43] local.WARNING: Falha no login: credenciais inválidas {"email":"joao@email.com"} 
+[2026-08-18 22:14:55] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:14:55] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:33:13] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:33:14] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-18 22:36:11] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-18 22:36:12] local.INFO: Login bem-sucedido para o usuário {"user_id":1,"email":"isac@email.com"} 
+[2026-08-18 23:33:24] testing.INFO: Iniciando relatório para o grupo 80 no ano 2026  
+[2026-08-18 23:33:24] testing.INFO: Despesas encontradas: 1  
+[2026-08-18 23:33:24] testing.INFO: ----------------------------------  
+[2026-08-18 23:33:24] testing.INFO: Valor: 100 total pago: 100.00 parcelas: 1  
+[2026-08-18 23:33:25] testing.INFO: Iniciando relatório para o grupo 81 no ano 2026  
+[2026-08-18 23:33:35] testing.INFO: Iniciando relatório para o grupo 99 no ano 2026  
+[2026-08-18 23:33:35] testing.INFO: Despesas encontradas: 1  
+[2026-08-18 23:33:35] testing.INFO: ----------------------------------  
+[2026-08-18 23:33:35] testing.INFO: Valor: 100 total pago: 100.00 parcelas: 1  
+[2026-08-18 23:33:35] testing.INFO: Iniciando relatório para o grupo 100 no ano 2026  
+[2026-08-18 23:42:39] testing.INFO: Iniciando relatório para o grupo 131 no ano 2026  
+[2026-08-18 23:42:39] testing.INFO: Despesas encontradas: 1  
+[2026-08-18 23:42:39] testing.INFO: ----------------------------------  
+[2026-08-18 23:42:39] testing.INFO: Valor: 100 total pago: 100.00 parcelas: 1  
+[2026-08-18 23:42:39] testing.INFO: Iniciando relatório para o grupo 132 no ano 2026  
+[2026-08-18 23:43:56] testing.INFO: Iniciando relatório para o grupo 153 no ano 2026  
+[2026-08-18 23:43:56] testing.INFO: Despesas encontradas: 1  
+[2026-08-18 23:43:56] testing.INFO: ----------------------------------  
+[2026-08-18 23:43:56] testing.INFO: Valor: 100 total pago: 100.00 parcelas: 1  
+[2026-08-18 23:43:56] testing.INFO: Iniciando relatório para o grupo 154 no ano 2026  
+[2026-08-18 23:47:41] testing.INFO: Iniciando relatório para o grupo 175 no ano 2026  
+[2026-08-18 23:47:41] testing.INFO: Despesas encontradas: 1  
+[2026-08-18 23:47:41] testing.INFO: ----------------------------------  
+[2026-08-18 23:47:41] testing.INFO: Valor: 100 total pago: 100.00 parcelas: 1  
+[2026-08-18 23:47:41] testing.INFO: Iniciando relatório para o grupo 176 no ano 2026  
+[2026-08-19 00:26:23] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 00:26:24] local.INFO: Login bem-sucedido para o usuário {"user_id":1,"email":"isac@email.com"} 
+[2026-08-19 00:26:26] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:26:26] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:26:47] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:26:48] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:26:52] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:26:52] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:26:59] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:26:59] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:27:46] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:27:47] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:27:57] local.INFO: User authenticated with ID: 1  
+[2026-08-19 00:27:57] local.INFO: User authenticated with ID: 1  

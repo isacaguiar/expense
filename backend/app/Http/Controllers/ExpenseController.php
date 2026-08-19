@@ -35,10 +35,17 @@ class ExpenseController extends Controller
         };
 
         // Despesas cujo date_payment cai neste mês (à vista, parcelas, e a criação da Fixa).
+        // Fixa também respeita o corte de recorrência aqui: se o corte é o próprio mês de
+        // criação (ou anterior), a despesa não deve aparecer nem nesse mês.
         $direct = Expense::where('group_id', $groupId)
             ->where('deleted', false)
             ->whereYear('date_payment', $data['year'])
             ->whereMonth('date_payment', $data['month'])
+            ->where(function ($query) use ($monthStart) {
+                $query->where('expense_type', '!=', 'FIXED')
+                    ->orWhereNull('fixed_recurrence_ends_at')
+                    ->orWhere('fixed_recurrence_ends_at', '>', $monthStart);
+            })
             ->with('payers')
             ->get();
 
@@ -99,6 +106,19 @@ class ExpenseController extends Controller
 
             if (count($request->quotas) !== 1) {
                 return response()->json(['error' => 'Despesa fixa deve ter exatamente 1 quota.'], 422);
+            }
+        }
+
+        if ($request->expense_type === 'IN_INSTALLMENTS') {
+            if (count($request->quotas) !== (int) $request->installments) {
+                return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
+            }
+
+            $quotasSum = round(array_sum(array_column($request->quotas, 'value_quota')), 2);
+            $totalValue = round((float) $request->total_value, 2);
+
+            if (abs($quotasSum - $totalValue) > 0.01) {
+                return response()->json(['error' => 'A soma das quotas deve ser igual a total_value.'], 422);
             }
         }
 
