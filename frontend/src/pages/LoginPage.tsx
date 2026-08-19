@@ -110,12 +110,6 @@ export default function LoginPage() {
                 Esqueceu sua senha?
               </Typography>
           </Grid>
-            <Grid container>
-              <Typography variant="body2" color="text.secondary">
-                Ainda não tem conta? Cadastre-se
-              </Typography>
-            </Grid>
-          
         </Box>
       </Box>
     </Container>
