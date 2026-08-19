@@ -1,12 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import Checkbox from '@mui/material/Checkbox';
 import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import Typography from '@mui/material/Typography';
+import Link from '@mui/material/Link';
 
 interface LoginFormCardProps {
   email: string;
@@ -23,6 +29,8 @@ export default function LoginFormCard({
   onPasswordChange,
   onSubmit,
 }: LoginFormCardProps) {
+  const [showPassword, setShowPassword] = useState(false);
+
   return (
     <Box
       sx={{
@@ -37,24 +45,38 @@ export default function LoginFormCard({
         alignItems: 'center',
       }}
     >
-      <Avatar sx={{ m: 1, bgcolor: 'secondary.main' }}>
-        <LockOutlinedIcon />
+      <Avatar sx={{ width: 56, height: 56, mb: 2, bgcolor: 'secondary.light' }}>
+        <LockOutlinedIcon color="secondary" />
       </Avatar>
-      <Typography component="h1" variant="h5">
-        Login
+      <Typography component="h1" variant="h5" fontWeight="bold" textAlign="center">
+        Bem-vindo de volta!
       </Typography>
-      <Box component="form" onSubmit={onSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
+      <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 0.5 }}>
+        Faça login para acessar sua conta
+      </Typography>
+
+      <Box component="form" onSubmit={onSubmit} noValidate sx={{ mt: 3, width: '100%' }}>
         <TextField
           margin="normal"
           required
           fullWidth
           id="email"
-          label="Email"
+          label="E-mail"
           name="email"
+          placeholder="seu@email.com"
           autoComplete="email"
           autoFocus
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <EmailOutlinedIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+            },
+          }}
         />
         <TextField
           margin="normal"
@@ -62,22 +84,48 @@ export default function LoginFormCard({
           fullWidth
           name="password"
           label="Senha"
-          type="password"
+          placeholder="Sua senha"
+          type={showPassword ? 'text' : 'password'}
           id="password"
           autoComplete="current-password"
           value={password}
           onChange={(e) => onPasswordChange(e.target.value)}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <LockOutlinedIcon fontSize="small" color="action" />
+                </InputAdornment>
+              ),
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+                    onClick={() => setShowPassword((show) => !show)}
+                    edge="end"
+                    size="small"
+                  >
+                    {showPassword ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            },
+          }}
         />
-        <FormControlLabel
-          control={<Checkbox value="remember" color="primary" />}
-          label="Lembrar-me"
-        />
-        <Button type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2 }}>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
+          <FormControlLabel
+            control={<Checkbox value="remember" color="primary" defaultChecked />}
+            label="Lembrar de mim"
+          />
+          <Link href="#" variant="body2" underline="hover">
+            Esqueci minha senha
+          </Link>
+        </Box>
+
+        <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 2, mb: 1 }}>
           Entrar
         </Button>
-        <Typography variant="body2" color="text.secondary">
-          Esqueceu sua senha?
-        </Typography>
       </Box>
     </Box>
   );
