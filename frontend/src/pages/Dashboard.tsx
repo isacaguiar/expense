@@ -13,6 +13,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import GroupAddIcon from '@mui/icons-material/GroupAdd';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ReceiptIcon from '@mui/icons-material/Receipt';
+import SummarizeIcon from '@mui/icons-material/Summarize';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
@@ -61,6 +62,9 @@ const Dashboard: React.FC = () => {
                 </IconButton>
                 <IconButton onClick={() => navigate(`/groups/${group.id}/expenses`)}>
                   <ReceiptIcon />
+                </IconButton>
+                <IconButton onClick={() => navigate(`/groups/${group.id}/summary`)}>
+                  <SummarizeIcon />
                 </IconButton>
               </CardActions>
             </Card>
