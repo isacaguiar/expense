@@ -9,7 +9,12 @@ import {
   Typography,
   CircularProgress,
   IconButton,
-  Grid
+  Grid,
+  Paper,
+  List,
+  ListItem,
+  ListItemText,
+  Chip
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
@@ -166,6 +171,36 @@ const GroupSummary: React.FC = () => {
               </Card>
             </Grid>
           </Grid>
+
+          <Typography variant="h6" gutterBottom>
+            Despesas do ciclo
+          </Typography>
+          {summary.expenses.length === 0 ? (
+            <Typography color="text.secondary" mb={3}>
+              Nenhuma despesa neste ciclo.
+            </Typography>
+          ) : (
+            <Paper elevation={3} sx={{ mb: 3 }}>
+              <List disablePadding>
+                {summary.expenses.map(expense => (
+                  <ListItem key={expense.id} divider>
+                    <ListItemText
+                      primary={`${expense.description} — R$ ${formatMoney(expense.value)}`}
+                      secondary={
+                        `${formatDate(expense.date)} · Pago por ${expense.payerName ?? '-'} · ` +
+                        `Dividido entre ${expense.participants.length} pessoa${expense.participants.length === 1 ? '' : 's'}`
+                      }
+                    />
+                    <Chip
+                      label={expense.paid ? 'Paga' : 'Pendente'}
+                      color={expense.paid ? 'success' : 'warning'}
+                      size="small"
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            </Paper>
+          )}
         </>
       ) : null}
     </Container>
