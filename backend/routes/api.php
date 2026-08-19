@@ -33,6 +33,7 @@ Route::middleware('jwt.auth')->group(function () {
     });
 
     Route::apiResource('expenses', ExpenseController::class);
+    Route::post('/expenses/{expenseId}/stop-recurrence', [ExpenseController::class, 'stopRecurrence']);
 
     Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
     Route::get('/groups/{groupId}/expenses/monthly', [ExpenseController::class, 'getMonthlyExpenses']);
