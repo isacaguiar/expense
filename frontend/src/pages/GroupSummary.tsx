@@ -13,6 +13,7 @@ import {
   Paper,
   List,
   ListItem,
+  ListItemIcon,
   ListItemText,
   Chip,
   SelectChangeEvent
@@ -20,6 +21,8 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
+import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
+import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import GroupSummarySidebar from './summary/GroupSummarySidebar';
 import GroupSummaryHeader from './summary/GroupSummaryHeader';
 
@@ -235,6 +238,13 @@ const GroupSummary: React.FC = () => {
               <List disablePadding>
                 {summary.expenses.map(expense => (
                   <ListItem key={expense.id} divider>
+                    <ListItemIcon sx={{ minWidth: 40 }}>
+                      {expense.isFixed ? (
+                        <AutorenewOutlinedIcon color="action" fontSize="small" />
+                      ) : (
+                        <ReceiptOutlinedIcon color="action" fontSize="small" />
+                      )}
+                    </ListItemIcon>
                     <ListItemText
                       primary={`${expense.description} — R$ ${formatMoney(expense.value)}`}
                       secondary={
