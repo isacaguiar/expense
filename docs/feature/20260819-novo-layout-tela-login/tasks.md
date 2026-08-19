@@ -11,7 +11,7 @@ Versão: 1.0 · Criado em: 20260819
 | TASK-072 | Divisor "ou continue com" + botões "Google"/"Microsoft" (`href="#"`, sem OAuth) + link "Cadastre-se" (`href="#"`) em `LoginFormCard` | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-073 | Ilustração do painel de branding: `frontend/src/assets/illustrations/login-hero.png` (asset fornecido pelo usuário, substituiu o SVG original criado nesta task) | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-074 | `LoginBrandingPanel`: logo/wordmark, headline, texto de apoio, 3 diferenciais com ícones, ilustração (TASK-073) e selo de rodapé | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-075 | Aplicar paleta de cores do mockup nos componentes de login via constantes locais (`loginColors`), sem alterar `theme.ts` global | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-075 | Aplicar paleta de cores do mockup nos componentes de login via constantes locais (`loginColors`), sem alterar `theme.ts` global | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-076 | Responsividade: ocultar `LoginBrandingPanel` abaixo do breakpoint `md`, `LoginFormCard` ocupa largura total | frontend | plan.md §5 | nenhum | Pendente |
 | TASK-077 | Testes frontend de `LoginPage` (campos/botões renderizados, submit ainda chama `/api/login`, elementos do novo layout presentes) | frontend | plan.md §6 | nenhum | Pendente |
 

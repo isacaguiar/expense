@@ -16,6 +16,7 @@ import Link from '@mui/material/Link';
 import Divider from '@mui/material/Divider';
 import googleLogo from '../../assets/illustrations/google-logo.svg';
 import microsoftLogo from '../../assets/illustrations/microsoft-logo.svg';
+import { loginColors } from './colors';
 
 interface LoginFormCardProps {
   email: string;
@@ -48,8 +49,8 @@ export default function LoginFormCard({
         alignItems: 'center',
       }}
     >
-      <Avatar sx={{ width: 56, height: 56, mb: 2, bgcolor: 'secondary.light' }}>
-        <LockOutlinedIcon color="secondary" />
+      <Avatar sx={{ width: 56, height: 56, mb: 2, bgcolor: loginColors.primaryLight }}>
+        <LockOutlinedIcon sx={{ color: loginColors.primary }} />
       </Avatar>
       <Typography component="h1" variant="h5" fontWeight="bold" textAlign="center">
         Bem-vindo de volta!
@@ -118,15 +119,32 @@ export default function LoginFormCard({
 
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mt: 1 }}>
           <FormControlLabel
-            control={<Checkbox value="remember" color="primary" defaultChecked />}
+            control={
+              <Checkbox
+                value="remember"
+                defaultChecked
+                sx={{ color: loginColors.primary, '&.Mui-checked': { color: loginColors.primary } }}
+              />
+            }
             label="Lembrar de mim"
           />
-          <Link href="#" variant="body2" underline="hover">
+          <Link href="#" variant="body2" underline="hover" sx={{ color: loginColors.primary }}>
             Esqueci minha senha
           </Link>
         </Box>
 
-        <Button type="submit" fullWidth variant="contained" size="large" sx={{ mt: 2, mb: 1 }}>
+        <Button
+          type="submit"
+          fullWidth
+          variant="contained"
+          size="large"
+          sx={{
+            mt: 2,
+            mb: 1,
+            bgcolor: loginColors.primary,
+            '&:hover': { bgcolor: loginColors.primaryDark },
+          }}
+        >
           Entrar
         </Button>
 
@@ -158,7 +176,7 @@ export default function LoginFormCard({
 
       <Typography variant="body2" color="text.secondary" sx={{ mt: 3 }}>
         Ainda não tem uma conta?{' '}
-        <Link href="#" underline="hover">
+        <Link href="#" underline="hover" sx={{ color: loginColors.primary }}>
           Cadastre-se
         </Link>
       </Typography>

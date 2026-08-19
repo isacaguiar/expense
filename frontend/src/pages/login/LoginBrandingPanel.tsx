@@ -6,6 +6,7 @@ import PieChartOutlineOutlinedIcon from '@mui/icons-material/PieChartOutlineOutl
 import ShieldOutlinedIcon from '@mui/icons-material/ShieldOutlined';
 import logo from '../../assets/images/expense.png';
 import loginHero from '../../assets/illustrations/login-hero.png';
+import { loginColors } from './colors';
 
 const differentials = [
   {
@@ -36,7 +37,7 @@ export default function LoginBrandingPanel() {
         gap: 3,
         px: 6,
         py: 4,
-        background: 'linear-gradient(180deg, #E8F5E9 0%, #FFFFFF 100%)',
+        background: `linear-gradient(180deg, ${loginColors.primaryLight} 0%, #FFFFFF 100%)`,
       }}
     >
       <Box
@@ -47,10 +48,10 @@ export default function LoginBrandingPanel() {
       />
 
       <Box>
-        <Typography variant="h4" fontWeight="bold" color="text.primary">
+        <Typography variant="h4" fontWeight="bold" sx={{ color: loginColors.textDark }}>
           Despesas compartilhadas,
         </Typography>
-        <Typography variant="h4" fontWeight="bold" color="primary.main">
+        <Typography variant="h4" fontWeight="bold" sx={{ color: loginColors.primary }}>
           contas em dia.
         </Typography>
       </Box>
@@ -76,10 +77,10 @@ export default function LoginBrandingPanel() {
                 flexShrink: 0,
               }}
             >
-              <Icon color="primary" />
+              <Icon sx={{ color: loginColors.primary }} />
             </Box>
             <Box>
-              <Typography variant="subtitle1" fontWeight="bold">
+              <Typography variant="subtitle1" fontWeight="bold" sx={{ color: loginColors.textDark }}>
                 {title}
               </Typography>
               <Typography variant="body2" color="text.secondary">
