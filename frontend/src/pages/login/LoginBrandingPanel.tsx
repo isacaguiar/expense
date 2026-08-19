@@ -31,7 +31,7 @@ export default function LoginBrandingPanel() {
     <Box
       sx={{
         display: { xs: 'none', md: 'flex' },
-        flexBasis: { md: '38%' },
+        flexBasis: { md: '42%' },
         flexGrow: 0,
         flexShrink: 0,
         minWidth: 0,
@@ -62,10 +62,10 @@ export default function LoginBrandingPanel() {
       </Box>
 
       <Box>
-        <Typography sx={{ fontSize: '1.75rem', fontWeight: 'bold', lineHeight: 1.25, color: loginColors.textDark }}>
+        <Typography sx={{ fontSize: '1.125rem', fontWeight: 'bold', lineHeight: 1.3, color: loginColors.textDark }}>
           Despesas compartilhadas,
         </Typography>
-        <Typography sx={{ fontSize: '1.75rem', fontWeight: 'bold', lineHeight: 1.25, color: loginColors.primary }}>
+        <Typography sx={{ fontSize: '1.125rem', fontWeight: 'bold', lineHeight: 1.3, color: loginColors.primary }}>
           contas em dia.
         </Typography>
       </Box>
