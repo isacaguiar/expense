@@ -6,8 +6,8 @@ Versão: 1.0 · Criado em: 20260819
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-078 | Mover `loginColors` de `pages/login/colors.ts` para `theme/brandColors.ts` (renomeado `brandColors`), atualizando os imports existentes em `LoginBrandingPanel.tsx`/`LoginFormCard.tsx` | frontend | plan.md §6 | nenhum | Pendente |
-| TASK-079 | Mover a rota `/groups/:id/summary` para fora de `InternalLayout` em `App.tsx` (mantendo dentro de `RequireAuth`), removendo a `Navbar` herdada dessa tela sem alterar `Navbar.tsx`/`InternalLayout.tsx` nem nenhuma outra rota | frontend | plan.md §1 | nenhum | Pendente |
+| TASK-078 | Mover `loginColors` de `pages/login/colors.ts` para `theme/brandColors.ts` (renomeado `brandColors`), atualizando os imports existentes em `LoginBrandingPanel.tsx`/`LoginFormCard.tsx` | frontend | plan.md §6 | nenhum | Concluída |
+| TASK-079 | Mover a rota `/groups/:id/summary` para fora de `InternalLayout` em `App.tsx` (mantendo dentro de `RequireAuth`), removendo a `Navbar` herdada dessa tela sem alterar `Navbar.tsx`/`InternalLayout.tsx` nem nenhuma outra rota | frontend | plan.md §1 | nenhum | Concluída |
 | TASK-080 | Reestruturar `GroupSummary.tsx` em layout de duas áreas (sidebar + conteúdo), extraindo `GroupSummarySidebar.tsx`/`GroupSummaryHeader.tsx` em `pages/summary/` como componentes-casca (props definidas, sem conteúdo final ainda) | frontend | plan.md §1 | nenhum | Pendente |
 | TASK-081 | Implementar `GroupSummarySidebar` — wordmark "Shared Expense", 6 itens de navegação (Resumo/Despesas/Participantes navegáveis; Pagamentos/Relatórios/Configurações como placeholder) e destaque do item ativo | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-082 | Implementar `GroupSummaryHeader` — seletor de grupo (migrado de `GroupSummary.tsx`), sino decorativo e bloco com nome/iniciais do usuário logado via `GET /api/me` | frontend | plan.md §3 | nenhum | Pendente |
