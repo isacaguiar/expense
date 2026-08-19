@@ -1,0 +1,17 @@
+# Implementar sistema de notificações
+
+ID: 020
+Origem: docs/feature/20260819-novo-layout-tela-entrada/specify.md §2.4/R3 (sino no cabeçalho da tela de Resumo, hoje decorativo)
+Criado em: 2026-08-19
+Prioridade: BAIXA
+Status: Aberto
+
+## Descrição
+
+O novo layout da tela de Resumo inclui um ícone de sino no cabeçalho, reaproveitando um elemento comum do mockup — mas não existe hoje, em nenhum lugar do projeto (frontend ou backend), qualquer conceito de notificação (endpoint, tabela, contagem de não lidas, etc.). O ícone fica sem badge e sem `onClick`.
+
+## Por que importa
+
+Um sistema de notificações real (ex.: "fulano marcou uma despesa como paga", "ciclo do grupo fechou") agregaria valor de produto, mas é uma feature grande (modelo de dados, endpoint, entrega em tempo real ou polling, UI de lista) que não deve ser decidida só como efeito colateral do redesenho visual.
+
+Tipo sugerido: backend
