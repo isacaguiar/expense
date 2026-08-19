@@ -5418,3 +5418,28 @@ Did you mean this?
 [2026-08-19 00:27:47] local.INFO: User authenticated with ID: 1  
 [2026-08-19 00:27:57] local.INFO: User authenticated with ID: 1  
 [2026-08-19 00:27:57] local.INFO: User authenticated with ID: 1  
+[2026-08-19 01:51:33] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:33] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 01:51:35] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:36] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 01:51:38] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:39] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 01:51:39] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:39] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 01:51:40] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:41] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 01:51:41] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:41] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 01:51:42] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:42] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 01:51:43] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:43] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 01:51:43] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 01:51:44] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 02:02:11] local.INFO: Tentativa de login recebida {"email":"isac@email.com"} 
+[2026-08-19 02:02:11] local.WARNING: Falha no login: credenciais inválidas {"email":"isac@email.com"} 
+[2026-08-19 02:03:48] testing.INFO: Iniciando relatório para o grupo 344 no ano 2026  
+[2026-08-19 02:03:49] testing.INFO: Despesas encontradas: 1  
+[2026-08-19 02:03:49] testing.INFO: ----------------------------------  
+[2026-08-19 02:03:49] testing.INFO: Valor: 100 total pago: 100.00 parcelas: 1  
+[2026-08-19 02:03:49] testing.INFO: Iniciando relatório para o grupo 345 no ano 2026  
