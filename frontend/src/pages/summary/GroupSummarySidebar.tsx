@@ -47,7 +47,7 @@ export default function GroupSummarySidebar({ groupId }: GroupSummarySidebarProp
         borderRight: '1px solid',
         borderColor: 'divider',
         bgcolor: 'background.paper',
-        display: 'flex',
+        display: { xs: 'none', md: 'flex' },
         flexDirection: 'column',
         py: 3,
       }}

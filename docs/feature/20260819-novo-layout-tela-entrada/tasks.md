@@ -14,7 +14,7 @@ Versão: 1.0 · Criado em: 20260819
 | TASK-083 | Cards de totais: subtítulo do card "Total de despesas" passa a usar a faixa de datas do ciclo, e adicionar percentual calculado sob "Pago"/"A pagar" | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-084 | Restilizar a lista "Despesas do ciclo" com ícone por tipo de despesa (`isFixed`) em card por item | frontend | plan.md §5 | nenhum | Concluída |
 | TASK-085 | Restilizar o bloco "Saldos por pessoa" com `Avatar` de iniciais por membro | frontend | plan.md §5 | nenhum | Concluída |
-| TASK-086 | Responsividade: ocultar `GroupSummarySidebar` abaixo do breakpoint `md`, conteúdo ocupa largura total | frontend | plan.md §7 | nenhum | Pendente |
+| TASK-086 | Responsividade: ocultar `GroupSummarySidebar` abaixo do breakpoint `md`, conteúdo ocupa largura total | frontend | plan.md §7 | nenhum | Concluída |
 | TASK-087 | Atualizar/estender `GroupSummary.test.tsx`: manter cobertura funcional existente e cobrir sidebar (itens navegáveis vs. placeholder), header (nome/iniciais via `/api/me` mockado) e percentual dos cards (incluindo `total === 0`) | frontend | plan.md §8 | nenhum | Pendente |
 
 ## Critérios de aceite
