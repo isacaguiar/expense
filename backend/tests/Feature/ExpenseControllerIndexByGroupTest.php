@@ -134,4 +134,19 @@ class ExpenseControllerIndexByGroupTest extends TestCase
             ->getJson("/api/groups/{$group->id}/expenses?year=2026&month=7");
         $afterCutoff->assertStatus(200)->assertJsonMissing(['id' => $expense->id]);
     }
+
+    public function test_fixed_expense_disappears_from_its_own_creation_month_when_cutoff_is_that_month(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $expense = $this->createExpense($group, $member, $member, '2026-03-10', 'FIXED', '2026-03-01');
+        $expense->payers()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson("/api/groups/{$group->id}/expenses?year=2026&month=3");
+
+        $response->assertStatus(200)->assertJsonMissing(['id' => $expense->id]);
+    }
 }

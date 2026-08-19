@@ -23,6 +23,9 @@ Versão: 1.0 · Criado em: 20260818
 | TASK-050 | Fluxo Fixa completo: payload `FIXED` com quota simbólica `paid:false` | frontend | plan.md §10.4 | nenhum | Concluída (merge `9586acdd`) |
 | TASK-051 | Ação "Remover" (diálogo com 2 opções) nas linhas Fixa da tabela | frontend | plan.md §10.5 | nenhum | Concluída (merge `9586acdd`) |
 | TASK-052 | Testes frontend (`ExpenseManager.test.tsx`: 3 fluxos de criação + seletor de participantes + diálogo remover) | frontend | plan.md §9 | nenhum | Concluída (merge `9586acdd`) |
+| TASK-053 | Corrigir `indexByGroup`: despesa Fixa some do próprio mês de criação quando `fixed_recurrence_ends_at` é esse mesmo mês (achado de code review pós-merge, branch `backend/20260819-fluxo-despesas-correcoes-review`) | backend | plan.md §8 | nenhum | Concluída |
+| TASK-054 | Ressincronizar `participantIds` com `members` quando o modal "Nova Despesa" já está aberto (achado de code review: abrir o modal antes do `GET /members` resolver deixa a lista de participantes vazia) | frontend | plan.md §10.3 | nenhum | Concluída |
+| TASK-055 | Validação cruzada de `quotas` para `expense_type=IN_INSTALLMENTS` em `ExpenseController::store` (contagem de quotas = `installments`, soma das quotas = `total_value`) | backend | plan.md §7.1 | nenhum | Concluída |
 
 ## Critérios de aceite
 
@@ -43,3 +46,6 @@ Versão: 1.0 · Criado em: 20260818
 - **TASK-036**: `POST /api/expenses` com `group_id` de um grupo ao qual o usuário autenticado não pertence retorna `404` (mesmo padrão de `Controller::authorizeGroupMembership`, criado na TASK-034) e não cria registro; `POST /api/expenses` com `user_creator_id` diferente do usuário autenticado no payload cria a despesa mas com `user_creator_id` = usuário autenticado (não o valor enviado) — confirmado consultando o registro criado.
 - **TASK-037**: preencher e submeter o modal "Nova Despesa" (com um pagador selecionado da lista de membros do grupo) cria uma despesa real via `POST /api/expenses`; a despesa aparece na tabela (TASK-035) depois do modal fechar, sem reload manual da página.
 - **TASK-038**: acessar `/expenses` com um usuário que pertence a exatamente 1 grupo redireciona automaticamente para `/groups/{id}/expenses` desse grupo; com mais de 1 grupo, mostra uma lista para escolher; com 0 grupos, mostra mensagem informativa (nenhuma das três situações resulta em tela em branco ou 404).
+- **TASK-053**: despesa `FIXED` criada no mês N com `fixed_recurrence_ends_at = N` (mesmo mês) não aparece mais em `GET /groups/{id}/expenses?year&month` para o mês N; despesa sem corte, ou com corte em mês futuro, continua aparecendo normalmente no mês de criação (regressão).
+- **TASK-054**: abrir "Nova Despesa" antes do `GET /groups/{id}/members` responder e só depois a resposta chegar → `participantIds` reflete todos os membros marcados (não fica vazio).
+- **TASK-055**: `POST /expenses` com `expense_type=IN_INSTALLMENTS`, `installments=3` e 2 quotas → `422`; com 3 quotas cuja soma não bate com `total_value` → `422`; caso consistente (já coberto pela TASK-046) continua `201`.
