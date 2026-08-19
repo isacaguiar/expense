@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-070 | Concluída | 2026-08-19 | IA (Claude) | `cd frontend && npx tsc --noEmit` — exit 0. `npx vitest run` — 21/21 testes passando (6 arquivos), sem regressão. `read_page`/`read_console_messages` no preview (`localhost:3000`) confirmam: seletor de idioma, card de login (form intacto) e rodapé com links `href="#"` renderizados, sem erro de console. | `node_modules` do frontend estava corrompido (dist truncado de `react-router-dom`) — reinstalado via `rm -rf node_modules && npm ci` antes de validar; não é regressão desta task, é o problema já registrado no backlog `005`. Screenshot visual não disponível neste ambiente (Browser pane não exibido), validação feita via árvore de acessibilidade. |

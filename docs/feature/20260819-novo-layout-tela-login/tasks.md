@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20260819
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-070 | Estrutura de duas colunas em `LoginPage.tsx` (subcomponentes `LoginBrandingPanel`/`LoginFormCard`/`LoginPageFooter`), seletor de idioma estático e rodapé global | frontend | plan.md §1 | nenhum | Pendente |
+| TASK-070 | Estrutura de duas colunas em `LoginPage.tsx` (subcomponentes `LoginBrandingPanel`/`LoginFormCard`/`LoginPageFooter`), seletor de idioma estático e rodapé global | frontend | plan.md §1 | nenhum | Concluída |
 | TASK-071 | Reestilizar `LoginFormCard` — ícone de cadeado, título/subtítulo, campos e-mail/senha com ícones e alternância de visibilidade, "Lembrar de mim" + "Esqueci minha senha" (`href="#"`), botão "Entrar" — mantendo `handleSubmit` existente | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-072 | Divisor "ou continue com" + botões "Google"/"Microsoft" (`href="#"`, sem OAuth) + link "Cadastre-se" (`href="#"`) em `LoginFormCard` | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-073 | Criar asset SVG original da ilustração (pessoas + badges decorativos) em `frontend/src/assets/illustrations/login-hero.svg` | frontend | plan.md §2 | nenhum | Pendente |
