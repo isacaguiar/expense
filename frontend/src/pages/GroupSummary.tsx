@@ -14,7 +14,9 @@ import {
   List,
   ListItem,
   ListItemIcon,
+  ListItemAvatar,
   ListItemText,
+  Avatar,
   Chip,
   SelectChangeEvent
 } from '@mui/material';
@@ -23,6 +25,8 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
+import { getInitials } from './summary/getInitials';
+import { brandColors } from '../theme/brandColors';
 import GroupSummarySidebar from './summary/GroupSummarySidebar';
 import GroupSummaryHeader from './summary/GroupSummaryHeader';
 
@@ -270,6 +274,11 @@ const GroupSummary: React.FC = () => {
             <List disablePadding>
               {summary.balances.map(balance => (
                 <ListItem key={balance.user_id} divider>
+                  <ListItemAvatar>
+                    <Avatar sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.85rem' }}>
+                      {getInitials(balance.name)}
+                    </Avatar>
+                  </ListItemAvatar>
                   <ListItemText primary={balance.name} />
                   <Typography color={balance.balance > 0 ? 'success.main' : balance.balance < 0 ? 'error.main' : 'text.secondary'}>
                     R$ {formatMoney(Math.abs(balance.balance))}
