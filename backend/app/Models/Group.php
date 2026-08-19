@@ -13,11 +13,13 @@ class Group extends Model
         'deleted',
         'description',
         'name',
+        'closing_day',
     ];
 
     protected $casts = [
         'create_date' => 'datetime',
         'deleted' => 'boolean',
+        'closing_day' => 'integer',
     ];
 
     public $timestamps = true;
