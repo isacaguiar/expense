@@ -7,6 +7,20 @@ import ExpenseManager from './ExpenseManager';
 
 vi.mock('axios');
 
+type ExpensePayload = {
+  expense_type: string;
+  installments: number;
+  payers: number[];
+  quotas: { number: number; date_expected: string; paid: boolean; value_quota: number }[];
+};
+
+type StopRecurrencePayload = { year: number; month: number };
+
+function lastPostCall<T>(): [string, T] {
+  const calls = vi.mocked(axios.post).mock.calls;
+  return calls[calls.length - 1] as unknown as [string, T];
+}
+
 vi.mock('react-router-dom', async importOriginal => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
   return {
@@ -72,7 +86,7 @@ describe('ExpenseManager - Nova Despesa', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = vi.mocked(axios.post).mock.calls[0];
+    const [, payload] = lastPostCall<ExpensePayload>();
     expect(payload).toMatchObject({
       expense_type: 'IN_CASH',
       installments: 1,
@@ -96,12 +110,12 @@ describe('ExpenseManager - Nova Despesa', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = vi.mocked(axios.post).mock.calls[0];
+    const [, payload] = lastPostCall<ExpensePayload>();
     expect(payload.expense_type).toBe('IN_INSTALLMENTS');
     expect(payload.installments).toBe(3);
     expect(payload.quotas).toHaveLength(3);
-    expect(payload.quotas.every((q: { paid: boolean }) => q.paid === false)).toBe(true);
-    const total = payload.quotas.reduce((sum: number, q: { value_quota: number }) => sum + q.value_quota, 0);
+    expect(payload.quotas.every(q => q.paid === false)).toBe(true);
+    const total = payload.quotas.reduce((sum, q) => sum + q.value_quota, 0);
     expect(total).toBeCloseTo(100, 2);
   });
 
@@ -115,7 +129,7 @@ describe('ExpenseManager - Nova Despesa', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = vi.mocked(axios.post).mock.calls[0];
+    const [, payload] = lastPostCall<ExpensePayload>();
     expect(payload.expense_type).toBe('FIXED');
     expect(payload.installments).toBe(1);
     expect(payload.quotas).toEqual([
@@ -134,7 +148,7 @@ describe('ExpenseManager - Nova Despesa', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = vi.mocked(axios.post).mock.calls[0];
+    const [, payload] = lastPostCall<ExpensePayload>();
     expect(payload.payers).toEqual([1]);
   });
 
@@ -180,7 +194,7 @@ describe('ExpenseManager - remover despesa Fixa', () => {
     await userEvent.click(screen.getByRole('button', { name: 'A partir deste mês' }));
 
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [url, payload] = vi.mocked(axios.post).mock.calls[0];
+    const [url, payload] = lastPostCall<StopRecurrencePayload>();
     expect(url).toContain('/api/expenses/9/stop-recurrence');
     const now = new Date();
     expect(payload).toEqual({ year: now.getFullYear(), month: now.getMonth() + 1 });
@@ -200,7 +214,7 @@ describe('ExpenseManager - remover despesa Fixa', () => {
     await userEvent.click(screen.getByRole('button', { name: 'A partir do mês que vem' }));
 
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = vi.mocked(axios.post).mock.calls[0];
+    const [, payload] = lastPostCall<StopRecurrencePayload>();
     const next = new Date();
     next.setMonth(next.getMonth() + 1);
     expect(payload).toEqual({ year: next.getFullYear(), month: next.getMonth() + 1 });
