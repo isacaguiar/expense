@@ -17,12 +17,12 @@ Versão: 1.0 · Criado em: 20260818
 | TASK-044 | Endpoint novo `POST /expenses/{id}/stop-recurrence` | backend | plan.md §7.2 | nenhum | Concluída (merge `ffdfc471`) |
 | TASK-045 | Projetar despesas Fixa em `indexByGroup` (2ª query + merge + campo `isFixed`) | backend | plan.md §8 | nenhum | Concluída (merge `ffdfc471`) |
 | TASK-046 | Testes backend (store `IN_INSTALLMENTS`/`FIXED`, `stop-recurrence`, projeção em `indexByGroup`) | backend | plan.md §9 | nenhum | Concluída (merge `ffdfc471`) |
-| TASK-047 | Seletor "Tipo de despesa" (À Vista/Parcelada/Fixa) + relabel do campo de data por tipo | frontend | plan.md §10.1-10.2 | nenhum | Pendente |
-| TASK-048 | Seletor multi-select de participantes da divisão (`payers[]`, default todos marcados) | frontend | plan.md §10.3 | nenhum | Pendente |
-| TASK-049 | Fluxo Parcelada completo: campo Nº parcelas + cálculo de `quotas[]` com arredondamento | frontend | plan.md §10.4 | nenhum | Pendente |
-| TASK-050 | Fluxo Fixa completo: payload `FIXED` com quota simbólica `paid:false` | frontend | plan.md §10.4 | nenhum | Pendente |
-| TASK-051 | Ação "Remover" (diálogo com 2 opções) nas linhas Fixa da tabela | frontend | plan.md §10.5 | nenhum | Pendente |
-| TASK-052 | Testes frontend (`ExpenseManager.test.tsx`: 3 fluxos de criação + seletor de participantes + diálogo remover) | frontend | plan.md §9 | nenhum | Pendente |
+| TASK-047 | Seletor "Tipo de despesa" (À Vista/Parcelada/Fixa) + relabel do campo de data por tipo | frontend | plan.md §10.1-10.2 | nenhum | Concluída (merge `9586acdd`) |
+| TASK-048 | Seletor multi-select de participantes da divisão (`payers[]`, default todos marcados) | frontend | plan.md §10.3 | nenhum | Concluída (merge `9586acdd`) |
+| TASK-049 | Fluxo Parcelada completo: campo Nº parcelas + cálculo de `quotas[]` com arredondamento | frontend | plan.md §10.4 | nenhum | Concluída (merge `9586acdd`) |
+| TASK-050 | Fluxo Fixa completo: payload `FIXED` com quota simbólica `paid:false` | frontend | plan.md §10.4 | nenhum | Concluída (merge `9586acdd`) |
+| TASK-051 | Ação "Remover" (diálogo com 2 opções) nas linhas Fixa da tabela | frontend | plan.md §10.5 | nenhum | Concluída (merge `9586acdd`) |
+| TASK-052 | Testes frontend (`ExpenseManager.test.tsx`: 3 fluxos de criação + seletor de participantes + diálogo remover) | frontend | plan.md §9 | nenhum | Concluída (merge `9586acdd`) |
 
 ## Critérios de aceite
 
