@@ -51,6 +51,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 013 | [expense-manager-data-exibida-com-um-dia-a-menos.md](expense-manager-data-exibida-com-um-dia-a-menos.md) | ExpenseManager exibe a data das despesas com 1 dia a menos em fusos negativos | resumo-grupo-dashboard (achado na TASK-063) | 2026-08-19 | MEDIA | Aberto |
 | 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
+| 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 
 ## Itens concluídos
 

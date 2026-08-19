@@ -30,23 +30,26 @@ export default function LoginBrandingPanel() {
   return (
     <Box
       sx={{
-        flex: 1,
         display: { xs: 'none', md: 'flex' },
+        flexBasis: { md: '38%' },
+        flexGrow: 0,
+        flexShrink: 0,
+        minWidth: 0,
         flexDirection: 'column',
         justifyContent: 'center',
-        gap: 3,
-        px: 6,
+        gap: 2.5,
+        px: 5,
         py: 4,
         background: `linear-gradient(180deg, ${loginColors.primaryLight} 0%, #FFFFFF 100%)`,
       }}
     >
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-        <Box component="img" src={logoIcon} alt="" sx={{ width: 48, height: 48, objectFit: 'contain' }} />
+        <Box component="img" src={logoIcon} alt="" sx={{ width: 40, height: 40, objectFit: 'contain' }} />
         <Typography
           sx={{
             fontFamily: "'Poppins', sans-serif",
             fontWeight: 700,
-            fontSize: '1.5rem',
+            fontSize: '1.25rem',
           }}
         >
           <Box component="span" sx={{ color: loginColors.textDark }}>
@@ -59,42 +62,42 @@ export default function LoginBrandingPanel() {
       </Box>
 
       <Box>
-        <Typography variant="h4" fontWeight="bold" sx={{ color: loginColors.textDark }}>
+        <Typography sx={{ fontSize: '1.75rem', fontWeight: 'bold', lineHeight: 1.25, color: loginColors.textDark }}>
           Despesas compartilhadas,
         </Typography>
-        <Typography variant="h4" fontWeight="bold" sx={{ color: loginColors.primary }}>
+        <Typography sx={{ fontSize: '1.75rem', fontWeight: 'bold', lineHeight: 1.25, color: loginColors.primary }}>
           contas em dia.
         </Typography>
       </Box>
 
-      <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 440 }}>
+      <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', maxWidth: 400 }}>
         Controle de despesas mensais fixas e variáveis entre grupos de usuários, com
         divisão igualitária dos valores entre os pagadores designados.
       </Typography>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
         {differentials.map(({ icon: Icon, title, description }) => (
-          <Box key={title} sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
+          <Box key={title} sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
             <Box
               sx={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: 44,
-                height: 44,
+                width: 38,
+                height: 38,
                 borderRadius: 2,
                 bgcolor: 'background.paper',
                 boxShadow: 1,
                 flexShrink: 0,
               }}
             >
-              <Icon sx={{ color: loginColors.primary }} />
+              <Icon sx={{ color: loginColors.primary, fontSize: '1.25rem' }} />
             </Box>
             <Box>
-              <Typography variant="subtitle1" fontWeight="bold" sx={{ color: loginColors.textDark }}>
+              <Typography sx={{ fontSize: '0.9rem', fontWeight: 'bold', color: loginColors.textDark }}>
                 {title}
               </Typography>
-              <Typography variant="body2" color="text.secondary">
+              <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary' }}>
                 {description}
               </Typography>
             </Box>
@@ -106,15 +109,8 @@ export default function LoginBrandingPanel() {
         component="img"
         src={loginHero}
         alt=""
-        sx={{ width: '100%', maxWidth: 420, alignSelf: 'center' }}
+        sx={{ width: '100%', maxWidth: 320, alignSelf: 'center' }}
       />
-
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <ShieldOutlinedIcon fontSize="small" color="action" />
-        <Typography variant="caption" color="text.secondary">
-          Seguro e confiável · Seus dados protegidos
-        </Typography>
-      </Box>
     </Box>
   );
 }

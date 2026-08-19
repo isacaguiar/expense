@@ -49,13 +49,13 @@ export default function LoginFormCard({
         alignItems: 'center',
       }}
     >
-      <Avatar sx={{ width: 56, height: 56, mb: 2, bgcolor: loginColors.primaryLight }}>
+      <Avatar sx={{ width: 48, height: 48, mb: 1.5, bgcolor: loginColors.primaryLight }}>
         <LockOutlinedIcon sx={{ color: loginColors.primary }} />
       </Avatar>
-      <Typography component="h1" variant="h5" fontWeight="bold" textAlign="center">
+      <Typography component="h1" sx={{ fontSize: '1.375rem', fontWeight: 'bold' }} textAlign="center">
         Bem-vindo de volta!
       </Typography>
-      <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mt: 0.5 }}>
+      <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 0.5 }} textAlign="center">
         Faça login para acessar sua conta
       </Typography>
 
@@ -72,6 +72,7 @@ export default function LoginFormCard({
           autoFocus
           value={email}
           onChange={(e) => onEmailChange(e.target.value)}
+          sx={{ '& .MuiOutlinedInput-root': { height: 46 } }}
           slotProps={{
             input: {
               startAdornment: (
@@ -94,6 +95,7 @@ export default function LoginFormCard({
           autoComplete="current-password"
           value={password}
           onChange={(e) => onPasswordChange(e.target.value)}
+          sx={{ '& .MuiOutlinedInput-root': { height: 46 } }}
           slotProps={{
             input: {
               startAdornment: (
