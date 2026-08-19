@@ -39,6 +39,7 @@ class GroupController extends Controller
         $data = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:255',
+            'closing_day' => 'nullable|integer|between:1,31',
         ]);
 
         $data['create_date'] = now();
@@ -67,7 +68,13 @@ class GroupController extends Controller
         $group = Group::findOrFail($id);
         $this->authorizeMembership($group);
 
-        $group->update($request->only(['name', 'description']));
+        $data = $request->validate([
+            'name' => 'sometimes|required|string|max:255',
+            'description' => 'nullable|string|max:255',
+            'closing_day' => 'nullable|integer|between:1,31',
+        ]);
+
+        $group->update($data);
 
         return response()->json($group);
     }

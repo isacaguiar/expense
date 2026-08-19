@@ -88,4 +88,49 @@ class GroupControllerTest extends TestCase
         $response->assertStatus(404);
         $this->assertDatabaseHas('ex_groups', ['id' => $group->id, 'deleted' => false]);
     }
+
+    public function test_store_persists_closing_day(): void
+    {
+        $member = User::factory()->create();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/groups', ['name' => 'Grupo com fechamento', 'closing_day' => 10]);
+
+        $response->assertStatus(201)->assertJsonFragment(['closing_day' => 10]);
+        $this->assertDatabaseHas('ex_groups', ['name' => 'Grupo com fechamento', 'closing_day' => 10]);
+    }
+
+    public function test_store_without_closing_day_defaults_to_null(): void
+    {
+        $member = User::factory()->create();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/groups', ['name' => 'Grupo sem fechamento']);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('ex_groups', ['name' => 'Grupo sem fechamento', 'closing_day' => null]);
+    }
+
+    public function test_store_rejects_invalid_closing_day(): void
+    {
+        $member = User::factory()->create();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/groups', ['name' => 'Grupo inválido', 'closing_day' => 32]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_member_can_update_closing_day(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'closing_day' => 5]);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->putJson('/api/groups/'.$group->id, ['name' => 'Grupo de teste', 'closing_day' => 15]);
+
+        $response->assertStatus(200)->assertJsonFragment(['closing_day' => 15]);
+        $this->assertDatabaseHas('ex_groups', ['id' => $group->id, 'closing_day' => 15]);
+    }
 }
