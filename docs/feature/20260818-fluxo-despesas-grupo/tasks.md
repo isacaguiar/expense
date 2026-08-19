@@ -12,11 +12,11 @@ Versão: 1.0 · Criado em: 20260818
 | TASK-036 | Adicionar checagem de membership e forçar `user_creator_id` do usuário autenticado em `ExpenseController::store` | backend | plan.md §3 | nenhum | Concluída (PR #17 mergeado em `dev`) |
 | TASK-037 | Alinhar formulário "Nova Despesa" ao payload real de `POST /api/expenses` (seletor de pagador + campos obrigatórios) | frontend | plan.md §3 | nenhum | Concluída (PR #19 mergeado em `dev`) |
 | TASK-038 | Criar rota `/expenses` com seleção/redirect automático de grupo (`ExpensesEntry.tsx`) | frontend | plan.md §4 | nenhum | Concluída (PR #20 mergeado em `dev`) |
-| TASK-042 | Migration: `FIXED` no enum `expense_type` + coluna `fixed_recurrence_ends_at` em `ex_expenses`; fillable/cast em `Expense` | backend | plan.md §6 | migration destrutiva (alterar tipo de coluna) — local autônomo, ambiente compartilhado/produção exige gate humano | Pendente |
-| TASK-043 | `ExpenseController::store` aceita `expense_type=FIXED` + validação cruzada (`installments=1`, exatamente 1 quota) | backend | plan.md §7.1 | nenhum | Pendente |
-| TASK-044 | Endpoint novo `POST /expenses/{id}/stop-recurrence` | backend | plan.md §7.2 | nenhum | Pendente |
-| TASK-045 | Projetar despesas Fixa em `indexByGroup` (2ª query + merge + campo `isFixed`) | backend | plan.md §8 | nenhum | Pendente |
-| TASK-046 | Testes backend (store `IN_INSTALLMENTS`/`FIXED`, `stop-recurrence`, projeção em `indexByGroup`) | backend | plan.md §9 | nenhum | Pendente |
+| TASK-042 | Migration: `FIXED` no enum `expense_type` + coluna `fixed_recurrence_ends_at` em `ex_expenses`; fillable/cast em `Expense` | backend | plan.md §6 | migration destrutiva (alterar tipo de coluna) — local autônomo, ambiente compartilhado/produção exige gate humano | Concluída (local, merge `ffdfc471`) |
+| TASK-043 | `ExpenseController::store` aceita `expense_type=FIXED` + validação cruzada (`installments=1`, exatamente 1 quota) | backend | plan.md §7.1 | nenhum | Concluída (merge `ffdfc471`) |
+| TASK-044 | Endpoint novo `POST /expenses/{id}/stop-recurrence` | backend | plan.md §7.2 | nenhum | Concluída (merge `ffdfc471`) |
+| TASK-045 | Projetar despesas Fixa em `indexByGroup` (2ª query + merge + campo `isFixed`) | backend | plan.md §8 | nenhum | Concluída (merge `ffdfc471`) |
+| TASK-046 | Testes backend (store `IN_INSTALLMENTS`/`FIXED`, `stop-recurrence`, projeção em `indexByGroup`) | backend | plan.md §9 | nenhum | Concluída (merge `ffdfc471`) |
 | TASK-047 | Seletor "Tipo de despesa" (À Vista/Parcelada/Fixa) + relabel do campo de data por tipo | frontend | plan.md §10.1-10.2 | nenhum | Pendente |
 | TASK-048 | Seletor multi-select de participantes da divisão (`payers[]`, default todos marcados) | frontend | plan.md §10.3 | nenhum | Pendente |
 | TASK-049 | Fluxo Parcelada completo: campo Nº parcelas + cálculo de `quotas[]` com arredondamento | frontend | plan.md §10.4 | nenhum | Pendente |
