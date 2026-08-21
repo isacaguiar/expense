@@ -25,10 +25,10 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
-import { getInitials } from './summary/getInitials';
+import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
-import GroupSummarySidebar from './summary/GroupSummarySidebar';
-import GroupSummaryHeader from './summary/GroupSummaryHeader';
+import GroupSidebar from '../layouts/group/GroupSidebar';
+import GroupHeader from '../layouts/group/GroupHeader';
 
 type SummaryCycle = { start: string; end: string };
 type SummaryTotals = { total: number; paid: number; pending: number };
@@ -142,9 +142,10 @@ const GroupSummary: React.FC = () => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <GroupSummarySidebar groupId={groupId ?? ''} />
+      <GroupSidebar groupId={groupId ?? ''} />
       <Container component="main" sx={{ flex: 1, mt: 4, mb: 4 }}>
-      <GroupSummaryHeader
+      <GroupHeader
+        title="Resumo do grupo"
         groups={groups}
         groupId={groupId ?? ''}
         onGroupChange={handleGroupChange}

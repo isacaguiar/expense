@@ -151,7 +151,7 @@ describe('GroupSummary', () => {
     expect(navigateMock).toHaveBeenCalledWith('/groups/2/summary');
   });
 
-  it('sidebar links Resumo/Despesas/Participantes to real routes and leaves the rest as placeholders', async () => {
+  it('sidebar links Resumo/Despesas/Participantes/Configurações to real routes and leaves the rest as placeholders', async () => {
     render(
       <MemoryRouter initialEntries={['/groups/1/summary']}>
         <GroupSummary />
@@ -165,7 +165,7 @@ describe('GroupSummary', () => {
     expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '/groups/1/members');
     expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
     expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '#');
-    expect(screen.getByRole('link', { name: /Configurações/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Configurações/ })).toHaveAttribute('href', '/groups/1/edit');
   });
 
   it('shows the logged-in user name and initials from GET /api/me', async () => {

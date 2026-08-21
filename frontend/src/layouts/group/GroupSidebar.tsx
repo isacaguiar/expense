@@ -15,27 +15,30 @@ import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import logoIcon from '../../assets/images/logo-expense.png';
 import { brandColors } from '../../theme/brandColors';
 
-interface GroupSummarySidebarProps {
+interface GroupSidebarProps {
   groupId: string;
 }
 
-type NavItem = {
+export type GroupNavItem = {
   label: string;
   icon: React.ElementType;
   to?: string;
 };
 
-export default function GroupSummarySidebar({ groupId }: GroupSummarySidebarProps) {
-  const location = useLocation();
-
-  const navItems: NavItem[] = [
+export function groupNavItems(groupId: string): GroupNavItem[] {
+  return [
     { label: 'Resumo', icon: HomeOutlinedIcon, to: `/groups/${groupId}/summary` },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: `/groups/${groupId}/expenses` },
     { label: 'Participantes', icon: PeopleOutlineOutlinedIcon, to: `/groups/${groupId}/members` },
     { label: 'Pagamentos', icon: PaymentsOutlinedIcon },
     { label: 'Relatórios', icon: AssessmentOutlinedIcon },
-    { label: 'Configurações', icon: SettingsOutlinedIcon },
+    { label: 'Configurações', icon: SettingsOutlinedIcon, to: `/groups/${groupId}/edit` },
   ];
+}
+
+export default function GroupSidebar({ groupId }: GroupSidebarProps) {
+  const location = useLocation();
+  const navItems = groupNavItems(groupId);
 
   return (
     <Box
