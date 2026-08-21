@@ -30,6 +30,12 @@ Versão: 1.0 · Criado em: 2026-08-17
 
 - Remover a linha `Log::debug('Credenciais extraídas', $credentials)` de `AuthController::login`. Os logs de falha (`Log::warning('Falha no login: credenciais inválidas', $credentials)`) também logam a senha — mesmo problema, mesma correção: não logar o array `$credentials` bruto; logar no máximo o e-mail.
 
-## 6. Ordem de execução
+## 6. IDOR em `GroupMemberController@store` (specify §2.6)
 
-Sem dependência técnica entre os 5 itens — podem ser feitos em qualquer ordem/paralelo. Ordem sugerida em `tasks.md` segue a gravidade (exposição de dado financeiro de terceiros primeiro).
+- Adicionar checagem de membership no início de `GroupMemberController::store`, antes de qualquer leitura/escrita: `$group->members()->where('user_id', auth()->id())->exists()` — mesmo padrão de `GroupController::authorizeMembership` (item 2 acima).
+- Resposta de negação: **`404`** (mesma justificativa do item 2 — não confirmar a existência do grupo a quem não é membro), não `403`.
+- Extrair a checagem para um trait/helper compartilhado é desnecessário aqui: `GroupController::authorizeMembership` é `private`, não reutilizável entre controllers sem refatoração maior — fora de escopo deste achado pontual. A mesma checagem de 3 linhas é replicada em `GroupMemberController`.
+
+## 7. Ordem de execução
+
+Sem dependência técnica entre os 6 itens — podem ser feitos em qualquer ordem/paralelo. Ordem sugerida em `tasks.md` segue a gravidade (exposição de dado financeiro de terceiros primeiro).

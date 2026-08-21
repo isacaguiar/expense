@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Group;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class GroupMemberControllerTest extends TestCase
@@ -16,24 +17,35 @@ class GroupMemberControllerTest extends TestCase
         return auth('api')->login($user);
     }
 
-    public function test_user_at_creation_limit_can_still_be_added_as_member_of_another_group(): void
+    public function test_member_can_add_member_to_group(): void
     {
-        $limitedUser = User::factory()->create();
-        $limitedUserToken = $this->tokenFor($limitedUser);
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
 
-        foreach (range(1, 3) as $i) {
-            $this->withToken($limitedUserToken)
-                ->postJson('/api/groups', ['name' => "Grupo criado {$i}"])
-                ->assertStatus(201);
-        }
+        $existingUser = User::factory()->create();
 
-        $otherCreator = User::factory()->create();
-        $group = Group::create(['name' => 'Grupo de outra pessoa', 'created_by' => $otherCreator->id, 'deleted' => false]);
-
-        $response = $this->withToken($this->tokenFor($otherCreator))
-            ->postJson("/api/groups/{$group->id}/members", ['email' => $limitedUser->email]);
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/groups/'.$group->id.'/members', ['email' => $existingUser->email]);
 
         $response->assertStatus(201);
-        $this->assertDatabaseHas('ex_groups_members', ['group_id' => $group->id, 'user_id' => $limitedUser->id]);
+        $this->assertTrue($group->members()->where('user_id', $existingUser->id)->exists());
+    }
+
+    public function test_non_member_cannot_add_member_to_group(): void
+    {
+        Mail::fake();
+
+        $outsider = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $newMemberEmail = 'novo.membro.'.uniqid().'@example.com';
+
+        $response = $this->withToken($this->tokenFor($outsider))
+            ->postJson('/api/groups/'.$group->id.'/members', ['email' => $newMemberEmail]);
+
+        $response->assertStatus(404);
+        $this->assertDatabaseMissing('ex_users', ['email' => $newMemberEmail]);
+        $this->assertSame(0, $group->members()->count());
+        Mail::assertNothingSent();
     }
 }

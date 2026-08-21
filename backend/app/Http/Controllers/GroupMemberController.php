@@ -2,28 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use App\Mail\UserInvitedMail;
 use App\Models\Group;
 use App\Models\User;
-use App\Mail\UserInvitedMail;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 
 class GroupMemberController extends Controller
 {
     // lista membros de um grupo
     public function index($groupId)
     {
-        //$group = Group::with('members')->findOrFail($groupId);
+        // $group = Group::with('members')->findOrFail($groupId);
         /*return response()->json([
             //'members' => $group->members
         ], 200);*/
-		$group = Group::with('members')->findOrFail($groupId);
+        $group = Group::with('members')->findOrFail($groupId);
+
         return response()->json($group->members);
     }
-
 
     public function store(Request $request, $groupId)
     {
@@ -32,26 +31,27 @@ class GroupMemberController extends Controller
             'email' => 'required|email',
         ]);
 
-        // 2) Busca o grupo
+        // 2) Busca o grupo e confirma que quem chama é membro dele
         $group = Group::findOrFail($groupId);
+        $this->authorizeMembership($group);
 
         // 3) Tenta carregar o usuário
         $user = User::where('email', $data['email'])->first();
         $isNewUser = false;
 
-        if (!$user) {
+        if (! $user) {
             $isNewUser = true;
 
             // 3.1) Cria senha aleatória e preenche name (pode ajustar)
             $password = Str::random(10);
             $user = User::create([
-                'name'     => explode('@', $data['email'])[0],
-                'email'    => $data['email'],
+                'name' => explode('@', $data['email'])[0],
+                'email' => $data['email'],
                 'password' => bcrypt($password),
             ]);
 
             // 3.2) Gera token de reset para montar link de convite
-            //$token = Password::broker()->createToken($user);
+            // $token = Password::broker()->createToken($user);
             $token = Password::getRepository()->create($user);
 
             // 3.3) Dispara e‑mail de convite
@@ -62,7 +62,7 @@ class GroupMemberController extends Controller
         // 4) Evita duplicata no pivot
         if ($group->members()->where('user_id', $user->id)->exists()) {
             return response()->json([
-                'message' => 'Usuário já é membro deste grupo.'
+                'message' => 'Usuário já é membro deste grupo.',
             ], 409);
         }
 
@@ -72,7 +72,17 @@ class GroupMemberController extends Controller
         return response()->json([
             'message' => $isNewUser
                 ? 'Usuário criado e convidado com sucesso.'
-                : 'Membro adicionado com sucesso.'
+                : 'Membro adicionado com sucesso.',
         ], 201);
+    }
+
+    /**
+     * 404 (não 403) para não confirmar a existência do grupo a quem não é membro.
+     */
+    private function authorizeMembership(Group $group): void
+    {
+        $isMember = $group->members()->where('user_id', auth()->id())->exists();
+
+        abort_unless($isMember, 404);
     }
 }
