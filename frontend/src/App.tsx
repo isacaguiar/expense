@@ -6,6 +6,7 @@ import GroupForm from './pages/GroupForm';
 import GroupMembersForm from './pages/GroupMembersForm';
 import ExpenseManager from './pages/ExpenseManager';
 import ExpenseForm from './pages/ExpenseForm';
+import ExpenseView from './pages/ExpenseView';
 import ExpensesEntry from './pages/ExpensesEntry';
 import GroupSummary from './pages/GroupSummary';
 import SummaryEntry from './pages/SummaryEntry';
@@ -25,6 +26,7 @@ const App = () => {
           <Route path="/groups/:id/summary" element={<GroupSummary />} />
           <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
           <Route path="/groups/:id/expenses/new" element={<ExpenseForm />} />
+          <Route path="/groups/:id/expenses/:expenseId" element={<ExpenseView />} />
           <Route path="/groups/:id/members" element={<GroupMembersForm />} />
           <Route path="/groups/:id/edit" element={<GroupForm />} />
         </Route>
