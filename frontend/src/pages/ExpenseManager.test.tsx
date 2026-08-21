@@ -125,6 +125,24 @@ describe('ExpenseManager - remover despesa Fixa', () => {
     ]);
   });
 
+  it('shows the expense description in the confirmation dialog and a success toast after removing', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    const removeButton = await screen.findByRole('button', { name: 'Remover despesa fixa' });
+    await userEvent.click(removeButton);
+
+    expect(await screen.findByText('"Aluguel" deve deixar de aparecer?', { exact: false })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'A partir deste mês' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    expect(await screen.findByText('Despesa fixa removida com sucesso.')).toBeInTheDocument();
+  });
+
   it('sends the currently viewed month when removing "a partir deste mês"', async () => {
     render(
       <MemoryRouter>

@@ -11,12 +11,14 @@ import {
   Chip,
   Typography,
   CircularProgress,
+  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
   Grid,
   IconButton,
+  Snackbar,
   TextField,
   ToggleButton,
   ToggleButtonGroup
@@ -55,6 +57,7 @@ const ExpenseManager: React.FC = () => {
 
   // Diálogo de remoção de despesa Fixa
   const [removeExpenseId, setRemoveExpenseId] = useState<number | null>(null);
+  const [removeSuccess, setRemoveSuccess] = useState<boolean>(false);
 
   // Helpers de mês/ano
   const year = currentDate.getFullYear();
@@ -118,6 +121,7 @@ const ExpenseManager: React.FC = () => {
       )
       .then(() => {
         setRemoveExpenseId(null);
+        setRemoveSuccess(true);
         loadExpenses();
       })
       .catch(err => {
@@ -133,6 +137,8 @@ const ExpenseManager: React.FC = () => {
     next.setMonth(next.getMonth() + 1);
     stopFixedRecurrence(next.getFullYear(), next.getMonth() + 1);
   };
+
+  const removeExpense = expenses.find(exp => exp.id === removeExpenseId) ?? null;
 
   const filteredExpenses = expenses
     .filter(exp => exp.description.toLowerCase().includes(search.toLowerCase()))
@@ -256,11 +262,17 @@ const ExpenseManager: React.FC = () => {
       )}
 
       {/* Diálogo de remoção de despesa Fixa */}
-      <Dialog open={removeExpenseId !== null} onClose={() => setRemoveExpenseId(null)}>
+      <Dialog
+        open={removeExpenseId !== null}
+        onClose={() => setRemoveExpenseId(null)}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
         <DialogTitle>Remover despesa fixa</DialogTitle>
         <DialogContent dividers>
           <Typography>
-            A partir de quando esta despesa deve deixar de aparecer?
+            {removeExpense
+              ? `A partir de quando "${removeExpense.description}" deve deixar de aparecer?`
+              : 'A partir de quando esta despesa deve deixar de aparecer?'}
           </Typography>
         </DialogContent>
         <DialogActions>
@@ -271,6 +283,17 @@ const ExpenseManager: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <Snackbar
+        open={removeSuccess}
+        autoHideDuration={4000}
+        onClose={() => setRemoveSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setRemoveSuccess(false)} severity="success" variant="filled">
+          Despesa fixa removida com sucesso.
+        </Alert>
+      </Snackbar>
     </>
   );
 };
