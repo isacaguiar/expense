@@ -19,6 +19,7 @@ class GroupController extends Controller
             ->whereHas('members', function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             })
+            ->with('creator:id,email')
             ->get();
 
         /*$user = auth()->user();
@@ -32,6 +33,8 @@ class GroupController extends Controller
         return $grupos;
     }
 
+    public const MAX_GROUPS_CREATED_PER_USER = 3;
+
     public function store(Request $request)
     {
         Log::info('User authenticated:', ['user' => auth()->user()]);
@@ -42,8 +45,19 @@ class GroupController extends Controller
             'closing_day' => 'nullable|integer|between:1,31',
         ]);
 
+        $createdGroupsCount = Group::where('deleted', 0)
+            ->where('created_by', auth()->id())
+            ->count();
+
+        if ($createdGroupsCount >= self::MAX_GROUPS_CREATED_PER_USER) {
+            return response()->json([
+                'message' => 'Você já atingiu o limite de '.self::MAX_GROUPS_CREATED_PER_USER.' grupos criados.',
+            ], 422);
+        }
+
         $data['create_date'] = now();
         $data['deleted'] = false;
+        $data['created_by'] = auth()->id();
 
         $group = Group::create($data);
         Log::info('Grupo criado!');
@@ -57,7 +71,7 @@ class GroupController extends Controller
 
     public function show($id)
     {
-        $group = Group::findOrFail($id);
+        $group = Group::with('creator:id,email')->findOrFail($id);
         $this->authorizeMembership($group);
 
         return $group;

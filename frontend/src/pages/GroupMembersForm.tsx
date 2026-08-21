@@ -21,7 +21,7 @@ import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
 
 type User = { id: number; email: string };
-type Group = { id: number; name: string; description: string };
+type Group = { id: number; name: string; description: string; creator?: { id: number; email: string } | null };
 
 const GroupMembersForm: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
@@ -98,6 +98,9 @@ const GroupMembersForm: React.FC = () => {
           <Typography variant="h6">{group.name}</Typography>
           <Typography variant="body2" color="text.secondary">
             {group.description}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Responsável: {group.creator?.email ?? '—'}
           </Typography>
         </Box>
       )}

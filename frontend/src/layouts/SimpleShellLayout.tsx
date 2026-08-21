@@ -22,7 +22,8 @@ export default function SimpleShellLayout() {
       .catch(err => console.error('Erro ao carregar usuário logado:', err));
   }, []);
 
-  const activeItem = simpleNavItems().find(item => item.to === location.pathname);
+  const flatItems = simpleNavItems().flatMap(item => [item, ...(item.children ?? [])]);
+  const activeItem = flatItems.find(item => item.to === location.pathname);
   const title = activeItem?.label ?? '';
 
   return (

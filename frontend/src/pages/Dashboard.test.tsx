@@ -17,10 +17,26 @@ vi.mock('react-router-dom', async importOriginal => {
   };
 });
 
-const groups = [
-  { id: 1, name: 'Viagem SP', description: 'Grupo da viagem', create_date: '2026-01-01' },
-  { id: 2, name: 'Casa', description: 'Contas da casa', create_date: '2026-01-01' },
+type Group = {
+  id: number;
+  name: string;
+  description: string;
+  create_date: string;
+  created_by: number | null;
+  creator?: { id: number; email: string } | null;
+};
+
+const groups: Group[] = [
+  { id: 1, name: 'Viagem SP', description: 'Grupo da viagem', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'dono@example.com' } },
+  { id: 2, name: 'Casa', description: 'Contas da casa', create_date: '2026-01-01', created_by: 99, creator: { id: 99, email: 'outro@example.com' } },
 ];
+
+function mockGroupsAndMe(groupsData: Group[], meId = 10) {
+  vi.mocked(axios.get).mockImplementation((url: string) => {
+    if (url.includes('/api/me')) return Promise.resolve({ data: { id: meId } });
+    return Promise.resolve({ data: groupsData });
+  });
+}
 
 describe('Dashboard', () => {
   beforeEach(() => {
@@ -29,8 +45,9 @@ describe('Dashboard', () => {
   });
 
   it('redirects to login when the groups request returns 401', async () => {
-    vi.mocked(axios.get).mockRejectedValueOnce({
-      response: { status: 401 },
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/api/me')) return Promise.resolve({ data: { id: 1 } });
+      return Promise.reject({ response: { status: 401 } });
     });
 
     render(
@@ -45,7 +62,7 @@ describe('Dashboard', () => {
   });
 
   it('renders a card per group and filters by search', async () => {
-    vi.mocked(axios.get).mockResolvedValueOnce({ data: groups });
+    mockGroupsAndMe(groups);
     const user = userEvent.setup();
 
     render(
@@ -64,7 +81,7 @@ describe('Dashboard', () => {
   });
 
   it('shows the empty state when the user has no groups', async () => {
-    vi.mocked(axios.get).mockResolvedValueOnce({ data: [] });
+    mockGroupsAndMe([]);
 
     render(
       <MemoryRouter>
@@ -76,7 +93,7 @@ describe('Dashboard', () => {
   });
 
   it('navigates to group edit/members/expenses from the card actions', async () => {
-    vi.mocked(axios.get).mockResolvedValueOnce({ data: groups });
+    mockGroupsAndMe(groups);
     const user = userEvent.setup();
 
     render(
@@ -98,7 +115,7 @@ describe('Dashboard', () => {
   });
 
   it('links the group card to its summary page', async () => {
-    vi.mocked(axios.get).mockResolvedValueOnce({ data: groups });
+    mockGroupsAndMe(groups);
 
     render(
       <MemoryRouter>
@@ -107,5 +124,63 @@ describe('Dashboard', () => {
     );
 
     expect(await screen.findByRole('link', { name: /Viagem SP/ })).toHaveAttribute('href', '/groups/1/summary');
+  });
+
+  it('shows the responsible person on each card', async () => {
+    mockGroupsAndMe(groups);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Responsável: dono@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Responsável: outro@example.com')).toBeInTheDocument();
+  });
+
+  it('falls back to a dash when the group has no creator recorded', async () => {
+    mockGroupsAndMe([{ id: 3, name: 'Grupo antigo', description: '', create_date: '2026-01-01', created_by: null, creator: null }]);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Responsável: —')).toBeInTheDocument();
+  });
+
+  it('disables "Novo grupo" when the current user already created 3 groups', async () => {
+    const threeOwnGroups = [
+      { id: 1, name: 'Grupo 1', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' } },
+      { id: 2, name: 'Grupo 2', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' } },
+      { id: 3, name: 'Grupo 3', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' } },
+    ];
+    mockGroupsAndMe(threeOwnGroups, 10);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Grupo 1');
+
+    expect(screen.getByRole('link', { name: 'Novo grupo' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('keeps "Novo grupo" enabled when the user created fewer than 3 groups', async () => {
+    mockGroupsAndMe(groups, 10);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+
+    expect(screen.getByRole('link', { name: 'Novo grupo' })).not.toHaveAttribute('aria-disabled', 'true');
   });
 });

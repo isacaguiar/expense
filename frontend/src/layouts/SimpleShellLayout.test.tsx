@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -51,16 +52,37 @@ describe('SimpleShellLayout', () => {
     await screen.findByText('Conteúdo Dashboard');
 
     expect(screen.getByRole('navigation')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Meus Grupos/ })).toHaveAttribute('href', '/dashboard');
     expect(screen.getByRole('link', { name: /Resumo/ })).toHaveAttribute('href', '/summary');
     expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/expenses');
     expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '#');
     expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
-    expect(screen.getByRole('link', { name: /Configurações/ })).toHaveAttribute('href', '#');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('derives the header title from the active sidebar item', async () => {
+  it('nests "Grupos" as a submenu of "Configurações", not as a top-level item', async () => {
+    render(
+      <MemoryRouter initialEntries={['/summary']}>
+        <Routes>
+          <Route element={<SimpleShellLayout />}>
+            <Route path="/summary" element={<div>Conteúdo Resumo</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Conteúdo Resumo');
+
+    expect(screen.queryByRole('link', { name: /Grupos/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Configurações/ })).not.toBeInTheDocument();
+
+    await screen.findByText('Configurações');
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Configurações'));
+
+    expect(screen.getByRole('link', { name: 'Grupos' })).toHaveAttribute('href', '/dashboard');
+  });
+
+  it('derives the header title from the active sidebar item, even when nested', async () => {
     render(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
@@ -71,6 +93,6 @@ describe('SimpleShellLayout', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByRole('heading', { name: 'Meus Grupos' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Grupos' })).toBeInTheDocument();
   });
 });
