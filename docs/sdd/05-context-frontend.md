@@ -2,7 +2,7 @@
 
 > Documento **portátil**, sem nada específico de ferramenta: é o conteúdo que qualquer assistente de IA (ou desenvolvedor) deve carregar antes de mexer na UI do projeto. Hoje é referenciado pela skill `expense-frontend` do Claude Code (`expense/.claude/skills/expense-frontend/SKILL.md`), mas não depende dela — se o projeto trocar de ferramenta de IA, este arquivo continua valendo, só muda o adaptador que aponta pra ele.
 
-Versão: 1.1 · Última atualização: 2026-08-19
+Versão: 1.2 · Última atualização: 2026-08-20
 
 ---
 
@@ -17,8 +17,9 @@ Antes de criar ou alterar o **layout** de uma tela (estrutura, hierarquia visual
 
 - `assets/images/screen/movel.png` — telas mobile do app "Shared Expense" (referência para `expense/app`, Expo/React Native): onboarding, login (com "Continuar com Google" e link de cadastro — nota: o `expense/frontend` web atual removeu o link de cadastro por não ter página de registro, ver `docs/backlog/`), dashboard do grupo, lista de grupos, listagem de despesas, nova despesa, detalhe da despesa (divisão/pagamento), configurações do grupo e perfil do usuário.
 - `assets/images/screen/desktop.png` — telas desktop do CRUD de despesas (referência para `expense/frontend`, web): listagem, visualização, criação, edição, confirmação de exclusão, exclusão concluída, listagem vazia e filtros/busca — com navegação lateral fixa (Resumo, Despesas, Participantes, Pagamentos, Relatórios, Configurações).
+- `E:\Projetos\Controle de Despesas\assets\images\01.png` a `09.png` (fora do repositório — pasta irmã de `expense/`, não versionada com o código) — os mesmos 8 estados de `desktop.png` recortados um por arquivo (`site-full.png`, na mesma pasta, é idêntico byte-a-byte a `desktop.png`, não traz tela nova). Útil como referência **de padrão**, não só do CRUD de Despesas: o formato "listagem → visualizar/criar/editar → confirmar exclusão → exclusão concluída → lista vazia → filtros/busca" é o modelo a repetir ao modernizar qualquer outra tela de listagem/cadastro do `frontend/` (Grupos, Participantes, etc.) que ainda não tenha mockup próprio — ver `docs/feature/20260820-atualizacao-layout-paginas/`.
 
-Esses mockups são **referência de layout e fluxo**, não a implementação atual — nem tudo que aparece neles já existe em código (ex.: navegação lateral desktop, tela de perfil completa, relatórios). Ao portar uma tela existente ou criar uma nova, comece pelo mockup do dispositivo alvo (mobile → `movel.png`, web/desktop → `desktop.png`) e só depois ajuste para os componentes reais disponíveis (MUI no web, `react-native-paper` no Expo) e para o contrato de API existente — não implemente campo/tela que o mockup sugere mas a API não suporta sem antes tratar isso como mudança de API (backend).
+Esses mockups são **referência de layout e fluxo**, não a implementação atual — nem tudo que aparece neles já existe em código (ex.: navegação lateral desktop, tela de perfil completa, relatórios). Ao portar uma tela existente ou criar uma nova, comece pelo mockup do dispositivo alvo (mobile → `movel.png`, web/desktop → `desktop.png`/`01-09.png`) e só depois ajuste para os componentes reais disponíveis (MUI no web, `react-native-paper` no Expo) e para o contrato de API existente — não implemente campo/tela que o mockup sugere mas a API não suporta sem antes tratar isso como mudança de API (backend, ver `docs/backlog/` itens `023`-`026` para os gaps já identificados no mockup de Despesas).
 
 ## Antes de codar
 

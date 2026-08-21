@@ -4,9 +4,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import {
   Box,
   Card,
+  CardActionArea,
   CardContent,
   CircularProgress,
-  Container,
   Grid,
   Typography
 } from '@mui/material';
@@ -51,45 +51,26 @@ const ExpensesEntry: React.FC = () => {
 
   if (loading) {
     return (
-      <Container sx={{ mt: 4 }}>
-        <Box display="flex" justifyContent="center">
-          <CircularProgress />
-        </Box>
-      </Container>
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (error) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Typography color="error">{error}</Typography>
-      </Container>
-    );
+    return <Typography color="error">{error}</Typography>;
   }
 
   if (groups.length === 0) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Typography>Você ainda não participa de nenhum grupo.</Typography>
-      </Container>
-    );
+    return <Typography color="text.secondary">Você ainda não participa de nenhum grupo.</Typography>;
   }
 
   return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" mb={3}>
-        Escolha um grupo
-      </Typography>
-      <Grid container spacing={2}>
-        {groups.map(group => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={group.id}>
-            <Card
-              elevation={3}
-              sx={{ borderRadius: 2 }}
-              component={Link}
-              to={`/groups/${group.id}/expenses`}
-              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-            >
+    <Grid container spacing={2}>
+      {groups.map(group => (
+        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={group.id}>
+          <Card elevation={3} sx={{ borderRadius: 2 }}>
+            <CardActionArea component={Link} to={`/groups/${group.id}/expenses`}>
               <CardContent>
                 <Typography variant="h6" color="primary">
                   {group.name}
@@ -98,11 +79,11 @@ const ExpensesEntry: React.FC = () => {
                   {group.description}
                 </Typography>
               </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Container>
+            </CardActionArea>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
   );
 };
 

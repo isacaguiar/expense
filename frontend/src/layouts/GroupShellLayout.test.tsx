@@ -1,0 +1,99 @@
+import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import axios from 'axios';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import GroupShellLayout from './GroupShellLayout';
+
+vi.mock('axios');
+
+const navigateMock = vi.fn();
+
+vi.mock('react-router-dom', async importOriginal => {
+  const actual = await importOriginal<typeof import('react-router-dom')>();
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
+
+const groups = [
+  { id: 1, name: 'Grupo A' },
+  { id: 2, name: 'Grupo B' },
+];
+
+const currentUser = { name: 'QA Shell Usuario', email: 'qa-shell@example.com' };
+
+function mockGetResponses() {
+  vi.mocked(axios.get).mockImplementation((url: string) => {
+    if (url.includes('/api/groups')) {
+      return Promise.resolve({ data: groups });
+    }
+    if (url.includes('/api/me')) {
+      return Promise.resolve({ data: currentUser });
+    }
+    return Promise.reject(new Error(`unexpected GET ${url}`));
+  });
+}
+
+function renderShell(initialPath: string) {
+  return render(
+    <MemoryRouter initialEntries={[initialPath]}>
+      <Routes>
+        <Route element={<GroupShellLayout />}>
+          <Route path="/groups/:id/summary" element={<div>Conteúdo Resumo</div>} />
+          <Route path="/groups/:id/expenses" element={<div>Conteúdo Despesas</div>} />
+        </Route>
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+describe('GroupShellLayout', () => {
+  beforeEach(() => {
+    navigateMock.mockClear();
+    vi.mocked(axios.get).mockReset();
+    mockGetResponses();
+  });
+
+  it('renders the sidebar with real links for Resumo/Despesas/Participantes/Configurações and placeholders for the rest', async () => {
+    renderShell('/groups/1/summary');
+
+    await screen.findByText('Conteúdo Resumo');
+
+    expect(screen.getByRole('link', { name: /Resumo/ })).toHaveAttribute('href', '/groups/1/summary');
+    expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/groups/1/expenses');
+    expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '/groups/1/members');
+    expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Configurações/ })).toHaveAttribute('href', '/groups/1/edit');
+  });
+
+  it('shows the logged-in user name and initials from GET /api/me', async () => {
+    renderShell('/groups/1/summary');
+
+    expect(await screen.findByText('QA Shell Usuario')).toBeInTheDocument();
+    expect(screen.getByText('QS')).toBeInTheDocument();
+  });
+
+  it('derives the header title from the active sidebar item', async () => {
+    renderShell('/groups/1/expenses');
+
+    await screen.findByText('Conteúdo Despesas');
+
+    expect(screen.getByRole('heading', { name: 'Despesas' })).toBeInTheDocument();
+  });
+
+  it('navigates to the same page for the newly selected group when the group dropdown changes', async () => {
+    const user = userEvent.setup();
+
+    renderShell('/groups/1/expenses');
+
+    await screen.findByText('Conteúdo Despesas');
+
+    await user.click(await screen.findByRole('combobox'));
+    await user.click(await screen.findByRole('option', { name: 'Grupo B' }));
+
+    expect(navigateMock).toHaveBeenCalledWith('/groups/2/expenses');
+  });
+});

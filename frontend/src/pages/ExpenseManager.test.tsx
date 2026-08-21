@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -7,13 +7,6 @@ import ExpenseManager from './ExpenseManager';
 
 vi.mock('axios');
 
-type ExpensePayload = {
-  expense_type: string;
-  installments: number;
-  payers: number[];
-  quotas: { number: number; date_expected: string; paid: boolean; value_quota: number }[];
-};
-
 type StopRecurrencePayload = { year: number; month: number };
 
 function lastPostCall<T>(): [string, T] {
@@ -21,28 +14,19 @@ function lastPostCall<T>(): [string, T] {
   return calls[calls.length - 1] as unknown as [string, T];
 }
 
+const navigateMock = vi.fn();
+
 vi.mock('react-router-dom', async importOriginal => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
   return {
     ...actual,
-    useNavigate: () => vi.fn(),
+    useNavigate: () => navigateMock,
     useParams: () => ({ id: '1' }),
   };
 });
 
-const members = [
-  { id: 1, name: 'Isac' },
-  { id: 2, name: 'João' },
-];
-
 function mockGetResponses(expensesList: unknown[] = []) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
-    if (url.includes('/members')) {
-      return Promise.resolve({ data: members });
-    }
-    if (url.includes('/me')) {
-      return Promise.resolve({ data: { id: 1 } });
-    }
     if (url.includes('/expenses')) {
       return Promise.resolve({ data: expensesList });
     }
@@ -50,126 +34,55 @@ function mockGetResponses(expensesList: unknown[] = []) {
   });
 }
 
-async function openNewExpenseModal() {
-  render(
-    <MemoryRouter>
-      <ExpenseManager />
-    </MemoryRouter>
-  );
-
-  await waitFor(() => expect(axios.get).toHaveBeenCalled());
-
-  await userEvent.click(screen.getByRole('button', { name: /nova despesa/i }));
-  await screen.findByText('Cadastrar nova despesa');
-}
-
-async function selectExpenseType(label: string) {
-  await userEvent.click(screen.getByLabelText('Tipo de despesa'));
-  const listbox = await screen.findByRole('listbox');
-  await userEvent.click(within(listbox).getByText(label));
-}
-
 describe('ExpenseManager - Nova Despesa', () => {
   beforeEach(() => {
+    navigateMock.mockClear();
     vi.mocked(axios.get).mockReset();
-    vi.mocked(axios.post).mockReset();
-    vi.mocked(axios.post).mockResolvedValue({ data: { expense_id: 1 } });
     mockGetResponses();
   });
 
-  it('creates an "à vista" expense with a single paid quota (regression)', async () => {
-    await openNewExpenseModal();
+  it('navigates to the full-page creation route instead of opening a modal', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
 
-    await userEvent.type(screen.getByLabelText('Descrição'), 'Mercado');
-    await userEvent.type(screen.getByLabelText('Valor'), '150,00');
+    await waitFor(() => expect(axios.get).toHaveBeenCalled());
 
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+    await userEvent.click(screen.getByRole('button', { name: /nova despesa/i }));
 
-    await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = lastPostCall<ExpensePayload>();
-    expect(payload).toMatchObject({
-      expense_type: 'IN_CASH',
-      installments: 1,
-      payers: [1, 2],
-    });
-    expect(payload.quotas).toEqual([
-      { number: 1, date_expected: expect.any(String), paid: true, value_quota: 150 },
-    ]);
+    expect(navigateMock).toHaveBeenCalledWith('/groups/1/expenses/new');
+    expect(screen.queryByText('Cadastrar nova despesa')).not.toBeInTheDocument();
+  });
+});
+
+describe('ExpenseManager - listagem em cards', () => {
+  const expenses = [
+    { id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true },
+    { id: 10, description: 'Mercado', value: 150, date: '2026-08-05', payerName: 'João', isFixed: false },
+  ];
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    mockGetResponses(expenses);
   });
 
-  it('creates an "parcelada" expense with N quotas, rounding absorbed in the last one', async () => {
-    await openNewExpenseModal();
+  it('renders a card per expense, each linking to its view route', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
 
-    await userEvent.type(screen.getByLabelText('Descrição'), 'Sofá');
-    await userEvent.type(screen.getByLabelText('Valor'), '100,00');
-    await selectExpenseType('Parcelada');
-
-    const installmentsField = await screen.findByLabelText('Quantidade de parcelas');
-    await userEvent.type(installmentsField, '3');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-
-    await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = lastPostCall<ExpensePayload>();
-    expect(payload.expense_type).toBe('IN_INSTALLMENTS');
-    expect(payload.installments).toBe(3);
-    expect(payload.quotas).toHaveLength(3);
-    expect(payload.quotas.every(q => q.paid === false)).toBe(true);
-    const total = payload.quotas.reduce((sum, q) => sum + q.value_quota, 0);
-    expect(total).toBeCloseTo(100, 2);
+    expect(await screen.findByText('Aluguel')).toBeInTheDocument();
+    expect(screen.getByText('Mercado')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Aluguel/ })).toHaveAttribute('href', '/groups/1/expenses/9');
+    expect(screen.getByRole('link', { name: /Mercado/ })).toHaveAttribute('href', '/groups/1/expenses/10');
   });
 
-  it('creates a "fixa" expense with a single unpaid quota', async () => {
-    await openNewExpenseModal();
-
-    await userEvent.type(screen.getByLabelText('Descrição'), 'Aluguel');
-    await userEvent.type(screen.getByLabelText('Valor'), '1200,00');
-    await selectExpenseType('Fixa');
-
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-
-    await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = lastPostCall<ExpensePayload>();
-    expect(payload.expense_type).toBe('FIXED');
-    expect(payload.installments).toBe(1);
-    expect(payload.quotas).toEqual([
-      { number: 1, date_expected: expect.any(String), paid: false, value_quota: 1200 },
-    ]);
-  });
-
-  it('lets the user uncheck a participant so payers[] excludes them', async () => {
-    await openNewExpenseModal();
-
-    await userEvent.type(screen.getByLabelText('Descrição'), 'Cinema');
-    await userEvent.type(screen.getByLabelText('Valor'), '50,00');
-
-    await userEvent.click(screen.getByRole('checkbox', { name: 'João' }));
-
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-
-    await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = lastPostCall<ExpensePayload>();
-    expect(payload.payers).toEqual([1]);
-  });
-
-  it('defaults all participants checked even when members resolve after the modal is already open (regression)', async () => {
-    let resolveMembers: (value: { data: typeof members }) => void = () => {};
-    const membersPromise = new Promise<{ data: typeof members }>(resolve => {
-      resolveMembers = resolve;
-    });
-
-    vi.mocked(axios.get).mockImplementation((url: string) => {
-      if (url.includes('/members')) {
-        return membersPromise;
-      }
-      if (url.includes('/me')) {
-        return Promise.resolve({ data: { id: 1 } });
-      }
-      if (url.includes('/expenses')) {
-        return Promise.resolve({ data: [] });
-      }
-      return Promise.reject(new Error(`unexpected GET ${url}`));
-    });
+  it('filters by description on the client side', async () => {
+    const user = userEvent.setup();
 
     render(
       <MemoryRouter>
@@ -177,36 +90,28 @@ describe('ExpenseManager - Nova Despesa', () => {
       </MemoryRouter>
     );
 
-    await userEvent.click(screen.getByRole('button', { name: /nova despesa/i }));
-    await screen.findByText('Cadastrar nova despesa');
+    await screen.findByText('Aluguel');
+    await user.type(screen.getByLabelText('Buscar despesa'), 'merc');
 
-    resolveMembers({ data: members });
-    await screen.findByRole('checkbox', { name: 'João' });
-
-    await userEvent.type(screen.getByLabelText('Descrição'), 'Cinema');
-    await userEvent.type(screen.getByLabelText('Valor'), '50,00');
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-
-    await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [, payload] = lastPostCall<ExpensePayload>();
-    expect(payload.payers).toEqual([1, 2]);
+    expect(screen.queryByText('Aluguel')).not.toBeInTheDocument();
+    expect(screen.getByText('Mercado')).toBeInTheDocument();
+    expect(axios.get).toHaveBeenCalledTimes(1);
   });
 
-  it('blocks saving when no participant is selected', async () => {
-    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-    await openNewExpenseModal();
+  it('filters by type (Fixas/Variáveis) on the client side', async () => {
+    const user = userEvent.setup();
 
-    await userEvent.type(screen.getByLabelText('Descrição'), 'Cinema');
-    await userEvent.type(screen.getByLabelText('Valor'), '50,00');
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
 
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Isac' }));
-    await userEvent.click(screen.getByRole('checkbox', { name: 'João' }));
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Fixas' }));
 
-    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
-
-    expect(axios.post).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledWith('Selecione ao menos um participante da divisão.');
-    alertSpy.mockRestore();
+    expect(screen.getByText('Aluguel')).toBeInTheDocument();
+    expect(screen.queryByText('Mercado')).not.toBeInTheDocument();
   });
 });
 
@@ -218,6 +123,24 @@ describe('ExpenseManager - remover despesa Fixa', () => {
     mockGetResponses([
       { id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true },
     ]);
+  });
+
+  it('shows the expense description in the confirmation dialog and a success toast after removing', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    const removeButton = await screen.findByRole('button', { name: 'Remover despesa fixa' });
+    await userEvent.click(removeButton);
+
+    expect(await screen.findByText('"Aluguel" deve deixar de aparecer?', { exact: false })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'A partir deste mês' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    expect(await screen.findByText('Despesa fixa removida com sucesso.')).toBeInTheDocument();
   });
 
   it('sends the currently viewed month when removing "a partir deste mês"', async () => {

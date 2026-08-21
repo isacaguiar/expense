@@ -15,14 +15,15 @@ type GroupOption = {
   name: string;
 };
 
-interface GroupSummaryHeaderProps {
+interface GroupHeaderProps {
+  title: string;
   groups: GroupOption[];
   groupId: string;
   onGroupChange: (event: SelectChangeEvent<number>) => void;
   userName: string | null;
 }
 
-export default function GroupSummaryHeader({ groups, groupId, onGroupChange, userName }: GroupSummaryHeaderProps) {
+export default function GroupHeader({ title, groups, groupId, onGroupChange, userName }: GroupHeaderProps) {
   return (
     <Box
       component="header"
@@ -36,7 +37,7 @@ export default function GroupSummaryHeader({ groups, groupId, onGroupChange, use
       }}
     >
       <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-        Resumo do grupo
+        {title}
       </Typography>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>

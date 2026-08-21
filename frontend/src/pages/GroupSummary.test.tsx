@@ -134,51 +134,6 @@ describe('GroupSummary', () => {
     });
   });
 
-  it('navigates to the selected group when the group dropdown changes', async () => {
-    const user = userEvent.setup();
-
-    render(
-      <MemoryRouter>
-        <GroupSummary />
-      </MemoryRouter>
-    );
-
-    await screen.findByText('R$ 1.100,00');
-
-    await user.click(await screen.findByRole('combobox'));
-    await user.click(await screen.findByRole('option', { name: 'Grupo B' }));
-
-    expect(navigateMock).toHaveBeenCalledWith('/groups/2/summary');
-  });
-
-  it('sidebar links Resumo/Despesas/Participantes to real routes and leaves the rest as placeholders', async () => {
-    render(
-      <MemoryRouter initialEntries={['/groups/1/summary']}>
-        <GroupSummary />
-      </MemoryRouter>
-    );
-
-    await screen.findByText('R$ 1.100,00');
-
-    expect(screen.getByRole('link', { name: /Resumo/ })).toHaveAttribute('href', '/groups/1/summary');
-    expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/groups/1/expenses');
-    expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '/groups/1/members');
-    expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
-    expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '#');
-    expect(screen.getByRole('link', { name: /Configurações/ })).toHaveAttribute('href', '#');
-  });
-
-  it('shows the logged-in user name and initials from GET /api/me', async () => {
-    render(
-      <MemoryRouter>
-        <GroupSummary />
-      </MemoryRouter>
-    );
-
-    expect(await screen.findByText('QA Header Usuario')).toBeInTheDocument();
-    expect(screen.getByText('QH')).toBeInTheDocument();
-  });
-
   it('shows the paid/pending percentage of the total', async () => {
     render(
       <MemoryRouter>
