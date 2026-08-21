@@ -8,6 +8,7 @@ use App\Models\Quota;
 use App\Support\BillingCycle;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -73,6 +74,47 @@ class ExpenseController extends Controller
             ->values();
 
         return response()->json($expenses);
+    }
+
+    public function show($id)
+    {
+        $expense = $this->findExpenseForMember($id);
+        $expense->load(['payers', 'quotas']);
+
+        return response()->json($expense);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $expense = $this->findExpenseForMember($id);
+        $this->authorizeExpenseOwner($expense);
+
+        $data = $request->validate([
+            'description' => 'sometimes|required|string|max:255',
+            'date_payment' => 'sometimes|required|date',
+            'total_value' => 'sometimes|required|numeric|min:0',
+            'user_payer_id' => ['sometimes', 'required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id)],
+            'payers' => 'sometimes|required|array|min:1',
+            'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
+        ]);
+
+        $expense->update(Arr::except($data, ['payers']));
+
+        if (array_key_exists('payers', $data)) {
+            $expense->payers()->sync($data['payers']);
+        }
+
+        return response()->json($expense->fresh(['payers', 'quotas']));
+    }
+
+    public function destroy($id)
+    {
+        $expense = $this->findExpenseForMember($id);
+        $this->authorizeExpenseOwner($expense);
+
+        $expense->update(['deleted' => true]);
+
+        return response()->json(['message' => 'Despesa marcada como deletada.']);
     }
 
     public function store(Request $request)
@@ -363,5 +405,21 @@ class ExpenseController extends Controller
         }
 
         return $entries;
+    }
+
+    private function findExpenseForMember($id): Expense
+    {
+        $expense = Expense::where('deleted', false)->findOrFail($id);
+        $group = Group::findOrFail($expense->group_id);
+        $this->authorizeGroupMembership($group);
+
+        return $expense;
+    }
+
+    private function authorizeExpenseOwner(Expense $expense): void
+    {
+        $isOwner = auth()->id() === $expense->user_creator_id || auth()->id() === $expense->user_payer_id;
+
+        abort_unless($isOwner, 403);
     }
 }
