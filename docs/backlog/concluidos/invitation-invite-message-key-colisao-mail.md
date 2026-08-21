@@ -19,3 +19,10 @@ Qualquer convite que inclua uma mensagem personalizada (`message` no payload) qu
 Correção sugerida (para quando isso virar task): renomear a chave de dados (`'message'` → ex. `'inviteMessage'`) tanto no controller quanto na blade view (`resources/views/email/invitation.blade.php`), evitando a colisão com a variável reservada `$message` do `Mail::send()` legado.
 
 Tipo sugerido: backend
+
+## Resolução
+
+Concluído em: 2026-08-21
+Feature: docs/feature/20260821-invitation-message-colisao-mail/
+Tasks: TASK-129
+PRs: https://github.com/isacaguiar/expense/pull/40 (mergeado em `dev`)
