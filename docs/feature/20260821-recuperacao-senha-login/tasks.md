@@ -7,9 +7,9 @@ Versão: 1.0 · Criado em: 20260821
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-122 | `InvitationController::forgotPassword`: parar de sobrescrever `password` antes do e-mail, envolver `Mail::send` em try/catch com log, e só gravar o rate-limit após envio confirmado | backend | plan.md §1 | nenhum | Concluída |
-| TASK-123 | Adicionar serviço `mailpit` (`axllent/mailpit`) ao `docker-compose.yml`, portas 1025 (SMTP) e 8025 (UI) | infra | plan.md §3 | nenhum | Pendente |
+| TASK-123 | Adicionar serviço `mailpit` (`axllent/mailpit`) ao `docker-compose.yml`, portas 1025 (SMTP) e 8025 (UI) | infra | plan.md §3 | nenhum | Concluída |
 | TASK-124 | `InvitationController`: corrigir `unique:users`/`exists:users` para `unique:ex_users`/`exists:ex_users` em `invite`/`verify`/`forgotPassword` (nome de tabela errado, bloqueava a verificação da TASK-122) | backend | plan.md §6 | nenhum | Concluída |
-| TASK-125 | `InvitationController`: corrigir `Mail::send('emails.*', ...)` para `'email.*'` nos 3 envios (`invite`/`verify`/`forgotPassword`) — nome de view errado, bloqueava o envio real de qualquer e-mail deste controller | backend | plan.md §7 | nenhum | Pendente |
+| TASK-125 | `InvitationController`: corrigir `Mail::send('emails.*', ...)` para `'email.*'` nos 3 envios (`invite`/`verify`/`forgotPassword`) — nome de view errado, bloqueava o envio real de qualquer e-mail deste controller | backend | plan.md §7 | nenhum | Concluída |
 
 ## Critérios de aceite
 
