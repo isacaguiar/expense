@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20260821
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-126 | Implementar `ExpenseController::show`, com helpers `findExpenseForMember`/membership | backend | plan.md §1, §4 | antes do merge | Implementada na branch da feature |
-| TASK-127 | Implementar `ExpenseController::update`, com helper `authorizeExpenseOwner` (criador/pagador) | backend | plan.md §2, §4 | antes do merge | Pendente |
+| TASK-127 | Implementar `ExpenseController::update`, com helper `authorizeExpenseOwner` (criador/pagador) | backend | plan.md §2, §4 | antes do merge | Implementada na branch da feature |
 | TASK-128 | Implementar `ExpenseController::destroy` (soft delete), reaproveitando `authorizeExpenseOwner` | backend | plan.md §3 | antes do merge | Pendente |
 
 ## Critérios de aceite

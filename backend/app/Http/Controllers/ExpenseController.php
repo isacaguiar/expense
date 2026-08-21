@@ -8,6 +8,7 @@ use App\Models\Quota;
 use App\Support\BillingCycle;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -81,6 +82,29 @@ class ExpenseController extends Controller
         $expense->load(['payers', 'quotas']);
 
         return response()->json($expense);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $expense = $this->findExpenseForMember($id);
+        $this->authorizeExpenseOwner($expense);
+
+        $data = $request->validate([
+            'description' => 'sometimes|required|string|max:255',
+            'date_payment' => 'sometimes|required|date',
+            'total_value' => 'sometimes|required|numeric|min:0',
+            'user_payer_id' => ['sometimes', 'required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id)],
+            'payers' => 'sometimes|required|array|min:1',
+            'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
+        ]);
+
+        $expense->update(Arr::except($data, ['payers']));
+
+        if (array_key_exists('payers', $data)) {
+            $expense->payers()->sync($data['payers']);
+        }
+
+        return response()->json($expense->fresh(['payers', 'quotas']));
     }
 
     public function store(Request $request)
@@ -380,5 +404,12 @@ class ExpenseController extends Controller
         $this->authorizeGroupMembership($group);
 
         return $expense;
+    }
+
+    private function authorizeExpenseOwner(Expense $expense): void
+    {
+        $isOwner = auth()->id() === $expense->user_creator_id || auth()->id() === $expense->user_payer_id;
+
+        abort_unless($isOwner, 403);
     }
 }
