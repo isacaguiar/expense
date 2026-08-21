@@ -98,6 +98,21 @@ describe('ExpenseManager - listagem em cards', () => {
     expect(axios.get).toHaveBeenCalledTimes(1);
   });
 
+  it('displays the expense date without an off-by-one-day shift in negative timezones', async () => {
+    mockGetResponses([
+      { id: 11, description: 'Assinatura', value: 50, date: '2026-07-16', payerName: 'Isac', isFixed: false },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Assinatura')).toBeInTheDocument();
+    expect(screen.getByText(/16\/07\/2026/)).toBeInTheDocument();
+  });
+
   it('filters by type (Fixas/Variáveis) on the client side', async () => {
     const user = userEvent.setup();
 

@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20260821
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-132 | Projetar despesas `IN_INSTALLMENTS` mês a mês em `indexByGroup`, usando `value_quota` | backend | plan.md §1 | antes do merge | Implementada na branch da feature |
-| TASK-133 | Corrigir parse de data em `ExpenseManager.tsx` (constrói `Date` a partir de componentes locais) | frontend | plan.md §2 | antes do merge | Pendente |
+| TASK-133 | Corrigir parse de data em `ExpenseManager.tsx` (constrói `Date` a partir de componentes locais) | frontend | plan.md §2 | antes do merge | Implementada na branch da feature |
 
 ## Critérios de aceite
 
