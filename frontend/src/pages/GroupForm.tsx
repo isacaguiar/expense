@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Box,
   Button,
+  Card,
+  CardContent,
   CircularProgress,
-  Container,
   TextField,
   Typography
 } from '@mui/material';
@@ -88,64 +89,72 @@ const GroupForm: React.FC = () => {
     }
   };
 
-  if (loading) return <CircularProgress sx={{ mt: 4 }} />;
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <Container maxWidth="md" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        {isEdit ? 'Editar Grupo' : 'Criar Novo Grupo'}
-      </Typography>
+    <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 520, mx: 'auto' }}>
+      <CardContent sx={{ p: 4 }}>
+        <Typography variant="h6" gutterBottom>
+          {isEdit ? 'Editar Grupo' : 'Criar Novo Grupo'}
+        </Typography>
 
-      {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
+        {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
 
-      <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-        <TextField
-          label="Nome"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          fullWidth
-          margin="normal"
-          required
-        />
-        <TextField
-          label="Descrição"
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-          fullWidth
-          margin="normal"
-          required
-          multiline
-          rows={4}
-        />
-        <TextField
-          label="Dia de fechamento (opcional)"
-          type="number"
-          value={closingDay}
-          onChange={e => setClosingDay(e.target.value)}
-          fullWidth
-          margin="normal"
-          helperText="Dia do mês em que o ciclo de despesas do grupo fecha (estilo fatura de cartão). Deixe em branco para usar o mês calendário."
-          inputProps={{ min: 1, max: 31 }}
-        />
-        <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={submitting}
-          >
-            {isEdit ? 'Atualizar Grupo' : 'Criar Grupo'}
-          </Button>
-          <Button
-            variant="outlined"
-            onClick={() => navigate('/dashboard')}
-            disabled={submitting}
-          >
-            Cancelar
-          </Button>
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+          <TextField
+            label="Nome"
+            value={name}
+            onChange={e => setName(e.target.value)}
+            fullWidth
+            margin="normal"
+            required
+          />
+          <TextField
+            label="Descrição"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            fullWidth
+            margin="normal"
+            required
+            multiline
+            rows={4}
+          />
+          <TextField
+            label="Dia de fechamento (opcional)"
+            type="number"
+            value={closingDay}
+            onChange={e => setClosingDay(e.target.value)}
+            fullWidth
+            margin="normal"
+            helperText="Dia do mês em que o ciclo de despesas do grupo fecha (estilo fatura de cartão). Deixe em branco para usar o mês calendário."
+            inputProps={{ min: 1, max: 31 }}
+          />
+          <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
+            <Button
+              type="submit"
+              variant="contained"
+              color="primary"
+              disabled={submitting}
+            >
+              {isEdit ? 'Atualizar Grupo' : 'Criar Grupo'}
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={() => navigate('/dashboard')}
+              disabled={submitting}
+            >
+              Cancelar
+            </Button>
+          </Box>
         </Box>
-      </Box>
-    </Container>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -11,7 +11,7 @@ Versão: 1.0 · Criado em: 20260820
 | TASK-090 | Criar `SimpleShellLayout` (cabeçalho simples — logo + avatar do usuário, sem sidebar/seletor de grupo) | frontend | plan.md §1 | nenhum | Concluída — revisada após feedback do usuário: `SimpleShellLayout` ganhou o mesmo menu lateral do `GroupShellLayout` (ver `implementation.md`, linha "Correção pós-TASK-091") |
 | TASK-091 | Reestruturar rotas em `App.tsx`: `/groups/:id/summary`, `/groups/:id/expenses`, `/groups/:id/members`, `/groups/:id/edit` sob `GroupShellLayout`; `/dashboard`, `/groups/new`, `/expenses` sob `SimpleShellLayout` | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-092 | Consolidar `Dashboard.tsx` (+ conteúdo de `GroupList.tsx`) numa única página "Meus Grupos" em `/dashboard`; remover `GroupList.tsx` e a rota `/groups`, atualizando referências | frontend | plan.md §3 | nenhum | Concluída |
-| TASK-093 | Reestilizar `GroupForm.tsx` (criar e editar) como formulário em card, mesmos campos e validação de hoje | frontend | plan.md §6 | nenhum | Pendente |
+| TASK-093 | Reestilizar `GroupForm.tsx` (criar e editar) como formulário em card, mesmos campos e validação de hoje | frontend | plan.md §6 | nenhum | Concluída |
 | TASK-094 | Reestilizar `GroupMembersForm.tsx` — lista de membros com `Avatar` de iniciais + formulário de adicionar por e-mail | frontend | plan.md §5 | nenhum | Pendente |
 | TASK-095 | Reestilizar `ExpensesEntry.tsx` (cards de grupo, mesmo comportamento de redirecionamento/escolha) | frontend | plan.md §7 | nenhum | Pendente |
 | TASK-096 | `ExpenseManager.tsx`: extrair criação de despesa do `Dialog` atual para rota de página cheia `/groups/:id/expenses/new`, reaproveitando `handleSaveExpense`/`POST /api/expenses` existente | frontend | plan.md §4 | nenhum | Pendente |
