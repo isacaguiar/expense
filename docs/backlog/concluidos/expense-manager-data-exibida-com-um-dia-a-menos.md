@@ -17,3 +17,10 @@ Confirmado na prática: a mesma função (`new Date(dateStr).toLocaleDateString(
 Qualquer usuário no fuso do Brasil (ou outro fuso negativo) vê a data errada de toda despesa na tela "Despesas do Grupo" — inclusive despesas Fixa projetadas, onde o dia exibido é parte do que comunica "em que mês/dia essa cobrança cai". É um bug de exibição silencioso (sem erro, sem crash), mas visível em todo lançamento.
 
 Tipo sugerido: frontend — trocar `new Date(exp.date).toLocaleDateString('pt-BR')` por uma construção a partir dos componentes locais (`year, month-1, day`), mesmo padrão já aplicado em `GroupSummary.tsx`.
+
+## Resolução
+
+Concluído em: 2026-08-21
+Feature: docs/feature/20260821-expense-manager-mes-e-data-corretos/
+Tasks: TASK-133
+PRs: https://github.com/isacaguiar/expense/pull/43 (mergeado em `dev`, agrupado com item 012)
