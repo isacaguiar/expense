@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class UserControllerTest extends TestCase
@@ -51,5 +52,49 @@ class UserControllerTest extends TestCase
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('ex_users', ['id' => $user->id, 'name' => 'Nome Atualizado', 'email' => 'meu@example.com']);
+    }
+
+    public function test_user_can_change_own_password(): void
+    {
+        $user = User::factory()->create(['password' => 'senha-antiga']);
+
+        $response = $this->withToken($this->tokenFor($user))
+            ->putJson('/api/user/password', [
+                'current_password' => 'senha-antiga',
+                'new_password' => 'senha-nova-123',
+                'new_password_confirmation' => 'senha-nova-123',
+            ]);
+
+        $response->assertStatus(200);
+        $this->assertTrue(Hash::check('senha-nova-123', $user->refresh()->password));
+    }
+
+    public function test_change_password_rejects_wrong_current_password(): void
+    {
+        $user = User::factory()->create(['password' => 'senha-antiga']);
+
+        $response = $this->withToken($this->tokenFor($user))
+            ->putJson('/api/user/password', [
+                'current_password' => 'senha-errada',
+                'new_password' => 'senha-nova-123',
+                'new_password_confirmation' => 'senha-nova-123',
+            ]);
+
+        $response->assertStatus(422);
+        $this->assertTrue(Hash::check('senha-antiga', $user->refresh()->password));
+    }
+
+    public function test_change_password_rejects_mismatched_confirmation(): void
+    {
+        $user = User::factory()->create(['password' => 'senha-antiga']);
+
+        $response = $this->withToken($this->tokenFor($user))
+            ->putJson('/api/user/password', [
+                'current_password' => 'senha-antiga',
+                'new_password' => 'senha-nova-123',
+                'new_password_confirmation' => 'outra-coisa',
+            ]);
+
+        $response->assertStatus(422);
     }
 }

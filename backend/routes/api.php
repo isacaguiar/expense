@@ -21,6 +21,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/dashboard', [AuthController::class, 'dashboard']);
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
     Route::put('/user/profile', [UserController::class, 'updateProfile']);
+    Route::put('/user/password', [UserController::class, 'changePassword']);
     Route::get('/pix/generate', [PixController::class, 'gerarPix']);
 
     Route::post('/invitations', [InvitationController::class, 'invite']);
