@@ -19,6 +19,7 @@ class GroupController extends Controller
             ->whereHas('members', function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             })
+            ->with('creator:id,email')
             ->get();
 
         /*$user = auth()->user();
@@ -70,7 +71,7 @@ class GroupController extends Controller
 
     public function show($id)
     {
-        $group = Group::findOrFail($id);
+        $group = Group::with('creator:id,email')->findOrFail($id);
         $this->authorizeMembership($group);
 
         return $group;

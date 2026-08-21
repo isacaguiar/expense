@@ -28,6 +28,32 @@ class GroupControllerTest extends TestCase
         $response->assertStatus(200)->assertJsonFragment(['id' => $group->id]);
     }
 
+    public function test_show_includes_creator_email(): void
+    {
+        $creator = User::factory()->create(['email' => 'criador@example.com']);
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'created_by' => $creator->id]);
+        $group->members()->attach([$creator->id, $member->id]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups/'.$group->id);
+
+        $response->assertStatus(200)->assertJsonFragment(['creator' => ['id' => $creator->id, 'email' => 'criador@example.com']]);
+    }
+
+    public function test_index_includes_creator_email(): void
+    {
+        $creator = User::factory()->create(['email' => 'criador2@example.com']);
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'created_by' => $creator->id]);
+        $group->members()->attach([$creator->id, $member->id]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups');
+
+        $response->assertStatus(200)->assertJsonFragment(['creator' => ['id' => $creator->id, 'email' => 'criador2@example.com']]);
+    }
+
     public function test_non_member_cannot_view_group(): void
     {
         $outsider = User::factory()->create();
