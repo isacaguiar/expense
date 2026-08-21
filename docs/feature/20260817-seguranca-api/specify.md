@@ -2,13 +2,13 @@
 
 > Feature: correção dos achados de segurança confirmados no código durante a criação do SDD (`docs/sdd/00-constitution.md` §5.3 e §6). Antes desta feature, esses achados viviam soltos como Épico B em `docs/sdd/03-tasks.md`; a partir daqui, `docs/sdd/03-tasks.md` não recebe mais tasks novas deste grupo — este diretório é a fonte da verdade.
 
-Versão: 1.0 · Criado em: 2026-08-17
+Versão: 1.1 · Criado em: 2026-08-17 · Atualizado em: 2026-08-21
 
 ---
 
 ## 1. Problema
 
-Cinco achados de segurança/infra foram confirmados lendo o código real do backend (`backend/`), não a documentação antiga. Todos expõem dado financeiro/pessoal ou credencial sem controle adequado, ou colocam o deploy de produção em risco.
+Seis achados de segurança/infra foram confirmados lendo o código real do backend (`backend/`), não a documentação antiga. Todos expõem dado financeiro/pessoal ou credencial sem controle adequado, ou colocam o deploy de produção em risco.
 
 ## 2. Achados confirmados
 
@@ -26,6 +26,9 @@ Nenhum desses três métodos verifica se o usuário autenticado é membro do gru
 
 ### 2.5 Senha em texto puro no log
 `AuthController::login` loga `$credentials` inteiro via `Log::debug('Credenciais extraídas', $credentials)`, incluindo a senha em claro no log de aplicação a cada tentativa de login.
+
+### 2.6 IDOR em `GroupMemberController@store`
+Achado em 2026-08-21, tangencial à feature `docs/feature/20260820-melhoria-tela-grupos/`. Diferente de `GroupController@show/update/destroy` (2.2, já corrigido), `GroupMemberController::store` (`POST /api/groups/{groupId}/members`) nunca verifica se o usuário autenticado é ele mesmo membro do grupo `$groupId` antes de adicionar um novo membro — mesmo estando dentro do middleware `jwt.auth`. Qualquer usuário autenticado no sistema pode chamar essa rota com um e-mail arbitrário e adicionar esse e-mail como membro de um grupo ao qual ele mesmo não pertence, só sabendo/adivinhando o ID numérico do grupo — inclusive criando um usuário novo e disparando o e-mail de convite (`Mail::to($user->email)->send(new UserInvitedMail(...))`) em nome de um grupo alheio.
 
 ## 3. Fora de escopo desta feature
 
