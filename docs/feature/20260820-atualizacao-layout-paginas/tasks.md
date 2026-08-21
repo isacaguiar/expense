@@ -19,7 +19,7 @@ Versão: 1.0 · Criado em: 20260820
 | TASK-098 | `ExpenseManager.tsx`: restilizar listagem em cards (badge de tipo Fixa/Variável) com busca e filtro por tipo client-side sobre os dados já carregados | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-099 | `ExpenseManager.tsx`: restilizar o fluxo de exclusão de despesa Fixa (`stopRecurrence`) com diálogo de confirmação e toast de sucesso no novo visual | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-100 | Responsividade: confirmar que `GroupShellLayout` oculta a sidebar abaixo do breakpoint `md` (herdado de `GroupSidebar`) e que o cabeçalho de `SimpleShellLayout` não quebra em telas estreitas | frontend | plan.md §8 | nenhum | Concluída |
-| TASK-101 | Testes frontend: ajustar `GroupSummary.test.tsx` pós-migração para o shell compartilhado; criar/atualizar testes de `Dashboard`, `GroupForm`, `GroupMembersForm`, `ExpensesEntry` e `ExpenseManager` (criar via página, visualizar incluindo "não encontrada", filtro/busca, exclusão de Fixa) | frontend | plan.md §9 | nenhum | Pendente |
+| TASK-101 | Testes frontend: ajustar `GroupSummary.test.tsx` pós-migração para o shell compartilhado; criar/atualizar testes de `Dashboard`, `GroupForm`, `GroupMembersForm`, `ExpensesEntry` e `ExpenseManager` (criar via página, visualizar incluindo "não encontrada", filtro/busca, exclusão de Fixa) | frontend | plan.md §9 | nenhum | Concluída |
 
 ## Critérios de aceite
 
