@@ -4,7 +4,7 @@ ID: 030
 Origem: (achado ao investigar promoção dos itens 005/007) — `backend/storage/framework/sessions/*` e `backend/storage/framework/views/*.php`
 Criado em: 2026-08-21
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-131
 
 ## Descrição
 
