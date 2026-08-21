@@ -11,6 +11,7 @@ import ExpensesEntry from './pages/ExpensesEntry';
 import GroupSummary from './pages/GroupSummary';
 import SummaryEntry from './pages/SummaryEntry';
 import RequireAuth from './components/RequireAuth';
+import GroupShellLayout from './layouts/GroupShellLayout';
 
 const App = () => {
   return (
@@ -34,8 +35,10 @@ const App = () => {
           <Route path="/summary" element={<SummaryEntry />} />
         </Route>
 
-        {/* Fora de InternalLayout: tela de Resumo tem navegação/sidebar própria */}
-        <Route path="/groups/:id/summary" element={<GroupSummary />} />
+        {/* Fora de InternalLayout: páginas com sidebar/navegação própria de grupo */}
+        <Route element={<GroupShellLayout />}>
+          <Route path="/groups/:id/summary" element={<GroupSummary />} />
+        </Route>
       </Route>
 
       {/* rota “catch-all” opcional */}

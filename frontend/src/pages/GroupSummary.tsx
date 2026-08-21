@@ -5,7 +5,6 @@ import {
   Box,
   Card,
   CardContent,
-  Container,
   Typography,
   CircularProgress,
   IconButton,
@@ -17,8 +16,7 @@ import {
   ListItemAvatar,
   ListItemText,
   Avatar,
-  Chip,
-  SelectChangeEvent
+  Chip
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
@@ -27,8 +25,6 @@ import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
-import GroupSidebar from '../layouts/group/GroupSidebar';
-import GroupHeader from '../layouts/group/GroupHeader';
 
 type SummaryCycle = { start: string; end: string };
 type SummaryTotals = { total: number; paid: number; pending: number };
@@ -48,11 +44,6 @@ type SummaryBalance = {
   user_id: number;
   name: string;
   balance: number;
-};
-
-type GroupOption = {
-  id: number;
-  name: string;
 };
 
 type Summary = {
@@ -84,8 +75,6 @@ const GroupSummary: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [cyclesAgo, setCyclesAgo] = useState<number>(0);
-  const [groups, setGroups] = useState<GroupOption[]>([]);
-  const [userName, setUserName] = useState<string | null>(null);
 
   useEffect(() => {
     if (!groupId) return;
@@ -116,42 +105,8 @@ const GroupSummary: React.FC = () => {
     setCyclesAgo(0);
   }, [groupId]);
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    axios
-      .get<GroupOption[]>(`${API_BASE_URL}/api/groups`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
-      })
-      .then(res => setGroups(res.data))
-      .catch(err => console.error('Erro ao carregar grupos:', err));
-  }, []);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    axios
-      .get<{ name: string; email: string }>(`${API_BASE_URL}/api/me`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
-      })
-      .then(res => setUserName(res.data.name))
-      .catch(err => console.error('Erro ao carregar usuário logado:', err));
-  }, []);
-
-  const handleGroupChange = (event: SelectChangeEvent<number>) => {
-    navigate(`/groups/${event.target.value}/summary`);
-  };
-
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <GroupSidebar groupId={groupId ?? ''} />
-      <Container component="main" sx={{ flex: 1, mt: 4, mb: 4 }}>
-      <GroupHeader
-        title="Resumo do grupo"
-        groups={groups}
-        groupId={groupId ?? ''}
-        onGroupChange={handleGroupChange}
-        userName={userName}
-      />
-
+    <>
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
           <CircularProgress />
@@ -291,8 +246,7 @@ const GroupSummary: React.FC = () => {
           </Paper>
         </>
       ) : null}
-      </Container>
-    </Box>
+    </>
   );
 };
 
