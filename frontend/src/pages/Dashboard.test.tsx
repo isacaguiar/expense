@@ -229,4 +229,51 @@ describe('Dashboard', () => {
 
     expect(screen.getByRole('link', { name: 'Novo grupo' })).not.toHaveAttribute('aria-disabled', 'true');
   });
+
+  it('deletes a group after confirming in the dialog', async () => {
+    mockGroupsAndMe(groups);
+    vi.mocked(axios.delete).mockResolvedValue({ data: { message: 'ok' } });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+
+    await user.click(screen.getAllByLabelText('Excluir grupo')[0]);
+
+    expect(await screen.findByText('Excluir grupo')).toBeInTheDocument();
+    expect(screen.getByText('Tem certeza que deseja excluir o grupo "Viagem SP"?')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+
+    expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining('/api/groups/1'), expect.anything());
+    await waitFor(() => {
+      expect(screen.queryByText('Viagem SP')).not.toBeInTheDocument();
+    });
+    expect(await screen.findByText('Grupo excluído com sucesso.')).toBeInTheDocument();
+  });
+
+  it('cancels the delete dialog without calling the API', async () => {
+    mockGroupsAndMe(groups);
+    vi.mocked(axios.delete).mockReset();
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+
+    await user.click(screen.getAllByLabelText('Excluir grupo')[0]);
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(axios.delete).not.toHaveBeenCalled();
+    expect(screen.getByText('Viagem SP')).toBeInTheDocument();
+  });
 });

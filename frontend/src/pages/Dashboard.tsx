@@ -2,13 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
+  Alert,
   Avatar,
   AvatarGroup,
   Box,
   Button,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -20,6 +26,7 @@ import {
   Typography
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
@@ -47,6 +54,8 @@ const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<string>('');
+  const [removeGroupId, setRemoveGroupId] = useState<number | null>(null);
+  const [removeSuccess, setRemoveSuccess] = useState<boolean>(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -78,6 +87,27 @@ const Dashboard: React.FC = () => {
 
   const myGroupsCount = groups.filter(group => group.created_by === currentUserId).length;
   const reachedCreationLimit = myGroupsCount >= MAX_GROUPS_CREATED_PER_USER;
+
+  const removeGroup = groups.find(group => group.id === removeGroupId) ?? null;
+
+  const handleDeleteGroup = () => {
+    if (removeGroupId === null) return;
+
+    const token = localStorage.getItem('accessToken');
+    axios
+      .delete(`${API_BASE_URL}/api/groups/${removeGroupId}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setGroups(prev => prev.filter(group => group.id !== removeGroupId));
+        setRemoveGroupId(null);
+        setRemoveSuccess(true);
+      })
+      .catch(err => {
+        console.error('Erro ao excluir grupo:', err);
+        alert('Falha ao excluir grupo.');
+      });
+  };
 
   if (loading) {
     return (
@@ -171,6 +201,9 @@ const Dashboard: React.FC = () => {
                     <IconButton onClick={() => navigate(`/groups/${group.id}/expenses`)} aria-label="Despesas">
                       <ReceiptLongOutlinedIcon fontSize="small" />
                     </IconButton>
+                    <IconButton onClick={() => setRemoveGroupId(group.id)} aria-label="Excluir grupo">
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
                   </TableCell>
                 </TableRow>
               ))}
@@ -178,6 +211,38 @@ const Dashboard: React.FC = () => {
           </Table>
         </TableContainer>
       )}
+
+      <Dialog
+        open={removeGroupId !== null}
+        onClose={() => setRemoveGroupId(null)}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle>Excluir grupo</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            {removeGroup
+              ? `Tem certeza que deseja excluir o grupo "${removeGroup.name}"?`
+              : 'Tem certeza que deseja excluir este grupo?'}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setRemoveGroupId(null)}>Cancelar</Button>
+          <Button variant="contained" color="error" onClick={handleDeleteGroup}>
+            Excluir
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={removeSuccess}
+        autoHideDuration={4000}
+        onClose={() => setRemoveSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setRemoveSuccess(false)} severity="success" variant="filled">
+          Grupo excluído com sucesso.
+        </Alert>
+      </Snackbar>
     </>
   );
 };
