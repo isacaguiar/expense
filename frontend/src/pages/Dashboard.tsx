@@ -2,15 +2,19 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
+  Avatar,
+  AvatarGroup,
   Box,
   Button,
-  Card,
-  CardActionArea,
-  CardActions,
-  CardContent,
   CircularProgress,
-  Grid,
   IconButton,
+  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   Tooltip,
   Typography
@@ -20,6 +24,10 @@ import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { API_BASE_URL } from '../config';
+import { getInitials } from '../layouts/group/getInitials';
+import { brandColors } from '../theme/brandColors';
+
+type Member = { id: number; name: string; email: string };
 
 type Group = {
   id: number;
@@ -28,6 +36,7 @@ type Group = {
   create_date: string;
   created_by: number | null;
   creator?: { id: number; email: string } | null;
+  members: Member[];
 };
 
 const MAX_GROUPS_CREATED_PER_USER = 3;
@@ -112,38 +121,62 @@ const Dashboard: React.FC = () => {
       ) : filteredGroups.length === 0 ? (
         <Typography color="text.secondary">Nenhum grupo encontrado.</Typography>
       ) : (
-        <Grid container spacing={2}>
-          {filteredGroups.map(group => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={group.id}>
-              <Card elevation={3} sx={{ borderRadius: 2 }}>
-                <CardActionArea component={Link} to={`/groups/${group.id}/summary`}>
-                  <CardContent>
-                    <Typography variant="h6" color="primary">
+        <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2 }}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Nome</TableCell>
+                <TableCell>Responsável</TableCell>
+                <TableCell>Integrantes</TableCell>
+                <TableCell align="right">Ações</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {filteredGroups.map(group => (
+                <TableRow key={group.id} hover>
+                  <TableCell>
+                    <Typography
+                      component={Link}
+                      to={`/groups/${group.id}/summary`}
+                      color="primary"
+                      sx={{ textDecoration: 'none', fontWeight: 500 }}
+                    >
                       {group.name}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                      {group.description}
+                  </TableCell>
+                  <TableCell>
+                    <Typography variant="body2" color="text.secondary">
+                      {group.creator?.email ?? '—'}
                     </Typography>
-                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                      Responsável: {group.creator?.email ?? '—'}
-                    </Typography>
-                  </CardContent>
-                </CardActionArea>
-                <CardActions>
-                  <IconButton onClick={() => navigate(`/groups/${group.id}/edit`)} aria-label="Editar grupo">
-                    <EditOutlinedIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton onClick={() => navigate(`/groups/${group.id}/members`)} aria-label="Participantes">
-                    <PeopleOutlineOutlinedIcon fontSize="small" />
-                  </IconButton>
-                  <IconButton onClick={() => navigate(`/groups/${group.id}/expenses`)} aria-label="Despesas">
-                    <ReceiptLongOutlinedIcon fontSize="small" />
-                  </IconButton>
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                  </TableCell>
+                  <TableCell>
+                    <AvatarGroup max={5} sx={{ justifyContent: 'flex-end' }}>
+                      {group.members.map(member => (
+                        <Avatar
+                          key={member.id}
+                          sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.8rem', width: 32, height: 32 }}
+                        >
+                          {getInitials(member.email)}
+                        </Avatar>
+                      ))}
+                    </AvatarGroup>
+                  </TableCell>
+                  <TableCell align="right">
+                    <IconButton onClick={() => navigate(`/groups/${group.id}/edit`)} aria-label="Editar grupo">
+                      <EditOutlinedIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton onClick={() => navigate(`/groups/${group.id}/members`)} aria-label="Participantes">
+                      <PeopleOutlineOutlinedIcon fontSize="small" />
+                    </IconButton>
+                    <IconButton onClick={() => navigate(`/groups/${group.id}/expenses`)} aria-label="Despesas">
+                      <ReceiptLongOutlinedIcon fontSize="small" />
+                    </IconButton>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
     </>
   );

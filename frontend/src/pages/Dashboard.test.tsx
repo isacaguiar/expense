@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -17,6 +17,8 @@ vi.mock('react-router-dom', async importOriginal => {
   };
 });
 
+type Member = { id: number; name: string; email: string };
+
 type Group = {
   id: number;
   name: string;
@@ -24,11 +26,28 @@ type Group = {
   create_date: string;
   created_by: number | null;
   creator?: { id: number; email: string } | null;
+  members: Member[];
 };
 
 const groups: Group[] = [
-  { id: 1, name: 'Viagem SP', description: 'Grupo da viagem', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'dono@example.com' } },
-  { id: 2, name: 'Casa', description: 'Contas da casa', create_date: '2026-01-01', created_by: 99, creator: { id: 99, email: 'outro@example.com' } },
+  {
+    id: 1,
+    name: 'Viagem SP',
+    description: 'Grupo da viagem',
+    create_date: '2026-01-01',
+    created_by: 10,
+    creator: { id: 10, email: 'dono@example.com' },
+    members: [{ id: 10, name: 'Dono', email: 'dono@example.com' }, { id: 11, name: 'Ana Silva', email: 'ana@example.com' }],
+  },
+  {
+    id: 2,
+    name: 'Casa',
+    description: 'Contas da casa',
+    create_date: '2026-01-01',
+    created_by: 99,
+    creator: { id: 99, email: 'outro@example.com' },
+    members: [{ id: 99, name: 'Outro', email: 'outro@example.com' }],
+  },
 ];
 
 function mockGroupsAndMe(groupsData: Group[], meId = 10) {
@@ -36,6 +55,10 @@ function mockGroupsAndMe(groupsData: Group[], meId = 10) {
     if (url.includes('/api/me')) return Promise.resolve({ data: { id: meId } });
     return Promise.resolve({ data: groupsData });
   });
+}
+
+function rowFor(groupName: string): HTMLElement {
+  return screen.getByText(groupName).closest('tr') as HTMLElement;
 }
 
 describe('Dashboard', () => {
@@ -61,7 +84,7 @@ describe('Dashboard', () => {
     });
   });
 
-  it('renders a card per group and filters by search', async () => {
+  it('renders a table row per group and filters by search', async () => {
     mockGroupsAndMe(groups);
     const user = userEvent.setup();
 
@@ -73,6 +96,9 @@ describe('Dashboard', () => {
 
     expect(await screen.findByText('Viagem SP')).toBeInTheDocument();
     expect(screen.getByText('Casa')).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Nome' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Responsável' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'Integrantes' })).toBeInTheDocument();
 
     await user.type(screen.getByLabelText('Buscar grupo'), 'via');
 
@@ -92,7 +118,7 @@ describe('Dashboard', () => {
     expect(await screen.findByText('Você ainda não participa de nenhum grupo.')).toBeInTheDocument();
   });
 
-  it('navigates to group edit/members/expenses from the card actions', async () => {
+  it('navigates to group edit/members/expenses from the row actions', async () => {
     mockGroupsAndMe(groups);
     const user = userEvent.setup();
 
@@ -114,7 +140,7 @@ describe('Dashboard', () => {
     expect(navigateMock).toHaveBeenCalledWith('/groups/1/expenses');
   });
 
-  it('links the group card to its summary page', async () => {
+  it('links the group name to its summary page', async () => {
     mockGroupsAndMe(groups);
 
     render(
@@ -123,10 +149,10 @@ describe('Dashboard', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByRole('link', { name: /Viagem SP/ })).toHaveAttribute('href', '/groups/1/summary');
+    expect(await screen.findByRole('link', { name: 'Viagem SP' })).toHaveAttribute('href', '/groups/1/summary');
   });
 
-  it('shows the responsible person on each card', async () => {
+  it('shows the responsible person for each group', async () => {
     mockGroupsAndMe(groups);
 
     render(
@@ -135,12 +161,30 @@ describe('Dashboard', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('Responsável: dono@example.com')).toBeInTheDocument();
-    expect(screen.getByText('Responsável: outro@example.com')).toBeInTheDocument();
+    await screen.findByText('Viagem SP');
+
+    expect(within(rowFor('Viagem SP')).getByText('dono@example.com')).toBeInTheDocument();
+    expect(within(rowFor('Casa')).getByText('outro@example.com')).toBeInTheDocument();
+  });
+
+  it('shows an avatar with initials per member', async () => {
+    mockGroupsAndMe(groups);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+
+    const row = rowFor('Viagem SP');
+    expect(within(row).getByText('D')).toBeInTheDocument();
+    expect(within(row).getByText('A')).toBeInTheDocument();
   });
 
   it('falls back to a dash when the group has no creator recorded', async () => {
-    mockGroupsAndMe([{ id: 3, name: 'Grupo antigo', description: '', create_date: '2026-01-01', created_by: null, creator: null }]);
+    mockGroupsAndMe([{ id: 3, name: 'Grupo antigo', description: '', create_date: '2026-01-01', created_by: null, creator: null, members: [] }]);
 
     render(
       <MemoryRouter>
@@ -148,14 +192,16 @@ describe('Dashboard', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('Responsável: —')).toBeInTheDocument();
+    await screen.findByText('Grupo antigo');
+
+    expect(within(rowFor('Grupo antigo')).getByText('—')).toBeInTheDocument();
   });
 
   it('disables "Novo grupo" when the current user already created 3 groups', async () => {
-    const threeOwnGroups = [
-      { id: 1, name: 'Grupo 1', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' } },
-      { id: 2, name: 'Grupo 2', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' } },
-      { id: 3, name: 'Grupo 3', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' } },
+    const threeOwnGroups: Group[] = [
+      { id: 1, name: 'Grupo 1', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [] },
+      { id: 2, name: 'Grupo 2', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [] },
+      { id: 3, name: 'Grupo 3', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [] },
     ];
     mockGroupsAndMe(threeOwnGroups, 10);
 
