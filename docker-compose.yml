@@ -32,6 +32,15 @@ services:
     networks:
       - ex-network
 
+  mailpit:
+    image: axllent/mailpit
+    container_name: mailpit-expense
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - ex-network
+
 networks:
   ex-network:
     driver: bridge
