@@ -4,25 +4,30 @@ import { API_BASE_URL } from '../config';
 import {
   Box,
   Button,
+  Card,
+  CardActionArea,
+  CardActions,
+  CardContent,
+  Chip,
   Typography,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Paper,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  IconButton
+  Grid,
+  IconButton,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
+import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 
 // Tipo de despesa (ajuste conforme sua API)
 type Expense = {
@@ -43,6 +48,10 @@ const ExpenseManager: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
+
+  // Busca e filtro por tipo — client-side, sobre os dados do mês já carregados
+  const [search, setSearch] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'fixed' | 'variable'>('all');
 
   // Diálogo de remoção de despesa Fixa
   const [removeExpenseId, setRemoveExpenseId] = useState<number | null>(null);
@@ -125,6 +134,14 @@ const ExpenseManager: React.FC = () => {
     stopFixedRecurrence(next.getFullYear(), next.getMonth() + 1);
   };
 
+  const filteredExpenses = expenses
+    .filter(exp => exp.description.toLowerCase().includes(search.toLowerCase()))
+    .filter(exp => {
+      if (typeFilter === 'fixed') return Boolean(exp.isFixed);
+      if (typeFilter === 'variable') return !exp.isFixed;
+      return true;
+    });
+
   return (
     <>
       {/* Cabeçalho */}
@@ -163,6 +180,27 @@ const ExpenseManager: React.FC = () => {
         </IconButton>
       </Box>
 
+      {/* Busca e filtro por tipo */}
+      <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
+        <TextField
+          label="Buscar despesa"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          size="small"
+          sx={{ minWidth: 240 }}
+        />
+        <ToggleButtonGroup
+          value={typeFilter}
+          exclusive
+          size="small"
+          onChange={(_, value) => value && setTypeFilter(value)}
+        >
+          <ToggleButton value="all">Todas</ToggleButton>
+          <ToggleButton value="fixed">Fixas</ToggleButton>
+          <ToggleButton value="variable">Variáveis</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
       {/* Lista de despesas */}
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
@@ -171,49 +209,50 @@ const ExpenseManager: React.FC = () => {
       ) : error ? (
         <Typography color="error">{error}</Typography>
       ) : expenses.length === 0 ? (
-        <Typography>Nenhuma despesa encontrada para este mês.</Typography>
+        <Typography color="text.secondary">Nenhuma despesa encontrada para este mês.</Typography>
+      ) : filteredExpenses.length === 0 ? (
+        <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
       ) : (
-        <Paper elevation={3}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Data</TableCell>
-                <TableCell>Descrição</TableCell>
-                <TableCell align="right">Valor (R$)</TableCell>
-                <TableCell>Pagador</TableCell>
-                <TableCell align="right">Ações</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {expenses.map(exp => (
-                <TableRow key={exp.id}>
-                  <TableCell>
-                    {new Date(exp.date).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell>{exp.description}</TableCell>
-                  <TableCell align="right">
-                    {exp.value.toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </TableCell>
-                  <TableCell>{exp.payerName || '-'}</TableCell>
-                  <TableCell align="right">
-                    {exp.isFixed && (
-                      <IconButton
-                        aria-label="Remover despesa fixa"
-                        size="small"
-                        onClick={() => setRemoveExpenseId(exp.id)}
-                      >
-                        <DeleteOutlineIcon fontSize="small" />
-                      </IconButton>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Paper>
+        <Grid container spacing={2}>
+          {filteredExpenses.map(exp => (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={exp.id}>
+              <Card elevation={3} sx={{ borderRadius: 2 }}>
+                <CardActionArea component={Link} to={`/groups/${groupId}/expenses/${exp.id}`}>
+                  <CardContent>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {exp.isFixed ? (
+                          <AutorenewOutlinedIcon color="action" fontSize="small" />
+                        ) : (
+                          <ReceiptOutlinedIcon color="action" fontSize="small" />
+                        )}
+                        <Typography variant="subtitle1">{exp.description}</Typography>
+                      </Box>
+                      <Chip label={exp.isFixed ? 'Fixa' : 'Variável'} size="small" />
+                    </Box>
+                    <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+                      R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(exp.date).toLocaleDateString('pt-BR')} · Pago por {exp.payerName || '-'}
+                    </Typography>
+                  </CardContent>
+                </CardActionArea>
+                {exp.isFixed && (
+                  <CardActions>
+                    <IconButton
+                      aria-label="Remover despesa fixa"
+                      size="small"
+                      onClick={() => setRemoveExpenseId(exp.id)}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </CardActions>
+                )}
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       )}
 
       {/* Diálogo de remoção de despesa Fixa */}

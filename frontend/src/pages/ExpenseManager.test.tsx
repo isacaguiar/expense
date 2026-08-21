@@ -57,6 +57,64 @@ describe('ExpenseManager - Nova Despesa', () => {
   });
 });
 
+describe('ExpenseManager - listagem em cards', () => {
+  const expenses = [
+    { id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true },
+    { id: 10, description: 'Mercado', value: 150, date: '2026-08-05', payerName: 'João', isFixed: false },
+  ];
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    mockGetResponses(expenses);
+  });
+
+  it('renders a card per expense, each linking to its view route', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Aluguel')).toBeInTheDocument();
+    expect(screen.getByText('Mercado')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Aluguel/ })).toHaveAttribute('href', '/groups/1/expenses/9');
+    expect(screen.getByRole('link', { name: /Mercado/ })).toHaveAttribute('href', '/groups/1/expenses/10');
+  });
+
+  it('filters by description on the client side', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.type(screen.getByLabelText('Buscar despesa'), 'merc');
+
+    expect(screen.queryByText('Aluguel')).not.toBeInTheDocument();
+    expect(screen.getByText('Mercado')).toBeInTheDocument();
+    expect(axios.get).toHaveBeenCalledTimes(1);
+  });
+
+  it('filters by type (Fixas/Variáveis) on the client side', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Fixas' }));
+
+    expect(screen.getByText('Aluguel')).toBeInTheDocument();
+    expect(screen.queryByText('Mercado')).not.toBeInTheDocument();
+  });
+});
+
 describe('ExpenseManager - remover despesa Fixa', () => {
   beforeEach(() => {
     vi.mocked(axios.get).mockReset();
