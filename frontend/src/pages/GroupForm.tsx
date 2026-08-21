@@ -82,8 +82,9 @@ const GroupForm: React.FC = () => {
       }
       const groupId = (response.data as Group).id;
       navigate('/dashboard');
-    } catch {
-      setError('Erro ao salvar grupo. Tente novamente.');
+    } catch (err) {
+      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setError(message || 'Erro ao salvar grupo. Tente novamente.');
     } finally {
       setSubmitting(false);
     }
