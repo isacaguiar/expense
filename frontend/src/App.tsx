@@ -4,7 +4,6 @@ import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import GroupForm from './pages/GroupForm';
 import GroupMembersForm from './pages/GroupMembersForm';
-import GroupList from './pages/GroupList';
 import ExpenseManager from './pages/ExpenseManager';
 import ExpensesEntry from './pages/ExpensesEntry';
 import GroupSummary from './pages/GroupSummary';
@@ -31,7 +30,6 @@ const App = () => {
         {/* Sem grupo selecionado: cabeçalho simples (SimpleShellLayout) */}
         <Route element={<SimpleShellLayout />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/groups" element={<GroupList />} />
           <Route path="/groups/new" element={<GroupForm />} />
           <Route path="/expenses" element={<ExpensesEntry />} />
           <Route path="/summary" element={<SummaryEntry />} />
