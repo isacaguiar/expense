@@ -13,11 +13,14 @@ class Group extends Model
         'deleted',
         'description',
         'name',
+        'closing_day',
+        'created_by',
     ];
 
     protected $casts = [
         'create_date' => 'datetime',
         'deleted' => 'boolean',
+        'closing_day' => 'integer',
     ];
 
     public $timestamps = true;
@@ -37,4 +40,8 @@ class Group extends Model
         return $this->belongsToMany(User::class, 'ex_groups_members', 'group_id', 'user_id');
     }
 
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
 }

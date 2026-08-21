@@ -20,6 +20,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [AuthController::class, 'dashboard']);
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
+    Route::put('/user/profile', [UserController::class, 'updateProfile']);
+    Route::put('/user/password', [UserController::class, 'changePassword']);
     Route::get('/pix/generate', [PixController::class, 'gerarPix']);
 
     Route::post('/invitations', [InvitationController::class, 'invite']);
@@ -33,9 +35,11 @@ Route::middleware('jwt.auth')->group(function () {
     });
 
     Route::apiResource('expenses', ExpenseController::class);
+    Route::post('/expenses/{expenseId}/stop-recurrence', [ExpenseController::class, 'stopRecurrence']);
 
     Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
     Route::get('/groups/{groupId}/expenses/monthly', [ExpenseController::class, 'getMonthlyExpenses']);
+    Route::get('/groups/{groupId}/expenses/summary', [ExpenseController::class, 'summary']);
 
     Route::get('/groups/{groupId}/expenses/report/{year}', [GroupExpenseReportController::class, 'reportByGroupAndYear']);
     Route::get('/group/{groupId}/report-monthly/{year}', [GroupExpenseReportController::class, 'reportByGroupAndYearMonthlySettlement']);

@@ -1,28 +1,22 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { Link, useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Card,
-  CardContent,
-  CircularProgress,
-  Container,
-  Grid,
-  Typography
-} from '@mui/material';
+import { useNavigate } from 'react-router-dom';
+import { Box, CircularProgress, Typography } from '@mui/material';
 import { API_BASE_URL } from '../config';
+import { mostActiveGroup } from './mostActiveGroup';
 
 type Group = {
   id: number;
   name: string;
   description: string;
   create_date: string;
+  expenses_max_date_payment: string | null;
 };
 
 const ExpensesEntry: React.FC = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [empty, setEmpty] = useState<boolean>(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,11 +26,12 @@ const ExpensesEntry: React.FC = () => {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
       .then(res => {
-        if (res.data.length === 1) {
-          navigate(`/groups/${res.data[0].id}/expenses`, { replace: true });
+        const target = mostActiveGroup(res.data);
+        if (!target) {
+          setEmpty(true);
           return;
         }
-        setGroups(res.data);
+        navigate(`/groups/${target.id}/expenses`, { replace: true });
       })
       .catch(err => {
         console.error('Erro ao carregar grupos:', err);
@@ -51,59 +46,21 @@ const ExpensesEntry: React.FC = () => {
 
   if (loading) {
     return (
-      <Container sx={{ mt: 4 }}>
-        <Box display="flex" justifyContent="center">
-          <CircularProgress />
-        </Box>
-      </Container>
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
     );
   }
 
   if (error) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Typography color="error">{error}</Typography>
-      </Container>
-    );
+    return <Typography color="error">{error}</Typography>;
   }
 
-  if (groups.length === 0) {
-    return (
-      <Container sx={{ mt: 4 }}>
-        <Typography>Você ainda não participa de nenhum grupo.</Typography>
-      </Container>
-    );
+  if (empty) {
+    return <Typography color="text.secondary">Você ainda não participa de nenhum grupo.</Typography>;
   }
 
-  return (
-    <Container sx={{ mt: 4 }}>
-      <Typography variant="h4" mb={3}>
-        Escolha um grupo
-      </Typography>
-      <Grid container spacing={2}>
-        {groups.map(group => (
-          <Grid size={{ xs: 12, sm: 6, md: 4 }} key={group.id}>
-            <Card
-              elevation={3}
-              sx={{ borderRadius: 2 }}
-              component={Link}
-              to={`/groups/${group.id}/expenses`}
-              style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}
-            >
-              <CardContent>
-                <Typography variant="h6" color="primary">
-                  {group.name}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                  {group.description}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
-    </Container>
-  );
+  return null;
 };
 
 export default ExpensesEntry;

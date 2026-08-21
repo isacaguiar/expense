@@ -4,27 +4,32 @@ import { API_BASE_URL } from '../config';
 import {
   Box,
   Button,
-  Container,
+  Card,
+  CardActionArea,
+  CardActions,
+  CardContent,
+  Chip,
   Typography,
   CircularProgress,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Paper,
+  Alert,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
+  Grid,
   IconButton,
-  MenuItem
+  Snackbar,
+  TextField,
+  ToggleButton,
+  ToggleButtonGroup
 } from '@mui/material';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
+import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 
 // Tipo de despesa (ajuste conforme sua API)
 type Expense = {
@@ -33,11 +38,7 @@ type Expense = {
   value: number;
   date: string;        // ISO string
   payerName?: string;  // opcional, se vier do backend
-};
-
-type GroupMember = {
-  id: number;
-  name: string;
+  isFixed?: boolean;
 };
 
 const ExpenseManager: React.FC = () => {
@@ -50,19 +51,13 @@ const ExpenseManager: React.FC = () => {
 
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
-  // Modal de nova despesa
-  const [openModal, setOpenModal] = useState<boolean>(false);
-  const [newDescription, setNewDescription] = useState<string>('');
-  const [newValue, setNewValue] = useState<string>(''); // string para input
-  const [newDate, setNewDate] = useState<string>(() => {
-    const today = new Date();
-    return today.toISOString().slice(0, 10); // yyyy-MM-dd
-  });
-  const [newPayerId, setNewPayerId] = useState<string>('');
+  // Busca e filtro por tipo — client-side, sobre os dados do mês já carregados
+  const [search, setSearch] = useState<string>('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'fixed' | 'variable'>('all');
 
-  // Membros do grupo (seletor de pagador) e usuário autenticado
-  const [members, setMembers] = useState<GroupMember[]>([]);
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  // Diálogo de remoção de despesa Fixa
+  const [removeExpenseId, setRemoveExpenseId] = useState<number | null>(null);
+  const [removeSuccess, setRemoveSuccess] = useState<boolean>(false);
 
   // Helpers de mês/ano
   const year = currentDate.getFullYear();
@@ -88,7 +83,6 @@ const ExpenseManager: React.FC = () => {
     setError(null);
 
     const token = localStorage.getItem('accessToken');
-    console.error('Load expenses for groupId: ${groupId}');
     axios
       .get<Expense[]>(`${API_BASE_URL}/api/groups/${groupId}/expenses`, {
         headers: { Authorization: token ? `Bearer ${token}` : '' },
@@ -114,106 +108,60 @@ const ExpenseManager: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupId, year, month]);
 
-  useEffect(() => {
-    if (!groupId) return;
+  const stopFixedRecurrence = (cutoffYear: number, cutoffMonth: number) => {
+    if (removeExpenseId === null) return;
 
     const token = localStorage.getItem('accessToken');
-    const headers = { Authorization: token ? `Bearer ${token}` : '' };
 
     axios
-      .get<GroupMember[]>(`${API_BASE_URL}/api/groups/${groupId}/members`, { headers })
-      .then(res => setMembers(res.data))
-      .catch(err => console.error('Erro ao carregar membros do grupo:', err));
-
-    axios
-      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers })
-      .then(res => setCurrentUserId(res.data.id))
-      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
-  }, [groupId]);
-
-  const handleOpenModal = () => {
-    setNewDescription('');
-    setNewValue('');
-    const today = new Date();
-    setNewDate(today.toISOString().slice(0, 10));
-    setNewPayerId(currentUserId ? String(currentUserId) : '');
-    setOpenModal(true);
-  };
-
-  const handleCloseModal = () => {
-    setOpenModal(false);
-  };
-
-  const handleSaveExpense = () => {
-    if (!groupId) return;
-
-    const valueNumber = parseFloat(
-      newValue.replace('.', '').replace(',', '.')
-    );
-
-    if (!newDescription || isNaN(valueNumber) || !newPayerId) {
-      alert('Preencha descrição, valor e pagador corretamente.');
-      return;
-    }
-
-    const token = localStorage.getItem('accessToken');
-    const payerId = Number(newPayerId);
-
-    const payload = {
-      date_payment: newDate,
-      description: newDescription,
-      expense_type: 'IN_CASH',
-      installments: 1,
-      total_value: valueNumber,
-      group_id: Number(groupId),
-      user_creator_id: currentUserId,
-      user_payer_id: payerId,
-      payers: [payerId],
-      quotas: [{
-        date_expected: newDate,
-        number: 1,
-        paid: true,
-        value_quota: valueNumber
-      }]
-    };
-
-    axios
-      .post(`${API_BASE_URL}/api/expenses`, payload, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
-      })
+      .post(
+        `${API_BASE_URL}/api/expenses/${removeExpenseId}/stop-recurrence`,
+        { year: cutoffYear, month: cutoffMonth },
+        { headers: { Authorization: token ? `Bearer ${token}` : '' } }
+      )
       .then(() => {
-        handleCloseModal();
+        setRemoveExpenseId(null);
+        setRemoveSuccess(true);
         loadExpenses();
       })
       .catch(err => {
-        console.error('Erro ao salvar despesa:', err);
-        alert('Falha ao salvar despesa.');
+        console.error('Erro ao remover recorrência da despesa fixa:', err);
+        alert('Falha ao remover despesa fixa.');
       });
   };
 
+  const handleRemoveFromThisMonth = () => stopFixedRecurrence(year, month);
+
+  const handleRemoveFromNextMonth = () => {
+    const next = new Date(currentDate);
+    next.setMonth(next.getMonth() + 1);
+    stopFixedRecurrence(next.getFullYear(), next.getMonth() + 1);
+  };
+
+  const removeExpense = expenses.find(exp => exp.id === removeExpenseId) ?? null;
+
+  const filteredExpenses = expenses
+    .filter(exp => exp.description.toLowerCase().includes(search.toLowerCase()))
+    .filter(exp => {
+      if (typeFilter === 'fixed') return Boolean(exp.isFixed);
+      if (typeFilter === 'variable') return !exp.isFixed;
+      return true;
+    });
+
   return (
-    <Container sx={{ mt: 4, mb: 4 }}>
+    <>
       {/* Cabeçalho */}
       <Box
         display="flex"
-        justifyContent="space-between"
+        justifyContent="flex-end"
         alignItems="center"
         mb={3}
       >
-        <Box>
-          <Typography variant="h4">Despesas do Grupo</Typography>
-          {groupId && (
-            <Typography variant="subtitle2" color="text.secondary">
-              Grupo ID: {groupId}
-            </Typography>
-          )}
-        </Box>
-
         <Button
           variant="contained"
           color="primary"
           startIcon={<AddIcon />}
-          onClick={handleOpenModal}
+          onClick={() => navigate(`/groups/${groupId}/expenses/new`)}
         >
           Nova Despesa
         </Button>
@@ -238,6 +186,27 @@ const ExpenseManager: React.FC = () => {
         </IconButton>
       </Box>
 
+      {/* Busca e filtro por tipo */}
+      <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
+        <TextField
+          label="Buscar despesa"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          size="small"
+          sx={{ minWidth: 240 }}
+        />
+        <ToggleButtonGroup
+          value={typeFilter}
+          exclusive
+          size="small"
+          onChange={(_, value) => value && setTypeFilter(value)}
+        >
+          <ToggleButton value="all">Todas</ToggleButton>
+          <ToggleButton value="fixed">Fixas</ToggleButton>
+          <ToggleButton value="variable">Variáveis</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
       {/* Lista de despesas */}
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
@@ -246,91 +215,86 @@ const ExpenseManager: React.FC = () => {
       ) : error ? (
         <Typography color="error">{error}</Typography>
       ) : expenses.length === 0 ? (
-        <Typography>Nenhuma despesa encontrada para este mês.</Typography>
+        <Typography color="text.secondary">Nenhuma despesa encontrada para este mês.</Typography>
+      ) : filteredExpenses.length === 0 ? (
+        <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
       ) : (
-        <Paper elevation={3}>
-          <Table>
-            <TableHead>
-              <TableRow>
-                <TableCell>Data</TableCell>
-                <TableCell>Descrição</TableCell>
-                <TableCell align="right">Valor (R$)</TableCell>
-                <TableCell>Pagador</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {expenses.map(exp => (
-                <TableRow key={exp.id}>
-                  <TableCell>
-                    {new Date(exp.date).toLocaleDateString('pt-BR')}
-                  </TableCell>
-                  <TableCell>{exp.description}</TableCell>
-                  <TableCell align="right">
-                    {exp.value.toLocaleString('pt-BR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2
-                    })}
-                  </TableCell>
-                  <TableCell>{exp.payerName || '-'}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Paper>
+        <Grid container spacing={2}>
+          {filteredExpenses.map(exp => (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={exp.id}>
+              <Card elevation={3} sx={{ borderRadius: 2 }}>
+                <CardActionArea component={Link} to={`/groups/${groupId}/expenses/${exp.id}`}>
+                  <CardContent>
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        {exp.isFixed ? (
+                          <AutorenewOutlinedIcon color="action" fontSize="small" />
+                        ) : (
+                          <ReceiptOutlinedIcon color="action" fontSize="small" />
+                        )}
+                        <Typography variant="subtitle1">{exp.description}</Typography>
+                      </Box>
+                      <Chip label={exp.isFixed ? 'Fixa' : 'Variável'} size="small" />
+                    </Box>
+                    <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+                      R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {new Date(exp.date).toLocaleDateString('pt-BR')} · Pago por {exp.payerName || '-'}
+                    </Typography>
+                  </CardContent>
+                </CardActionArea>
+                {exp.isFixed && (
+                  <CardActions>
+                    <IconButton
+                      aria-label="Remover despesa fixa"
+                      size="small"
+                      onClick={() => setRemoveExpenseId(exp.id)}
+                    >
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  </CardActions>
+                )}
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
       )}
 
-      {/* Modal de nova despesa */}
-      <Dialog open={openModal} onClose={handleCloseModal} fullWidth maxWidth="sm">
-        <DialogTitle>Cadastrar nova despesa</DialogTitle>
+      {/* Diálogo de remoção de despesa Fixa */}
+      <Dialog
+        open={removeExpenseId !== null}
+        onClose={() => setRemoveExpenseId(null)}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle>Remover despesa fixa</DialogTitle>
         <DialogContent dividers>
-          <Box display="flex" flexDirection="column" gap={2} mt={1}>
-            <TextField
-              label="Descrição"
-              fullWidth
-              value={newDescription}
-              onChange={e => setNewDescription(e.target.value)}
-            />
-
-            <TextField
-              label="Valor"
-              fullWidth
-              value={newValue}
-              onChange={e => setNewValue(e.target.value)}
-              placeholder="Ex: 150,00"
-            />
-
-            <TextField
-              label="Data"
-              type="date"
-              fullWidth
-              value={newDate}
-              onChange={e => setNewDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-
-            <TextField
-              label="Pagador"
-              select
-              fullWidth
-              value={newPayerId}
-              onChange={e => setNewPayerId(e.target.value)}
-            >
-              {members.map(member => (
-                <MenuItem key={member.id} value={String(member.id)}>
-                  {member.name}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Box>
+          <Typography>
+            {removeExpense
+              ? `A partir de quando "${removeExpense.description}" deve deixar de aparecer?`
+              : 'A partir de quando esta despesa deve deixar de aparecer?'}
+          </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseModal}>Cancelar</Button>
-          <Button variant="contained" onClick={handleSaveExpense}>
-            Salvar
+          <Button onClick={() => setRemoveExpenseId(null)}>Cancelar</Button>
+          <Button onClick={handleRemoveFromThisMonth}>A partir deste mês</Button>
+          <Button variant="contained" onClick={handleRemoveFromNextMonth}>
+            A partir do mês que vem
           </Button>
         </DialogActions>
       </Dialog>
-    </Container>
+
+      <Snackbar
+        open={removeSuccess}
+        autoHideDuration={4000}
+        onClose={() => setRemoveSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setRemoveSuccess(false)} severity="success" variant="filled">
+          Despesa fixa removida com sucesso.
+        </Alert>
+      </Snackbar>
+    </>
   );
 };
 

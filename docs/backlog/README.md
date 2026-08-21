@@ -46,6 +46,23 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Aberto |
 | 009 | [despesas-menu-tela-branco-frontend.md](despesas-menu-tela-branco-frontend.md) | Tela de despesas abre em branco ao clicar no menu | (solicitação direta) | 2026-08-18 | ALTA | Promovido para TASK-033 |
 | 010 | [expense-store-sem-checagem-membership-payer.md](expense-store-sem-checagem-membership-payer.md) | POST /api/expenses não checa se user_payer_id/payers são membros do grupo | fluxo-despesas-grupo (achado na TASK-036, revisão security-reviewer) | 2026-08-18 | ALTA | Promovido para TASK-039 |
+| 012 | [expense-manager-installments-nao-projetadas-por-mes.md](expense-manager-installments-nao-projetadas-por-mes.md) | Despesas Parceladas não aparecem nos meses seguintes ao de criação, e valor exibido é o total, não a parcela | resumo-grupo-dashboard | 2026-08-18 | MEDIA | Aberto |
+| 013 | [expense-manager-data-exibida-com-um-dia-a-menos.md](expense-manager-data-exibida-com-um-dia-a-menos.md) | ExpenseManager exibe a data das despesas com 1 dia a menos em fusos negativos | resumo-grupo-dashboard (achado na TASK-063) | 2026-08-19 | MEDIA | Aberto |
+| 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
+| 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
+| 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
+| 017 | [summary-tela-pagamentos.md](summary-tela-pagamentos.md) | Criar tela de Pagamentos do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
+| 018 | [summary-tela-relatorios.md](summary-tela-relatorios.md) | Criar tela de Relatórios do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
+| 019 | [summary-tela-configuracoes.md](summary-tela-configuracoes.md) | Criar tela de Configurações do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
+| 020 | [sistema-notificacoes-frontend.md](sistema-notificacoes-frontend.md) | Implementar sistema de notificações | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
+| 021 | [avatar-foto-usuario.md](avatar-foto-usuario.md) | Suportar foto de perfil do usuário | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
+| 022 | [summary-sidebar-navegacao-mobile.md](summary-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar da tela de Resumo em mobile | novo-layout-tela-entrada | 2026-08-19 | MEDIA | Aberto |
+| 023 | [expense-show-update-destroy-ausentes.md](expense-show-update-destroy-ausentes.md) | Implementar ExpenseController::show/update/destroy (rotas já registradas sem método) | atualizacao-layout-paginas | 2026-08-20 | ALTA | Aberto |
+| 024 | [expense-campo-categoria.md](expense-campo-categoria.md) | Adicionar campo "categoria" em despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 027 | [dashboard-grouplist-duplicados.md](dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 028 | [invitation-invite-message-key-colisao-mail.md](invitation-invite-message-key-colisao-mail.md) | Convite por e-mail quebra quando `message` é preenchido (colisão de chave com `Mail::send` legado) | recuperacao-senha-login (achado na TASK-125) | 2026-08-21 | MEDIA | Aberto |
 
 ## Itens concluídos
 
@@ -56,3 +73,4 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 001 | [config-url-api-frontend.md](concluidos/config-url-api-frontend.md) | Configuração de URL da API via variável de ambiente | 2026-08-17 | config-url-api-frontend | TASK-027 |
 | 004 | [auth-guard-redirect-frontend.md](concluidos/auth-guard-redirect-frontend.md) | Auth guard / redirect automático | 2026-08-17 | config-url-api-frontend | TASK-028, TASK-029 |
 | 002 | [infra-testes-frontend.md](concluidos/infra-testes-frontend.md) | Infraestrutura de testes no frontend | 2026-08-18 | infra-testes-frontend | TASK-030, TASK-031, TASK-032 |
+| 011 | [recuperacao-senha-quebra-login-backend.md](concluidos/recuperacao-senha-quebra-login-backend.md) | Fluxo de recuperação de senha sobrescreve a senha antes de garantir entrega do e-mail | 2026-08-21 | recuperacao-senha-login | TASK-122, TASK-123, TASK-124, TASK-125 |
