@@ -16,7 +16,7 @@ class InvitationController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email',
+            'email' => 'required|email|unique:ex_users,email',
             'message' => 'nullable|string|max:1000',
         ]);
 
@@ -46,7 +46,7 @@ class InvitationController extends Controller
     public function verify(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email|exists:ex_users,email',
             'token' => 'required|string',
             'password' => 'required|string|min:6|confirmed', // campo "password_confirmation" também obrigatório
         ]);
@@ -88,7 +88,7 @@ class InvitationController extends Controller
     public function forgotPassword(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email|exists:ex_users,email',
         ]);
 
         $user = User::where('email', $request->email)->first();
