@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-111 | Concluída | 20260821 | IA | `npx vitest run src/layouts/SimpleShellLayout.test.tsx src/layouts/GroupShellLayout.test.tsx` — 10 passed (2 files). `npx tsc --noEmit` — limpo. `npx vitest run` (suíte completa) — 63 passed (14 files). | `accountSettingsNavItems.ts` novo, compartilhado pelos 2 arquivos de navegação. Rótulo do filho "Grupos" virou "Meus Grupos" (pedido do usuário: "Configurações > Meus Grupos, Minha Conta, Alterar Senha") — ajustou testes que checavam o rótulo antigo. `Configurações` do menu com grupo selecionado deixou de linkar direto para `/groups/:id/edit`; esse acesso só volta a existir via ícone de editar na listagem de grupos (TASK-116/117, ainda não implementadas). |

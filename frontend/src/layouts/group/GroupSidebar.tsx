@@ -6,6 +6,7 @@ import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import Sidebar from '../Sidebar';
+import { accountSettingsNavItems } from '../accountSettingsNavItems';
 
 interface GroupSidebarProps {
   groupId: string;
@@ -20,12 +21,16 @@ export type GroupNavItem = {
 
 export function groupNavItems(groupId: string): GroupNavItem[] {
   return [
-    { label: 'Resumo', icon: HomeOutlinedIcon, to: `/groups/${groupId}/summary` },
+    { label: 'Home', icon: HomeOutlinedIcon, to: `/groups/${groupId}/summary` },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: `/groups/${groupId}/expenses` },
     { label: 'Participantes', icon: PeopleOutlineOutlinedIcon, to: `/groups/${groupId}/members` },
     { label: 'Pagamentos', icon: PaymentsOutlinedIcon },
     { label: 'Relatórios', icon: AssessmentOutlinedIcon },
-    { label: 'Configurações', icon: SettingsOutlinedIcon, to: `/groups/${groupId}/edit` },
+    {
+      label: 'Configurações',
+      icon: SettingsOutlinedIcon,
+      children: accountSettingsNavItems(),
+    },
   ];
 }
 

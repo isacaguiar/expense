@@ -5,17 +5,19 @@ import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import type { GroupNavItem } from './group/GroupSidebar';
+import { accountSettingsNavItems } from './accountSettingsNavItems';
 
 export function simpleNavItems(): GroupNavItem[] {
   return [
-    { label: 'Resumo', icon: AssessmentOutlinedIcon, to: '/summary' },
+    { label: 'Home', icon: HomeOutlinedIcon, to: '/summary' },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: '/expenses' },
     { label: 'Participantes', icon: PeopleOutlineOutlinedIcon },
     { label: 'Pagamentos', icon: PaymentsOutlinedIcon },
+    { label: 'Relatórios', icon: AssessmentOutlinedIcon },
     {
       label: 'Configurações',
       icon: SettingsOutlinedIcon,
-      children: [{ label: 'Grupos', icon: HomeOutlinedIcon, to: '/dashboard' }],
+      children: accountSettingsNavItems(),
     },
   ];
 }
