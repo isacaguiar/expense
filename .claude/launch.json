@@ -10,7 +10,7 @@
     {
       "name": "backend-api",
       "runtimeExecutable": "php",
-      "runtimeArgs": ["artisan", "serve"],
+      "runtimeArgs": ["backend/artisan", "serve"],
       "port": 8000
     }
   ]
