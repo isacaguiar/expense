@@ -5,7 +5,6 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\View;
 use Tests\TestCase;
 
 class InvitationControllerMailViewsTest extends TestCase
@@ -42,12 +41,17 @@ class InvitationControllerMailViewsTest extends TestCase
         $response->assertStatus(200);
     }
 
-    // invite() tem um bug não relacionado (colisão da chave 'message' com a variável
-    // $message que o Mail::send() legado injeta automaticamente na view) que impede
-    // testar de ponta a ponta via HTTP sem consertar algo fora do escopo desta feature
-    // (specify.md §3). Verifica só o que é escopo da TASK-125: o nome da view existe.
-    public function test_invite_view_name_exists(): void
+    public function test_invite_with_message_resolves_the_real_view(): void
     {
-        $this->assertTrue(View::exists('email.invitation'));
+        $inviter = User::factory()->create();
+
+        $response = $this->withToken(auth('api')->login($inviter))
+            ->postJson('/api/invitations', [
+                'name' => 'Alguém',
+                'email' => 'convidado@example.com',
+                'message' => 'Bem-vindo ao grupo!',
+            ]);
+
+        $response->assertStatus(200);
     }
 }
