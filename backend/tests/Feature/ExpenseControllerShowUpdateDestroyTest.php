@@ -173,4 +173,63 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
         $response->assertStatus(200);
         $this->assertEqualsCanonicalizing([$newPayer->id], $expense->payers()->pluck('ex_users.id')->all());
     }
+
+    public function test_non_member_cannot_destroy_expense(): void
+    {
+        $creator = User::factory()->create();
+        $outsider = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creator->id);
+        $expense = $this->createExpense($group, $creator, $creator);
+
+        $response = $this->withToken($this->tokenFor($outsider))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(404);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+    }
+
+    public function test_member_who_is_not_creator_nor_payer_cannot_destroy_expense(): void
+    {
+        $creator = User::factory()->create();
+        $otherMember = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creator->id, $otherMember->id]);
+        $expense = $this->createExpense($group, $creator, $creator);
+
+        $response = $this->withToken($this->tokenFor($otherMember))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+    }
+
+    public function test_creator_can_destroy_expense(): void
+    {
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creator->id);
+        $expense = $this->createExpense($group, $creator, $creator);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => true]);
+    }
+
+    public function test_payer_can_destroy_expense(): void
+    {
+        $creator = User::factory()->create();
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creator->id, $payer->id]);
+        $expense = $this->createExpense($group, $creator, $payer);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => true]);
+    }
 }

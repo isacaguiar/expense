@@ -107,6 +107,16 @@ class ExpenseController extends Controller
         return response()->json($expense->fresh(['payers', 'quotas']));
     }
 
+    public function destroy($id)
+    {
+        $expense = $this->findExpenseForMember($id);
+        $this->authorizeExpenseOwner($expense);
+
+        $expense->update(['deleted' => true]);
+
+        return response()->json(['message' => 'Despesa marcada como deletada.']);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
