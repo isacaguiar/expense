@@ -31,7 +31,7 @@ class InvitationController extends Controller
             'invited_by' => auth()->id(),
         ]);
 
-        Mail::send('emails.invitation', [
+        Mail::send('email.invitation', [
             'inviterName' => auth()->user()->name,
             'message' => $request->message,
             'activationLink' => url("/aceitar-convite?email={$user->email}&token={$token}"),
@@ -76,7 +76,7 @@ class InvitationController extends Controller
         }
 
         // Envia e-mail de confirmação
-        Mail::send('emails.activation-confirmation', [
+        Mail::send('email.activation-confirmation', [
             'user' => $user,
         ], function ($mail) use ($user) {
             $mail->to($user->email)->subject('Conta ativada com sucesso');
@@ -110,7 +110,7 @@ class InvitationController extends Controller
         $resetLink = url("/recuperar-senha?email={$user->email}&token={$token}");
 
         try {
-            Mail::send('emails.password-reset', [
+            Mail::send('email.password-reset', [
                 'user' => $user,
                 'resetLink' => $resetLink,
             ], function ($mail) use ($user) {
