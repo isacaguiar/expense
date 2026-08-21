@@ -17,6 +17,7 @@ export type GroupNavItem = {
   icon: React.ElementType;
   to?: string;
   children?: GroupNavItem[];
+  onAction?: () => void;
 };
 
 export function groupNavItems(groupId: string): GroupNavItem[] {

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
 import Sidebar from './Sidebar';
@@ -51,5 +51,23 @@ describe('Sidebar', () => {
     renderSidebar('/dashboard');
 
     expect(screen.getByRole('link', { name: 'Grupos' })).toHaveAttribute('href', '/dashboard');
+  });
+
+  it('renders an item with onAction as a clickable button, not a link', async () => {
+    const onAction = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Sidebar items={[{ label: 'Sair', icon: HomeOutlinedIcon, onAction }]} />
+      </MemoryRouter>
+    );
+
+    const sairItem = screen.getByText('Sair');
+    expect(screen.queryByRole('link', { name: 'Sair' })).not.toBeInTheDocument();
+
+    await user.click(sairItem);
+
+    expect(onAction).toHaveBeenCalledTimes(1);
   });
 });
