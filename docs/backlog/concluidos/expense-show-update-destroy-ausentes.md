@@ -15,3 +15,10 @@ Status: Promovido para TASK-126
 Bloqueia diretamente as telas "Visualizar despesa", "Editar despesa" (página cheia) e o fluxo de exclusão do mockup `desktop.png`/`site-full.png` — a feature `atualizacao-layout-paginas` optou por fazer essas interações só no cliente (sobre os dados já carregados), justamente por essas rotas não funcionarem. Implementar de verdade também precisa decidir: quem pode editar/excluir uma despesa (authorization — dono? qualquer membro do grupo?), e se exclusão é soft delete (coluna `deleted`, já existe na tabela) — não pode ser `DELETE` físico sem gate humano, conforme `CLAUDE.md`.
 
 Tipo sugerido: backend
+
+## Resolução
+
+Concluído em: 2026-08-21
+Feature: docs/feature/20260821-expense-show-update-destroy/
+Tasks: TASK-126, TASK-127, TASK-128
+PRs: https://github.com/isacaguiar/expense/pull/38 (mergeado em `dev`)
