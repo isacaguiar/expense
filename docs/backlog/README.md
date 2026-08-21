@@ -61,6 +61,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 027 | [dashboard-grouplist-duplicados.md](dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 029 | [cors-origin-rede-local-hardcoded-backend.md](cors-origin-rede-local-hardcoded-backend.md) | CORS do backend com IP de rede local hardcoded (deveria ser configurável via .env) | (solicitação direta) | 2026-08-21 | BAIXA | Promovido para TASK-130 |
 
 ## Itens concluídos
 

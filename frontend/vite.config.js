@@ -9,6 +9,7 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
+    host: true,
     proxy: {
       // todo /auth/* vai para o Laravel em 8000, sem CORS
       '/auth': {
