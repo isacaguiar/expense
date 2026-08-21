@@ -37,7 +37,7 @@ describe('SimpleShellLayout', () => {
     expect(screen.getByText('QS')).toBeInTheDocument();
   });
 
-  it('has no group sidebar or group selector', async () => {
+  it('shows a generic menu (same visual pattern as the group shell), but no group selector', async () => {
     render(
       <MemoryRouter initialEntries={['/dashboard']}>
         <Routes>
@@ -50,7 +50,27 @@ describe('SimpleShellLayout', () => {
 
     await screen.findByText('Conteúdo Dashboard');
 
-    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Meus Grupos/ })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: /Resumo/ })).toHaveAttribute('href', '/summary');
+    expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/expenses');
+    expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Configurações/ })).toHaveAttribute('href', '#');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('derives the header title from the active sidebar item', async () => {
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route element={<SimpleShellLayout />}>
+            <Route path="/dashboard" element={<div>Conteúdo Dashboard</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Meus Grupos' })).toBeInTheDocument();
   });
 });
