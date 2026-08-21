@@ -40,9 +40,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
 |---|---|---|---|---|---|---|
 | 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
-| 005 | [node-modules-versionado-frontend.md](node-modules-versionado-frontend.md) | node_modules do frontend versionado no repositório | config-url-api-frontend | 2026-08-17 | BAIXA | Aberto |
 | 006 | [expense-manager-groupid-param-mismatch.md](expense-manager-groupid-param-mismatch.md) | ExpenseManager nunca carrega despesas (nome de param de rota errado) | config-url-api-frontend | 2026-08-17 | ALTA | Promovido para TASK-033 |
-| 007 | [storage-cache-logs-versionados-backend.md](storage-cache-logs-versionados-backend.md) | Cache e logs do Laravel versionados no repositório | config-url-api-frontend | 2026-08-17 | BAIXA | Aberto |
 | 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Aberto |
 | 009 | [despesas-menu-tela-branco-frontend.md](despesas-menu-tela-branco-frontend.md) | Tela de despesas abre em branco ao clicar no menu | (solicitação direta) | 2026-08-18 | ALTA | Promovido para TASK-033 |
 | 010 | [expense-store-sem-checagem-membership-payer.md](expense-store-sem-checagem-membership-payer.md) | POST /api/expenses não checa se user_payer_id/payers são membros do grupo | fluxo-despesas-grupo (achado na TASK-036, revisão security-reviewer) | 2026-08-18 | ALTA | Promovido para TASK-039 |
@@ -61,6 +59,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 027 | [dashboard-grouplist-duplicados.md](dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 030 | [storage-sessions-views-compilados-versionados-backend.md](storage-sessions-views-compilados-versionados-backend.md) | Sessões e views compiladas do Laravel versionadas no repositório | achado ao investigar itens 005/007 | 2026-08-21 | BAIXA | Aberto |
 
 ## Itens concluídos
 
@@ -68,6 +67,8 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 
 | ID | Arquivo | Título | Resolvido em | Feature | Tasks |
 |---|---|---|---|---|---|
+| 005 | [node-modules-versionado-frontend.md](concluidos/node-modules-versionado-frontend.md) | node_modules do frontend versionado no repositório | 2026-08-21 (fora do fluxo SDD — commit `477d27665`, anterior) | — | — |
+| 007 | [storage-cache-logs-versionados-backend.md](concluidos/storage-cache-logs-versionados-backend.md) | Cache e logs do Laravel versionados no repositório | 2026-08-21 (fora do fluxo SDD — commit `ec81e9cfd`, anterior) | — | — |
 | 001 | [config-url-api-frontend.md](concluidos/config-url-api-frontend.md) | Configuração de URL da API via variável de ambiente | 2026-08-17 | config-url-api-frontend | TASK-027 |
 | 004 | [auth-guard-redirect-frontend.md](concluidos/auth-guard-redirect-frontend.md) | Auth guard / redirect automático | 2026-08-17 | config-url-api-frontend | TASK-028, TASK-029 |
 | 002 | [infra-testes-frontend.md](concluidos/infra-testes-frontend.md) | Infraestrutura de testes no frontend | 2026-08-18 | infra-testes-frontend | TASK-030, TASK-031, TASK-032 |
