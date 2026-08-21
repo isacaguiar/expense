@@ -6,7 +6,10 @@ return [
 
     'allowed_methods' => ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 
-    'allowed_origins' => ['http://localhost:3000'],
+    'allowed_origins' => array_filter([
+        'http://localhost:3000',
+        env('FRONTEND_NETWORK_URL'),
+    ]),
 
     'allowed_origins_patterns' => [],
 
