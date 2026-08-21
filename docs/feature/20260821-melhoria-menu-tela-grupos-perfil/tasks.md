@@ -6,17 +6,17 @@ Versão: 1.0 · Criado em: 20260821
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-111 | Criar `accountSettingsNavItems.ts`; aplicar em `simpleNavItems.ts` (renomear Resumo→Home, adicionar Relatórios, Configurações vira submenu) e `groupNavItems` (renomear Resumo→Home, Configurações deixa de ser link de edição do grupo e vira o mesmo submenu) | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-112 | `Sidebar.tsx`/`SidebarNavItem`: suportar item de ação (`onAction`), sem `to` nem `children`, renderizado como `ListItemButton` com `onClick` | frontend | plan.md §6 | nenhum | Pendente |
-| TASK-113 | Criar helper de logout (`POST /api/logout` + limpar `localStorage` + navegar para `/`); `simpleNavItems()`/`groupNavItems()` passam a receber `navigate` e ganham item final "Sair" usando o helper | frontend | plan.md §6 | nenhum | Pendente |
-| TASK-114 | `GroupController@index`: adicionar `withMax('expenses', 'date_payment')` e `with('members:id,name,email')` na query | backend | plan.md §2, §3 | nenhum | Pendente |
-| TASK-115 | `SummaryEntry.tsx` e `ExpensesEntry.tsx`: redirecionar automaticamente para o grupo com `expenses_max_date_payment` mais recente mesmo havendo múltiplos grupos, em vez de mostrar a tela de escolha | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-116 | `Dashboard.tsx`: trocar `Grid`/`Card` por `Table`, coluna de integrantes com `AvatarGroup`/`getInitials`, preservando busca/"Novo grupo"/limite/responsável já existentes | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-117 | `Dashboard.tsx`: adicionar ícone de excluir grupo na tabela (diálogo de confirmação + `Snackbar` de sucesso, mesmo padrão de `ExpenseManager.tsx`), chamando `DELETE /api/groups/:id` | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-118 | `UserController@updateProfile` (valida `name`/`email`/`pix`, atualiza os 3 campos) + rota `PUT /api/user/profile` | backend | plan.md §4 | nenhum | Pendente |
-| TASK-119 | Página `Profile.tsx` em `/profile` — formulário pré-preenchido via `GET /api/me`, submete para `PUT /api/user/profile` | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-120 | `UserController@changePassword` (valida `current_password` contra o hash atual, `new_password` com `confirmed`) + rota `PUT /api/user/password` | backend | plan.md §5 | nenhum | Pendente |
-| TASK-121 | Página `ChangePassword.tsx` em `/change-password` — formulário com senha atual/nova/confirmação, submete para `PUT /api/user/password` | frontend | plan.md §5 | nenhum | Pendente |
+| TASK-111 | Criar `accountSettingsNavItems.ts`; aplicar em `simpleNavItems.ts` (renomear Resumo→Home, adicionar Relatórios, Configurações vira submenu) e `groupNavItems` (renomear Resumo→Home, Configurações deixa de ser link de edição do grupo e vira o mesmo submenu) | frontend | plan.md §1 | nenhum | Concluída |
+| TASK-112 | `Sidebar.tsx`/`SidebarNavItem`: suportar item de ação (`onAction`), sem `to` nem `children`, renderizado como `ListItemButton` com `onClick` | frontend | plan.md §6 | nenhum | Concluída |
+| TASK-113 | Criar helper de logout (`POST /api/logout` + limpar `localStorage` + navegar para `/`); `simpleNavItems()`/`groupNavItems()` passam a receber `navigate` e ganham item final "Sair" usando o helper | frontend | plan.md §6 | nenhum | Concluída |
+| TASK-114 | `GroupController@index`: adicionar `withMax('expenses', 'date_payment')` e `with('members:id,name,email')` na query | backend | plan.md §2, §3 | nenhum | Concluída |
+| TASK-115 | `SummaryEntry.tsx` e `ExpensesEntry.tsx`: redirecionar automaticamente para o grupo com `expenses_max_date_payment` mais recente mesmo havendo múltiplos grupos, em vez de mostrar a tela de escolha | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-116 | `Dashboard.tsx`: trocar `Grid`/`Card` por `Table`, coluna de integrantes com `AvatarGroup`/`getInitials`, preservando busca/"Novo grupo"/limite/responsável já existentes | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-117 | `Dashboard.tsx`: adicionar ícone de excluir grupo na tabela (diálogo de confirmação + `Snackbar` de sucesso, mesmo padrão de `ExpenseManager.tsx`), chamando `DELETE /api/groups/:id` | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-118 | `UserController@updateProfile` (valida `name`/`email`/`pix`, atualiza os 3 campos) + rota `PUT /api/user/profile` | backend | plan.md §4 | nenhum | Concluída |
+| TASK-119 | Página `Profile.tsx` em `/profile` — formulário pré-preenchido via `GET /api/me`, submete para `PUT /api/user/profile` | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-120 | `UserController@changePassword` (valida `current_password` contra o hash atual, `new_password` com `confirmed`) + rota `PUT /api/user/password` | backend | plan.md §5 | nenhum | Concluída |
+| TASK-121 | Página `ChangePassword.tsx` em `/change-password` — formulário com senha atual/nova/confirmação, submete para `PUT /api/user/password` | frontend | plan.md §5 | nenhum | Concluída |
 
 ## Critérios de aceite
 

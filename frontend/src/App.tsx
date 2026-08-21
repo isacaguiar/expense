@@ -11,6 +11,7 @@ import ExpensesEntry from './pages/ExpensesEntry';
 import GroupSummary from './pages/GroupSummary';
 import SummaryEntry from './pages/SummaryEntry';
 import Profile from './pages/Profile';
+import ChangePassword from './pages/ChangePassword';
 import RequireAuth from './components/RequireAuth';
 import GroupShellLayout from './layouts/GroupShellLayout';
 import SimpleShellLayout from './layouts/SimpleShellLayout';
@@ -39,6 +40,7 @@ const App = () => {
           <Route path="/expenses" element={<ExpensesEntry />} />
           <Route path="/summary" element={<SummaryEntry />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/change-password" element={<ChangePassword />} />
         </Route>
       </Route>
 
