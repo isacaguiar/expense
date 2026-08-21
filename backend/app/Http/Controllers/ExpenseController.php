@@ -42,6 +42,7 @@ class ExpenseController extends Controller
         // criação (ou anterior), a despesa não deve aparecer nem nesse mês.
         $direct = Expense::where('group_id', $groupId)
             ->where('deleted', false)
+            ->where('expense_type', '!=', 'IN_INSTALLMENTS')
             ->whereYear('date_payment', $data['year'])
             ->whereMonth('date_payment', $data['month'])
             ->where(function ($query) use ($monthStart) {
@@ -64,12 +65,35 @@ class ExpenseController extends Controller
             ->with('payers')
             ->get();
 
+        // Parcelas de despesas IN_INSTALLMENTS cujo vencimento (date_expected) cai neste
+        // mês — inclui o mês de criação (1ª parcela) e os seguintes, ao contrário de
+        // $direct, que só olha o date_payment da despesa (mês de criação).
+        $installmentQuotas = Quota::whereYear('date_expected', $data['year'])
+            ->whereMonth('date_expected', $data['month'])
+            ->whereHas('expense', function ($query) use ($groupId) {
+                $query->where('group_id', $groupId)
+                    ->where('deleted', false)
+                    ->where('expense_type', 'IN_INSTALLMENTS');
+            })
+            ->with('expense.payers')
+            ->get();
+
+        $mapQuotaRow = fn (Quota $quota) => [
+            'id' => $quota->expense->id,
+            'description' => $quota->expense->description,
+            'date' => $quota->date_expected->toDateString(),
+            'value' => $quota->value_quota,
+            'payerName' => $quota->expense->payers->pluck('name')->implode(', '),
+            'isFixed' => false,
+        ];
+
         $expenses = $direct->map(fn (Expense $expense) => $mapRow($expense))
             ->concat($projectedFixed->map(function (Expense $expense) use ($monthStart, $mapRow) {
                 $day = min($expense->date_payment->day, $monthStart->daysInMonth);
 
                 return $mapRow($expense, $monthStart->copy()->day($day));
             }))
+            ->concat($installmentQuotas->map($mapQuotaRow))
             ->sortBy('date')
             ->values();
 

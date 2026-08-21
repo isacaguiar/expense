@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Expense;
 use App\Models\Group;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -146,6 +147,87 @@ class ExpenseControllerIndexByGroupTest extends TestCase
 
         $response = $this->withToken($this->tokenFor($member))
             ->getJson("/api/groups/{$group->id}/expenses?year=2026&month=3");
+
+        $response->assertStatus(200)->assertJsonMissing(['id' => $expense->id]);
+    }
+
+    private function createInstallmentExpense(Group $group, User $creator, User $payer, string $datePayment, array $quotas): Expense
+    {
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => $datePayment,
+            'description' => 'Despesa parcelada de teste',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => count($quotas),
+            'total_value' => array_sum($quotas),
+            'group_id' => $group->id,
+            'user_creator_id' => $creator->id,
+            'user_payer_id' => $payer->id,
+            'deleted' => false,
+        ]);
+
+        foreach ($quotas as $number => $value) {
+            $expense->quotas()->create([
+                'date_expected' => Carbon::parse($datePayment)->addMonths($number)->toDateString(),
+                'number' => $number + 1,
+                'paid' => false,
+                'value_quota' => $value,
+            ]);
+        }
+
+        return $expense;
+    }
+
+    public function test_installment_expense_appears_in_creation_month_with_first_quota_value(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $expense = $this->createInstallmentExpense($group, $member, $member, '2026-03-10', [300, 300, 300]);
+        $expense->payers()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson("/api/groups/{$group->id}/expenses?year=2026&month=3");
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['id' => $expense->id, 'date' => '2026-03-10', 'value' => '300.00']);
+    }
+
+    public function test_installment_expense_appears_in_following_months_with_that_months_quota_value(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $expense = $this->createInstallmentExpense($group, $member, $member, '2026-03-10', [300, 300, 300]);
+        $expense->payers()->attach($member->id);
+
+        $month2 = $this->withToken($this->tokenFor($member))
+            ->getJson("/api/groups/{$group->id}/expenses?year=2026&month=4");
+        $month2->assertStatus(200)
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['id' => $expense->id, 'date' => '2026-04-10', 'value' => '300.00']);
+
+        $month3 = $this->withToken($this->tokenFor($member))
+            ->getJson("/api/groups/{$group->id}/expenses?year=2026&month=5");
+        $month3->assertStatus(200)
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['id' => $expense->id, 'date' => '2026-05-10', 'value' => '300.00']);
+    }
+
+    public function test_installment_expense_does_not_appear_after_last_quota(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $expense = $this->createInstallmentExpense($group, $member, $member, '2026-03-10', [300, 300, 300]);
+        $expense->payers()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson("/api/groups/{$group->id}/expenses?year=2026&month=6");
 
         $response->assertStatus(200)->assertJsonMissing(['id' => $expense->id]);
     }

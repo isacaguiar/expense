@@ -4,7 +4,7 @@ ID: 013
 Origem: docs/feature/20260818-resumo-grupo-dashboard/implementation.md (achado durante validação no browser da TASK-063)
 Criado em: 2026-08-19
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-133
 
 ## Descrição
 
