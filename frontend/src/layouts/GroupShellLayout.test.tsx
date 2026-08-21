@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -54,6 +54,9 @@ describe('GroupShellLayout', () => {
     navigateMock.mockClear();
     vi.mocked(axios.get).mockReset();
     mockGetResponses();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.post).mockResolvedValue({ data: { message: 'ok' } });
+    localStorage.setItem('accessToken', 'a-token');
   });
 
   it('renders the sidebar with real links for Home/Despesas/Participantes and placeholders for the rest', async () => {
@@ -110,5 +113,22 @@ describe('GroupShellLayout', () => {
     await user.click(await screen.findByRole('option', { name: 'Grupo B' }));
 
     expect(navigateMock).toHaveBeenCalledWith('/groups/2/expenses');
+  });
+
+  it('logs out when "Sair" is clicked, as a top-level item (not nested)', async () => {
+    renderShell('/groups/1/summary');
+
+    await screen.findByText('Conteúdo Resumo');
+
+    expect(screen.queryByRole('link', { name: 'Sair' })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Sair'));
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/api/logout'), null, expect.anything());
+      expect(localStorage.getItem('accessToken')).toBeNull();
+      expect(navigateMock).toHaveBeenCalledWith('/');
+    });
   });
 });

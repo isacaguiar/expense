@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -18,6 +18,9 @@ describe('SimpleShellLayout', () => {
       }
       return Promise.reject(new Error(`unexpected GET ${url}`));
     });
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.post).mockResolvedValue({ data: { message: 'ok' } });
+    localStorage.setItem('accessToken', 'a-token');
   });
 
   it('renders the wordmark, the outlet content and the logged-in user name/initials', async () => {
@@ -114,5 +117,29 @@ describe('SimpleShellLayout', () => {
     );
 
     expect(await screen.findByRole('heading', { name: 'Meus Grupos' })).toBeInTheDocument();
+  });
+
+  it('logs out when "Sair" is clicked, as a top-level item (not nested)', async () => {
+    render(
+      <MemoryRouter initialEntries={['/dashboard']}>
+        <Routes>
+          <Route element={<SimpleShellLayout />}>
+            <Route path="/dashboard" element={<div>Conteúdo Dashboard</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Conteúdo Dashboard');
+
+    expect(screen.queryByRole('link', { name: 'Sair' })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Sair'));
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/api/logout'), null, expect.anything());
+      expect(localStorage.getItem('accessToken')).toBeNull();
+    });
   });
 });

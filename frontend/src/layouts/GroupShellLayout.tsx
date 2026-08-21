@@ -41,7 +41,7 @@ export default function GroupShellLayout() {
       .catch(err => console.error('Erro ao carregar usuário logado:', err));
   }, []);
 
-  const activeItem = groupNavItems(groupId ?? '').find(item => item.to === location.pathname);
+  const activeItem = groupNavItems(groupId ?? '', navigate).find(item => item.to === location.pathname);
   const title = activeItem?.label ?? '';
 
   const handleGroupChange = (event: SelectChangeEvent<number>) => {
