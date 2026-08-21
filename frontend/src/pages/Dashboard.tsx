@@ -12,6 +12,7 @@ import {
   Grid,
   IconButton,
   TextField,
+  Tooltip,
   Typography
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -25,10 +26,15 @@ type Group = {
   name: string;
   description: string;
   create_date: string;
+  created_by: number | null;
+  creator?: { id: number; email: string } | null;
 };
+
+const MAX_GROUPS_CREATED_PER_USER = 3;
 
 const Dashboard: React.FC = () => {
   const [groups, setGroups] = useState<Group[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<string>('');
@@ -36,10 +42,15 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
+    const headers = { Authorization: token ? `Bearer ${token}` : '' };
+
     axios
-      .get<Group[]>(`${API_BASE_URL}/api/groups`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
-      })
+      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers })
+      .then(res => setCurrentUserId(res.data.id))
+      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
+
+    axios
+      .get<Group[]>(`${API_BASE_URL}/api/groups`, { headers })
       .then(res => setGroups(res.data))
       .catch(err => {
         console.error('Erro ao carregar grupos:', err);
@@ -55,6 +66,9 @@ const Dashboard: React.FC = () => {
   const filteredGroups = groups.filter(group =>
     group.name.toLowerCase().includes(search.toLowerCase())
   );
+
+  const myGroupsCount = groups.filter(group => group.created_by === currentUserId).length;
+  const reachedCreationLimit = myGroupsCount >= MAX_GROUPS_CREATED_PER_USER;
 
   if (loading) {
     return (
@@ -78,9 +92,19 @@ const Dashboard: React.FC = () => {
           size="small"
           sx={{ minWidth: 260 }}
         />
-        <Button variant="contained" startIcon={<AddIcon />} component={Link} to="/groups/new">
-          Novo grupo
-        </Button>
+        <Tooltip title={reachedCreationLimit ? `Você já atingiu o limite de ${MAX_GROUPS_CREATED_PER_USER} grupos criados.` : ''}>
+          <span>
+            <Button
+              variant="contained"
+              startIcon={<AddIcon />}
+              component={Link}
+              to="/groups/new"
+              disabled={reachedCreationLimit}
+            >
+              Novo grupo
+            </Button>
+          </span>
+        </Tooltip>
       </Box>
 
       {groups.length === 0 ? (
@@ -99,6 +123,9 @@ const Dashboard: React.FC = () => {
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                       {group.description}
+                    </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                      Responsável: {group.creator?.email ?? '—'}
                     </Typography>
                   </CardContent>
                 </CardActionArea>
