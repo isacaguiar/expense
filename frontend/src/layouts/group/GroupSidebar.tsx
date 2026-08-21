@@ -12,8 +12,8 @@ import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined
 import PaymentsOutlinedIcon from '@mui/icons-material/PaymentsOutlined';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
 import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import logoIcon from '../../assets/images/logo-expense.png';
 import { brandColors } from '../../theme/brandColors';
+import BrandWordmark from '../BrandWordmark';
 
 interface GroupSidebarProps {
   groupId: string;
@@ -55,16 +55,8 @@ export default function GroupSidebar({ groupId }: GroupSidebarProps) {
         py: 3,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, px: 3, mb: 3 }}>
-        <Box component="img" src={logoIcon} alt="" sx={{ width: 36, height: 36, objectFit: 'contain' }} />
-        <Typography sx={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: '1.125rem' }}>
-          <Box component="span" sx={{ color: brandColors.textDark }}>
-            Shared
-          </Box>{' '}
-          <Box component="span" sx={{ color: brandColors.primary }}>
-            Expense
-          </Box>
-        </Typography>
+      <Box sx={{ px: 3, mb: 3 }}>
+        <BrandWordmark />
       </Box>
 
       <List sx={{ px: 1.5 }}>
