@@ -59,7 +59,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 027 | [dashboard-grouplist-duplicados.md](dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
-| 030 | [storage-sessions-views-compilados-versionados-backend.md](storage-sessions-views-compilados-versionados-backend.md) | Sessões e views compiladas do Laravel versionadas no repositório | achado ao investigar itens 005/007 | 2026-08-21 | BAIXA | Aberto |
+| 030 | [storage-sessions-views-compilados-versionados-backend.md](storage-sessions-views-compilados-versionados-backend.md) | Sessões e views compiladas do Laravel versionadas no repositório | achado ao investigar itens 005/007 | 2026-08-21 | BAIXA | Promovido para TASK-131 |
 
 ## Itens concluídos
 
