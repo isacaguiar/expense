@@ -19,3 +19,10 @@ Mesmo problema de fundo dos itens 005/007: ruído no histórico do repositório,
 Correção: `git rm --cached` nos 11 arquivos (sem `--force`, sem apagar do disco), sem necessidade de tocar em nenhum `.gitignore` (já corretos).
 
 Tipo sugerido: infra
+
+## Resolução
+
+Concluído em: 2026-08-21
+Feature: docs/feature/20260821-storage-sessions-views-versionados/
+Tasks: TASK-131
+PRs: https://github.com/isacaguiar/expense/pull/42 (mergeado em `dev`)
