@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import GroupForm from './pages/GroupForm';
-import InternalLayout from './layouts/InternalLayout';
 import GroupMembersForm from './pages/GroupMembersForm';
 import GroupList from './pages/GroupList';
 import ExpenseManager from './pages/ExpenseManager';
@@ -12,32 +11,30 @@ import GroupSummary from './pages/GroupSummary';
 import SummaryEntry from './pages/SummaryEntry';
 import RequireAuth from './components/RequireAuth';
 import GroupShellLayout from './layouts/GroupShellLayout';
+import SimpleShellLayout from './layouts/SimpleShellLayout';
 
 const App = () => {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
 
-
-      {/* Rotas privadas com layout */}
+      {/* Rotas privadas */}
       <Route element={<RequireAuth />}>
-        <Route element={<InternalLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
-
-          {/* Rota de grupo */}
-          <Route path="/groups" element={<GroupList />} />
-          <Route path="/groups/new" element={<GroupForm />} />
-          <Route path="/groups/:id/edit" element={<GroupForm />} />
-          <Route path="/groups/:id/members" element={<GroupMembersForm />} />
-
-          <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
-          <Route path="/expenses" element={<ExpensesEntry />} />
-          <Route path="/summary" element={<SummaryEntry />} />
-        </Route>
-
-        {/* Fora de InternalLayout: páginas com sidebar/navegação própria de grupo */}
+        {/* Com grupo selecionado: sidebar/navegação de grupo (GroupShellLayout) */}
         <Route element={<GroupShellLayout />}>
           <Route path="/groups/:id/summary" element={<GroupSummary />} />
+          <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
+          <Route path="/groups/:id/members" element={<GroupMembersForm />} />
+          <Route path="/groups/:id/edit" element={<GroupForm />} />
+        </Route>
+
+        {/* Sem grupo selecionado: cabeçalho simples (SimpleShellLayout) */}
+        <Route element={<SimpleShellLayout />}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/groups" element={<GroupList />} />
+          <Route path="/groups/new" element={<GroupForm />} />
+          <Route path="/expenses" element={<ExpensesEntry />} />
+          <Route path="/summary" element={<SummaryEntry />} />
         </Route>
       </Route>
 
