@@ -14,7 +14,7 @@ Versão: 1.0 · Criado em: 20260820
 | TASK-093 | Reestilizar `GroupForm.tsx` (criar e editar) como formulário em card, mesmos campos e validação de hoje | frontend | plan.md §6 | nenhum | Concluída |
 | TASK-094 | Reestilizar `GroupMembersForm.tsx` — lista de membros com `Avatar` de iniciais + formulário de adicionar por e-mail | frontend | plan.md §5 | nenhum | Concluída |
 | TASK-095 | Reestilizar `ExpensesEntry.tsx` (cards de grupo, mesmo comportamento de redirecionamento/escolha) | frontend | plan.md §7 | nenhum | Concluída — `SummaryEntry.tsx` (mesmo padrão, R6) restilizado junto, ver `implementation.md` |
-| TASK-096 | `ExpenseManager.tsx`: extrair criação de despesa do `Dialog` atual para rota de página cheia `/groups/:id/expenses/new`, reaproveitando `handleSaveExpense`/`POST /api/expenses` existente | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-096 | `ExpenseManager.tsx`: extrair criação de despesa do `Dialog` atual para rota de página cheia `/groups/:id/expenses/new`, reaproveitando `handleSaveExpense`/`POST /api/expenses` existente | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-097 | `ExpenseManager.tsx`: criar rota somente-leitura `/groups/:id/expenses/:expenseId` (busca no array já carregado do mês; trata caso "despesa não encontrada" com link de volta) | frontend | plan.md §4 | nenhum | Pendente |
 | TASK-098 | `ExpenseManager.tsx`: restilizar listagem em cards (badge de tipo Fixa/Variável) com busca e filtro por tipo client-side sobre os dados já carregados | frontend | plan.md §4 | nenhum | Pendente |
 | TASK-099 | `ExpenseManager.tsx`: restilizar o fluxo de exclusão de despesa Fixa (`stopRecurrence`) com diálogo de confirmação e toast de sucesso no novo visual | frontend | plan.md §4 | nenhum | Pendente |
