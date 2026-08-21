@@ -4,7 +4,7 @@ ID: 023
 Origem: docs/feature/20260820-atualizacao-layout-paginas/specify.md (achado ao avaliar o mockup de Despesas — telas "Visualizar"/"Editar"/"Excluir")
 Criado em: 2026-08-20
 Prioridade: ALTA
-Status: Aberto
+Status: Promovido para TASK-126
 
 ## Descrição
 

@@ -75,6 +75,14 @@ class ExpenseController extends Controller
         return response()->json($expenses);
     }
 
+    public function show($id)
+    {
+        $expense = $this->findExpenseForMember($id);
+        $expense->load(['payers', 'quotas']);
+
+        return response()->json($expense);
+    }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -363,5 +371,14 @@ class ExpenseController extends Controller
         }
 
         return $entries;
+    }
+
+    private function findExpenseForMember($id): Expense
+    {
+        $expense = Expense::where('deleted', false)->findOrFail($id);
+        $group = Group::findOrFail($expense->group_id);
+        $this->authorizeGroupMembership($group);
+
+        return $expense;
     }
 }
