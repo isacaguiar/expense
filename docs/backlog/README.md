@@ -46,7 +46,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Aberto |
 | 009 | [despesas-menu-tela-branco-frontend.md](despesas-menu-tela-branco-frontend.md) | Tela de despesas abre em branco ao clicar no menu | (solicitação direta) | 2026-08-18 | ALTA | Promovido para TASK-033 |
 | 010 | [expense-store-sem-checagem-membership-payer.md](expense-store-sem-checagem-membership-payer.md) | POST /api/expenses não checa se user_payer_id/payers são membros do grupo | fluxo-despesas-grupo (achado na TASK-036, revisão security-reviewer) | 2026-08-18 | ALTA | Promovido para TASK-039 |
-| 011 | [recuperacao-senha-quebra-login-backend.md](recuperacao-senha-quebra-login-backend.md) | Fluxo de recuperação de senha sobrescreve a senha antes de garantir entrega do e-mail | Debug de sessão (usuário sem conseguir logar) | 2026-08-18 | ALTA | Aberto |
+| 011 | [recuperacao-senha-quebra-login-backend.md](recuperacao-senha-quebra-login-backend.md) | Fluxo de recuperação de senha sobrescreve a senha antes de garantir entrega do e-mail | Debug de sessão (usuário sem conseguir logar) | 2026-08-18 | ALTA | Promovido para TASK-122 |
 | 012 | [expense-manager-installments-nao-projetadas-por-mes.md](expense-manager-installments-nao-projetadas-por-mes.md) | Despesas Parceladas não aparecem nos meses seguintes ao de criação, e valor exibido é o total, não a parcela | resumo-grupo-dashboard | 2026-08-18 | MEDIA | Aberto |
 | 013 | [expense-manager-data-exibida-com-um-dia-a-menos.md](expense-manager-data-exibida-com-um-dia-a-menos.md) | ExpenseManager exibe a data das despesas com 1 dia a menos em fusos negativos | resumo-grupo-dashboard (achado na TASK-063) | 2026-08-19 | MEDIA | Aberto |
 | 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
@@ -63,6 +63,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 027 | [dashboard-grouplist-duplicados.md](dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 028 | [invitation-invite-message-key-colisao-mail.md](invitation-invite-message-key-colisao-mail.md) | Convite por e-mail quebra quando `message` é preenchido (colisão de chave com `Mail::send` legado) | recuperacao-senha-login (achado na TASK-125) | 2026-08-21 | MEDIA | Aberto |
 
 ## Itens concluídos
 

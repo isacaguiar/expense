@@ -4,7 +4,7 @@ ID: 011
 Origem: Debug de sessão (usuário relatou não conseguir logar), 2026-08-18
 Criado em: 2026-08-18
 Prioridade: ALTA
-Status: Aberto
+Status: Promovido para TASK-122
 
 ## Descrição
 
