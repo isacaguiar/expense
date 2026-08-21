@@ -6,15 +6,15 @@ Versão: 1.0 · Criado em: 20260820
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-102 | Migration aditiva `created_by` em `ex_groups` (FK nullable para `ex_users`, `nullOnDelete`) + `Group.php` (fillable + relação `creator()`) | backend | plan.md §1 | nenhum | Pendente |
-| TASK-103 | `GroupController@store`: validar limite de 3 grupos criados (não deletados) por usuário antes de criar, e setar `created_by` | backend | plan.md §1 | nenhum | Pendente |
-| TASK-104 | `GroupController@index` e `@show`: eager-load `creator:id,email` na resposta | backend | plan.md §1, §3 | nenhum | Pendente |
-| TASK-105 | Teste backend: usuário já no limite de 3 grupos criados continua podendo ser adicionado como membro de um grupo de outra pessoa | backend | plan.md §2 | nenhum | Pendente |
-| TASK-106 | `GroupForm.tsx`: exibir a mensagem de erro retornada pelo backend (ex.: limite atingido) em vez do texto genérico fixo | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-107 | `Dashboard.tsx`: desabilitar "Novo grupo" ao atingir o limite (com base em `created_by` + `GET /api/me`) e exibir "Responsável" em cada card | frontend | plan.md §1, §3 | nenhum | Pendente |
-| TASK-108 | `GroupMembersForm.tsx`: exibir o responsável (criador) do grupo | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-109 | `Sidebar.tsx`: suportar item de menu expansível (`children`) com `Collapse` do MUI, mantendo o comportamento atual para itens sem `children` | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-110 | `simpleNavItems.ts` + `SimpleShellLayout.tsx`: mover "Grupos" para dentro de "Configurações" como submenu, e ajustar a derivação do título do header para itens aninhados | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-102 | Migration aditiva `created_by` em `ex_groups` (FK nullable para `ex_users`, `nullOnDelete`) + `Group.php` (fillable + relação `creator()`) | backend | plan.md §1 | nenhum | Concluída |
+| TASK-103 | `GroupController@store`: validar limite de 3 grupos criados (não deletados) por usuário antes de criar, e setar `created_by` | backend | plan.md §1 | nenhum | Concluída |
+| TASK-104 | `GroupController@index` e `@show`: eager-load `creator:id,email` na resposta | backend | plan.md §1, §3 | nenhum | Concluída |
+| TASK-105 | Teste backend: usuário já no limite de 3 grupos criados continua podendo ser adicionado como membro de um grupo de outra pessoa | backend | plan.md §2 | nenhum | Concluída |
+| TASK-106 | `GroupForm.tsx`: exibir a mensagem de erro retornada pelo backend (ex.: limite atingido) em vez do texto genérico fixo | frontend | plan.md §1 | nenhum | Concluída |
+| TASK-107 | `Dashboard.tsx`: desabilitar "Novo grupo" ao atingir o limite (com base em `created_by` + `GET /api/me`) e exibir "Responsável" em cada card | frontend | plan.md §1, §3 | nenhum | Concluída |
+| TASK-108 | `GroupMembersForm.tsx`: exibir o responsável (criador) do grupo | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-109 | `Sidebar.tsx`: suportar item de menu expansível (`children`) com `Collapse` do MUI, mantendo o comportamento atual para itens sem `children` | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-110 | `simpleNavItems.ts` + `SimpleShellLayout.tsx`: mover "Grupos" para dentro de "Configurações" como submenu, e ajustar a derivação do título do header para itens aninhados | frontend | plan.md §4 | nenhum | Concluída |
 
 ## Critérios de aceite
 

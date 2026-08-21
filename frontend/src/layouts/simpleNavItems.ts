@@ -8,11 +8,14 @@ import type { GroupNavItem } from './group/GroupSidebar';
 
 export function simpleNavItems(): GroupNavItem[] {
   return [
-    { label: 'Meus Grupos', icon: HomeOutlinedIcon, to: '/dashboard' },
     { label: 'Resumo', icon: AssessmentOutlinedIcon, to: '/summary' },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: '/expenses' },
     { label: 'Participantes', icon: PeopleOutlineOutlinedIcon },
     { label: 'Pagamentos', icon: PaymentsOutlinedIcon },
-    { label: 'Configurações', icon: SettingsOutlinedIcon },
+    {
+      label: 'Configurações',
+      icon: SettingsOutlinedIcon,
+      children: [{ label: 'Grupos', icon: HomeOutlinedIcon, to: '/dashboard' }],
+    },
   ];
 }
