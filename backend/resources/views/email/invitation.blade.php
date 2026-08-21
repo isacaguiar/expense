@@ -52,8 +52,8 @@
 
     <p><strong>{{ $inviterName }}</strong> convidou você para participar da nossa plataforma.</p>
 
-    @if($message)
-      <p><em>Mensagem:</em> "{{ $message }}"</p>
+    @if($inviteMessage)
+      <p><em>Mensagem:</em> "{{ $inviteMessage }}"</p>
     @endif
 
     <p>Para começar, clique no botão abaixo e ative sua conta:</p>

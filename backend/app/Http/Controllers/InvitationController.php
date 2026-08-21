@@ -33,7 +33,7 @@ class InvitationController extends Controller
 
         Mail::send('email.invitation', [
             'inviterName' => auth()->user()->name,
-            'message' => $request->message,
+            'inviteMessage' => $request->message,
             'activationLink' => url("/aceitar-convite?email={$user->email}&token={$token}"),
         ], function ($mail) use ($user) {
             $mail->to($user->email)->subject('Convite para a plataforma Despesa Compartilhada da Novemax');

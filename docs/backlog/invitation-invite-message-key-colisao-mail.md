@@ -4,7 +4,7 @@ ID: 028
 Origem: docs/feature/20260821-recuperacao-senha-login/plan.md §7 (achado ao testar TASK-125)
 Criado em: 2026-08-21
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-129
 
 ## Descrição
 
