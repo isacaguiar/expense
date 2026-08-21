@@ -20,6 +20,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [AuthController::class, 'dashboard']);
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
+    Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::get('/pix/generate', [PixController::class, 'gerarPix']);
 
     Route::post('/invitations', [InvitationController::class, 'invite']);
