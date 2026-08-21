@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Expense;
 use App\Models\Group;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -14,6 +15,22 @@ class GroupControllerTest extends TestCase
     private function tokenFor(User $user): string
     {
         return auth('api')->login($user);
+    }
+
+    private function createExpense(Group $group, User $creator, string $datePayment): Expense
+    {
+        return Expense::create([
+            'create_date' => now(),
+            'date_payment' => $datePayment,
+            'description' => 'Despesa de teste',
+            'expense_type' => 'IN_CASH',
+            'installments' => 1,
+            'total_value' => 100,
+            'group_id' => $group->id,
+            'user_creator_id' => $creator->id,
+            'user_payer_id' => $creator->id,
+            'deleted' => false,
+        ]);
     }
 
     public function test_member_can_view_group(): void
@@ -52,6 +69,46 @@ class GroupControllerTest extends TestCase
             ->getJson('/api/groups');
 
         $response->assertStatus(200)->assertJsonFragment(['creator' => ['id' => $creator->id, 'email' => 'criador2@example.com']]);
+    }
+
+    public function test_index_includes_members_list(): void
+    {
+        $member = User::factory()->create(['name' => 'Ana', 'email' => 'ana@example.com']);
+        $other = User::factory()->create(['name' => 'Bruno', 'email' => 'bruno@example.com']);
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$member->id, $other->id]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups');
+
+        $response->assertStatus(200)->assertJsonFragment(['id' => $member->id, 'email' => 'ana@example.com']);
+        $response->assertJsonFragment(['id' => $other->id, 'email' => 'bruno@example.com']);
+    }
+
+    public function test_index_includes_expenses_max_date_payment(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo com despesas']);
+        $group->members()->attach($member->id);
+        $this->createExpense($group, $member, '2026-01-10');
+        $this->createExpense($group, $member, '2026-03-20');
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups');
+
+        $response->assertStatus(200)->assertJsonFragment(['expenses_max_date_payment' => '2026-03-20']);
+    }
+
+    public function test_index_expenses_max_date_payment_is_null_without_expenses(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo sem despesas']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups');
+
+        $response->assertStatus(200)->assertJsonFragment(['id' => $group->id, 'expenses_max_date_payment' => null]);
     }
 
     public function test_non_member_cannot_view_group(): void
