@@ -41,6 +41,14 @@ type Expense = {
   isFixed?: boolean;
 };
 
+// exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
+// que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
+// pra hora local. Construir a partir dos componentes evita isso.
+const formatDate = (dateStr: string): string => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
+};
+
 const ExpenseManager: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -240,7 +248,7 @@ const ExpenseManager: React.FC = () => {
                       R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {new Date(exp.date).toLocaleDateString('pt-BR')} · Pago por {exp.payerName || '-'}
+                      {formatDate(exp.date)} · Pago por {exp.payerName || '-'}
                     </Typography>
                   </CardContent>
                 </CardActionArea>

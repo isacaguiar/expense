@@ -4,7 +4,7 @@ ID: 012
 Origem: docs/feature/20260818-resumo-grupo-dashboard/specify.md (achado durante investigação da feature "Resumo do Grupo")
 Criado em: 2026-08-18
 Prioridade: MÉDIA
-Status: Backlog
+Status: Promovido para TASK-132
 
 ## Descrição
 
