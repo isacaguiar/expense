@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -54,19 +54,37 @@ describe('GroupShellLayout', () => {
     navigateMock.mockClear();
     vi.mocked(axios.get).mockReset();
     mockGetResponses();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.post).mockResolvedValue({ data: { message: 'ok' } });
+    localStorage.setItem('accessToken', 'a-token');
   });
 
-  it('renders the sidebar with real links for Resumo/Despesas/Participantes/Configurações and placeholders for the rest', async () => {
+  it('renders the sidebar with real links for Home/Despesas/Participantes and placeholders for the rest', async () => {
     renderShell('/groups/1/summary');
 
     await screen.findByText('Conteúdo Resumo');
 
-    expect(screen.getByRole('link', { name: /Resumo/ })).toHaveAttribute('href', '/groups/1/summary');
+    expect(screen.getByRole('link', { name: /Home/ })).toHaveAttribute('href', '/groups/1/summary');
     expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/groups/1/expenses');
     expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '/groups/1/members');
     expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
     expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '#');
-    expect(screen.getByRole('link', { name: /Configurações/ })).toHaveAttribute('href', '/groups/1/edit');
+  });
+
+  it('nests "Meus Grupos", "Minha Conta" and "Alterar Senha" under "Configurações" instead of linking straight to the group edit page', async () => {
+    const user = userEvent.setup();
+    renderShell('/groups/1/summary');
+
+    await screen.findByText('Conteúdo Resumo');
+
+    expect(screen.queryByRole('link', { name: /Configurações/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /groups\/1\/edit/ })).not.toBeInTheDocument();
+
+    await user.click(screen.getByText('Configurações'));
+
+    expect(screen.getByRole('link', { name: 'Meus Grupos' })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: 'Minha Conta' })).toHaveAttribute('href', '/profile');
+    expect(screen.getByRole('link', { name: 'Alterar Senha' })).toHaveAttribute('href', '/change-password');
   });
 
   it('shows the logged-in user name and initials from GET /api/me', async () => {
@@ -95,5 +113,22 @@ describe('GroupShellLayout', () => {
     await user.click(await screen.findByRole('option', { name: 'Grupo B' }));
 
     expect(navigateMock).toHaveBeenCalledWith('/groups/2/expenses');
+  });
+
+  it('logs out when "Sair" is clicked, as a top-level item (not nested)', async () => {
+    renderShell('/groups/1/summary');
+
+    await screen.findByText('Conteúdo Resumo');
+
+    expect(screen.queryByRole('link', { name: 'Sair' })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText('Sair'));
+
+    await waitFor(() => {
+      expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/api/logout'), null, expect.anything());
+      expect(localStorage.getItem('accessToken')).toBeNull();
+      expect(navigateMock).toHaveBeenCalledWith('/');
+    });
   });
 });

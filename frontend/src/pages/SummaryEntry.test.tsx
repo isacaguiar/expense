@@ -24,7 +24,7 @@ describe('SummaryEntry', () => {
 
   it('redirects automatically when the user belongs to exactly 1 group', async () => {
     vi.mocked(axios.get).mockResolvedValueOnce({
-      data: [{ id: 42, name: 'Grupo Único', description: '', create_date: '' }],
+      data: [{ id: 42, name: 'Grupo Único', description: '', create_date: '2026-01-01', expenses_max_date_payment: null }],
     });
 
     render(
@@ -38,11 +38,11 @@ describe('SummaryEntry', () => {
     });
   });
 
-  it('shows a group picker when the user belongs to more than 1 group', async () => {
+  it('redirects to the group with the most recent expense when there is more than 1 group, without showing a picker', async () => {
     vi.mocked(axios.get).mockResolvedValueOnce({
       data: [
-        { id: 1, name: 'Grupo A', description: '', create_date: '' },
-        { id: 2, name: 'Grupo B', description: '', create_date: '' },
+        { id: 1, name: 'Grupo A', description: '', create_date: '2026-01-01', expenses_max_date_payment: '2026-02-10' },
+        { id: 2, name: 'Grupo B', description: '', create_date: '2026-01-01', expenses_max_date_payment: '2026-05-01' },
       ],
     });
 
@@ -52,9 +52,30 @@ describe('SummaryEntry', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('Grupo A')).toBeInTheDocument();
-    expect(screen.getByText('Grupo B')).toBeInTheDocument();
-    expect(navigateMock).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/groups/2/summary', { replace: true });
+    });
+    expect(screen.queryByText('Grupo A')).not.toBeInTheDocument();
+    expect(screen.queryByText('Grupo B')).not.toBeInTheDocument();
+  });
+
+  it('picks the group with any expense over a group with none, even if the other group is newer', async () => {
+    vi.mocked(axios.get).mockResolvedValueOnce({
+      data: [
+        { id: 1, name: 'Grupo sem despesas', description: '', create_date: '2026-06-01', expenses_max_date_payment: null },
+        { id: 2, name: 'Grupo com despesa antiga', description: '', create_date: '2026-01-01', expenses_max_date_payment: '2026-01-15' },
+      ],
+    });
+
+    render(
+      <MemoryRouter>
+        <SummaryEntry />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(navigateMock).toHaveBeenCalledWith('/groups/2/summary', { replace: true });
+    });
   });
 
   it('shows an informative message when the user belongs to 0 groups', async () => {

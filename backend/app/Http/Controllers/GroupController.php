@@ -19,7 +19,8 @@ class GroupController extends Controller
             ->whereHas('members', function ($q) use ($userId) {
                 $q->where('user_id', $userId);
             })
-            ->with('creator:id,email')
+            ->with('creator:id,email', 'members:id,name,email')
+            ->withMax('expenses', 'date_payment')
             ->get();
 
         /*$user = auth()->user();

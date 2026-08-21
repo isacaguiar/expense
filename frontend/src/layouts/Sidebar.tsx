@@ -76,6 +76,17 @@ function SidebarNavItem({ item, pathname, indent = false }: SidebarNavItemProps)
     );
   }
 
+  if (item.onAction) {
+    return (
+      <ListItemButton onClick={item.onAction} sx={sx}>
+        <ListItemIcon sx={{ minWidth: 36 }}>
+          <Icon fontSize="small" />
+        </ListItemIcon>
+        <ListItemText primary={label} />
+      </ListItemButton>
+    );
+  }
+
   return (
     <ListItemButton component="a" href="#" sx={{ ...sx, color: 'text.disabled' }}>
       <ListItemIcon sx={{ minWidth: 36, color: 'text.disabled' }}>
