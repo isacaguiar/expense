@@ -16,7 +16,7 @@ import Link from '@mui/material/Link';
 import Divider from '@mui/material/Divider';
 import googleLogo from '../../assets/illustrations/google-logo.svg';
 import microsoftLogo from '../../assets/illustrations/microsoft-logo.svg';
-import { loginColors } from './colors';
+import { brandColors } from '../../theme/brandColors';
 
 interface LoginFormCardProps {
   email: string;
@@ -49,8 +49,8 @@ export default function LoginFormCard({
         alignItems: 'center',
       }}
     >
-      <Avatar sx={{ width: 48, height: 48, mb: 1.5, bgcolor: loginColors.primaryLight }}>
-        <LockOutlinedIcon sx={{ color: loginColors.primary }} />
+      <Avatar sx={{ width: 48, height: 48, mb: 1.5, bgcolor: brandColors.primaryLight }}>
+        <LockOutlinedIcon sx={{ color: brandColors.primary }} />
       </Avatar>
       <Typography component="h1" sx={{ fontSize: '1.375rem', fontWeight: 'bold' }} textAlign="center">
         Bem-vindo de volta!
@@ -133,13 +133,13 @@ export default function LoginFormCard({
               <Checkbox
                 value="remember"
                 defaultChecked
-                sx={{ color: loginColors.primary, '&.Mui-checked': { color: loginColors.primary } }}
+                sx={{ color: brandColors.primary, '&.Mui-checked': { color: brandColors.primary } }}
               />
             }
             label="Lembrar de mim"
             sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.8rem' } }}
           />
-          <Link href="#" underline="hover" sx={{ color: loginColors.primary, fontSize: '0.8rem' }}>
+          <Link href="#" underline="hover" sx={{ color: brandColors.primary, fontSize: '0.8rem' }}>
             Esqueci minha senha
           </Link>
         </Box>
@@ -153,8 +153,8 @@ export default function LoginFormCard({
             mt: 2,
             mb: 1,
             fontSize: '0.8rem',
-            bgcolor: loginColors.primary,
-            '&:hover': { bgcolor: loginColors.primaryDark },
+            bgcolor: brandColors.primary,
+            '&:hover': { bgcolor: brandColors.primaryDark },
           }}
         >
           Entrar
@@ -190,7 +190,7 @@ export default function LoginFormCard({
 
       <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 3 }}>
         Ainda não tem uma conta?{' '}
-        <Link href="#" underline="hover" sx={{ color: loginColors.primary }}>
+        <Link href="#" underline="hover" sx={{ color: brandColors.primary }}>
           Cadastre-se
         </Link>
       </Typography>

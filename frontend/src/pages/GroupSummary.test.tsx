@@ -54,13 +54,18 @@ const summaryResponse = {
   ],
 };
 
-function mockGetResponses() {
+const currentUser = { name: 'QA Header Usuario', email: 'qa-header@example.com' };
+
+function mockGetResponses(summaryOverride: typeof summaryResponse = summaryResponse) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
     if (url.includes('/expenses/summary')) {
-      return Promise.resolve({ data: summaryResponse });
+      return Promise.resolve({ data: summaryOverride });
     }
     if (url.includes('/api/groups')) {
       return Promise.resolve({ data: groups });
+    }
+    if (url.includes('/api/me')) {
+      return Promise.resolve({ data: currentUser });
     }
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
@@ -144,5 +149,57 @@ describe('GroupSummary', () => {
     await user.click(await screen.findByRole('option', { name: 'Grupo B' }));
 
     expect(navigateMock).toHaveBeenCalledWith('/groups/2/summary');
+  });
+
+  it('sidebar links Resumo/Despesas/Participantes to real routes and leaves the rest as placeholders', async () => {
+    render(
+      <MemoryRouter initialEntries={['/groups/1/summary']}>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('R$ 1.100,00');
+
+    expect(screen.getByRole('link', { name: /Resumo/ })).toHaveAttribute('href', '/groups/1/summary');
+    expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/groups/1/expenses');
+    expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '/groups/1/members');
+    expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Configurações/ })).toHaveAttribute('href', '#');
+  });
+
+  it('shows the logged-in user name and initials from GET /api/me', async () => {
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('QA Header Usuario')).toBeInTheDocument();
+    expect(screen.getByText('QH')).toBeInTheDocument();
+  });
+
+  it('shows the paid/pending percentage of the total', async () => {
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('27% do total')).toBeInTheDocument();
+    expect(screen.getByText('73% do total')).toBeInTheDocument();
+  });
+
+  it('does not break (no NaN) when the cycle total is zero', async () => {
+    mockGetResponses({ ...summaryResponse, totals: { total: 0, paid: 0, pending: 0 } });
+
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findAllByText('0% do total')).toHaveLength(2);
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 });

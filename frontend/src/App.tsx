@@ -31,9 +31,11 @@ const App = () => {
 
           <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
           <Route path="/expenses" element={<ExpensesEntry />} />
-          <Route path="/groups/:id/summary" element={<GroupSummary />} />
           <Route path="/summary" element={<SummaryEntry />} />
         </Route>
+
+        {/* Fora de InternalLayout: tela de Resumo tem navegação/sidebar própria */}
+        <Route path="/groups/:id/summary" element={<GroupSummary />} />
       </Route>
 
       {/* rota “catch-all” opcional */}
