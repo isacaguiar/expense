@@ -21,3 +21,12 @@ Qualquer clique real (ou de teste) em "esqueci minha senha" deixa a conta inaces
 Correção sugerida (para quando isso virar task): só sobrescrever a senha depois de confirmar que o e-mail foi enviado (ou usar uma coluna separada de "token de reset" em vez de reaproveitar `password`), e envolver `Mail::send` em try/catch com log.
 
 Tipo sugerido: backend
+
+## Resolução
+
+Concluído em: 2026-08-21
+Feature: docs/feature/20260821-recuperacao-senha-login/
+Tasks: TASK-122, TASK-123, TASK-124, TASK-125
+PRs: https://github.com/isacaguiar/expense/pull/35
+
+Corrigido conforme sugerido (senha só é trocada em `verify()`, nunca mais em `forgotPassword`), mais dois achados bloqueantes descobertos durante a execução: nome de tabela errado nas validações (`exists:users`→`exists:ex_users`, TASK-124) e nome de view errado nos 3 envios de e-mail (`emails.*`→`email.*`, TASK-125) — este último provavelmente a causa raiz real do "e-mail nunca chega" original. `mailpit` adicionado ao `docker-compose.yml` (TASK-123) para permitir validar o fluxo de ponta a ponta localmente. Validado manualmente: e-mail de recuperação confirmado recebido no Mailpit.
