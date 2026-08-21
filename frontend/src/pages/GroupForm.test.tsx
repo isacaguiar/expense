@@ -61,4 +61,23 @@ describe('GroupForm', () => {
 
     expect(lastPostBody().closing_day).toBeNull();
   });
+
+  it('shows the backend error message when creation is rejected', async () => {
+    vi.mocked(axios.post).mockRejectedValueOnce({
+      response: { status: 422, data: { message: 'Você já atingiu o limite de 3 grupos criados.' } },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <GroupForm />
+      </MemoryRouter>
+    );
+
+    await user.type(screen.getByLabelText(/^Nome/), 'Grupo 4');
+    await user.type(screen.getByLabelText(/^Descrição/), 'grupo de teste');
+    await user.click(screen.getByRole('button', { name: 'Criar Grupo' }));
+
+    expect(await screen.findByText('Você já atingiu o limite de 3 grupos criados.')).toBeInTheDocument();
+  });
 });

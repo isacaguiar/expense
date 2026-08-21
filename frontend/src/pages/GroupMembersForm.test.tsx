@@ -16,7 +16,7 @@ vi.mock('react-router-dom', async importOriginal => {
   };
 });
 
-const group = { id: 1, name: 'Casa dos Amigos', description: 'Contas da casa' };
+const group = { id: 1, name: 'Casa dos Amigos', description: 'Contas da casa', creator: { id: 5, email: 'dono@example.com' } };
 const members = [
   { id: 1, email: 'ana@example.com' },
   { id: 2, email: 'bruno@example.com' },
@@ -43,6 +43,7 @@ describe('GroupMembersForm', () => {
     expect(await screen.findByText('Casa dos Amigos')).toBeInTheDocument();
     expect(screen.getByText('ana@example.com')).toBeInTheDocument();
     expect(screen.getByText('bruno@example.com')).toBeInTheDocument();
+    expect(screen.getByText('Responsável: dono@example.com')).toBeInTheDocument();
   });
 
   it('adds a new member by email and refreshes the list', async () => {

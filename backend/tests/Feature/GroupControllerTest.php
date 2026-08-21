@@ -28,6 +28,32 @@ class GroupControllerTest extends TestCase
         $response->assertStatus(200)->assertJsonFragment(['id' => $group->id]);
     }
 
+    public function test_show_includes_creator_email(): void
+    {
+        $creator = User::factory()->create(['email' => 'criador@example.com']);
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'created_by' => $creator->id]);
+        $group->members()->attach([$creator->id, $member->id]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups/'.$group->id);
+
+        $response->assertStatus(200)->assertJsonFragment(['creator' => ['id' => $creator->id, 'email' => 'criador@example.com']]);
+    }
+
+    public function test_index_includes_creator_email(): void
+    {
+        $creator = User::factory()->create(['email' => 'criador2@example.com']);
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'created_by' => $creator->id]);
+        $group->members()->attach([$creator->id, $member->id]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups');
+
+        $response->assertStatus(200)->assertJsonFragment(['creator' => ['id' => $creator->id, 'email' => 'criador2@example.com']]);
+    }
+
     public function test_non_member_cannot_view_group(): void
     {
         $outsider = User::factory()->create();
@@ -119,6 +145,54 @@ class GroupControllerTest extends TestCase
             ->postJson('/api/groups', ['name' => 'Grupo inválido', 'closing_day' => 32]);
 
         $response->assertStatus(422);
+    }
+
+    public function test_store_sets_created_by_to_authenticated_user(): void
+    {
+        $member = User::factory()->create();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/groups', ['name' => 'Grupo com criador']);
+
+        $response->assertStatus(201);
+        $this->assertDatabaseHas('ex_groups', ['name' => 'Grupo com criador', 'created_by' => $member->id]);
+    }
+
+    public function test_store_blocks_fourth_group_created_by_same_user(): void
+    {
+        $member = User::factory()->create();
+        $token = $this->tokenFor($member);
+
+        foreach (range(1, 3) as $i) {
+            $this->withToken($token)
+                ->postJson('/api/groups', ['name' => "Grupo {$i}"])
+                ->assertStatus(201);
+        }
+
+        $response = $this->withToken($token)
+            ->postJson('/api/groups', ['name' => 'Grupo 4']);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_groups', ['name' => 'Grupo 4']);
+    }
+
+    public function test_store_ignores_deleted_groups_when_counting_limit(): void
+    {
+        $member = User::factory()->create();
+        $token = $this->tokenFor($member);
+
+        foreach (range(1, 3) as $i) {
+            $this->withToken($token)
+                ->postJson('/api/groups', ['name' => "Grupo excluido {$i}"])
+                ->assertStatus(201);
+        }
+
+        Group::where('created_by', $member->id)->update(['deleted' => true]);
+
+        $response = $this->withToken($token)
+            ->postJson('/api/groups', ['name' => 'Grupo novo apos exclusao']);
+
+        $response->assertStatus(201);
     }
 
     public function test_member_can_update_closing_day(): void
