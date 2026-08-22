@@ -10,7 +10,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-002 | Criar `SummarySidePanel.tsx` com abas Saldo/À pagar (reaproveitando `BalanceCards`/`SettlementList`) e integrar em `GroupSummary.tsx` | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-003 | Selo Prévia/Definitivo no `SummarySidePanel` a partir de `cycleStatus` | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-004 | Adaptar testes existentes de `GroupSummary.test.tsx` que dependiam do bloco "Quem paga a quem" sumir/aparecer | frontend | plan.md §4 | nenhum | Concluída |
-| TASK-005 | Testes novos: aba padrão Saldo, troca de aba sem nova chamada de API, selo Prévia/Definitivo por status | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-005 | Testes novos: aba padrão Saldo, troca de aba sem nova chamada de API, selo Prévia/Definitivo por status | frontend | plan.md §4 | nenhum | Concluída |
 
 ## Critérios de aceite
 
