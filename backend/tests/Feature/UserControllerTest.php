@@ -54,6 +54,37 @@ class UserControllerTest extends TestCase
         $this->assertDatabaseHas('ex_users', ['id' => $user->id, 'name' => 'Nome Atualizado', 'email' => 'meu@example.com']);
     }
 
+    public function test_update_profile_persists_whatsapp_and_notify_whatsapp(): void
+    {
+        $user = User::factory()->create(['name' => 'Nome', 'email' => 'meu@example.com']);
+
+        $response = $this->withToken($this->tokenFor($user))
+            ->putJson('/api/user/profile', [
+                'name' => 'Nome',
+                'email' => 'meu@example.com',
+                'whatsapp' => '(71) 99999-9999',
+                'notify_whatsapp' => true,
+            ]);
+
+        $response->assertStatus(200)->assertJsonFragment(['whatsapp' => '(71) 99999-9999', 'notify_whatsapp' => true]);
+        $this->assertDatabaseHas('ex_users', ['id' => $user->id, 'whatsapp' => '(71) 99999-9999', 'notify_whatsapp' => true]);
+    }
+
+    public function test_update_profile_rejects_whatsapp_in_invalid_format(): void
+    {
+        $user = User::factory()->create(['name' => 'Nome', 'email' => 'meu@example.com']);
+
+        $response = $this->withToken($this->tokenFor($user))
+            ->putJson('/api/user/profile', [
+                'name' => 'Nome',
+                'email' => 'meu@example.com',
+                'whatsapp' => '71999999999',
+            ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_users', ['id' => $user->id, 'whatsapp' => null]);
+    }
+
     public function test_user_can_change_own_password(): void
     {
         $user = User::factory()->create(['password' => 'senha-antiga']);

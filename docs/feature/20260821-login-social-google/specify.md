@@ -47,6 +47,10 @@ Hoje `ex_users.password` é `NOT NULL` (`backend/database/migrations/2014_10_12_
 
 O botão "Google" (`frontend/src/pages/login/LoginFormCard.tsx:170-178`) troca `href="#"` por um redirecionamento real para a rota de início do fluxo OAuth do backend.
 
+### 2.7 Nota de sequenciamento (adicionada em 2026-08-22)
+
+A infraestrutura de OAuth Google (client `laravel/socialite`, colunas `google_id`/`avatar_url`, `password` nullable em `ex_users`, callback compartilhado) passou a ser construída primeiro por `docs/feature/20260822-atualizacao-minha-conta/` (§2.2 daquele `specify.md`), decisão tomada com o usuário para evitar duplicar client OAuth ou reabrir código já mergeado depois. Quando esta feature (`login-social-google`) ganhar seu `plan.md`, ele deve **reaproveitar** essa infraestrutura — apenas adicionar o redirect público de login (§2.6) e o ajuste em `UserController::changePassword` para o caso de senha `NULL` (usuário criado só via Google) — não recriar client, colunas ou callback já existentes.
+
 ## 3. Fora de escopo desta feature
 
 - Login social via Microsoft (backlog item 015, `docs/backlog/login-social-microsoft.md` — segue "Aberto", nenhuma decisão de produto tomada para esse provedor ainda).
