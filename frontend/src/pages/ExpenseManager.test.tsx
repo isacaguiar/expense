@@ -543,3 +543,119 @@ describe('ExpenseManager - excluir despesa variável', () => {
     expect(screen.getByText('Excluir despesa')).toBeInTheDocument();
   });
 });
+
+describe('ExpenseManager - fechar/reabrir mês', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+  });
+
+  it('shows "Fechar mês" when the cycle is open and calls POST .../close', async () => {
+    mockGetResponses([], { status: 'open' });
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fechar mês' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    const [url] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/groups/1/expenses/close');
+    expect(await screen.findByText('Competência fechada com sucesso.')).toBeInTheDocument();
+  });
+
+  it('shows "Reabrir mês" when the cycle is closed_manually and calls POST .../reopen', async () => {
+    mockGetResponses([], { status: 'closed_manually' });
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Reabrir mês' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    const [url] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/groups/1/expenses/reopen');
+    expect(await screen.findByText('Competência reaberta com sucesso.')).toBeInTheDocument();
+  });
+
+  it('does not show either button when the cycle is automatically closed', async () => {
+    mockGetResponses([], { status: 'closed' });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Nenhuma despesa encontrada para esta competência.');
+    expect(screen.queryByRole('button', { name: 'Fechar mês' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reabrir mês' })).not.toBeInTheDocument();
+  });
+
+  it('does not show either button when the cycle is future', async () => {
+    mockGetResponses([], { status: 'future' });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Nenhuma despesa encontrada para esta competência.');
+    expect(screen.queryByRole('button', { name: 'Fechar mês' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reabrir mês' })).not.toBeInTheDocument();
+  });
+
+  it('hides the buttons after navigating away from the current cycle', async () => {
+    const user = userEvent.setup();
+    vi.mocked(axios.get).mockImplementation((url: string, config?: { params?: { cycles_ago?: number } }) => {
+      if (url.includes('/expenses/summary')) {
+        const cyclesAgo = config?.params?.cycles_ago ?? 0;
+        const status = cyclesAgo === 0 ? 'open' : 'closed';
+        return Promise.resolve({ data: summaryResponse([], { status }) });
+      }
+      if (url.includes('/api/me')) {
+        return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('button', { name: 'Fechar mês' });
+
+    await user.click(screen.getByLabelText('Competência anterior'));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: 'Fechar mês' })).not.toBeInTheDocument();
+    });
+    expect(screen.queryByRole('button', { name: 'Reabrir mês' })).not.toBeInTheDocument();
+  });
+
+  it('shows the error message returned by the API when closing fails', async () => {
+    mockGetResponses([], { status: 'open' });
+    vi.mocked(axios.post).mockRejectedValue({ response: { data: { error: 'Falha genérica de teste.' } } });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Fechar mês' }));
+
+    expect(await screen.findByText('Falha genérica de teste.')).toBeInTheDocument();
+  });
+});

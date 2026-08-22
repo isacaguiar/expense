@@ -55,7 +55,7 @@ const ExpenseManager: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const { summary, loading, error, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
+  const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
   const expenses = summary?.expenses ?? [];
 
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
@@ -81,6 +81,59 @@ const ExpenseManager: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
   const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
+
+  // Fechar/reabrir a competência vigente
+  const [closingMonth, setClosingMonth] = useState<boolean>(false);
+  const [reopeningMonth, setReopeningMonth] = useState<boolean>(false);
+  const [closeReopenError, setCloseReopenError] = useState<string | null>(null);
+  const [closeSuccess, setCloseSuccess] = useState<boolean>(false);
+  const [reopenSuccess, setReopenSuccess] = useState<boolean>(false);
+
+  const handleCloseMonth = () => {
+    if (!groupId) return;
+
+    setClosingMonth(true);
+    setCloseReopenError(null);
+
+    const token = localStorage.getItem('accessToken');
+
+    axios
+      .post(`${API_BASE_URL}/api/groups/${groupId}/expenses/close`, null, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setCloseSuccess(true);
+        reload();
+      })
+      .catch(err => {
+        console.error('Erro ao fechar a competência:', err);
+        setCloseReopenError(err.response?.data?.error ?? 'Falha ao fechar a competência.');
+      })
+      .finally(() => setClosingMonth(false));
+  };
+
+  const handleReopenMonth = () => {
+    if (!groupId) return;
+
+    setReopeningMonth(true);
+    setCloseReopenError(null);
+
+    const token = localStorage.getItem('accessToken');
+
+    axios
+      .post(`${API_BASE_URL}/api/groups/${groupId}/expenses/reopen`, null, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setReopenSuccess(true);
+        reload();
+      })
+      .catch(err => {
+        console.error('Erro ao reabrir a competência:', err);
+        setCloseReopenError(err.response?.data?.error ?? 'Falha ao reabrir a competência.');
+      })
+      .finally(() => setReopeningMonth(false));
+  };
 
   const stopFixedRecurrence = (cutoffYear: number, cutoffMonth: number) => {
     if (removeExpenseId === null) return;
@@ -215,6 +268,28 @@ const ExpenseManager: React.FC = () => {
           <ArrowForwardIosIcon />
         </IconButton>
       </Box>
+
+      {/* Fechar/reabrir — só faz sentido na competência vigente (cyclesAgo=0):
+          close()/reopen() sempre operam sobre "agora", nunca sobre a
+          competência navegada via as setas acima. */}
+      {summary && cyclesAgo === 0 && (summary.cycle.status === 'open' || summary.cycle.status === 'closed_manually') && (
+        <Box display="flex" flexDirection="column" alignItems="center" mb={3} gap={1}>
+          {summary.cycle.status === 'open' ? (
+            <Button variant="outlined" onClick={handleCloseMonth} disabled={closingMonth}>
+              Fechar mês
+            </Button>
+          ) : (
+            <Button variant="outlined" onClick={handleReopenMonth} disabled={reopeningMonth}>
+              Reabrir mês
+            </Button>
+          )}
+          {closeReopenError && (
+            <Alert severity="error" sx={{ maxWidth: 480 }}>
+              {closeReopenError}
+            </Alert>
+          )}
+        </Box>
+      )}
 
       {/* Grid principal: listagem à esquerda, saldo por pessoa à direita */}
       {loading ? (
@@ -416,6 +491,28 @@ const ExpenseManager: React.FC = () => {
       >
         <Alert onClose={() => setDeleteSuccess(false)} severity="success" variant="filled">
           Despesa excluída com sucesso.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={closeSuccess}
+        autoHideDuration={4000}
+        onClose={() => setCloseSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setCloseSuccess(false)} severity="success" variant="filled">
+          Competência fechada com sucesso.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={reopenSuccess}
+        autoHideDuration={4000}
+        onClose={() => setReopenSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setReopenSuccess(false)} severity="success" variant="filled">
+          Competência reaberta com sucesso.
         </Alert>
       </Snackbar>
     </>
