@@ -179,6 +179,40 @@ class ExpenseControllerSummaryTest extends TestCase
         ]);
     }
 
+    public function test_fixed_expense_uses_materialized_quota_value_when_present(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'closing_day' => 15]);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 500,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 500]);
+
+        // Ocorrência do ciclo corrente (16/ago-15/set cai em 05/set) já foi congelada
+        // com um valor diferente do total_value atual — o resumo deve refletir isso,
+        // não o total_value ao vivo (500).
+        $expense->quotas()->create(['date_expected' => '2026-09-05', 'number' => 1, 'paid' => true, 'value_quota' => 350]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'date' => '2026-09-05',
+            'value' => 350,
+            'paid' => true,
+            'isFixed' => true,
+        ]);
+    }
+
     public function test_balances_include_every_member_and_sum_to_zero(): void
     {
         Carbon::setTestNow('2026-08-19');
