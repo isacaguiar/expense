@@ -222,6 +222,7 @@ class ExpenseController extends Controller
 
         $group = Group::findOrFail($request->group_id);
         $this->authorizeGroupMembership($group);
+        abort_if($group->deleted, 404);
 
         $request->validate([
             'date_payment' => 'required|date',
@@ -426,6 +427,7 @@ class ExpenseController extends Controller
     {
         $group = Group::findOrFail($groupId);
         $this->authorizeGroupMembership($group);
+        abort_if($group->deleted, 404);
 
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
         $start = $cycle['start'];
@@ -471,6 +473,7 @@ class ExpenseController extends Controller
     {
         $group = Group::findOrFail($groupId);
         $this->authorizeGroupMembership($group);
+        abort_if($group->deleted, 404);
 
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
         $start = $cycle['start'];
