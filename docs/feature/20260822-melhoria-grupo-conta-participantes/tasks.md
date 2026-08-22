@@ -6,14 +6,14 @@ Versão: 1.0 · Criado em: 20260822
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-181 | `GroupMemberController@store`: rejeitar com 404 a adição de membro a grupo com `deleted=true` | backend | plan.md §3 | nenhum | Implementada na branch da feature |
-| TASK-182 | `ExpenseController@store`, `@close`, `@reopen`: rejeitar com 404 quando o grupo tem `deleted=true` | backend | plan.md §3 | nenhum | Implementada na branch da feature |
-| TASK-183 | `Group.php`: relação `cycleSnapshots()`; `GroupController@destroy`: ramificar exclusão física (sem `ex_group_cycle_snapshots` para o grupo, apaga em cascata dentro de transação) vs. lógica (mantém `deleted=true`) | backend | plan.md §2 | nenhum | Implementada na branch da feature |
-| TASK-184 | `GroupController@index`: expor `cycle_snapshots_exists` via `withExists('cycleSnapshots')` | backend | plan.md §2 | nenhum | Implementada na branch da feature |
-| TASK-185 | `Dashboard.tsx`: tipo `Group` ganha `cycle_snapshots_exists`; texto do modal de confirmação varia entre aviso de exclusão irreversível e aviso de preservação de histórico | frontend | plan.md §2 | nenhum | Implementada na branch da feature |
-| TASK-186 | `App.tsx`: rota principal passa a ser `/meus-grupos`; `/dashboard` vira redirect (`<Navigate replace>`) para `/meus-grupos`, sem duplicar página | frontend | plan.md §1 | nenhum | Implementada na branch da feature |
-| TASK-187 | Atualizar referências internas para `/meus-grupos` (`accountSettingsNavItems.ts`, `LoginPage.tsx`, `GroupForm.tsx`, `GroupMembersForm.tsx`) | frontend | plan.md §1 | nenhum | Implementada na branch da feature |
-| TASK-188 | Atualizar testes que fixam `/dashboard` como rota real (`SimpleShellLayout.test.tsx`, `RequireAuth.test.tsx`, `GroupShellLayout.test.tsx`) e adicionar teste do redirect `/dashboard` → `/meus-grupos` | frontend | plan.md §1 | nenhum | Implementada na branch da feature |
+| TASK-181 | `GroupMemberController@store`: rejeitar com 404 a adição de membro a grupo com `deleted=true` | backend | plan.md §3 | nenhum | Implementada |
+| TASK-182 | `ExpenseController@store`, `@close`, `@reopen`: rejeitar com 404 quando o grupo tem `deleted=true` | backend | plan.md §3 | nenhum | Implementada |
+| TASK-183 | `Group.php`: relação `cycleSnapshots()`; `GroupController@destroy`: ramificar exclusão física (sem `ex_group_cycle_snapshots` para o grupo, apaga em cascata dentro de transação) vs. lógica (mantém `deleted=true`) | backend | plan.md §2 | nenhum | Implementada |
+| TASK-184 | `GroupController@index`: expor `cycle_snapshots_exists` via `withExists('cycleSnapshots')` | backend | plan.md §2 | nenhum | Implementada |
+| TASK-185 | `Dashboard.tsx`: tipo `Group` ganha `cycle_snapshots_exists`; texto do modal de confirmação varia entre aviso de exclusão irreversível e aviso de preservação de histórico | frontend | plan.md §2 | nenhum | Implementada |
+| TASK-186 | `App.tsx`: rota principal passa a ser `/meus-grupos`; `/dashboard` vira redirect (`<Navigate replace>`) para `/meus-grupos`, sem duplicar página | frontend | plan.md §1 | nenhum | Implementada |
+| TASK-187 | Atualizar referências internas para `/meus-grupos` (`accountSettingsNavItems.ts`, `LoginPage.tsx`, `GroupForm.tsx`, `GroupMembersForm.tsx`) | frontend | plan.md §1 | nenhum | Implementada |
+| TASK-188 | Atualizar testes que fixam `/dashboard` como rota real (`SimpleShellLayout.test.tsx`, `RequireAuth.test.tsx`, `GroupShellLayout.test.tsx`) e adicionar teste do redirect `/dashboard` → `/meus-grupos` | frontend | plan.md §1 | nenhum | Implementada |
 
 ## Critérios de aceite
 
