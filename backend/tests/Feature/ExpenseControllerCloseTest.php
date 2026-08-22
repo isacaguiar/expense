@@ -196,6 +196,69 @@ class ExpenseControllerCloseTest extends TestCase
             ->assertJsonPath('totals.total', 999);
     }
 
+    public function test_full_close_flow_blocks_update_destroy_and_new_expenses_in_the_same_competence(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10', 'total_value' => 100]);
+        $expense->payers()->sync([$payer->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $token = $this->tokenFor($payer);
+
+        // Fecha via a rota real (não simula o estado do snapshot direto no
+        // banco, ao contrário dos testes das TASK-156/159) — cobre a
+        // integração de ponta a ponta entre close() e as checagens de
+        // competência fechada em update/destroy/store.
+        $this->withToken($token)
+            ->postJson("/api/groups/{$group->id}/expenses/close")
+            ->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'closed_manually');
+
+        $this->withToken($token)
+            ->putJson("/api/expenses/{$expense->id}", ['description' => 'Tentativa de alterar'])
+            ->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'description' => 'Despesa de teste']);
+
+        $this->withToken($token)
+            ->deleteJson("/api/expenses/{$expense->id}")
+            ->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+
+        $newExpensePayload = [
+            'date_payment' => '2026-08-20',
+            'description' => 'Nova despesa na competência fechada',
+            'expense_type' => 'IN_CASH',
+            'installments' => 1,
+            'total_value' => 50,
+            'group_id' => $group->id,
+            'user_creator_id' => $payer->id,
+            'user_payer_id' => $payer->id,
+            'payers' => [$payer->id],
+            'quotas' => [['date_expected' => '2026-08-20', 'number' => 1, 'value_quota' => 50]],
+        ];
+
+        $this->withToken($token)
+            ->postJson('/api/expenses', $newExpensePayload)
+            ->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['description' => 'Nova despesa na competência fechada']);
+
+        // Re-fechar (upsert) continua funcionando mesmo com tudo bloqueado —
+        // não cria um segundo registro para a mesma competência.
+        $this->withToken($token)
+            ->postJson("/api/groups/{$group->id}/expenses/close")
+            ->assertStatus(200);
+
+        $this->assertSame(
+            1,
+            GroupCycleSnapshot::where('group_id', $group->id)->where('cycle_start', '2026-08-01')->count()
+        );
+    }
+
     public function test_close_requires_group_membership(): void
     {
         $outsider = User::factory()->create();
