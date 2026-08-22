@@ -3,13 +3,22 @@
 namespace Tests\Feature;
 
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class ExpenseControllerStoreTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     private function tokenFor(User $user): string
     {
@@ -314,5 +323,70 @@ class ExpenseControllerStoreTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id, 'expense_type' => 'IN_INSTALLMENTS']);
+    }
+
+    public function test_rejects_expense_with_date_payment_in_an_automatically_closed_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'date_payment' => '2026-07-10',
+                'quotas' => [['date_expected' => '2026-07-10', 'number' => 1, 'value_quota' => 100]],
+            ]));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_rejects_fixed_expense_with_date_payment_in_an_automatically_closed_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'expense_type' => 'FIXED',
+                'date_payment' => '2026-07-10',
+                'quotas' => [['date_expected' => '2026-07-10', 'number' => 1, 'value_quota' => 100]],
+            ]));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id, 'expense_type' => 'FIXED']);
+    }
+
+    public function test_rejects_expense_with_date_payment_in_a_manually_closed_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'date_payment' => '2026-08-10',
+                'quotas' => [['date_expected' => '2026-08-10', 'number' => 1, 'value_quota' => 100]],
+            ]));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
     }
 }

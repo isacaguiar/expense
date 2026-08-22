@@ -16,7 +16,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-156 | `ExpenseController` — helper único de "competência fechada" (automática OU manual), substituindo o uso isolado de `rejectIfCycleClosed` | backend | plan.md §4, §9 | antes do merge | Implementada |
 | TASK-157 | Rota + `ExpenseController::close` — `POST /groups/{groupId}/expenses/close`, materializa `FIXED` do mês, computa e faz upsert do snapshot manual | backend | plan.md §4 | antes do merge | Implementada |
 | TASK-158 | `ExpenseController::summary` — expor estado `closed_manually` distinto de `closed` automático na resposta | backend | plan.md §4 | antes do merge | Implementada |
-| TASK-159 | `ExpenseController::store` — bloquear criação de despesa em competência fechada (automática ou manual) | backend | plan.md §9 | antes do merge | Pendente |
+| TASK-159 | `ExpenseController::store` — bloquear criação de despesa em competência fechada (automática ou manual) | backend | plan.md §9 | antes do merge | Implementada |
 | TASK-160 | Testes — fechar/re-fechar (upsert) e bloqueio de criação/edição/exclusão na competência fechada | backend | plan.md §4, §9 | nenhum | Pendente |
 | TASK-161 | Rota + `ExpenseController::reopen` — `POST /groups/{groupId}/expenses/reopen`, só permitido na competência ainda vigente | backend | plan.md §5 | antes do merge | Pendente |
 | TASK-162 | Testes — reabertura permitida só no mês vigente; negada após a virada mesmo com snapshot manual existente | backend | plan.md §5 | nenhum | Pendente |
