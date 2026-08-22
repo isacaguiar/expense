@@ -8,7 +8,16 @@ Versão: 1.0 · Criado em: 20260822
 
 ## 1. Desvios do fluxo padrão (se houver)
 
-<Deixe vazio/apague esta seção se a feature segue `04-implementation.md` sem exceção.>
+Feature segue `04-implementation.md` sem exceção: branch da feature `backend/20260822-atualizacao-minha-conta` nasceu de `dev` atualizada; TASK-194 implementada direto nela (primeira task); TASK-195 a TASK-202 cada uma em sub-branch própria (`.../TASK-19x`, `.../TASK-20x`), integrada de volta via `git merge --no-ff` sem PR. PR único da branch da feature contra `dev` (#53), revisado e mergeado por humano.
+
+## 1.1 Checklist final da feature (item 5 do fluxo)
+
+Rodado na branch `backend/20260822-atualizacao-minha-conta` já com as 9 tasks integradas, antes de abrir o PR:
+
+- `cd backend && ./vendor/bin/pint --test` — 8 issues de estilo, todos em arquivos **não tocados** por esta feature (`app/Helpers/PixPayload.php`, `app/Models/Expense.php`, `app/Models/User.php`, 5 migrations antigas de 2025-06) — dívida pré-existente, fora de escopo (`06-context-backend.md` "Não corrigir de passagem"). Nenhum arquivo novo desta feature aparece na lista.
+- `cd backend && php artisan test` — 198 passed (602 assertions).
+- `cd frontend && npx tsc --noEmit` — sem erro.
+- `cd frontend && npx vitest run` — 138 passed (20 arquivos).
 
 ## 2. Log de implementação
 
