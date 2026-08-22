@@ -370,6 +370,54 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Fechamento manual da competência vigente: congela a composição e os
+     * valores considerados (inclusive de despesas FIXED, materializando a
+     * Quota de cada ocorrência antes de calcular) num `GroupCycleSnapshot`.
+     * Sempre opera sobre a competência que contém "agora" — que, por
+     * construção de `BillingCycle::cycleFor` com `cyclesAgo=0`, está sempre
+     * aberta em relação a "agora" (não há como chamar isto sobre uma
+     * competência já fechada por data). Chamar de novo (re-fechar) recalcula
+     * e sobrescreve a foto (upsert), o que cobre "a cópia pode ser
+     * atualizada até a virada do mês".
+     */
+    public function close($groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+        $start = $cycle['start'];
+        $end = $cycle['end'];
+
+        foreach ($this->collectCycleEntries($groupId, $start, $end) as $entry) {
+            if ($entry['expense']->expense_type === 'FIXED') {
+                $this->materializeFixedOccurrenceQuota($entry['expense'], $entry['date']);
+            }
+        }
+
+        $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+        $snapshot = GroupCycleSnapshot::updateOrCreate(
+            ['group_id' => $groupId, 'cycle_start' => $start->toDateString()],
+            [
+                'cycle_end' => $end->toDateString(),
+                'totals' => $summary['totals'],
+                'expenses' => $summary['expenses'],
+                'balances' => $summary['balances'],
+                'closed_manually_at' => Carbon::now(),
+                'reopened_at' => null,
+            ]
+        );
+
+        return response()->json([
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => 'closed_manually'],
+            'totals' => $snapshot->totals,
+            'expenses' => $snapshot->expenses,
+            'balances' => $snapshot->balances,
+        ]);
+    }
+
+    /**
      * Foto imutável de um ciclo já fechado: devolve a foto já persistida, ou
      * computa ao vivo (uma única vez) e persiste antes de devolver. A partir
      * daí, este ciclo nunca mais é recalculado — edições/exclusões de
