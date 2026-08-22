@@ -76,6 +76,12 @@ const ExpenseManager: React.FC = () => {
   const [removeExpenseId, setRemoveExpenseId] = useState<number | null>(null);
   const [removeSuccess, setRemoveSuccess] = useState<boolean>(false);
 
+  // Diálogo de exclusão de despesa variável
+  const [deleteExpenseId, setDeleteExpenseId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
+  const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
+
   const stopFixedRecurrence = (cutoffYear: number, cutoffMonth: number) => {
     if (removeExpenseId === null) return;
 
@@ -115,6 +121,38 @@ const ExpenseManager: React.FC = () => {
   };
 
   const removeExpense = expenses.find(exp => exp.id === removeExpenseId) ?? null;
+  const deleteExpense = expenses.find(exp => exp.id === deleteExpenseId) ?? null;
+
+  const closeDeleteDialog = () => {
+    setDeleteExpenseId(null);
+    setDeleteError(null);
+  };
+
+  const confirmDelete = () => {
+    if (deleteExpenseId === null) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    const token = localStorage.getItem('accessToken');
+
+    axios
+      .delete(`${API_BASE_URL}/api/expenses/${deleteExpenseId}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setDeleteExpenseId(null);
+        setDeleteSuccess(true);
+        reload();
+      })
+      .catch(err => {
+        console.error('Erro ao excluir despesa:', err);
+        // O backend valida as regras de domínio (competência fechada, despesa
+        // paga) — o cliente só exibe o motivo que a API devolveu.
+        setDeleteError(err.response?.data?.error ?? 'Falha ao excluir despesa.');
+      })
+      .finally(() => setDeleting(false));
+  };
 
   const filteredExpenses = expenses
     .filter(exp => exp.description.toLowerCase().includes(search.toLowerCase()))
@@ -276,9 +314,12 @@ const ExpenseManager: React.FC = () => {
                           </Tooltip>
                         )}
                         {canDelete(exp) && (
-                          // TASK-175 conecta o diálogo de confirmação de exclusão.
                           <Tooltip title="Excluir despesa">
-                            <IconButton aria-label="Excluir despesa" size="small">
+                            <IconButton
+                              aria-label="Excluir despesa"
+                              size="small"
+                              onClick={() => setDeleteExpenseId(exp.id)}
+                            >
                               <DeleteOutlineIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -339,6 +380,42 @@ const ExpenseManager: React.FC = () => {
       >
         <Alert onClose={() => setRemoveSuccess(false)} severity="success" variant="filled">
           Despesa fixa removida com sucesso.
+        </Alert>
+      </Snackbar>
+
+      {/* Diálogo de exclusão de despesa variável */}
+      <Dialog open={deleteExpenseId !== null} onClose={closeDeleteDialog} PaperProps={{ sx: { borderRadius: 2 } }}>
+        <DialogTitle>Excluir despesa</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            {deleteExpense
+              ? `Tem certeza que deseja excluir "${deleteExpense.description}"? Essa ação não pode ser desfeita.`
+              : 'Tem certeza que deseja excluir esta despesa? Essa ação não pode ser desfeita.'}
+          </Typography>
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteDialog} disabled={deleting}>
+            Cancelar
+          </Button>
+          <Button variant="contained" color="error" onClick={confirmDelete} disabled={deleting}>
+            Excluir
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={deleteSuccess}
+        autoHideDuration={4000}
+        onClose={() => setDeleteSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setDeleteSuccess(false)} severity="success" variant="filled">
+          Despesa excluída com sucesso.
         </Alert>
       </Snackbar>
     </>
