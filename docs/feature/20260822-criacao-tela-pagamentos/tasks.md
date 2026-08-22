@@ -10,10 +10,10 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-002 | `pay()`/`unpay()` aceitam comprovante opcional (multipart) e limpam o arquivo ao desfazer | backend | plan.md §2 | antes do merge | Concluída |
 | TASK-003 | `computeCycleSummary()`/`collectCycleEntries()` expõem `valuePerPerson` e `paymentProofUrl` por despesa | backend | plan.md §3, §4 | antes do merge | Concluída |
 | TASK-004 | Testes backend de comprovante (`pay` com/sem foto, `unpay` limpa foto, `valuePerPerson`, `paymentProofUrl` no summary) | backend | plan.md §2, §3, §4 | antes do merge | Concluída |
-| TASK-005 | Tela `Payments.tsx` (lista por despesa: credor, valor total, valor por pessoa, pagadores) + rota `/groups/:id/payments` | frontend | plan.md §5 | nenhum | Pendente |
-| TASK-006 | Hook compartilhado de ações de pagamento (`canPay`/`canUnpay`) + diálogo "Confirmar pagamento" com foto obrigatória (multipart) + "Desfazer pagamento", usados em `Payments.tsx` e `ExpenseManager.tsx` | frontend | plan.md §6 | antes do merge | Pendente |
-| TASK-007 | `PaymentsEntry.tsx` (`/payments` sem grupo selecionado) + item de menu "Pagamentos" com `to` nos dois sidebars | frontend | plan.md §7 | nenhum | Pendente |
-| TASK-008 | Testes frontend (`Payments.tsx`, diálogo de confirmação exige foto, `PaymentsEntry`, navegação do menu) | frontend | plan.md §5, §6, §7 | antes do merge | Pendente |
+| TASK-005 | Tela `Payments.tsx` (lista por despesa: credor, valor total, valor por pessoa, pagadores) + rota `/groups/:id/payments` | frontend | plan.md §5 | nenhum | Concluída |
+| TASK-006 | Hook compartilhado de ações de pagamento (`canPay`/`canUnpay`) + diálogo "Confirmar pagamento" com foto obrigatória (multipart) + "Desfazer pagamento", usados em `Payments.tsx` e `ExpenseManager.tsx` | frontend | plan.md §6 | antes do merge | Concluída |
+| TASK-007 | `PaymentsEntry.tsx` (`/payments` sem grupo selecionado) + item de menu "Pagamentos" com `to` nos dois sidebars | frontend | plan.md §7 | nenhum | Concluída |
+| TASK-008 | Testes frontend (`Payments.tsx`, diálogo de confirmação exige foto, `PaymentsEntry`, navegação do menu) | frontend | plan.md §5, §6, §7 | antes do merge | Concluída |
 
 ## Critérios de aceite
 

@@ -58,7 +58,7 @@ describe('SimpleShellLayout', () => {
     expect(screen.getByRole('link', { name: /Home/ })).toHaveAttribute('href', '/summary');
     expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/expenses');
     expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '#');
-    expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '/payments');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
