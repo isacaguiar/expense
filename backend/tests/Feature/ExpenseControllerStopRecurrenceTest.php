@@ -5,12 +5,20 @@ namespace Tests\Feature;
 use App\Models\Expense;
 use App\Models\Group;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class ExpenseControllerStopRecurrenceTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     private function tokenFor(User $user): string
     {
@@ -35,6 +43,8 @@ class ExpenseControllerStopRecurrenceTest extends TestCase
 
     public function test_member_can_stop_recurrence_of_fixed_expense(): void
     {
+        Carbon::setTestNow('2026-03-15');
+
         $member = User::factory()->create();
         $group = Group::create(['name' => 'Grupo de teste']);
         $group->members()->attach($member->id);
@@ -49,6 +59,23 @@ class ExpenseControllerStopRecurrenceTest extends TestCase
             'id' => $expense->id,
             'fixed_recurrence_ends_at' => '2026-06-01',
         ]);
+    }
+
+    public function test_cannot_stop_recurrence_with_cutoff_in_a_closed_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $expense = $this->createExpense($group, $member, 'FIXED', '2026-03-10');
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson("/api/expenses/{$expense->id}/stop-recurrence", ['year' => 2026, 'month' => 6]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'fixed_recurrence_ends_at' => null]);
     }
 
     public function test_non_member_cannot_stop_recurrence(): void

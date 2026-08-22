@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Support\BillingCycle;
 use Carbon\Carbon;
@@ -113,6 +114,10 @@ class ExpenseController extends Controller
         $expense = $this->findExpenseForMember($id);
         $this->authorizeExpenseOwner($expense);
 
+        if ($response = $this->rejectIfCycleClosed($expense)) {
+            return $response;
+        }
+
         $data = $request->validate([
             'description' => 'sometimes|required|string|max:255',
             'date_payment' => 'sometimes|required|date',
@@ -136,9 +141,35 @@ class ExpenseController extends Controller
         $expense = $this->findExpenseForMember($id);
         $this->authorizeExpenseOwner($expense);
 
+        if ($response = $this->rejectIfCycleClosed($expense)) {
+            return $response;
+        }
+
         $expense->update(['deleted' => true]);
 
         return response()->json(['message' => 'Despesa marcada como deletada.']);
+    }
+
+    /**
+     * Ciclo passado é só leitura: `IN_CASH`/`IN_INSTALLMENTS` cujo `date_payment`
+     * cai num ciclo já fechado não podem mais ser editados/apagados. `FIXED`
+     * fica de fora dessa checagem — é uma definição recorrente, não presa a um
+     * único ciclo, e a foto do ciclo fechado (`GroupCycleSnapshot`) já garante
+     * que editar/apagar uma despesa Fixa depois não muda o passado.
+     */
+    private function rejectIfCycleClosed(Expense $expense): ?\Illuminate\Http\JsonResponse
+    {
+        if ($expense->expense_type === 'FIXED') {
+            return null;
+        }
+
+        $status = BillingCycle::statusFor($expense->group->closing_day, $expense->date_payment, Carbon::now());
+
+        if ($status === 'closed') {
+            return response()->json(['error' => 'Não é possível alterar uma despesa de um ciclo já fechado.'], 422);
+        }
+
+        return null;
     }
 
     public function store(Request $request)
@@ -252,6 +283,10 @@ class ExpenseController extends Controller
             return response()->json(['error' => 'O mês informado é anterior à criação da despesa.'], 422);
         }
 
+        if (BillingCycle::statusFor($group->closing_day, $cutoff, Carbon::now()) === 'closed') {
+            return response()->json(['error' => 'Não é possível interromper a recorrência em um ciclo já fechado.'], 422);
+        }
+
         $expense->update(['fixed_recurrence_ends_at' => $cutoff]);
 
         return response()->json([
@@ -288,13 +323,86 @@ class ExpenseController extends Controller
         $this->authorizeGroupMembership($group);
 
         $data = $request->validate([
-            'cycles_ago' => 'nullable|integer|min:0',
+            'cycles_ago' => 'nullable|integer',
         ]);
 
-        $cycle = BillingCycle::closedCycle($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
         $start = $cycle['start'];
         $end = $cycle['end'];
 
+        if ($cycle['status'] === 'closed') {
+            $summary = $this->cycleSnapshotFor($group, $groupId, $start, $end);
+        } else {
+            $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+        }
+
+        return response()->json([
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => $cycle['status']],
+            'totals' => $summary['totals'],
+            'expenses' => $summary['expenses'],
+            'balances' => $summary['balances'],
+        ]);
+    }
+
+    /**
+     * Foto imutável de um ciclo já fechado: devolve a foto já persistida, ou
+     * computa ao vivo (uma única vez) e persiste antes de devolver. A partir
+     * daí, este ciclo nunca mais é recalculado — edições/exclusões de
+     * despesa depois de fotografado não mudam mais o resultado.
+     *
+     * @return array{totals: array, expenses: array, balances: array}
+     */
+    private function cycleSnapshotFor(Group $group, $groupId, Carbon $start, Carbon $end): array
+    {
+        $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->first();
+
+        if ($snapshot) {
+            return [
+                'totals' => $snapshot->totals,
+                'expenses' => $snapshot->expenses,
+                'balances' => $snapshot->balances,
+            ];
+        }
+
+        $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+        try {
+            GroupCycleSnapshot::create([
+                'group_id' => $groupId,
+                'cycle_start' => $start->toDateString(),
+                'cycle_end' => $end->toDateString(),
+                'totals' => $summary['totals'],
+                'expenses' => $summary['expenses'],
+                'balances' => $summary['balances'],
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Violação de unique(group_id, cycle_start): outra requisição já
+            // fotografou este ciclo entre a consulta acima e este insert.
+            // Usa a foto que a outra requisição já persistiu.
+            $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
+                ->where('cycle_start', $start->toDateString())
+                ->firstOrFail();
+
+            return [
+                'totals' => $snapshot->totals,
+                'expenses' => $snapshot->expenses,
+                'balances' => $snapshot->balances,
+            ];
+        }
+
+        return $summary;
+    }
+
+    /**
+     * Calcula totais, lista de despesas e saldos por pessoa de um ciclo
+     * [start, end], sempre ao vivo a partir de `Expense`/`Quota`.
+     *
+     * @return array{totals: array, expenses: array, balances: array}
+     */
+    private function computeCycleSummary(Group $group, $groupId, Carbon $start, Carbon $end): array
+    {
         $entries = $this->collectCycleEntries($groupId, $start, $end);
 
         $expenses = $entries
@@ -309,7 +417,8 @@ class ExpenseController extends Controller
                 'isFixed' => $entry['expense']->expense_type === 'FIXED',
             ])
             ->sortBy('date')
-            ->values();
+            ->values()
+            ->all();
 
         $totals = [
             'total' => round($entries->sum('value'), 2),
@@ -350,14 +459,10 @@ class ExpenseController extends Controller
 
                 return $balance;
             })
-            ->values();
+            ->values()
+            ->all();
 
-        return response()->json([
-            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString()],
-            'totals' => $totals,
-            'expenses' => $expenses,
-            'balances' => $balances,
-        ]);
+        return ['totals' => $totals, 'expenses' => $expenses, 'balances' => $balances];
     }
 
     /**
@@ -374,6 +479,7 @@ class ExpenseController extends Controller
 
         $direct = Expense::where('group_id', $groupId)
             ->where('deleted', false)
+            ->where('expense_type', '!=', 'IN_INSTALLMENTS')
             ->whereBetween('date_payment', [$start->toDateString(), $end->toDateString()])
             ->where(function ($query) use ($start) {
                 $query->where('expense_type', '!=', 'FIXED')
@@ -391,6 +497,27 @@ class ExpenseController extends Controller
                 'date' => $expense->date_payment->copy(),
                 'value' => (float) ($quota->value_quota ?? $expense->total_value),
                 'paid' => (bool) ($quota->paid ?? false),
+            ]);
+        }
+
+        // Parcelas de despesas IN_INSTALLMENTS cujo vencimento (date_expected) cai neste
+        // ciclo — inclui o ciclo de criação (1ª parcela) e os seguintes, ao contrário de
+        // $direct, que só olharia o date_payment da despesa (mês de criação).
+        $installmentQuotas = Quota::whereBetween('date_expected', [$start->toDateString(), $end->toDateString()])
+            ->whereHas('expense', function ($query) use ($groupId) {
+                $query->where('group_id', $groupId)
+                    ->where('deleted', false)
+                    ->where('expense_type', 'IN_INSTALLMENTS');
+            })
+            ->with(['expense.payer', 'expense.payers'])
+            ->get();
+
+        foreach ($installmentQuotas as $quota) {
+            $entries->push([
+                'expense' => $quota->expense,
+                'date' => $quota->date_expected->copy(),
+                'value' => (float) $quota->value_quota,
+                'paid' => (bool) $quota->paid,
             ]);
         }
 
