@@ -127,6 +127,16 @@ class ExpenseController extends Controller
             'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
         ]);
 
+        // FIXED fica de fora: seu total_value é o valor do template pra
+        // ocorrências futuras/ainda não materializadas — uma ocorrência já
+        // paga já tem Quota própria congelada (materializeFixedOccurrenceQuota)
+        // e não é afetada por essa edição, então não há o que proteger aqui.
+        if ($expense->expense_type !== 'FIXED'
+            && array_key_exists('total_value', $data)
+            && $expense->quotas()->where('paid', true)->exists()) {
+            return response()->json(['error' => 'Não é possível alterar o valor de uma despesa já paga.'], 422);
+        }
+
         $expense->update(Arr::except($data, ['payers']));
 
         if (array_key_exists('payers', $data)) {
