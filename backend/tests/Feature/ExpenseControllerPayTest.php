@@ -357,6 +357,59 @@ class ExpenseControllerPayTest extends TestCase
         $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 150]);
     }
 
+    public function test_full_pay_unpay_destroy_flow_blocks_and_unblocks_deletion(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10', 'total_value' => 100]);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $token = $this->tokenFor($creditor);
+
+        // Paga (TASK-163): excluir passa a ser bloqueado (TASK-167).
+        $this->withToken($token)->postJson("/api/expenses/{$expense->id}/pay")->assertStatus(200);
+
+        $this->withToken($token)
+            ->deleteJson("/api/expenses/{$expense->id}")
+            ->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+
+        // Despagar (TASK-164): excluir volta a funcionar.
+        $this->withToken($token)->postJson("/api/expenses/{$expense->id}/unpay")->assertStatus(200);
+
+        $this->withToken($token)
+            ->deleteJson("/api/expenses/{$expense->id}")
+            ->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => true]);
+    }
+
+    public function test_destroy_rejects_paid_expense_even_when_cycle_is_also_closed(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        // Despesa de julho (competência já fechada automaticamente) que
+        // também está paga — os dois motivos de bloqueio coexistem, e
+        // qualquer um dos dois já basta pra recusar a exclusão.
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-07-10', 'total_value' => 100]);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-07-10', 'number' => 1, 'paid' => true, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+    }
+
     public function test_unpay_requires_group_membership(): void
     {
         Carbon::setTestNow('2026-08-19');
