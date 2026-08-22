@@ -13,31 +13,32 @@ class UserInvitedMail extends Mailable
     use Queueable, SerializesModels;
 
     public $user;
+
     public $group;
+
     public $token;
 
-    /**
-     * @param User  $user
-     * @param Group $group
-     * @param string $token
-     */
-    public function __construct(User $user, Group $group, string $token)
+    public $inviter;
+
+    public function __construct(User $user, Group $group, string $token, User $inviter)
     {
-        $this->user  = $user;
+        $this->user = $user;
         $this->group = $group;
         $this->token = $token;
+        $this->inviter = $inviter;
     }
 
     public function build()
     {
-        $inviteUrl = url("/password/reset/{$this->token}?email={$this->user->email}");
+        $activationLink = url("/aceitar-convite?email={$this->user->email}&token={$this->token}");
 
         return $this->subject("Você foi convidado para o grupo “{$this->group->name}”")
-                    ->view('emails.user_invited')
-                    ->with([
-                        'userName'  => $this->user->name,
-                        'groupName' => $this->group->name,
-                        'inviteUrl' => $inviteUrl,
-                    ]);    
+            ->view('email.invitation')
+            ->with([
+                'inviterName' => $this->inviter->name,
+                'groupName' => $this->group->name,
+                'inviteMessage' => null,
+                'activationLink' => $activationLink,
+            ]);
     }
 }

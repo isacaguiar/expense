@@ -11,37 +11,6 @@ use Illuminate\Support\Facades\Mail;
 
 class InvitationController extends Controller
 {
-    // Envia convite
-    public function invite(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:ex_users,email',
-            'message' => 'nullable|string|max:1000',
-        ]);
-
-        $token = bin2hex(random_bytes(16)); // senha temporária aleatória
-        $hashedPassword = Hash::make($token);
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => $hashedPassword,
-            'email_verified_at' => null,
-            'invited_by' => auth()->id(),
-        ]);
-
-        Mail::send('email.invitation', [
-            'inviterName' => auth()->user()->name,
-            'inviteMessage' => $request->message,
-            'activationLink' => url("/aceitar-convite?email={$user->email}&token={$token}"),
-        ], function ($mail) use ($user) {
-            $mail->to($user->email)->subject('Convite para a plataforma Despesa Compartilhada da Novemax');
-        });
-
-        return response()->json(['message' => 'Convite enviado com sucesso.']);
-    }
-
     // Verifica e ativa
     public function verify(Request $request)
     {
@@ -57,11 +26,13 @@ class InvitationController extends Controller
             return response()->json(['message' => 'Usuário não encontrado.'], 404);
         }
 
-        $tokenFromCache = Cache::get('password-reset-token:'.$user->email);
-        $isInvitationToken = Hash::check($request->token, $user->password);
-        $isResetTokenValid = $tokenFromCache && $tokenFromCache === $request->token;
+        $resetTokenFromCache = Cache::get('password-reset-token:'.$user->email);
+        $isResetTokenValid = $resetTokenFromCache && $resetTokenFromCache === $request->token;
 
-        if (! $isInvitationToken && ! $isResetTokenValid) {
+        $invitationTokenFromCache = Cache::get('invitation-token:'.$user->email);
+        $isInvitationTokenValid = $invitationTokenFromCache && $invitationTokenFromCache === $request->token;
+
+        if (! $isInvitationTokenValid && ! $isResetTokenValid) {
             return response()->json(['message' => 'Token inválido ou expirado.'], 401);
         }
 
@@ -70,9 +41,12 @@ class InvitationController extends Controller
         $user->email_verified_at = $user->email_verified_at ?? now();
         $user->save();
 
-        // Limpa token temporário se era recuperação de senha
+        // Limpa o token usado (uso único)
         if ($isResetTokenValid) {
             Cache::forget('password-reset-token:'.$user->email);
+        }
+        if ($isInvitationTokenValid) {
+            Cache::forget('invitation-token:'.$user->email);
         }
 
         // Envia e-mail de confirmação

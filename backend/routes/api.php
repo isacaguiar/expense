@@ -24,8 +24,6 @@ Route::middleware('jwt.auth')->group(function () {
     Route::put('/user/password', [UserController::class, 'changePassword']);
     Route::get('/pix/generate', [PixController::class, 'gerarPix']);
 
-    Route::post('/invitations', [InvitationController::class, 'invite']);
-
     Route::apiResource('groups', GroupController::class);
 
     Route::prefix('groups/{groupId}/members')->group(function () {

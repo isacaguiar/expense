@@ -40,18 +40,4 @@ class InvitationControllerMailViewsTest extends TestCase
 
         $response->assertStatus(200);
     }
-
-    public function test_invite_with_message_resolves_the_real_view(): void
-    {
-        $inviter = User::factory()->create();
-
-        $response = $this->withToken(auth('api')->login($inviter))
-            ->postJson('/api/invitations', [
-                'name' => 'Alguém',
-                'email' => 'convidado@example.com',
-                'message' => 'Bem-vindo ao grupo!',
-            ]);
-
-        $response->assertStatus(200);
-    }
 }

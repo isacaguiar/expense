@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import AcceptInvitePage from './pages/AcceptInvitePage';
 import Dashboard from './pages/Dashboard';
 import GroupForm from './pages/GroupForm';
 import GroupMembersForm from './pages/GroupMembersForm';
@@ -20,6 +21,7 @@ const App = () => {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
+      <Route path="/aceitar-convite" element={<AcceptInvitePage />} />
 
       {/* Rotas privadas */}
       <Route element={<RequireAuth />}>
