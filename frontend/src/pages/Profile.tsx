@@ -7,12 +7,26 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   CircularProgress,
+  FormControlLabel,
   Snackbar,
   TextField,
   Typography
 } from '@mui/material';
 import { API_BASE_URL } from '../config';
+
+const formatWhatsapp = (value: string): string => {
+  const digits = value.replace(/\D/g, '').slice(0, 11);
+  const ddd = digits.slice(0, 2);
+  const firstPart = digits.slice(2, 7);
+  const lastPart = digits.slice(7, 11);
+
+  if (digits.length === 0) return '';
+  if (digits.length <= 2) return `(${ddd}`;
+  if (digits.length <= 7) return `(${ddd}) ${firstPart}`;
+  return `(${ddd}) ${firstPart}-${lastPart}`;
+};
 
 const Profile: React.FC = () => {
   const navigate = useNavigate();
@@ -20,6 +34,8 @@ const Profile: React.FC = () => {
   const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [pix, setPix] = useState<string>('');
+  const [whatsapp, setWhatsapp] = useState<string>('');
+  const [notifyWhatsapp, setNotifyWhatsapp] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,13 +44,16 @@ const Profile: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     axios
-      .get<{ name: string; email: string; pix: string | null }>(`${API_BASE_URL}/api/me`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
-      })
+      .get<{ name: string; email: string; pix: string | null; whatsapp: string | null; notify_whatsapp: boolean }>(
+        `${API_BASE_URL}/api/me`,
+        { headers: { Authorization: token ? `Bearer ${token}` : '' } }
+      )
       .then(res => {
         setName(res.data.name);
         setEmail(res.data.email);
         setPix(res.data.pix ?? '');
+        setWhatsapp(res.data.whatsapp ?? '');
+        setNotifyWhatsapp(res.data.notify_whatsapp ?? false);
       })
       .catch(err => {
         console.error('Erro ao carregar perfil:', err);
@@ -56,7 +75,7 @@ const Profile: React.FC = () => {
     try {
       await axios.put(
         `${API_BASE_URL}/api/user/profile`,
-        { name, email, pix: pix || null },
+        { name, email, pix: pix || null, whatsapp: whatsapp || null, notify_whatsapp: notifyWhatsapp },
         { headers: { Authorization: token ? `Bearer ${token}` : '' } }
       );
       setSuccess(true);
@@ -106,6 +125,23 @@ const Profile: React.FC = () => {
               onChange={e => setPix(e.target.value)}
               fullWidth
               margin="normal"
+            />
+            <TextField
+              label="WhatsApp (opcional)"
+              placeholder="(71) 99999-9999"
+              value={whatsapp}
+              onChange={e => setWhatsapp(formatWhatsapp(e.target.value))}
+              fullWidth
+              margin="normal"
+            />
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={notifyWhatsapp}
+                  onChange={e => setNotifyWhatsapp(e.target.checked)}
+                />
+              }
+              label="Receber notificações pelo WhatsApp"
             />
             <Box sx={{ mt: 3, display: 'flex', gap: 2 }}>
               <Button type="submit" variant="contained" color="primary" disabled={submitting}>
