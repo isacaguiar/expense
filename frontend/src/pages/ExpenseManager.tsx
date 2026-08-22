@@ -39,6 +39,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import UndoIcon from '@mui/icons-material/Undo';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import SummarySidePanel from '../components/SummarySidePanel';
 import { getInitials } from '../layouts/group/getInitials';
@@ -79,6 +80,9 @@ const ExpenseManager: React.FC = () => {
   // Busca e filtro por tipo — client-side, sobre os dados da competência já carregada
   const [search, setSearch] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'fixed' | 'variable'>('all');
+
+  // Modal de detalhamento da despesa
+  const [detailExpenseId, setDetailExpenseId] = useState<number | null>(null);
 
   // Diálogo de remoção de despesa Fixa
   const [removeExpenseId, setRemoveExpenseId] = useState<number | null>(null);
@@ -231,6 +235,7 @@ const ExpenseManager: React.FC = () => {
 
   const removeExpense = expenses.find(exp => exp.id === removeExpenseId) ?? null;
   const deleteExpense = expenses.find(exp => exp.id === deleteExpenseId) ?? null;
+  const detailExpense = expenses.find(exp => exp.id === detailExpenseId) ?? null;
 
   const closeDeleteDialog = () => {
     setDeleteExpenseId(null);
@@ -441,6 +446,15 @@ const ExpenseManager: React.FC = () => {
                         </TableCell>
                         <TableCell align="right">
                           <Box display="flex" gap={0.5} justifyContent="flex-end">
+                            <Tooltip title="Ver detalhes">
+                              <IconButton
+                                aria-label="Ver detalhes"
+                                size="small"
+                                onClick={() => setDetailExpenseId(exp.id)}
+                              >
+                                <InfoOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
                             {exp.isFixed && cycleIsOpen && (
                               <Tooltip title="Remover despesa fixa">
                                 <IconButton
@@ -520,6 +534,71 @@ const ExpenseManager: React.FC = () => {
           </Grid>
         </Grid>
       )}
+
+      {/* Modal de detalhamento da despesa */}
+      <Dialog
+        open={detailExpenseId !== null}
+        onClose={() => setDetailExpenseId(null)}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Detalhes da despesa</DialogTitle>
+        <DialogContent dividers>
+          {detailExpense && (
+            <Box display="flex" flexDirection="column" gap={1.5}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                <Typography variant="subtitle1">{detailExpense.description}</Typography>
+                <Box display="flex" gap={0.5}>
+                  <Chip label={detailExpense.isFixed ? 'Fixa' : 'Variável'} size="small" />
+                  <Chip
+                    label={detailExpense.paid ? 'Paga' : 'Pendente'}
+                    color={detailExpense.paid ? 'success' : 'warning'}
+                    size="small"
+                  />
+                </Box>
+              </Box>
+
+              <Typography variant="h6" color="primary">
+                R${' '}
+                {detailExpense.value.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary">
+                {formatDate(detailExpense.date)}
+              </Typography>
+
+              <Box display="flex" alignItems="center" gap={1}>
+                <Avatar
+                  sx={{
+                    bgcolor: brandColors.primaryLight,
+                    color: brandColors.primary,
+                    width: 32,
+                    height: 32,
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  {getInitials(detailExpense.payerName || '-')}
+                </Avatar>
+                <Typography variant="body2">Credor: {detailExpense.payerName || '-'}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Pagadores
+                </Typography>
+                <Typography variant="body2">{detailExpense.participants.join(', ') || '-'}</Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailExpenseId(null)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Diálogo de remoção de despesa Fixa */}
       <Dialog
