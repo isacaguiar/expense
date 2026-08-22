@@ -10,7 +10,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-002 | Tabela de despesas no lugar do grid de cards | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-003 | Painel lateral com `SummarySidePanel` (abas Saldo/À pagar) | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-004 | Adaptar os 2 testes existentes afetados pela tabela e pelo painel novo | frontend | plan.md §4 | nenhum | Concluída |
-| TASK-005 | Teste novo: aba "À pagar" com `settlements` real desta página | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-005 | Teste novo: aba "À pagar" com `settlements` real desta página | frontend | plan.md §4 | nenhum | Concluída |
 
 ## Critérios de aceite
 
