@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Alert,
+  Avatar,
   Box,
   Button,
   Card,
@@ -15,6 +16,7 @@ import {
   Typography
 } from '@mui/material';
 import { API_BASE_URL } from '../config';
+import { getInitials } from '../layouts/group/getInitials';
 
 const formatWhatsapp = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -37,6 +39,7 @@ const Profile: React.FC = () => {
   const [pix, setPix] = useState<string>('');
   const [whatsapp, setWhatsapp] = useState<string>('');
   const [notifyWhatsapp, setNotifyWhatsapp] = useState<boolean>(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [linking, setLinking] = useState<boolean>(false);
@@ -55,6 +58,7 @@ const Profile: React.FC = () => {
         pix: string | null;
         whatsapp: string | null;
         notify_whatsapp: boolean;
+        avatar_url: string | null;
       }>(`${API_BASE_URL}/api/me`, { headers: { Authorization: token ? `Bearer ${token}` : '' } })
       .then(res => {
         setName(res.data.name);
@@ -62,6 +66,7 @@ const Profile: React.FC = () => {
         setPix(res.data.pix ?? '');
         setWhatsapp(res.data.whatsapp ?? '');
         setNotifyWhatsapp(res.data.notify_whatsapp ?? false);
+        setAvatarUrl(res.data.avatar_url ?? null);
       })
       .catch(err => {
         console.error('Erro ao carregar perfil:', err);
@@ -139,6 +144,12 @@ const Profile: React.FC = () => {
     <>
       <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 520, mx: 'auto' }}>
         <CardContent sx={{ p: 4 }}>
+          <Box display="flex" justifyContent="center" mb={3}>
+            <Avatar src={avatarUrl ?? undefined} sx={{ width: 72, height: 72 }}>
+              {getInitials(name)}
+            </Avatar>
+          </Box>
+
           {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
 
           <Box component="form" onSubmit={handleSubmit}>
