@@ -4,10 +4,6 @@ import { API_BASE_URL } from '../config';
 import {
   Box,
   Button,
-  Card,
-  CardActionArea,
-  CardActions,
-  CardContent,
   Chip,
   Typography,
   CircularProgress,
@@ -18,7 +14,15 @@ import {
   DialogActions,
   Grid,
   IconButton,
+  Link as MuiLink,
+  Paper,
   Snackbar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -377,107 +381,123 @@ const ExpenseManager: React.FC = () => {
             ) : filteredExpenses.length === 0 ? (
               <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
             ) : (
-              <Grid container spacing={2}>
-                {filteredExpenses.map(exp => (
-                  <Grid size={{ xs: 12, sm: 6 }} key={exp.id}>
-                    <Card elevation={3} sx={{ borderRadius: 2 }}>
-                      <CardActionArea component={Link} to={`/groups/${groupId}/expenses/${exp.id}`}>
-                        <CardContent>
-                          <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
-                            <Box display="flex" alignItems="center" gap={1}>
-                              {exp.isFixed ? (
-                                <AutorenewOutlinedIcon color="action" fontSize="small" />
-                              ) : (
-                                <ReceiptOutlinedIcon color="action" fontSize="small" />
-                              )}
-                              <Typography variant="subtitle1">{exp.description}</Typography>
-                            </Box>
-                            <Box display="flex" gap={0.5}>
-                              <Chip label={exp.isFixed ? 'Fixa' : 'Variável'} size="small" />
-                              <Chip
-                                label={exp.paid ? 'Paga' : 'Pendente'}
-                                color={exp.paid ? 'success' : 'warning'}
-                                size="small"
-                              />
-                            </Box>
-                          </Box>
-                          <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-                            R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {formatDate(exp.date)} · Credor: {exp.payerName || '-'}
-                          </Typography>
+              <TableContainer component={Paper} elevation={3}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tipo</TableCell>
+                      <TableCell>Despesa</TableCell>
+                      <TableCell>Valor</TableCell>
+                      <TableCell>Data</TableCell>
+                      <TableCell>Credor</TableCell>
+                      <TableCell>Pagadores</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell align="right">Ações</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredExpenses.map(exp => (
+                      <TableRow key={exp.id} hover>
+                        <TableCell>
+                          <Tooltip title={exp.isFixed ? 'Fixa' : 'Variável'}>
+                            {exp.isFixed ? (
+                              <AutorenewOutlinedIcon color="action" fontSize="small" />
+                            ) : (
+                              <ReceiptOutlinedIcon color="action" fontSize="small" />
+                            )}
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <MuiLink component={Link} to={`/groups/${groupId}/expenses/${exp.id}`} underline="hover">
+                            {exp.description}
+                          </MuiLink>
+                        </TableCell>
+                        <TableCell>
+                          R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>{formatDate(exp.date)}</TableCell>
+                        <TableCell>{exp.payerName || '-'}</TableCell>
+                        <TableCell sx={{ maxWidth: 160 }}>
                           <Tooltip title={exp.participants.join(', ') || 'Ninguém'}>
-                            <Typography variant="body2" color="text.secondary" noWrap>
-                              Pagadores: {exp.participants.join(', ') || '-'}
+                            <Typography variant="body2" noWrap>
+                              {exp.participants.join(', ') || '-'}
                             </Typography>
                           </Tooltip>
-                        </CardContent>
-                      </CardActionArea>
-                      <CardActions>
-                        {exp.isFixed && cycleIsOpen && (
-                          <Tooltip title="Remover despesa fixa">
-                            <IconButton
-                              aria-label="Remover despesa fixa"
-                              size="small"
-                              onClick={() => setRemoveExpenseId(exp.id)}
-                            >
-                              <DeleteOutlineIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        {canEdit(exp) && (
-                          <Tooltip title="Editar despesa">
-                            <IconButton
-                              aria-label="Editar despesa"
-                              size="small"
-                              component={Link}
-                              to={`/groups/${groupId}/expenses/${exp.id}`}
-                            >
-                              <EditOutlinedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        {canDelete(exp) && (
-                          <Tooltip title="Excluir despesa">
-                            <IconButton
-                              aria-label="Excluir despesa"
-                              size="small"
-                              onClick={() => setDeleteExpenseId(exp.id)}
-                            >
-                              <DeleteOutlineIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        {canPay(exp) && (
-                          <Tooltip title="Marcar como paga">
-                            <IconButton
-                              aria-label="Marcar como paga"
-                              size="small"
-                              disabled={payingExpenseId === exp.id}
-                              onClick={() => handlePay(exp.id)}
-                            >
-                              <CheckCircleOutlineIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                        {canUnpay(exp) && (
-                          <Tooltip title="Desfazer pagamento">
-                            <IconButton
-                              aria-label="Desfazer pagamento"
-                              size="small"
-                              disabled={payingExpenseId === exp.id}
-                              onClick={() => handleUnpay(exp.id)}
-                            >
-                              <UndoIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        )}
-                      </CardActions>
-                    </Card>
-                  </Grid>
-                ))}
-              </Grid>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={exp.paid ? 'Paga' : 'Pendente'}
+                            color={exp.paid ? 'success' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Box display="flex" gap={0.5} justifyContent="flex-end">
+                            {exp.isFixed && cycleIsOpen && (
+                              <Tooltip title="Remover despesa fixa">
+                                <IconButton
+                                  aria-label="Remover despesa fixa"
+                                  size="small"
+                                  onClick={() => setRemoveExpenseId(exp.id)}
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canEdit(exp) && (
+                              <Tooltip title="Editar despesa">
+                                <IconButton
+                                  aria-label="Editar despesa"
+                                  size="small"
+                                  component={Link}
+                                  to={`/groups/${groupId}/expenses/${exp.id}`}
+                                >
+                                  <EditOutlinedIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canDelete(exp) && (
+                              <Tooltip title="Excluir despesa">
+                                <IconButton
+                                  aria-label="Excluir despesa"
+                                  size="small"
+                                  onClick={() => setDeleteExpenseId(exp.id)}
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canPay(exp) && (
+                              <Tooltip title="Marcar como paga">
+                                <IconButton
+                                  aria-label="Marcar como paga"
+                                  size="small"
+                                  disabled={payingExpenseId === exp.id}
+                                  onClick={() => handlePay(exp.id)}
+                                >
+                                  <CheckCircleOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canUnpay(exp) && (
+                              <Tooltip title="Desfazer pagamento">
+                                <IconButton
+                                  aria-label="Desfazer pagamento"
+                                  size="small"
+                                  disabled={payingExpenseId === exp.id}
+                                  onClick={() => handleUnpay(exp.id)}
+                                >
+                                  <UndoIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             )}
           </Grid>
 
