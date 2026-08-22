@@ -37,6 +37,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-177 | `ExpenseManager.tsx` — ação marcar como paga / desfazer pagamento, visível só para o credor | frontend | plan.md §6 | antes do merge | Pendente |
 | TASK-178 | Testes de componente novos para `ExpenseManager.tsx` (grid, ações condicionais, modal de exclusão, fechar/reabrir, pagar/despagar) | frontend | plan.md §1–§6 | nenhum | Pendente |
 | TASK-179 | `ExpenseView.tsx` — troca pra `GET /expenses/{expenseId}` (recurso único) e ganha modo de edição consumindo `PUT /expenses/{id}` | frontend | plan.md §1 | antes do merge | Implementada |
+| TASK-180 | `computeCycleSummary` — expor `userPayerId`/`userCreatorId` por despesa na resposta do `summary`, pro frontend decidir credor/dono sem comparar nomes | backend | plan.md §1 | antes do merge | Implementada |
 
 ## Critérios de aceite
 
@@ -71,3 +72,4 @@ Versão: 1.0 · Criado em: 20260822
 - **TASK-177**: botão de marcar/desfazer pagamento só aparece para o usuário logado quando ele é o credor (`user_payer_id`) da despesa e a competência está aberta; clicar chama `POST .../pay` ou `.../unpay` conforme o estado atual e atualiza o status exibido.
 - **TASK-178**: `npx vitest run src/pages/ExpenseManager.test.tsx` verde, cobrindo pelo menos: grid renderizado, 1 ação escondida por regra de negócio, modal de exclusão (confirmar/cancelar), fechar/reabrir mês, marcar/desfazer pagamento.
 - **TASK-179**: `ExpenseView.tsx` busca via `GET /expenses/{expenseId}` (não mais a lista do mês); exibe despesa fora do mês calendário atual corretamente. Modo de edição altera descrição/valor/data/credor/pagadores via `PUT /expenses/{id}`; erro retornado pela API (422 — competência fechada, valor de despesa paga) é exibido ao usuário, não é validado no cliente.
+- **TASK-180**: `GET /groups/{groupId}/expenses/summary` inclui `userPayerId`/`userCreatorId` (ids reais, não nomes) em cada item de `expenses`; teste automatizado confirma os valores corretos para uma despesa com credor e criador diferentes.
