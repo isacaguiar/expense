@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20260822
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-149 | Migration + model — `paid_at`/`paid_by` em `ex_quotas` (`Quota`) | backend | plan.md §6 | antes do merge | Implementada |
-| TASK-150 | `ExpenseController::store` — forçar `paid=false` sempre na criação de quotas, ignorando valor enviado pelo cliente | backend | plan.md §6 | antes do merge | Pendente |
+| TASK-150 | `ExpenseController::store` — forçar `paid=false` sempre na criação de quotas, ignorando valor enviado pelo cliente | backend | plan.md §6 | antes do merge | Implementada |
 | TASK-151 | Testes — despesa nasce sempre com quotas `paid=false`, mesmo se o cliente enviar `paid:true` | backend | plan.md §6 | nenhum | Pendente |
 | TASK-152 | `ExpenseController` — método privado que materializa (busca ou cria) a `Quota` da ocorrência mensal de uma despesa `FIXED` | backend | plan.md §3 | antes do merge | Pendente |
 | TASK-153 | `collectCycleEntries` — usar `Quota` materializada de `FIXED` quando existir, em vez de projetar sempre ao vivo | backend | plan.md §3 | antes do merge | Pendente |
