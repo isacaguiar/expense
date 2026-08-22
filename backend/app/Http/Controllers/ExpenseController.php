@@ -479,6 +479,43 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Marca como paga a ocorrência desta despesa na competência vigente.
+     * Só o credor (`user_payer_id`) pode confirmar o pagamento, e só enquanto
+     * a competência ainda está aberta (nem automática nem manualmente
+     * fechada). Despesa nova nasce sem Quota na competência vigente quando é
+     * `FIXED` — materializa antes de marcar.
+     */
+    public function pay($expenseId)
+    {
+        $expense = $this->findExpenseForMember($expenseId);
+
+        if (auth()->id() !== $expense->user_payer_id) {
+            abort(403, 'Só o credor pode marcar esta despesa como paga.');
+        }
+
+        $group = $expense->group;
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+
+        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
+            return $response;
+        }
+
+        $quota = $this->resolveQuotaForCurrentCompetence($expense, $cycle['start'], $cycle['end']);
+
+        if (! $quota) {
+            return response()->json(['error' => 'Esta despesa não tem ocorrência na competência vigente.'], 422);
+        }
+
+        $quota->update([
+            'paid' => true,
+            'paid_at' => Carbon::now(),
+            'paid_by' => auth()->id(),
+        ]);
+
+        return response()->json($quota->fresh());
+    }
+
+    /**
      * Foto imutável de um ciclo já fechado: devolve a foto já persistida, ou
      * computa ao vivo (uma única vez) e persiste antes de devolver. A partir
      * daí, este ciclo nunca mais é recalculado — edições/exclusões de
@@ -720,6 +757,27 @@ class ExpenseController extends Controller
             'paid' => false,
             'value_quota' => $expense->total_value,
         ]);
+    }
+
+    /**
+     * Quota que representa esta despesa na competência [start, end] — para
+     * `FIXED`, materializa a ocorrência se ainda não existir; para as demais,
+     * a Quota já existe desde a criação (uma por competência, por design).
+     * `null` se a despesa não tiver ocorrência nessa competência (ex.: FIXED
+     * cuja recorrência já foi cortada antes dela).
+     */
+    private function resolveQuotaForCurrentCompetence(Expense $expense, Carbon $start, Carbon $end): ?Quota
+    {
+        if ($expense->expense_type === 'FIXED') {
+            $entry = $this->collectCycleEntries($expense->group_id, $start, $end)
+                ->first(fn (array $entry) => $entry['expense']->id === $expense->id);
+
+            return $entry ? $this->materializeFixedOccurrenceQuota($expense, $entry['date']) : null;
+        }
+
+        return $expense->quotas()
+            ->whereBetween('date_expected', [$start->toDateString(), $end->toDateString()])
+            ->first();
     }
 
     private function findExpenseForMember($id): Expense
