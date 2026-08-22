@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 
 class Quota extends Model
 {
@@ -17,6 +18,7 @@ class Quota extends Model
         'paid',
         'paid_at',
         'paid_by',
+        'payment_proof_path',
         'value_quota',
         'expense_id',
     ];
@@ -26,6 +28,10 @@ class Quota extends Model
         'paid' => 'boolean',
         'paid_at' => 'datetime',
         'value_quota' => 'decimal:2',
+    ];
+
+    protected $appends = [
+        'payment_proof_url',
     ];
 
     public function expense()
@@ -41,5 +47,14 @@ class Quota extends Model
     public function paidBy()
     {
         return $this->belongsTo(User::class, 'paid_by');
+    }
+
+    public function getPaymentProofUrlAttribute(): ?string
+    {
+        if (! $this->payment_proof_path) {
+            return null;
+        }
+
+        return Storage::disk('public')->url($this->payment_proof_path);
     }
 }

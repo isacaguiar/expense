@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
@@ -510,14 +511,23 @@ class ExpenseController extends Controller
      * a competência ainda está aberta (nem automática nem manualmente
      * fechada). Despesa nova nasce sem Quota na competência vigente quando é
      * `FIXED` — materializa antes de marcar.
+     *
+     * Comprovante (`comprovante`) é opcional no contrato da API: o fluxo
+     * antigo de `ExpenseManager` chama este endpoint sem corpo e precisa
+     * continuar funcionando; a Tela de Pagamentos é quem exige a foto,
+     * do lado do cliente, antes de chamar isto.
      */
-    public function pay($expenseId)
+    public function pay($expenseId, Request $request)
     {
         $expense = $this->findExpenseForMember($expenseId);
 
         if (auth()->id() !== $expense->user_payer_id) {
             abort(403, 'Só o credor pode marcar esta despesa como paga.');
         }
+
+        $data = $request->validate([
+            'comprovante' => 'nullable|image|max:5120',
+        ]);
 
         $group = $expense->group;
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
@@ -532,11 +542,17 @@ class ExpenseController extends Controller
             return response()->json(['error' => 'Esta despesa não tem ocorrência na competência vigente.'], 422);
         }
 
-        $quota->update([
+        $update = [
             'paid' => true,
             'paid_at' => Carbon::now(),
             'paid_by' => auth()->id(),
-        ]);
+        ];
+
+        if (! empty($data['comprovante'])) {
+            $update['payment_proof_path'] = $request->file('comprovante')->store('comprovantes', 'public');
+        }
+
+        $quota->update($update);
 
         return response()->json($quota->fresh());
     }
@@ -548,6 +564,9 @@ class ExpenseController extends Controller
      * uma ocorrência ainda virtual nunca está paga (`collectCycleEntries`
      * projeta `paid: false` até existir uma Quota real), então não há o que
      * desfazer nesse caso.
+     *
+     * Se a quota tinha comprovante, apaga o arquivo do disco — um pagamento
+     * desfeito não deve manter "prova" de um estado que não vale mais.
      */
     public function unpay($expenseId)
     {
@@ -572,10 +591,15 @@ class ExpenseController extends Controller
             return response()->json(['error' => 'Esta despesa não está paga na competência vigente.'], 422);
         }
 
+        if ($quota->payment_proof_path) {
+            Storage::disk('public')->delete($quota->payment_proof_path);
+        }
+
         $quota->update([
             'paid' => false,
             'paid_at' => null,
             'paid_by' => null,
+            'payment_proof_path' => null,
         ]);
 
         return response()->json($quota->fresh());
@@ -647,22 +671,28 @@ class ExpenseController extends Controller
         $entries = $this->collectCycleEntries($groupId, $start, $end);
 
         $expenses = $entries
-            ->map(fn (array $entry) => [
-                'id' => $entry['expense']->id,
-                'description' => $entry['expense']->description,
-                'date' => $entry['date']->toDateString(),
-                'value' => $entry['value'],
-                'paid' => $entry['paid'],
-                'payerName' => $entry['expense']->payer->name ?? null,
-                'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
-                'isFixed' => $entry['expense']->expense_type === 'FIXED',
-                // IDs (não só nomes) — o frontend precisa deles pra decidir se o
-                // usuário logado é o credor (pode pagar) ou dono (pode editar/
-                // excluir: authorizeExpenseOwner() aceita criador OU credor),
-                // sem depender de comparar nomes.
-                'userPayerId' => $entry['expense']->user_payer_id,
-                'userCreatorId' => $entry['expense']->user_creator_id,
-            ])
+            ->map(function (array $entry) {
+                $participantsCount = max($entry['expense']->payers->count(), 1);
+
+                return [
+                    'id' => $entry['expense']->id,
+                    'description' => $entry['expense']->description,
+                    'date' => $entry['date']->toDateString(),
+                    'value' => $entry['value'],
+                    'valuePerPerson' => round($entry['value'] / $participantsCount, 2),
+                    'paid' => $entry['paid'],
+                    'paymentProofUrl' => $entry['paymentProofUrl'],
+                    'payerName' => $entry['expense']->payer->name ?? null,
+                    'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
+                    'isFixed' => $entry['expense']->expense_type === 'FIXED',
+                    // IDs (não só nomes) — o frontend precisa deles pra decidir se o
+                    // usuário logado é o credor (pode pagar) ou dono (pode editar/
+                    // excluir: authorizeExpenseOwner() aceita criador OU credor),
+                    // sem depender de comparar nomes.
+                    'userPayerId' => $entry['expense']->user_payer_id,
+                    'userCreatorId' => $entry['expense']->user_creator_id,
+                ];
+            })
             ->sortBy('date')
             ->values()
             ->all();
@@ -760,7 +790,7 @@ class ExpenseController extends Controller
      * regra de corte de recorrência de indexByGroup, adaptada de mês único para
      * intervalo de datas, que pode atravessar dois meses calendário).
      *
-     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool}>
+     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool, paymentProofUrl: ?string}>
      */
     private function collectCycleEntries($groupId, Carbon $start, Carbon $end)
     {
@@ -786,6 +816,7 @@ class ExpenseController extends Controller
                 'date' => $expense->date_payment->copy(),
                 'value' => (float) ($quota->value_quota ?? $expense->total_value),
                 'paid' => (bool) ($quota->paid ?? false),
+                'paymentProofUrl' => $quota->payment_proof_url ?? null,
             ]);
         }
 
@@ -807,6 +838,7 @@ class ExpenseController extends Controller
                 'date' => $quota->date_expected->copy(),
                 'value' => (float) $quota->value_quota,
                 'paid' => (bool) $quota->paid,
+                'paymentProofUrl' => $quota->payment_proof_url,
             ]);
         }
 
@@ -842,6 +874,7 @@ class ExpenseController extends Controller
                         'date' => $occurrence,
                         'value' => (float) ($quota->value_quota ?? $expense->total_value),
                         'paid' => (bool) ($quota->paid ?? false),
+                        'paymentProofUrl' => $quota->payment_proof_url ?? null,
                     ]);
                 }
 
