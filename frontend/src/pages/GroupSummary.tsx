@@ -170,7 +170,11 @@ const GroupSummary: React.FC = () => {
             </Grid>
 
             <Grid size={{ xs: 12, sm: 12, lg: 4 }}>
-              <SummarySidePanel balances={summary.balances} settlements={summary.settlements} />
+              <SummarySidePanel
+                balances={summary.balances}
+                settlements={summary.settlements}
+                cycleStatus={summary.cycle.status}
+              />
             </Grid>
           </Grid>
         </>
