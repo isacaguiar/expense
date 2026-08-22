@@ -442,6 +442,43 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Reabertura de um fechamento manual ainda vigente. Só encontra algo pra
+     * reabrir quando o fechamento manual pertence à competência que contém
+     * "agora" — depois da virada do mês, a competência antiga simplesmente
+     * não é mais a que este método consulta (sem precisar de uma checagem
+     * extra de `BillingCycle`), então "reabrir competência antiga" já falha
+     * por não achar snapshot nenhum aqui.
+     */
+    public function reopen($groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+        $start = $cycle['start'];
+        $end = $cycle['end'];
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->first();
+
+        if (! $snapshot || ! $snapshot->isManuallyClosedAndActive()) {
+            return response()->json(['error' => 'Não há fechamento manual ativo para reabrir nesta competência.'], 422);
+        }
+
+        $snapshot->update(['reopened_at' => Carbon::now()]);
+
+        $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+        return response()->json([
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => 'open'],
+            'totals' => $summary['totals'],
+            'expenses' => $summary['expenses'],
+            'balances' => $summary['balances'],
+        ]);
+    }
+
+    /**
      * Foto imutável de um ciclo já fechado: devolve a foto já persistida, ou
      * computa ao vivo (uma única vez) e persiste antes de devolver. A partir
      * daí, este ciclo nunca mais é recalculado — edições/exclusões de
