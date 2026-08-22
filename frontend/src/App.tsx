@@ -11,6 +11,8 @@ import ExpenseView from './pages/ExpenseView';
 import ExpensesEntry from './pages/ExpensesEntry';
 import GroupSummary from './pages/GroupSummary';
 import SummaryEntry from './pages/SummaryEntry';
+import Payments from './pages/Payments';
+import PaymentsEntry from './pages/PaymentsEntry';
 import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
 import RequireAuth from './components/RequireAuth';
@@ -28,6 +30,7 @@ const App = () => {
         {/* Com grupo selecionado: sidebar/navegação de grupo (GroupShellLayout) */}
         <Route element={<GroupShellLayout />}>
           <Route path="/groups/:id/summary" element={<GroupSummary />} />
+          <Route path="/groups/:id/payments" element={<Payments />} />
           <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
           <Route path="/groups/:id/expenses/new" element={<ExpenseForm />} />
           <Route path="/groups/:id/expenses/:expenseId" element={<ExpenseView />} />
@@ -42,6 +45,7 @@ const App = () => {
           <Route path="/groups/new" element={<GroupForm />} />
           <Route path="/expenses" element={<ExpensesEntry />} />
           <Route path="/summary" element={<SummaryEntry />} />
+          <Route path="/payments" element={<PaymentsEntry />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/change-password" element={<ChangePassword />} />
         </Route>

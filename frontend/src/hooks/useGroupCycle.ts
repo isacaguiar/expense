@@ -17,7 +17,9 @@ export type SummaryExpense = {
   description: string;
   date: string;
   value: number;
+  valuePerPerson: number;
   paid: boolean;
+  paymentProofUrl: string | null;
   payerName: string | null;
   participants: string[];
   isFixed: boolean;
