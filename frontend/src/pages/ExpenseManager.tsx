@@ -31,6 +31,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import UndoIcon from '@mui/icons-material/Undo';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
@@ -81,6 +82,54 @@ const ExpenseManager: React.FC = () => {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
   const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
+
+  // Marcar como paga / desfazer pagamento
+  const [payingExpenseId, setPayingExpenseId] = useState<number | null>(null);
+  const [payError, setPayError] = useState<string | null>(null);
+  const [paySuccess, setPaySuccess] = useState<boolean>(false);
+  const [unpaySuccess, setUnpaySuccess] = useState<boolean>(false);
+
+  const handlePay = (expenseId: number) => {
+    setPayingExpenseId(expenseId);
+    setPayError(null);
+
+    const token = localStorage.getItem('accessToken');
+
+    axios
+      .post(`${API_BASE_URL}/api/expenses/${expenseId}/pay`, null, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setPaySuccess(true);
+        reload();
+      })
+      .catch(err => {
+        console.error('Erro ao marcar despesa como paga:', err);
+        setPayError(err.response?.data?.error ?? 'Falha ao marcar despesa como paga.');
+      })
+      .finally(() => setPayingExpenseId(null));
+  };
+
+  const handleUnpay = (expenseId: number) => {
+    setPayingExpenseId(expenseId);
+    setPayError(null);
+
+    const token = localStorage.getItem('accessToken');
+
+    axios
+      .post(`${API_BASE_URL}/api/expenses/${expenseId}/unpay`, null, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setUnpaySuccess(true);
+        reload();
+      })
+      .catch(err => {
+        console.error('Erro ao desfazer pagamento da despesa:', err);
+        setPayError(err.response?.data?.error ?? 'Falha ao desfazer pagamento.');
+      })
+      .finally(() => setPayingExpenseId(null));
+  };
 
   // Fechar/reabrir a competência vigente
   const [closingMonth, setClosingMonth] = useState<boolean>(false);
@@ -230,6 +279,7 @@ const ExpenseManager: React.FC = () => {
   const canEdit = (exp: SummaryExpense) => cycleIsOpen && isOwner(exp);
   const canDelete = (exp: SummaryExpense) => cycleIsOpen && !exp.isFixed && !exp.paid && isOwner(exp);
   const canPay = (exp: SummaryExpense) => cycleIsOpen && !exp.paid && isCreditor(exp);
+  const canUnpay = (exp: SummaryExpense) => cycleIsOpen && exp.paid && isCreditor(exp);
 
   return (
     <>
@@ -400,10 +450,26 @@ const ExpenseManager: React.FC = () => {
                           </Tooltip>
                         )}
                         {canPay(exp) && (
-                          // TASK-177 conecta a chamada de POST .../pay.
                           <Tooltip title="Marcar como paga">
-                            <IconButton aria-label="Marcar como paga" size="small">
+                            <IconButton
+                              aria-label="Marcar como paga"
+                              size="small"
+                              disabled={payingExpenseId === exp.id}
+                              onClick={() => handlePay(exp.id)}
+                            >
                               <CheckCircleOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {canUnpay(exp) && (
+                          <Tooltip title="Desfazer pagamento">
+                            <IconButton
+                              aria-label="Desfazer pagamento"
+                              size="small"
+                              disabled={payingExpenseId === exp.id}
+                              onClick={() => handleUnpay(exp.id)}
+                            >
+                              <UndoIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
                         )}
@@ -513,6 +579,39 @@ const ExpenseManager: React.FC = () => {
       >
         <Alert onClose={() => setReopenSuccess(false)} severity="success" variant="filled">
           Competência reaberta com sucesso.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={paySuccess}
+        autoHideDuration={4000}
+        onClose={() => setPaySuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setPaySuccess(false)} severity="success" variant="filled">
+          Despesa marcada como paga.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={unpaySuccess}
+        autoHideDuration={4000}
+        onClose={() => setUnpaySuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setUnpaySuccess(false)} severity="success" variant="filled">
+          Pagamento desfeito.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={payError !== null}
+        autoHideDuration={6000}
+        onClose={() => setPayError(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setPayError(null)} severity="error" variant="filled">
+          {payError}
         </Alert>
       </Snackbar>
     </>
