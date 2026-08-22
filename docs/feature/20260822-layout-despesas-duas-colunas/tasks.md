@@ -11,6 +11,8 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-003 | Painel lateral com `SummarySidePanel` (abas Saldo/À pagar) | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-004 | Adaptar os 2 testes existentes afetados pela tabela e pelo painel novo | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-005 | Teste novo: aba "À pagar" com `settlements` real desta página | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-006 | Reestruturar colunas da tabela (remover Data/Pagadores, avatar no Credor) | frontend | plan.md §5 | nenhum | Concluída |
+| TASK-007 | Ícone "Ver detalhes" com modal de detalhamento da despesa | frontend | plan.md §5 | nenhum | Pendente |
 
 ## Critérios de aceite
 
@@ -19,3 +21,5 @@ Versão: 1.0 · Criado em: 20260822
 - **TASK-003**: painel lateral mostra `Tabs` "Saldo"/"À pagar" com o mesmo conteúdo/selo Prévia-Definitivo de `GroupSummary.tsx`; trocar de aba não dispara nova chamada `axios.get`.
 - **TASK-004**: `npx vitest run src/pages/ExpenseManager.test.tsx` 100% verde depois de reescrever `shows status chip, credor and pagadores` (linhas 171-194 na numeração atual, sem os prefixos "Credor: "/"Pagadores: ") e o trecho do teste de fluxo completo que checava `screen.getByText('Saldo por pessoa')` (linha 847 na numeração atual, trocado por uma asserção que bata com a aba "Saldo" do `SummarySidePanel`).
 - **TASK-005**: `npx vitest run src/pages/ExpenseManager.test.tsx` verde cobrindo um cenário com `settlements` não vazio no fixture de teste, clicando na aba "À pagar" e conferindo que o texto/valor da liquidação aparece (mesmo padrão usado em `GroupSummary.test.tsx`).
+- **TASK-006**: a tabela mostra as colunas Tipo, Despesa, Valor, Credor, Status, Ações (sem Data nem Pagadores); a célula Credor mostra um avatar com iniciais ao lado do nome do credor.
+- **TASK-007**: clicar no ícone "Ver detalhes" de uma despesa abre um modal com descrição, tipo, status, valor, data e participantes dessa despesa; fechar o modal não navega nem altera nenhum dado; o link da célula "Despesa" continua navegando pra `ExpenseView.tsx` normalmente.
