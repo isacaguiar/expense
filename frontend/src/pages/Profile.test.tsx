@@ -114,6 +114,55 @@ describe('Profile', () => {
     expect(checkbox).not.toBeChecked();
   });
 
+  it('navigates to the Google consent URL when clicking "Vincular conta Google"', async () => {
+    const assignSpy = vi.fn();
+    vi.stubGlobal('location', { ...window.location, assign: assignSpy, set href(value: string) {
+      assignSpy(value);
+    } });
+
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { url: 'https://accounts.google.com/o/oauth2/auth?state=xyz' } });
+    await user.click(screen.getByRole('button', { name: 'Vincular conta Google' }));
+
+    await waitFor(() => {
+      expect(assignSpy).toHaveBeenCalledWith('https://accounts.google.com/o/oauth2/auth?state=xyz');
+    });
+    expect(axios.get).toHaveBeenLastCalledWith(expect.stringContaining('/api/user/google/redirect-url'), expect.anything());
+
+    vi.unstubAllGlobals();
+  });
+
+  it('shows a success snackbar when returning from Google with ?linked=success', async () => {
+    render(
+      <MemoryRouter initialEntries={['/profile?linked=success']}>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+    expect(await screen.findByText('Conta Google vinculada com sucesso.')).toBeInTheDocument();
+  });
+
+  it('shows an error snackbar when returning from Google with ?linked=error', async () => {
+    render(
+      <MemoryRouter initialEntries={['/profile?linked=error']}>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+    expect(await screen.findByText('Não foi possível vincular sua conta Google.')).toBeInTheDocument();
+  });
+
   it('shows the backend validation error on failure', async () => {
     vi.mocked(axios.put).mockRejectedValue({
       response: { data: { errors: { email: ['O e-mail já está em uso.'] } } },
