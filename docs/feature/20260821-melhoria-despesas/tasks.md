@@ -23,7 +23,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-163 | Rota + `ExpenseController::pay` — `POST /expenses/{expenseId}/pay`, só credor, só competência aberta, materializa `FIXED` se preciso | backend | plan.md §6 | antes do merge | Implementada |
 | TASK-164 | Rota + `ExpenseController::unpay` — `POST /expenses/{expenseId}/unpay`, só credor, só competência aberta | backend | plan.md §6 | antes do merge | Implementada |
 | TASK-165 | `ExpenseController::update` — bloquear alteração de valor quando a `Quota` da competência já está paga | backend | plan.md §6 | antes do merge | Implementada |
-| TASK-166 | Testes — pay/unpay só pelo credor e só com competência aberta; update de valor bloqueado se pago | backend | plan.md §6 | nenhum | Pendente |
+| TASK-166 | Testes — pay/unpay só pelo credor e só com competência aberta; update de valor bloqueado se pago | backend | plan.md §6 | nenhum | Implementada |
 | TASK-167 | `ExpenseController::destroy` — bloquear exclusão se a despesa tem `Quota` da competência paga | backend | plan.md §2 | antes do merge | Pendente |
 | TASK-168 | Testes — exclusão bloqueada se paga; permitida se pendente e competência aberta | backend | plan.md §2 | nenhum | Pendente |
 | TASK-169 | Teste — saldo por pessoa (`computeCycleSummary`) continua correto após materialização de `Quota` para `FIXED` | backend | plan.md §7 | nenhum | Pendente |

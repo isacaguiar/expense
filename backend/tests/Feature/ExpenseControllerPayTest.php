@@ -315,6 +315,48 @@ class ExpenseControllerPayTest extends TestCase
         $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => true]);
     }
 
+    public function test_full_pay_unpay_update_flow_blocks_and_unblocks_value_edits(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10', 'total_value' => 100]);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $token = $this->tokenFor($creditor);
+
+        // Pendente: editar valor funciona normalmente.
+        $this->withToken($token)
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 120])
+            ->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 120]);
+
+        // Paga (TASK-163): editar valor passa a ser bloqueado (TASK-165),
+        // mas outros campos continuam editáveis.
+        $this->withToken($token)->postJson("/api/expenses/{$expense->id}/pay")->assertStatus(200);
+
+        $this->withToken($token)
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 999])
+            ->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 120]);
+
+        $this->withToken($token)
+            ->putJson("/api/expenses/{$expense->id}", ['description' => 'Ajuste de descrição'])
+            ->assertStatus(200);
+
+        // Despagar (TASK-164): editar valor volta a funcionar.
+        $this->withToken($token)->postJson("/api/expenses/{$expense->id}/unpay")->assertStatus(200);
+
+        $this->withToken($token)
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 150])
+            ->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 150]);
+    }
+
     public function test_unpay_requires_group_membership(): void
     {
         Carbon::setTestNow('2026-08-19');
