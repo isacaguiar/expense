@@ -66,6 +66,33 @@ class ExpenseControllerSummaryTest extends TestCase
             ->assertJsonPath('totals.pending', 0);
     }
 
+    public function test_expense_entries_include_creditor_and_creator_ids(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $creator->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-08-05',
+            'user_creator_id' => $creator->id,
+            'user_payer_id' => $payer->id,
+        ]);
+        $expense->payers()->sync([$payer->id, $creator->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'userPayerId' => $payer->id,
+            'userCreatorId' => $creator->id,
+        ]);
+    }
+
     public function test_future_cycle_without_expenses_returns_zero_totals(): void
     {
         Carbon::setTestNow('2026-08-19');
@@ -179,6 +206,40 @@ class ExpenseControllerSummaryTest extends TestCase
         ]);
     }
 
+    public function test_fixed_expense_uses_materialized_quota_value_when_present(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'closing_day' => 15]);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 500,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 500]);
+
+        // Ocorrência do ciclo corrente (16/ago-15/set cai em 05/set) já foi congelada
+        // com um valor diferente do total_value atual — o resumo deve refletir isso,
+        // não o total_value ao vivo (500).
+        $expense->quotas()->create(['date_expected' => '2026-09-05', 'number' => 1, 'paid' => true, 'value_quota' => 350]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'date' => '2026-09-05',
+            'value' => 350,
+            'paid' => true,
+            'isFixed' => true,
+        ]);
+    }
+
     public function test_balances_include_every_member_and_sum_to_zero(): void
     {
         Carbon::setTestNow('2026-08-19');
@@ -200,6 +261,45 @@ class ExpenseControllerSummaryTest extends TestCase
             ->assertJsonFragment(['user_id' => $payer->id, 'balance' => 100])
             ->assertJsonFragment(['user_id' => $participant->id, 'balance' => -100])
             ->assertJsonFragment(['user_id' => $uninvolved->id, 'balance' => 0]);
+    }
+
+    public function test_balances_are_unchanged_after_the_fixed_occurrence_quota_is_materialized(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 200,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 200]);
+
+        $before = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $before->assertStatus(200);
+        $balancesBefore = $before->json('balances');
+
+        // Materializa a ocorrência do mês corrente (agosto) exatamente como
+        // materializeFixedOccurrenceQuota faria — a origem do dado (Quota
+        // real em vez de projeção ao vivo) muda, mas o valor é o mesmo.
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 200]);
+
+        $after = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $after->assertStatus(200);
+        $balancesAfter = $after->json('balances');
+
+        $this->assertSame($balancesBefore, $balancesAfter);
+        $after->assertJsonFragment(['user_id' => $payer->id, 'balance' => 100])
+            ->assertJsonFragment(['user_id' => $participant->id, 'balance' => -100]);
     }
 
     public function test_cycles_ago_navigates_to_previous_closed_cycle(): void
