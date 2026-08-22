@@ -66,6 +66,33 @@ class ExpenseControllerSummaryTest extends TestCase
             ->assertJsonPath('totals.pending', 0);
     }
 
+    public function test_expense_entries_include_creditor_and_creator_ids(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $creator->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-08-05',
+            'user_creator_id' => $creator->id,
+            'user_payer_id' => $payer->id,
+        ]);
+        $expense->payers()->sync([$payer->id, $creator->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'userPayerId' => $payer->id,
+            'userCreatorId' => $creator->id,
+        ]);
+    }
+
     public function test_future_cycle_without_expenses_returns_zero_totals(): void
     {
         Carbon::setTestNow('2026-08-19');

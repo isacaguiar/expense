@@ -644,6 +644,12 @@ class ExpenseController extends Controller
                 'payerName' => $entry['expense']->payer->name ?? null,
                 'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
                 'isFixed' => $entry['expense']->expense_type === 'FIXED',
+                // IDs (não só nomes) — o frontend precisa deles pra decidir se o
+                // usuário logado é o credor (pode pagar) ou dono (pode editar/
+                // excluir: authorizeExpenseOwner() aceita criador OU credor),
+                // sem depender de comparar nomes.
+                'userPayerId' => $entry['expense']->user_payer_id,
+                'userCreatorId' => $entry['expense']->user_creator_id,
             ])
             ->sortBy('date')
             ->values()
