@@ -236,6 +236,45 @@ class ExpenseControllerSummaryTest extends TestCase
             ->assertJsonFragment(['user_id' => $uninvolved->id, 'balance' => 0]);
     }
 
+    public function test_balances_are_unchanged_after_the_fixed_occurrence_quota_is_materialized(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 200,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 200]);
+
+        $before = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $before->assertStatus(200);
+        $balancesBefore = $before->json('balances');
+
+        // Materializa a ocorrência do mês corrente (agosto) exatamente como
+        // materializeFixedOccurrenceQuota faria — a origem do dado (Quota
+        // real em vez de projeção ao vivo) muda, mas o valor é o mesmo.
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 200]);
+
+        $after = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $after->assertStatus(200);
+        $balancesAfter = $after->json('balances');
+
+        $this->assertSame($balancesBefore, $balancesAfter);
+        $after->assertJsonFragment(['user_id' => $payer->id, 'balance' => 100])
+            ->assertJsonFragment(['user_id' => $participant->id, 'balance' => -100]);
+    }
+
     public function test_cycles_ago_navigates_to_previous_closed_cycle(): void
     {
         Carbon::setTestNow('2026-08-19');
