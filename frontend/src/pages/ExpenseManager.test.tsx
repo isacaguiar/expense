@@ -178,7 +178,7 @@ describe('ExpenseManager - campos completos e ações condicionais', () => {
     vi.mocked(axios.get).mockReset();
   });
 
-  it('shows status chip, credor and pagadores', async () => {
+  it('shows status chip and credor with an initials avatar', async () => {
     mockGetResponses([
       {
         id: 20,
@@ -199,10 +199,11 @@ describe('ExpenseManager - campos completos e ações condicionais', () => {
     );
 
     expect(await screen.findByText('Paga')).toBeInTheDocument();
-    // Colunas "Credor"/"Pagadores" da tabela já dão o rótulo — a célula só
-    // tem o valor, sem o prefixo que existia no card.
+    // Coluna "Credor" já dá o rótulo — a célula só tem o avatar de iniciais
+    // e o valor, sem prefixo. "Pagadores" não é mais coluna da tabela (fica
+    // acessível pelo modal de detalhes, TASK-007).
     expect(screen.getByText('Isac')).toBeInTheDocument();
-    expect(screen.getByText('Isac, Maria')).toBeInTheDocument();
+    expect(screen.getByText('I')).toBeInTheDocument();
   });
 
   it('shows edit, delete and pay icons when the user owns and is the creditor of a pending variable expense', async () => {

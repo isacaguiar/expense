@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
+  Avatar,
   Box,
   Button,
   Chip,
@@ -40,6 +41,8 @@ import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import SummarySidePanel from '../components/SummarySidePanel';
+import { getInitials } from '../layouts/group/getInitials';
+import { brandColors } from '../theme/brandColors';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -388,9 +391,7 @@ const ExpenseManager: React.FC = () => {
                       <TableCell>Tipo</TableCell>
                       <TableCell>Despesa</TableCell>
                       <TableCell>Valor</TableCell>
-                      <TableCell>Data</TableCell>
                       <TableCell>Credor</TableCell>
-                      <TableCell>Pagadores</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell align="right">Ações</TableCell>
                     </TableRow>
@@ -415,14 +416,21 @@ const ExpenseManager: React.FC = () => {
                         <TableCell>
                           R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </TableCell>
-                        <TableCell>{formatDate(exp.date)}</TableCell>
-                        <TableCell>{exp.payerName || '-'}</TableCell>
-                        <TableCell sx={{ maxWidth: 160 }}>
-                          <Tooltip title={exp.participants.join(', ') || 'Ninguém'}>
-                            <Typography variant="body2" noWrap>
-                              {exp.participants.join(', ') || '-'}
-                            </Typography>
-                          </Tooltip>
+                        <TableCell>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Avatar
+                              sx={{
+                                bgcolor: brandColors.primaryLight,
+                                color: brandColors.primary,
+                                width: 28,
+                                height: 28,
+                                fontSize: '0.75rem'
+                              }}
+                            >
+                              {getInitials(exp.payerName || '-')}
+                            </Avatar>
+                            {exp.payerName || '-'}
+                          </Box>
                         </TableCell>
                         <TableCell>
                           <Chip
