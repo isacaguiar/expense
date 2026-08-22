@@ -11,9 +11,7 @@ import {
   List,
   ListItem,
   ListItemIcon,
-  ListItemAvatar,
   ListItemText,
-  Avatar,
   Chip
 } from '@mui/material';
 import { useParams } from 'react-router-dom';
@@ -21,9 +19,8 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
-import { getInitials } from '../layouts/group/getInitials';
-import { brandColors } from '../theme/brandColors';
 import { useGroupCycle, cycleStatusChip } from '../hooks/useGroupCycle';
+import BalanceCards from '../components/BalanceCards';
 
 // new Date('YYYY-MM-DD') interpreta a string como UTC-meia-noite, o que desloca
 // a data em 1 dia para trás em fusos negativos (ex.: America/Sao_Paulo) —
@@ -172,24 +169,7 @@ const GroupSummary: React.FC = () => {
           <Typography variant="h6" gutterBottom>
             Saldos por pessoa
           </Typography>
-          <Paper elevation={3}>
-            <List disablePadding>
-              {summary.balances.map(balance => (
-                <ListItem key={balance.user_id} divider>
-                  <ListItemAvatar>
-                    <Avatar sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.85rem' }}>
-                      {getInitials(balance.name)}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText primary={balance.name} />
-                  <Typography color={balance.balance > 0 ? 'success.main' : balance.balance < 0 ? 'error.main' : 'text.secondary'}>
-                    R$ {formatMoney(Math.abs(balance.balance))}
-                    {balance.balance > 0 ? ' a receber' : balance.balance < 0 ? ' a pagar' : ''}
-                  </Typography>
-                </ListItem>
-              ))}
-            </List>
-          </Paper>
+          <BalanceCards balances={summary.balances} />
         </>
       ) : null}
     </>
