@@ -35,6 +35,11 @@ class Group extends Model
         return $this->hasMany(Participation::class, 'group_id');
     }
 
+    public function cycleSnapshots()
+    {
+        return $this->hasMany(GroupCycleSnapshot::class, 'group_id');
+    }
+
     public function members()
     {
         return $this->belongsToMany(User::class, 'ex_groups_members', 'group_id', 'user_id');
