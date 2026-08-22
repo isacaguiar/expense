@@ -25,10 +25,34 @@ vi.mock('react-router-dom', async importOriginal => {
   };
 });
 
-function mockGetResponses(expensesList: unknown[] = []) {
+type SummaryExpenseFixture = {
+  id: number;
+  description: string;
+  date: string;
+  value: number;
+  paid?: boolean;
+  payerName?: string | null;
+  participants?: string[];
+  isFixed?: boolean;
+};
+
+function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
+  return {
+    cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open', ...cycleOverride },
+    totals: { total: 0, paid: 0, pending: 0 },
+    expenses: expensesList.map(exp => ({
+      paid: false,
+      participants: [],
+      ...exp,
+    })),
+    balances: [],
+  };
+}
+
+function mockGetResponses(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
-    if (url.includes('/expenses')) {
-      return Promise.resolve({ data: expensesList });
+    if (url.includes('/expenses/summary')) {
+      return Promise.resolve({ data: summaryResponse(expensesList, cycleOverride) });
     }
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
@@ -58,7 +82,7 @@ describe('ExpenseManager - Nova Despesa', () => {
 });
 
 describe('ExpenseManager - listagem em cards', () => {
-  const expenses = [
+  const expenses: SummaryExpenseFixture[] = [
     { id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true },
     { id: 10, description: 'Mercado', value: 150, date: '2026-08-05', payerName: 'João', isFixed: false },
   ];
@@ -130,14 +154,70 @@ describe('ExpenseManager - listagem em cards', () => {
   });
 });
 
+describe('ExpenseManager - navegação por competência', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    mockGetResponses([], { start: '2026-08-01', end: '2026-08-31', status: 'open' });
+  });
+
+  it('shows the current cycle range in the header', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/01 de ago.*31 de ago/)).toBeInTheDocument();
+  });
+
+  it('requests the previous cycle when the back arrow is clicked', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/01 de ago/);
+    await user.click(screen.getByLabelText('Competência anterior'));
+
+    await waitFor(() => {
+      const lastCall = vi.mocked(axios.get).mock.calls.at(-1);
+      expect(lastCall?.[0]).toContain('/expenses/summary');
+      expect((lastCall?.[1] as { params: { cycles_ago: number } }).params.cycles_ago).toBe(1);
+    });
+  });
+
+  it('requests the next cycle when the forward arrow is clicked, even past the current cycle', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/01 de ago/);
+    await user.click(screen.getByLabelText('Próxima competência'));
+
+    await waitFor(() => {
+      const lastCall = vi.mocked(axios.get).mock.calls.at(-1);
+      expect(lastCall?.[0]).toContain('/expenses/summary');
+      expect((lastCall?.[1] as { params: { cycles_ago: number } }).params.cycles_ago).toBe(-1);
+    });
+  });
+});
+
 describe('ExpenseManager - remover despesa Fixa', () => {
   beforeEach(() => {
     vi.mocked(axios.get).mockReset();
     vi.mocked(axios.post).mockReset();
     vi.mocked(axios.post).mockResolvedValue({ data: {} });
-    mockGetResponses([
-      { id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true },
-    ]);
+    mockGetResponses(
+      [{ id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true }],
+      { start: '2026-08-01', end: '2026-08-31', status: 'open' }
+    );
   });
 
   it('shows the expense description in the confirmation dialog and a success toast after removing', async () => {
@@ -158,7 +238,7 @@ describe('ExpenseManager - remover despesa Fixa', () => {
     expect(await screen.findByText('Despesa fixa removida com sucesso.')).toBeInTheDocument();
   });
 
-  it('sends the currently viewed month when removing "a partir deste mês"', async () => {
+  it('sends the currently viewed cycle\'s month when removing "a partir deste mês"', async () => {
     render(
       <MemoryRouter>
         <ExpenseManager />
@@ -174,8 +254,7 @@ describe('ExpenseManager - remover despesa Fixa', () => {
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
     const [url, payload] = lastPostCall<StopRecurrencePayload>();
     expect(url).toContain('/api/expenses/9/stop-recurrence');
-    const now = new Date();
-    expect(payload).toEqual({ year: now.getFullYear(), month: now.getMonth() + 1 });
+    expect(payload).toEqual({ year: 2026, month: 8 });
   });
 
   it('sends the following month when removing "a partir do mês que vem"', async () => {
@@ -193,8 +272,6 @@ describe('ExpenseManager - remover despesa Fixa', () => {
 
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
     const [, payload] = lastPostCall<StopRecurrencePayload>();
-    const next = new Date();
-    next.setMonth(next.getMonth() + 1);
-    expect(payload).toEqual({ year: next.getFullYear(), month: next.getMonth() + 1 });
+    expect(payload).toEqual({ year: 2026, month: 9 });
   });
 });
