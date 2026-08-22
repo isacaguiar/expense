@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20260822
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-181 | `GroupMemberController@store`: rejeitar com 404 a adição de membro a grupo com `deleted=true` | backend | plan.md §3 | nenhum | Pendente |
+| TASK-181 | `GroupMemberController@store`: rejeitar com 404 a adição de membro a grupo com `deleted=true` | backend | plan.md §3 | nenhum | Implementada na branch da feature |
 | TASK-182 | `ExpenseController@store`, `@close`, `@reopen`: rejeitar com 404 quando o grupo tem `deleted=true` | backend | plan.md §3 | nenhum | Pendente |
 | TASK-183 | `Group.php`: relação `cycleSnapshots()`; `GroupController@destroy`: ramificar exclusão física (sem `ex_group_cycle_snapshots` para o grupo, apaga em cascata dentro de transação) vs. lógica (mantém `deleted=true`) | backend | plan.md §2 | nenhum | Pendente |
 | TASK-184 | `GroupController@index`: expor `cycle_snapshots_exists` via `withExists('cycleSnapshots')` | backend | plan.md §2 | nenhum | Pendente |
