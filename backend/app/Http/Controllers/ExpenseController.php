@@ -155,6 +155,14 @@ class ExpenseController extends Controller
             return $response;
         }
 
+        // Ao contrário de `update()`, aqui não há bypass de FIXED: excluir
+        // apaga a definição inteira (todas as ocorrências, inclusive as já
+        // pagas), não só o template pra frente — se qualquer ocorrência está
+        // paga, é preciso desfazer o pagamento antes.
+        if ($expense->quotas()->where('paid', true)->exists()) {
+            return response()->json(['error' => 'Não é possível excluir uma despesa já paga. Desfaça o pagamento primeiro.'], 422);
+        }
+
         $expense->update(['deleted' => true]);
 
         return response()->json(['message' => 'Despesa marcada como deletada.']);
