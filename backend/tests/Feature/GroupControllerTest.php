@@ -113,6 +113,40 @@ class GroupControllerTest extends TestCase
         $response->assertStatus(200)->assertJsonFragment(['id' => $group->id, 'expenses_max_date_payment' => null]);
     }
 
+    public function test_index_includes_cycle_snapshots_exists_true_when_group_has_closed_cycle(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo com fechamento']);
+        $group->members()->attach($member->id);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => [],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups');
+
+        $response->assertStatus(200)->assertJsonFragment(['id' => $group->id, 'cycle_snapshots_exists' => true]);
+    }
+
+    public function test_index_includes_cycle_snapshots_exists_false_without_closed_cycle(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo sem fechamento']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups');
+
+        $response->assertStatus(200)->assertJsonFragment(['id' => $group->id, 'cycle_snapshots_exists' => false]);
+    }
+
     public function test_non_member_cannot_view_group(): void
     {
         $outsider = User::factory()->create();

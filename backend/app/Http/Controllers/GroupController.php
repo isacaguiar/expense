@@ -22,6 +22,7 @@ class GroupController extends Controller
             })
             ->with('creator:id,email', 'members:id,name,email')
             ->withMax('expenses', 'date_payment')
+            ->withExists('cycleSnapshots')
             ->get();
 
         /*$user = auth()->user();
