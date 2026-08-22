@@ -31,6 +31,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { useGroupCycle } from '../hooks/useGroupCycle';
+import BalanceCards from '../components/BalanceCards';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -148,78 +149,91 @@ const ExpenseManager: React.FC = () => {
         </IconButton>
       </Box>
 
-      {/* Busca e filtro por tipo */}
-      <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
-        <TextField
-          label="Buscar despesa"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          size="small"
-          sx={{ minWidth: 240 }}
-        />
-        <ToggleButtonGroup
-          value={typeFilter}
-          exclusive
-          size="small"
-          onChange={(_, value) => value && setTypeFilter(value)}
-        >
-          <ToggleButton value="all">Todas</ToggleButton>
-          <ToggleButton value="fixed">Fixas</ToggleButton>
-          <ToggleButton value="variable">Variáveis</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
-
-      {/* Lista de despesas */}
+      {/* Grid principal: listagem à esquerda, saldo por pessoa à direita */}
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
           <CircularProgress />
         </Box>
       ) : error ? (
         <Typography color="error">{error}</Typography>
-      ) : expenses.length === 0 ? (
-        <Typography color="text.secondary">Nenhuma despesa encontrada para esta competência.</Typography>
-      ) : filteredExpenses.length === 0 ? (
-        <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
       ) : (
-        <Grid container spacing={2}>
-          {filteredExpenses.map(exp => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={exp.id}>
-              <Card elevation={3} sx={{ borderRadius: 2 }}>
-                <CardActionArea component={Link} to={`/groups/${groupId}/expenses/${exp.id}`}>
-                  <CardContent>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {exp.isFixed ? (
-                          <AutorenewOutlinedIcon color="action" fontSize="small" />
-                        ) : (
-                          <ReceiptOutlinedIcon color="action" fontSize="small" />
-                        )}
-                        <Typography variant="subtitle1">{exp.description}</Typography>
-                      </Box>
-                      <Chip label={exp.isFixed ? 'Fixa' : 'Variável'} size="small" />
-                    </Box>
-                    <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-                      R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatDate(exp.date)} · Pago por {exp.payerName || '-'}
-                    </Typography>
-                  </CardContent>
-                </CardActionArea>
-                {exp.isFixed && (
-                  <CardActions>
-                    <IconButton
-                      aria-label="Remover despesa fixa"
-                      size="small"
-                      onClick={() => setRemoveExpenseId(exp.id)}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </CardActions>
-                )}
-              </Card>
-            </Grid>
-          ))}
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, md: 8 }}>
+            {/* Busca e filtro por tipo */}
+            <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
+              <TextField
+                label="Buscar despesa"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                size="small"
+                sx={{ minWidth: 240 }}
+              />
+              <ToggleButtonGroup
+                value={typeFilter}
+                exclusive
+                size="small"
+                onChange={(_, value) => value && setTypeFilter(value)}
+              >
+                <ToggleButton value="all">Todas</ToggleButton>
+                <ToggleButton value="fixed">Fixas</ToggleButton>
+                <ToggleButton value="variable">Variáveis</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {expenses.length === 0 ? (
+              <Typography color="text.secondary">Nenhuma despesa encontrada para esta competência.</Typography>
+            ) : filteredExpenses.length === 0 ? (
+              <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
+            ) : (
+              <Grid container spacing={2}>
+                {filteredExpenses.map(exp => (
+                  <Grid size={{ xs: 12, sm: 6 }} key={exp.id}>
+                    <Card elevation={3} sx={{ borderRadius: 2 }}>
+                      <CardActionArea component={Link} to={`/groups/${groupId}/expenses/${exp.id}`}>
+                        <CardContent>
+                          <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                            <Box display="flex" alignItems="center" gap={1}>
+                              {exp.isFixed ? (
+                                <AutorenewOutlinedIcon color="action" fontSize="small" />
+                              ) : (
+                                <ReceiptOutlinedIcon color="action" fontSize="small" />
+                              )}
+                              <Typography variant="subtitle1">{exp.description}</Typography>
+                            </Box>
+                            <Chip label={exp.isFixed ? 'Fixa' : 'Variável'} size="small" />
+                          </Box>
+                          <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
+                            R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {formatDate(exp.date)} · Pago por {exp.payerName || '-'}
+                          </Typography>
+                        </CardContent>
+                      </CardActionArea>
+                      {exp.isFixed && (
+                        <CardActions>
+                          <IconButton
+                            aria-label="Remover despesa fixa"
+                            size="small"
+                            onClick={() => setRemoveExpenseId(exp.id)}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </CardActions>
+                      )}
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            )}
+          </Grid>
+
+          <Grid size={{ xs: 12, md: 4 }}>
+            <Typography variant="h6" gutterBottom>
+              Saldo por pessoa
+            </Typography>
+            {summary && <BalanceCards balances={summary.balances} />}
+          </Grid>
         </Grid>
       )}
 
