@@ -243,6 +243,40 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
         $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 350]);
     }
 
+    public function test_destroy_rejects_when_expense_is_paid(): void
+    {
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creator->id);
+        $expense = $this->createExpense($group, $creator, $creator);
+        $expense->quotas()->create(['date_expected' => '2026-08-15', 'number' => 1, 'paid' => true, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+    }
+
+    public function test_destroy_rejects_fixed_expense_when_any_occurrence_is_paid(): void
+    {
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creator->id);
+        $expense = $this->createExpense($group, $creator, $creator, [
+            'expense_type' => 'FIXED',
+            'date_payment' => '2026-06-05',
+            'total_value' => 300,
+        ]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => true, 'value_quota' => 300]);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+    }
+
     public function test_non_member_cannot_destroy_expense(): void
     {
         $creator = User::factory()->create();
