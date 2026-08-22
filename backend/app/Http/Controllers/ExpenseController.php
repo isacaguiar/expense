@@ -530,7 +530,7 @@ class ExpenseController extends Controller
                 $query->whereNull('fixed_recurrence_ends_at')
                     ->orWhere('fixed_recurrence_ends_at', '>', $start);
             })
-            ->with(['payer', 'payers'])
+            ->with(['payer', 'payers', 'quotas'])
             ->get();
 
         foreach ($fixedCandidates as $expense) {
@@ -544,11 +544,16 @@ class ExpenseController extends Controller
                     || $expense->fixed_recurrence_ends_at->gt($occurrence);
 
                 if ($occurrence->between($start, $end) && $recurrenceActive) {
+                    // Se a ocorrência já foi congelada (materializeFixedOccurrenceQuota,
+                    // chamado no fechamento ou no pagamento), usa o valor/status
+                    // persistidos; senão projeta ao vivo a partir do total_value atual.
+                    $quota = $expense->quotas->first(fn (Quota $quota) => $quota->date_expected->isSameDay($occurrence));
+
                     $entries->push([
                         'expense' => $expense,
                         'date' => $occurrence,
-                        'value' => (float) $expense->total_value,
-                        'paid' => false,
+                        'value' => (float) ($quota->value_quota ?? $expense->total_value),
+                        'paid' => (bool) ($quota->paid ?? false),
                     ]);
                 }
 
