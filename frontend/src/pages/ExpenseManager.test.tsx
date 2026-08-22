@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -141,7 +141,7 @@ describe('ExpenseManager - listagem em cards', () => {
     expect(vi.mocked(axios.get).mock.calls.filter(call => (call[0] as string).includes('/expenses/summary'))).toHaveLength(1);
   });
 
-  it('displays the expense date without an off-by-one-day shift in negative timezones', async () => {
+  it('displays the expense date in the details modal without an off-by-one-day shift in negative timezones', async () => {
     mockGetResponses([
       { id: 11, description: 'Assinatura', value: 50, date: '2026-07-16', payerName: 'Isac', isFixed: false },
     ]);
@@ -152,8 +152,12 @@ describe('ExpenseManager - listagem em cards', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('Assinatura')).toBeInTheDocument();
-    expect(screen.getByText(/16\/07\/2026/)).toBeInTheDocument();
+    await screen.findByText('Assinatura');
+    // Data não é mais coluna da tabela (TASK-006) — só aparece no modal de
+    // detalhes (TASK-007), aberto pelo ícone "Ver detalhes".
+    await userEvent.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+    expect(await screen.findByText(/16\/07\/2026/)).toBeInTheDocument();
   });
 
   it('filters by type (Fixas/Variáveis) on the client side', async () => {
@@ -917,5 +921,54 @@ describe('ExpenseManager - aba "À pagar" do painel lateral', () => {
     expect(screen.getByText('QA Despesas')).toBeInTheDocument();
     expect(screen.getByText('R$ 550,00')).toBeInTheDocument();
     expect(screen.getByText(/deve pagar/)).toBeInTheDocument();
+  });
+});
+
+describe('ExpenseManager - modal de detalhes', () => {
+  beforeEach(() => {
+    navigateMock.mockClear();
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.delete).mockReset();
+  });
+
+  it('shows description, type, status, value, date, credor and pagadores, and closes without navigating or changing data', async () => {
+    mockGetResponses([
+      {
+        id: 60,
+        description: 'Internet',
+        value: 120,
+        date: '2026-08-05',
+        payerName: 'Isac',
+        participants: ['Isac', 'Maria'],
+        paid: false,
+        isFixed: true,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Internet');
+    await userEvent.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+    expect(await screen.findByText('Detalhes da despesa')).toBeInTheDocument();
+    const modal = within(screen.getByRole('dialog'));
+    expect(modal.getByText('R$ 120,00')).toBeInTheDocument();
+    expect(modal.getByText(/05\/08\/2026/)).toBeInTheDocument();
+    expect(modal.getByText('Credor: Isac')).toBeInTheDocument();
+    expect(modal.getByText('Isac, Maria')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Detalhes da despesa')).not.toBeInTheDocument();
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(axios.post).not.toHaveBeenCalled();
+    expect(axios.delete).not.toHaveBeenCalled();
   });
 });

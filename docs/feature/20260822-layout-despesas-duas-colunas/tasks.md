@@ -12,7 +12,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-004 | Adaptar os 2 testes existentes afetados pela tabela e pelo painel novo | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-005 | Teste novo: aba "À pagar" com `settlements` real desta página | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-006 | Reestruturar colunas da tabela (remover Data/Pagadores, avatar no Credor) | frontend | plan.md §5 | nenhum | Concluída |
-| TASK-007 | Ícone "Ver detalhes" com modal de detalhamento da despesa | frontend | plan.md §5 | nenhum | Pendente |
+| TASK-007 | Ícone "Ver detalhes" com modal de detalhamento da despesa | frontend | plan.md §5 | nenhum | Concluída |
 
 ## Critérios de aceite
 
