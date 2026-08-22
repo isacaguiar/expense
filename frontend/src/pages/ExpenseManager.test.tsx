@@ -659,3 +659,124 @@ describe('ExpenseManager - fechar/reabrir mês', () => {
     expect(await screen.findByText('Falha genérica de teste.')).toBeInTheDocument();
   });
 });
+
+describe('ExpenseManager - marcar como paga / desfazer pagamento', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+  });
+
+  it('calls POST .../pay and shows a success toast when marking as paid', async () => {
+    mockGetResponses([
+      {
+        id: 40,
+        description: 'Mercado',
+        value: 300,
+        date: '2026-08-10',
+        payerName: 'Isac',
+        paid: false,
+        isFixed: false,
+        userPayerId: CURRENT_USER_ID,
+        userCreatorId: CURRENT_USER_ID,
+      },
+    ]);
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    const [url] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/expenses/40/pay');
+    expect(await screen.findByText('Despesa marcada como paga.')).toBeInTheDocument();
+  });
+
+  it('calls POST .../unpay and shows a success toast when undoing payment', async () => {
+    mockGetResponses([
+      {
+        id: 41,
+        description: 'Mercado',
+        value: 300,
+        date: '2026-08-10',
+        payerName: 'Isac',
+        paid: true,
+        isFixed: false,
+        userPayerId: CURRENT_USER_ID,
+        userCreatorId: CURRENT_USER_ID,
+      },
+    ]);
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Desfazer pagamento' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    const [url] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/expenses/41/unpay');
+    expect(await screen.findByText('Pagamento desfeito.')).toBeInTheDocument();
+  });
+
+  it('does not show "Desfazer pagamento" for someone who is not the creditor', async () => {
+    mockGetResponses([
+      {
+        id: 42,
+        description: 'Mercado',
+        value: 300,
+        date: '2026-08-10',
+        payerName: 'Outra Pessoa',
+        paid: true,
+        isFixed: false,
+        userPayerId: CURRENT_USER_ID + 1,
+        userCreatorId: CURRENT_USER_ID,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Mercado');
+    expect(screen.queryByRole('button', { name: 'Desfazer pagamento' })).not.toBeInTheDocument();
+  });
+
+  it('shows the error message returned by the API when marking as paid fails', async () => {
+    mockGetResponses([
+      {
+        id: 43,
+        description: 'Mercado',
+        value: 300,
+        date: '2026-08-10',
+        payerName: 'Isac',
+        paid: false,
+        isFixed: false,
+        userPayerId: CURRENT_USER_ID,
+        userCreatorId: CURRENT_USER_ID,
+      },
+    ]);
+    vi.mocked(axios.post).mockRejectedValue({
+      response: { data: { error: 'Não é possível alterar dados de uma competência já fechada.' } },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+
+    expect(await screen.findByText('Não é possível alterar dados de uma competência já fechada.')).toBeInTheDocument();
+  });
+});
