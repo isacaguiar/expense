@@ -559,6 +559,31 @@ class ExpenseController extends Controller
         return $entries;
     }
 
+    /**
+     * Congela a ocorrência mensal de uma despesa FIXED numa Quota real, usando
+     * o `total_value` vigente no momento da chamada. Chamar de novo para o
+     * mesmo mês não duplica — devolve a Quota já materializada. A partir daqui,
+     * essa competência passa a ler o valor congelado (via `collectCycleEntries`),
+     * independente de o `total_value` da despesa mudar depois.
+     */
+    private function materializeFixedOccurrenceQuota(Expense $expense, Carbon $occurrenceDate): Quota
+    {
+        $existing = $expense->quotas()
+            ->whereDate('date_expected', $occurrenceDate->toDateString())
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return $expense->quotas()->create([
+            'date_expected' => $occurrenceDate->toDateString(),
+            'number' => 1,
+            'paid' => false,
+            'value_quota' => $expense->total_value,
+        ]);
+    }
+
     private function findExpenseForMember($id): Expense
     {
         $expense = Expense::where('deleted', false)->findOrFail($id);
