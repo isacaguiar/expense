@@ -130,56 +130,62 @@ const GroupSummary: React.FC = () => {
             </Grid>
           </Grid>
 
-          <Typography variant="h6" gutterBottom>
-            Despesas do ciclo
-          </Typography>
-          {summary.expenses.length === 0 ? (
-            <Typography color="text.secondary" mb={3}>
-              Nenhuma despesa neste ciclo.
-            </Typography>
-          ) : (
-            <Paper elevation={3} sx={{ mb: 3 }}>
-              <List disablePadding>
-                {summary.expenses.map(expense => (
-                  <ListItem key={expense.id} divider>
-                    <ListItemIcon sx={{ minWidth: 40 }}>
-                      {expense.isFixed ? (
-                        <AutorenewOutlinedIcon color="action" fontSize="small" />
-                      ) : (
-                        <ReceiptOutlinedIcon color="action" fontSize="small" />
-                      )}
-                    </ListItemIcon>
-                    <ListItemText
-                      primary={`${expense.description} — R$ ${formatMoney(expense.value)}`}
-                      secondary={
-                        `${formatDate(expense.date)} · Pago por ${expense.payerName ?? '-'} · ` +
-                        `Dividido entre ${expense.participants.length} pessoa${expense.participants.length === 1 ? '' : 's'}`
-                      }
-                    />
-                    <Chip
-                      label={expense.paid ? 'Paga' : 'Pendente'}
-                      color={expense.paid ? 'success' : 'warning'}
-                      size="small"
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
-          )}
-
-          <Typography variant="h6" gutterBottom>
-            Saldos por pessoa
-          </Typography>
-          <BalanceCards balances={summary.balances} />
-
-          {summary.settlements.length > 0 && (
-            <>
-              <Typography variant="h6" gutterBottom mt={3}>
-                Quem paga a quem
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, sm: 12, lg: 8 }}>
+              <Typography variant="h6" gutterBottom>
+                Despesas do ciclo
               </Typography>
-              <SettlementList settlements={summary.settlements} balances={summary.balances} />
-            </>
-          )}
+              {summary.expenses.length === 0 ? (
+                <Typography color="text.secondary" mb={3}>
+                  Nenhuma despesa neste ciclo.
+                </Typography>
+              ) : (
+                <Paper elevation={3} sx={{ mb: 3 }}>
+                  <List disablePadding>
+                    {summary.expenses.map(expense => (
+                      <ListItem key={expense.id} divider>
+                        <ListItemIcon sx={{ minWidth: 40 }}>
+                          {expense.isFixed ? (
+                            <AutorenewOutlinedIcon color="action" fontSize="small" />
+                          ) : (
+                            <ReceiptOutlinedIcon color="action" fontSize="small" />
+                          )}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={`${expense.description} — R$ ${formatMoney(expense.value)}`}
+                          secondary={
+                            `${formatDate(expense.date)} · Pago por ${expense.payerName ?? '-'} · ` +
+                            `Dividido entre ${expense.participants.length} pessoa${expense.participants.length === 1 ? '' : 's'}`
+                          }
+                        />
+                        <Chip
+                          label={expense.paid ? 'Paga' : 'Pendente'}
+                          color={expense.paid ? 'success' : 'warning'}
+                          size="small"
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Paper>
+              )}
+            </Grid>
+
+            <Grid size={{ xs: 12, sm: 12, lg: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                Saldos por pessoa
+              </Typography>
+              <BalanceCards balances={summary.balances} />
+
+              {summary.settlements.length > 0 && (
+                <>
+                  <Typography variant="h6" gutterBottom mt={3}>
+                    Quem paga a quem
+                  </Typography>
+                  <SettlementList settlements={summary.settlements} balances={summary.balances} />
+                </>
+              )}
+            </Grid>
+          </Grid>
         </>
       ) : null}
     </>
