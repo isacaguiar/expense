@@ -5,11 +5,11 @@ import RequireAuth from './RequireAuth';
 
 const renderAtDashboard = () =>
   render(
-    <MemoryRouter initialEntries={['/dashboard']}>
+    <MemoryRouter initialEntries={['/meus-grupos']}>
       <Routes>
         <Route path="/" element={<div>Login Page</div>} />
         <Route element={<RequireAuth />}>
-          <Route path="/dashboard" element={<div>Protected Content</div>} />
+          <Route path="/meus-grupos" element={<div>Protected Content</div>} />
         </Route>
       </Routes>
     </MemoryRouter>

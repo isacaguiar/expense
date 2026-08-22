@@ -25,10 +25,10 @@ describe('SimpleShellLayout', () => {
 
   it('renders the wordmark, the outlet content and the logged-in user name/initials', async () => {
     render(
-      <MemoryRouter initialEntries={['/dashboard']}>
+      <MemoryRouter initialEntries={['/meus-grupos']}>
         <Routes>
           <Route element={<SimpleShellLayout />}>
-            <Route path="/dashboard" element={<div>Conteúdo Dashboard</div>} />
+            <Route path="/meus-grupos" element={<div>Conteúdo Dashboard</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -43,10 +43,10 @@ describe('SimpleShellLayout', () => {
 
   it('shows a generic menu (same visual pattern as the group shell), but no group selector', async () => {
     render(
-      <MemoryRouter initialEntries={['/dashboard']}>
+      <MemoryRouter initialEntries={['/meus-grupos']}>
         <Routes>
           <Route element={<SimpleShellLayout />}>
-            <Route path="/dashboard" element={<div>Conteúdo Dashboard</div>} />
+            <Route path="/meus-grupos" element={<div>Conteúdo Dashboard</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -64,10 +64,10 @@ describe('SimpleShellLayout', () => {
 
   it('shows "Relatórios" as a top-level placeholder item', async () => {
     render(
-      <MemoryRouter initialEntries={['/dashboard']}>
+      <MemoryRouter initialEntries={['/meus-grupos']}>
         <Routes>
           <Route element={<SimpleShellLayout />}>
-            <Route path="/dashboard" element={<div>Conteúdo Dashboard</div>} />
+            <Route path="/meus-grupos" element={<div>Conteúdo Dashboard</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -100,17 +100,17 @@ describe('SimpleShellLayout', () => {
     const user = userEvent.setup();
     await user.click(screen.getByText('Configurações'));
 
-    expect(screen.getByRole('link', { name: 'Meus Grupos' })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: 'Meus Grupos' })).toHaveAttribute('href', '/meus-grupos');
     expect(screen.getByRole('link', { name: 'Minha Conta' })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('link', { name: 'Alterar Senha' })).toHaveAttribute('href', '/change-password');
   });
 
   it('derives the header title from the active sidebar item, even when nested', async () => {
     render(
-      <MemoryRouter initialEntries={['/dashboard']}>
+      <MemoryRouter initialEntries={['/meus-grupos']}>
         <Routes>
           <Route element={<SimpleShellLayout />}>
-            <Route path="/dashboard" element={<div>Conteúdo Dashboard</div>} />
+            <Route path="/meus-grupos" element={<div>Conteúdo Dashboard</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -121,10 +121,10 @@ describe('SimpleShellLayout', () => {
 
   it('logs out when "Sair" is clicked, as a top-level item (not nested)', async () => {
     render(
-      <MemoryRouter initialEntries={['/dashboard']}>
+      <MemoryRouter initialEntries={['/meus-grupos']}>
         <Routes>
           <Route element={<SimpleShellLayout />}>
-            <Route path="/dashboard" element={<div>Conteúdo Dashboard</div>} />
+            <Route path="/meus-grupos" element={<div>Conteúdo Dashboard</div>} />
           </Route>
         </Routes>
       </MemoryRouter>

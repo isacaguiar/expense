@@ -82,7 +82,7 @@ describe('GroupShellLayout', () => {
 
     await user.click(screen.getByText('Configurações'));
 
-    expect(screen.getByRole('link', { name: 'Meus Grupos' })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: 'Meus Grupos' })).toHaveAttribute('href', '/meus-grupos');
     expect(screen.getByRole('link', { name: 'Minha Conta' })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('link', { name: 'Alterar Senha' })).toHaveAttribute('href', '/change-password');
   });
