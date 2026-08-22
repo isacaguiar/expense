@@ -52,11 +52,7 @@
 
     <p>
       <strong>{{ $inviterName }}</strong>
-      @isset($groupName)
-        convidou você para participar do grupo <strong>{{ $groupName }}</strong> na plataforma Novemax.
-      @else
-        convidou você para participar da plataforma Novemax.
-      @endisset
+      convidou você para participar do grupo <strong>{{ $groupName }}</strong> na plataforma Novemax.
     </p>
 
     @if($inviteMessage)
