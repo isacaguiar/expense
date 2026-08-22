@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import GroupForm from './pages/GroupForm';
@@ -35,7 +35,8 @@ const App = () => {
 
         {/* Sem grupo selecionado: cabeçalho simples (SimpleShellLayout) */}
         <Route element={<SimpleShellLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/meus-grupos" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Navigate to="/meus-grupos" replace />} />
           <Route path="/groups/new" element={<GroupForm />} />
           <Route path="/expenses" element={<ExpensesEntry />} />
           <Route path="/summary" element={<SummaryEntry />} />
