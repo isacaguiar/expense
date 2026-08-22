@@ -23,7 +23,7 @@ const groups = [
   { id: 2, name: 'Grupo B' },
 ];
 
-type CycleStatus = 'closed' | 'open' | 'future';
+type CycleStatus = 'closed' | 'open' | 'future' | 'closed_manually';
 
 const summaryResponse = {
   cycle: { start: '2026-07-16', end: '2026-08-15', status: 'closed' as CycleStatus },
@@ -197,7 +197,9 @@ describe('GroupSummary', () => {
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
-  it('does not show the "quem paga a quem" block when settlements is empty', async () => {
+  it('shows an empty state in the "À pagar" tab when settlements is empty', async () => {
+    const user = userEvent.setup();
+
     render(
       <MemoryRouter>
         <GroupSummary />
@@ -206,10 +208,14 @@ describe('GroupSummary', () => {
 
     await screen.findByText('R$ 1.100,00');
 
-    expect(screen.queryByText('Quem paga a quem')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'À pagar' }));
+
+    expect(screen.getByText('Nenhuma pendência entre os membros neste ciclo.')).toBeInTheDocument();
   });
 
-  it('shows the "quem paga a quem" block resolving names from balances', async () => {
+  it('shows settlements in the "À pagar" tab, resolving names from balances', async () => {
+    const user = userEvent.setup();
+
     mockGetResponses({
       ...summaryResponse,
       settlements: [{ from_user_id: 534, to_user_id: 533, amount: 550 }],
@@ -221,12 +227,65 @@ describe('GroupSummary', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('Quem paga a quem')).toBeInTheDocument();
-    // Nomes já aparecem em "Saldos por pessoa" (mesmo mock) — usa
-    // getAllByText pra não quebrar por duplicidade, só confirma presença.
-    expect(screen.getAllByText('QA Membro 2').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('QA Resumo').length).toBeGreaterThan(0);
+    await screen.findByText('R$ 1.100,00');
+
+    await user.click(screen.getByRole('tab', { name: 'À pagar' }));
+
+    // Só a aba "À pagar" está visível agora (a "Saldo" some do DOM ao
+    // trocar de aba, render condicional em SummarySidePanel), então cada
+    // nome aparece uma única vez (dentro de SettlementList).
+    expect(screen.getByText('QA Membro 2')).toBeInTheDocument();
+    expect(screen.getByText('QA Resumo')).toBeInTheDocument();
     expect(screen.getByText('R$ 550,00')).toBeInTheDocument();
     expect(screen.getByText(/deve pagar/)).toBeInTheDocument();
+  });
+
+  it('has the "Saldo" tab selected by default', async () => {
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('R$ 1.100,00');
+
+    expect(screen.getByRole('tab', { name: 'Saldo' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'À pagar' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('does not trigger a new API call when switching between tabs', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('R$ 1.100,00');
+
+    const callsBefore = vi.mocked(axios.get).mock.calls.length;
+
+    await user.click(screen.getByRole('tab', { name: 'À pagar' }));
+    await user.click(screen.getByRole('tab', { name: 'Saldo' }));
+
+    expect(vi.mocked(axios.get).mock.calls.length).toBe(callsBefore);
+  });
+
+  it.each([
+    ['closed', 'Definitivo'],
+    ['closed_manually', 'Definitivo'],
+    ['open', 'Prévia'],
+    ['future', 'Prévia'],
+  ] as const)('shows the volatility badge for cycle status %s', async (status, badgeLabel) => {
+    mockGetResponses({ ...summaryResponse, cycle: { ...summaryResponse.cycle, status } });
+
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(badgeLabel)).toBeInTheDocument();
   });
 });
