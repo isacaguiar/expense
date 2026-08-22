@@ -138,6 +138,64 @@ class ExpenseControllerCloseTest extends TestCase
         );
     }
 
+    public function test_summary_reports_closed_manually_and_reflects_the_snapshot_not_live_edits(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10', 'total_value' => 100]);
+        $expense->payers()->sync([$payer->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $this->withToken($this->tokenFor($payer))
+            ->postJson("/api/groups/{$group->id}/expenses/close")
+            ->assertStatus(200);
+
+        // Edição ao vivo depois do fechamento manual — o resumo deve continuar
+        // refletindo a foto (100), não o valor novo.
+        $expense->update(['total_value' => 999]);
+        $expense->quotas()->first()->update(['value_quota' => 999]);
+
+        $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'closed_manually')
+            ->assertJsonPath('totals.total', 100);
+    }
+
+    public function test_summary_reflects_live_edits_again_after_manual_reopening(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10', 'total_value' => 100]);
+        $expense->payers()->sync([$payer->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $this->withToken($this->tokenFor($payer))
+            ->postJson("/api/groups/{$group->id}/expenses/close")
+            ->assertStatus(200);
+
+        GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', '2026-08-01')
+            ->update(['reopened_at' => now()]);
+
+        $expense->update(['total_value' => 999]);
+        $expense->quotas()->first()->update(['value_quota' => 999]);
+
+        $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'open')
+            ->assertJsonPath('totals.total', 999);
+    }
+
     public function test_close_requires_group_membership(): void
     {
         $outsider = User::factory()->create();
