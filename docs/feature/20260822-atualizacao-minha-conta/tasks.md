@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20260822
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-194 | Migration `add_whatsapp_to_users_table` (`whatsapp` string nullable, `notify_whatsapp` boolean default false) em `ex_users`; adicionar os 2 campos a `User::$fillable` | backend | plan.md §1 | nenhum | Concluída |
-| TASK-195 | `UserController@updateProfile`: validar (`whatsapp` regex `(DD) 9XXXX-XXXX`, `notify_whatsapp` boolean) e persistir os 2 campos junto com `name`/`email`/`pix`; incluir os 2 no JSON de resposta | backend | plan.md §1 | nenhum | Pendente |
+| TASK-195 | `UserController@updateProfile`: validar (`whatsapp` regex `(DD) 9XXXX-XXXX`, `notify_whatsapp` boolean) e persistir os 2 campos junto com `name`/`email`/`pix`; incluir os 2 no JSON de resposta | backend | plan.md §1 | nenhum | Concluída |
 | TASK-196 | `Profile.tsx`: campo `whatsapp` com máscara `(DD) 9XXXX-XXXX` e checkbox "Receber notificações pelo WhatsApp", incluídos no estado do formulário e no `PUT /api/user/profile` já existente | frontend | plan.md §1 | nenhum | Pendente |
 | TASK-197 | `composer require laravel/socialite doctrine/dbal`; adicionar bloco `'google' => [...]` em `backend/config/services.php` lendo `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`/`GOOGLE_REDIRECT_URI` | backend | plan.md §2.1, §2.3 | nenhum | Pendente |
 | TASK-198 | 3 migrations aditivas em `ex_users`: `password` nullable (`->change()`), `google_id` (string nullable unique), `avatar_url` (string nullable); adicionar `google_id`/`avatar_url` a `User::$fillable`, `google_id` a `User::$hidden` | backend | plan.md §2.2 | nenhum | Pendente |
