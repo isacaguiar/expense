@@ -63,7 +63,7 @@ class GroupMemberController extends Controller
 
             // 3.3) Dispara e‑mail de convite
             Mail::to($user->email)
-                ->send(new UserInvitedMail($user, $group, $token));
+                ->send(new UserInvitedMail($user, $group, $token, auth()->user()));
         }
 
         // 4) Evita duplicata no pivot
