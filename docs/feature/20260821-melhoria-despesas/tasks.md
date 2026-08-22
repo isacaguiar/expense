@@ -11,7 +11,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-151 | Testes — despesa nasce sempre com quotas `paid=false`, mesmo se o cliente enviar `paid:true` | backend | plan.md §6 | nenhum | Implementada |
 | TASK-152 | `ExpenseController` — método privado que materializa (busca ou cria) a `Quota` da ocorrência mensal de uma despesa `FIXED` | backend | plan.md §3 | antes do merge | Implementada |
 | TASK-153 | `collectCycleEntries` — usar `Quota` materializada de `FIXED` quando existir, em vez de projetar sempre ao vivo | backend | plan.md §3 | antes do merge | Implementada |
-| TASK-154 | Testes — valor de despesa `FIXED` editado depois não muda mês já materializado/congelado | backend | plan.md §3 | nenhum | Pendente |
+| TASK-154 | Testes — valor de despesa `FIXED` editado depois não muda mês já materializado/congelado | backend | plan.md §3 | nenhum | Implementada |
 | TASK-155 | Migration + model — `closed_manually_at`/`reopened_at` em `GroupCycleSnapshot` | backend | plan.md §4 | antes do merge | Pendente |
 | TASK-156 | `ExpenseController` — helper único de "competência fechada" (automática OU manual), substituindo o uso isolado de `rejectIfCycleClosed` | backend | plan.md §4, §9 | antes do merge | Pendente |
 | TASK-157 | Rota + `ExpenseController::close` — `POST /groups/{groupId}/expenses/close`, materializa `FIXED` do mês, computa e faz upsert do snapshot manual | backend | plan.md §4 | antes do merge | Pendente |

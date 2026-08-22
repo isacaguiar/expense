@@ -214,4 +214,41 @@ class ExpenseControllerCycleFreezeTest extends TestCase
         $destroyResponse->assertStatus(200);
         $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => true]);
     }
+
+    public function test_fixed_expense_value_edited_later_does_not_change_a_month_whose_quota_was_already_materialized(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 350,
+        ]);
+        $expense->payers()->attach($payer->id);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 350]);
+
+        // Simula que a ocorrência de julho (competência já fechada hoje, mas cujo
+        // resumo ninguém leu ainda — logo, sem GroupCycleSnapshot) já tinha sido
+        // congelada com o valor vigente na época (350), via fechamento manual de
+        // julho quando ainda era o mês vigente (materializeFixedOccurrenceQuota).
+        $expense->quotas()->create(['date_expected' => '2026-07-05', 'number' => 1, 'paid' => false, 'value_quota' => 350]);
+
+        // Só depois disso o valor da despesa Fixa é alterado.
+        $expense->update(['total_value' => 999]);
+
+        // Primeira leitura do resumo de julho (fechado) — é aqui que o snapshot
+        // seria criado pela primeira vez. Antes da Quota materializada existir,
+        // isso teria congelado o valor errado (999); com ela, usa o valor certo.
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'closed')
+            ->assertJsonPath('totals.total', 350)
+            ->assertJsonFragment(['id' => $expense->id, 'date' => '2026-07-05', 'value' => 350]);
+    }
 }
