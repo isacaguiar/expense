@@ -35,6 +35,11 @@ class GroupMemberController extends Controller
         $group = Group::findOrFail($groupId);
         $this->authorizeMembership($group);
 
+        // Grupo excluído (logicamente) não aceita novos participantes — 404
+        // pelo mesmo motivo do authorizeMembership: não confirmar a um membro
+        // antigo que o grupo ainda "existe" para escrita.
+        abort_if($group->deleted, 404);
+
         // 3) Tenta carregar o usuário
         $user = User::where('email', $data['email'])->first();
         $isNewUser = false;
