@@ -8,7 +8,16 @@ Versão: 1.0 · Criado em: 20260822
 
 ## 1. Desvios do fluxo padrão (se houver)
 
-Feature segue `04-implementation.md` sem exceção. Branch da feature: `backend/20260822-atualizacao-participantes` (nasceu de `dev` atualizada; TASK-189 implementada direto nela, por ser a primeira task).
+Branch da feature: `backend/20260822-atualizacao-participantes` (nasceu de `dev` atualizada). TASK-189 implementada direto nela (correto, é a primeira task). **Desvio**: TASK-190 a TASK-193 também foram implementadas direto na branch da feature, em vez de cada uma nascer em sub-branch própria (`.../TASK-19x`) e ser integrada via `git merge --no-ff` como `04-implementation.md` item 1 prescreve — sessão única, tasks com dependência sequencial forte (189→190→191→192; 193 depende de 191) e sem necessidade de testar cada uma isolada antes de integrar. Cada task ainda tem exatamente 1 commit próprio, com checklist (pint/phpunit/tsc/vitest) rodado e registrado antes do commit — o rastreio por task no histórico do git não foi perdido, só a topologia de branch.
+
+## 1.1 Checklist final da feature (item 5 do fluxo)
+
+Rodado na branch `backend/20260822-atualizacao-participantes` já com as 5 tasks integradas:
+
+- `cd backend && ./vendor/bin/pint --test` — 8 issues de estilo, todos em arquivos **não tocados** por esta feature (`app/Helpers/PixPayload.php`, `app/Models/Expense.php`, `app/Models/User.php`, 5 migrations antigas de 2025-06) — dívida pré-existente, fora de escopo (`06-context-backend.md` "Não corrigir de passagem"). Nenhum arquivo desta feature aparece na lista.
+- `cd backend && php artisan test` — 186 passed (575 assertions).
+- `cd frontend && npx tsc --noEmit` — sem erro.
+- `cd frontend && npx vitest run` — 123 passed (20 arquivos).
 
 ## 2. Log de implementação
 
