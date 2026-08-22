@@ -33,7 +33,7 @@ class UserController extends Controller
     }
 
     /**
-     * Atualiza os dados de perfil (nome, e-mail, pix) do usuário autenticado
+     * Atualiza os dados de perfil (nome, e-mail, pix, whatsapp) do usuário autenticado
      */
     public function updateProfile(Request $request)
     {
@@ -43,6 +43,8 @@ class UserController extends Controller
             'name' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:ex_users,email,'.$user->id,
             'pix' => 'nullable|string|max:100',
+            'whatsapp' => 'nullable|string|regex:/^\(\d{2}\) 9\d{4}-\d{4}$/',
+            'notify_whatsapp' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -52,6 +54,8 @@ class UserController extends Controller
         $user->name = $request->name;
         $user->email = $request->email;
         $user->pix = $request->pix;
+        $user->whatsapp = $request->whatsapp;
+        $user->notify_whatsapp = $request->boolean('notify_whatsapp');
         $user->save();
 
         return response()->json([
@@ -59,6 +63,8 @@ class UserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'pix' => $user->pix,
+            'whatsapp' => $user->whatsapp,
+            'notify_whatsapp' => $user->notify_whatsapp,
         ]);
     }
 

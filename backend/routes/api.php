@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ExpenseController;
+use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupExpenseReportController;
 use App\Http\Controllers\GroupMemberController;
@@ -14,6 +15,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/invitations/verify', [InvitationController::class, 'verify']);
 Route::post('/forgot-password', [InvitationController::class, 'forgotPassword']);
+Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
@@ -22,6 +24,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
     Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::put('/user/password', [UserController::class, 'changePassword']);
+    Route::get('/user/google/redirect-url', [GoogleAuthController::class, 'redirectUrl']);
     Route::get('/pix/generate', [PixController::class, 'gerarPix']);
 
     Route::apiResource('groups', GroupController::class);
