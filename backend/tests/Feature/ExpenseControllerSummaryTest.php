@@ -41,7 +41,7 @@ class ExpenseControllerSummaryTest extends TestCase
         ], $overrides));
     }
 
-    public function test_default_calendar_cycle_returns_previous_full_month(): void
+    public function test_default_cycle_is_the_current_calendar_month_and_is_open(): void
     {
         Carbon::setTestNow('2026-08-19');
 
@@ -50,19 +50,73 @@ class ExpenseControllerSummaryTest extends TestCase
         $group = Group::create(['name' => 'Grupo de teste']);
         $group->members()->attach([$payer->id, $participant->id]);
 
-        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-07-15']);
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05']);
         $expense->payers()->sync([$payer->id, $participant->id]);
-        $expense->quotas()->create(['date_expected' => '2026-07-15', 'number' => 1, 'paid' => true, 'value_quota' => 100]);
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => true, 'value_quota' => 100]);
 
         $response = $this->withToken($this->tokenFor($payer))
             ->getJson("/api/groups/{$group->id}/expenses/summary");
 
         $response->assertStatus(200)
-            ->assertJsonPath('cycle.start', '2026-07-01')
-            ->assertJsonPath('cycle.end', '2026-07-31')
+            ->assertJsonPath('cycle.start', '2026-08-01')
+            ->assertJsonPath('cycle.end', '2026-08-31')
+            ->assertJsonPath('cycle.status', 'open')
             ->assertJsonPath('totals.total', 100)
             ->assertJsonPath('totals.paid', 100)
             ->assertJsonPath('totals.pending', 0);
+    }
+
+    public function test_future_cycle_without_expenses_returns_zero_totals(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=-1");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('cycle.start', '2026-09-01')
+            ->assertJsonPath('cycle.end', '2026-09-30')
+            ->assertJsonPath('cycle.status', 'future')
+            ->assertJsonPath('totals.total', 0)
+            ->assertJsonPath('expenses', [])
+            ->assertJsonPath('balances.0.balance', 0);
+    }
+
+    public function test_installment_with_date_expected_in_a_later_cycle_still_appears(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-07-01',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 3,
+            'total_value' => 300,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-07-01', 'number' => 1, 'paid' => true, 'value_quota' => 100]);
+        $expense->quotas()->create(['date_expected' => '2026-08-01', 'number' => 2, 'paid' => false, 'value_quota' => 100]);
+        $expense->quotas()->create(['date_expected' => '2026-09-01', 'number' => 3, 'paid' => false, 'value_quota' => 100]);
+
+        // Ciclo futuro (setembro): a despesa foi criada (date_payment) em julho,
+        // mas a 3ª parcela vence em setembro — precisa aparecer mesmo assim.
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=-1");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'date' => '2026-09-01',
+            'value' => 100,
+            'paid' => false,
+        ]);
     }
 
     public function test_installment_row_shows_quota_value_and_paid_status_not_total(): void
@@ -115,10 +169,10 @@ class ExpenseControllerSummaryTest extends TestCase
         $response = $this->withToken($this->tokenFor($payer))
             ->getJson("/api/groups/{$group->id}/expenses/summary");
 
-        // Ciclo fechado mais recente e 16/jul-15/ago; a ocorrencia projetada cai em 05/ago, sem Quota propria.
+        // Ciclo corrente (aberto): 16/ago-15/set; a ocorrência projetada cai em 05/set, sem Quota própria.
         $response->assertStatus(200)->assertJsonFragment([
             'id' => $expense->id,
-            'date' => '2026-08-05',
+            'date' => '2026-09-05',
             'value' => 500,
             'paid' => false,
             'isFixed' => true,
@@ -135,9 +189,9 @@ class ExpenseControllerSummaryTest extends TestCase
         $group = Group::create(['name' => 'Grupo de teste']);
         $group->members()->attach([$payer->id, $participant->id, $uninvolved->id]);
 
-        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-07-10', 'total_value' => 200]);
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10', 'total_value' => 200]);
         $expense->payers()->sync([$payer->id, $participant->id]);
-        $expense->quotas()->create(['date_expected' => '2026-07-10', 'number' => 1, 'paid' => true, 'value_quota' => 200]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => true, 'value_quota' => 200]);
 
         $response = $this->withToken($this->tokenFor($payer))
             ->getJson("/api/groups/{$group->id}/expenses/summary");
@@ -161,11 +215,12 @@ class ExpenseControllerSummaryTest extends TestCase
         $juneExpense->quotas()->create(['date_expected' => '2026-06-10', 'number' => 1, 'paid' => true, 'value_quota' => 50]);
 
         $response = $this->withToken($this->tokenFor($payer))
-            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1");
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=2");
 
         $response->assertStatus(200)
             ->assertJsonPath('cycle.start', '2026-06-01')
             ->assertJsonPath('cycle.end', '2026-06-30')
+            ->assertJsonPath('cycle.status', 'closed')
             ->assertJsonPath('totals.total', 50);
     }
 
