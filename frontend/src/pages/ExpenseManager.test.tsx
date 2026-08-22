@@ -780,3 +780,96 @@ describe('ExpenseManager - marcar como paga / desfazer pagamento', () => {
     expect(await screen.findByText('Não é possível alterar dados de uma competência já fechada.')).toBeInTheDocument();
   });
 });
+
+describe('ExpenseManager - fluxo completo (grid, pagar, despagar, excluir)', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.delete).mockReset();
+  });
+
+  it('renders the grid with balances, transitions action icons through pay/unpay, then deletes the expense', async () => {
+    const user = userEvent.setup();
+
+    let paid = false;
+    let deleted = false;
+
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/summary')) {
+        const expensesList: SummaryExpenseFixture[] = deleted
+          ? []
+          : [
+              {
+                id: 50,
+                description: 'Mercado',
+                value: 300,
+                date: '2026-08-10',
+                payerName: 'Isac',
+                paid,
+                isFixed: false,
+                userPayerId: CURRENT_USER_ID,
+                userCreatorId: CURRENT_USER_ID,
+              },
+            ];
+        return Promise.resolve({ data: summaryResponse(expensesList) });
+      }
+      if (url.includes('/api/me')) {
+        return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+
+    vi.mocked(axios.post).mockImplementation((url: string) => {
+      if (url.includes('/pay')) {
+        paid = true;
+        return Promise.resolve({ data: {} });
+      }
+      if (url.includes('/unpay')) {
+        paid = false;
+        return Promise.resolve({ data: {} });
+      }
+      return Promise.reject(new Error(`unexpected POST ${url}`));
+    });
+
+    vi.mocked(axios.delete).mockImplementation(() => {
+      deleted = true;
+      return Promise.resolve({ data: {} });
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    // Grid: listagem e "Saldo por pessoa" juntos na mesma tela.
+    expect(await screen.findByText('Mercado')).toBeInTheDocument();
+    expect(screen.getByText('Saldo por pessoa')).toBeInTheDocument();
+
+    // Pendente: pode marcar como paga; "Desfazer pagamento" ainda não existe.
+    expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Desfazer pagamento' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Marcar como paga' }));
+    await waitFor(() => expect(screen.getByText('Paga')).toBeInTheDocument());
+
+    // Paga: "Excluir"/"Marcar como paga" somem, "Desfazer pagamento" aparece.
+    expect(screen.queryByRole('button', { name: 'Excluir despesa' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Marcar como paga' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Desfazer pagamento' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Desfazer pagamento' }));
+    await waitFor(() => expect(screen.getByText('Pendente')).toBeInTheDocument());
+
+    // Pendente de novo: "Excluir despesa" volta a existir.
+    expect(await screen.findByRole('button', { name: 'Excluir despesa' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Excluir despesa' }));
+    await screen.findByText('Excluir despesa');
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+
+    await waitFor(() => {
+      expect(screen.getByText('Nenhuma despesa encontrada para esta competência.')).toBeInTheDocument();
+    });
+  });
+});

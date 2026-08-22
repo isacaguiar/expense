@@ -35,7 +35,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-175 | `ExpenseManager.tsx` — modal de confirmação de exclusão de despesa variável | frontend | plan.md §2 | antes do merge | Implementada |
 | TASK-176 | `ExpenseManager.tsx` — botões "Fechar mês" / "Reabrir mês" | frontend | plan.md §4, §5 | antes do merge | Implementada |
 | TASK-177 | `ExpenseManager.tsx` — ação marcar como paga / desfazer pagamento, visível só para o credor | frontend | plan.md §6 | antes do merge | Implementada |
-| TASK-178 | Testes de componente novos para `ExpenseManager.tsx` (grid, ações condicionais, modal de exclusão, fechar/reabrir, pagar/despagar) | frontend | plan.md §1–§6 | nenhum | Pendente |
+| TASK-178 | Testes de componente novos para `ExpenseManager.tsx` (grid, ações condicionais, modal de exclusão, fechar/reabrir, pagar/despagar) | frontend | plan.md §1–§6 | nenhum | Implementada |
 | TASK-179 | `ExpenseView.tsx` — troca pra `GET /expenses/{expenseId}` (recurso único) e ganha modo de edição consumindo `PUT /expenses/{id}` | frontend | plan.md §1 | antes do merge | Implementada |
 | TASK-180 | `computeCycleSummary` — expor `userPayerId`/`userCreatorId` por despesa na resposta do `summary`, pro frontend decidir credor/dono sem comparar nomes | backend | plan.md §1 | antes do merge | Implementada |
 
