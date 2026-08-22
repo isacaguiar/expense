@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Group;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class GroupController extends Controller
@@ -94,14 +95,38 @@ class GroupController extends Controller
         return response()->json($group);
     }
 
+    /**
+     * Sem nenhuma competência já fechada (nenhuma linha em
+     * ex_group_cycle_snapshots), o grupo nunca teve histórico a preservar —
+     * exclusão física, em cascata. Com competência fechada, mantém o
+     * comportamento antigo (exclusão lógica) para preservar despesas,
+     * participantes, fechamentos e saldos.
+     */
     public function destroy($id)
     {
         $group = Group::findOrFail($id);
         $this->authorizeMembership($group);
 
-        $group->update(['deleted' => true]);
+        if ($group->cycleSnapshots()->exists()) {
+            $group->update(['deleted' => true]);
 
-        return response()->json(['message' => 'Grupo marcado como deletado.']);
+            return response()->json(['message' => 'Grupo marcado como deletado.']);
+        }
+
+        DB::transaction(function () use ($group) {
+            $group->participations()->delete();
+
+            foreach ($group->expenses()->get() as $expense) {
+                $expense->quotas()->delete();
+                $expense->payers()->detach();
+                $expense->delete();
+            }
+
+            $group->members()->detach();
+            $group->delete();
+        });
+
+        return response()->json(['message' => 'Grupo excluído permanentemente.']);
     }
 
     /**

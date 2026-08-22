@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
+use App\Models\Participation;
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
@@ -147,17 +149,61 @@ class GroupControllerTest extends TestCase
         $this->assertDatabaseHas('ex_groups', ['id' => $group->id, 'name' => 'Nome antigo']);
     }
 
-    public function test_member_can_delete_group(): void
+    public function test_member_can_delete_group_without_closed_cycle_physically(): void
     {
         $member = User::factory()->create();
         $group = Group::create(['name' => 'Grupo de teste']);
         $group->members()->attach($member->id);
+
+        $expense = $this->createExpense($group, $member, '2026-08-10');
+        $expense->payers()->attach($member->id);
+        $quota = $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+        Participation::create(['state' => 'PENDING', 'group_id' => $group->id, 'quota_id' => $quota->id]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->deleteJson('/api/groups/'.$group->id);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseMissing('ex_groups', ['id' => $group->id]);
+        $this->assertDatabaseMissing('ex_groups_members', ['group_id' => $group->id]);
+        $this->assertDatabaseMissing('ex_expenses', ['id' => $expense->id]);
+        $this->assertDatabaseMissing('ex_quotas', ['id' => $quota->id]);
+        $this->assertDatabaseMissing('ex_expenses_payers', ['expense_id' => $expense->id]);
+        $this->assertDatabaseMissing('ex_participations', ['quota_id' => $quota->id]);
+    }
+
+    public function test_member_can_delete_group_with_closed_cycle_logically_preserving_history(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $expense = $this->createExpense($group, $member, '2026-08-10');
+        $expense->payers()->attach($member->id);
+        $quota = $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+        Participation::create(['state' => 'PENDING', 'group_id' => $group->id, 'quota_id' => $quota->id]);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => [],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
 
         $response = $this->withToken($this->tokenFor($member))
             ->deleteJson('/api/groups/'.$group->id);
 
         $response->assertStatus(200);
         $this->assertDatabaseHas('ex_groups', ['id' => $group->id, 'deleted' => true]);
+        $this->assertDatabaseHas('ex_groups_members', ['group_id' => $group->id, 'user_id' => $member->id]);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id]);
+        $this->assertDatabaseHas('ex_quotas', ['id' => $quota->id]);
+        $this->assertDatabaseHas('ex_expenses_payers', ['expense_id' => $expense->id, 'user_id' => $member->id]);
+        $this->assertDatabaseHas('ex_participations', ['quota_id' => $quota->id]);
+        $this->assertDatabaseHas('ex_group_cycle_snapshots', ['group_id' => $group->id]);
     }
 
     public function test_non_member_cannot_delete_group(): void
