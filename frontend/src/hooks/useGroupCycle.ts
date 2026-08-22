@@ -31,11 +31,18 @@ export type SummaryBalance = {
   balance: number;
 };
 
+export type SummarySettlement = {
+  from_user_id: number;
+  to_user_id: number;
+  amount: number;
+};
+
 export type Summary = {
   cycle: SummaryCycle;
   totals: SummaryTotals;
   expenses: SummaryExpense[];
   balances: SummaryBalance[];
+  settlements: SummarySettlement[];
 };
 
 export const cycleStatusChip: Record<
