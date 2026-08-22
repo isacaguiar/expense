@@ -5,7 +5,7 @@ import type { GroupNavItem } from './group/GroupSidebar';
 
 export function accountSettingsNavItems(): GroupNavItem[] {
   return [
-    { label: 'Meus Grupos', icon: GroupsOutlinedIcon, to: '/dashboard' },
+    { label: 'Meus Grupos', icon: GroupsOutlinedIcon, to: '/meus-grupos' },
     { label: 'Minha Conta', icon: PersonOutlineOutlinedIcon, to: '/profile' },
     { label: 'Alterar Senha', icon: LockOutlinedIcon, to: '/change-password' },
   ];
