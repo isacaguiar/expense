@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -250,5 +251,93 @@ class ExpenseControllerCycleFreezeTest extends TestCase
             ->assertJsonPath('cycle.status', 'closed')
             ->assertJsonPath('totals.total', 350)
             ->assertJsonFragment(['id' => $expense->id, 'date' => '2026-07-05', 'value' => 350]);
+    }
+
+    public function test_update_of_in_cash_expense_in_manually_closed_open_cycle_is_rejected(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        // Agosto ainda está aberto por data (BillingCycle), mas foi fechado
+        // manualmente — simula o resultado esperado do fechamento manual
+        // (TASK-157, ainda não implementada nesta task).
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($payer->id);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->putJson("/api/expenses/{$expense->id}", ['description' => 'Tentativa de alterar']);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'description' => 'Despesa de teste']);
+    }
+
+    public function test_destroy_of_in_cash_expense_in_manually_closed_open_cycle_is_rejected(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($payer->id);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+    }
+
+    public function test_update_of_in_cash_expense_is_allowed_again_after_manual_reopening(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now()->subHour(),
+            'reopened_at' => now(),
+        ]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($payer->id);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->putJson("/api/expenses/{$expense->id}", ['description' => 'Alterado']);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'description' => 'Alterado']);
     }
 }
