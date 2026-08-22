@@ -39,7 +39,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
-import BalanceCards from '../components/BalanceCards';
+import SummarySidePanel from '../components/SummarySidePanel';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -502,10 +502,13 @@ const ExpenseManager: React.FC = () => {
           </Grid>
 
           <Grid size={{ xs: 12, sm: 12, lg: 4 }}>
-            <Typography variant="h6" gutterBottom>
-              Saldo por pessoa
-            </Typography>
-            {summary && <BalanceCards balances={summary.balances} />}
+            {summary && (
+              <SummarySidePanel
+                balances={summary.balances}
+                settlements={summary.settlements}
+                cycleStatus={summary.cycle.status}
+              />
+            )}
           </Grid>
         </Grid>
       )}
