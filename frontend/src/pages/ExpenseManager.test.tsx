@@ -40,7 +40,11 @@ type SummaryExpenseFixture = {
 
 const CURRENT_USER_ID = 500;
 
-function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
+function summaryResponse(
+  expensesList: SummaryExpenseFixture[] = [],
+  cycleOverride: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {}
+) {
   return {
     cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open', ...cycleOverride },
     totals: { total: 0, paid: 0, pending: 0 },
@@ -52,13 +56,19 @@ function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverri
       ...exp,
     })),
     balances: [],
+    settlements: [],
+    ...extra,
   };
 }
 
-function mockGetResponses(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
+function mockGetResponses(
+  expensesList: SummaryExpenseFixture[] = [],
+  cycleOverride: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {}
+) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
     if (url.includes('/expenses/summary')) {
-      return Promise.resolve({ data: summaryResponse(expensesList, cycleOverride) });
+      return Promise.resolve({ data: summaryResponse(expensesList, cycleOverride, extra) });
     }
     if (url.includes('/api/me')) {
       return Promise.resolve({ data: { id: CURRENT_USER_ID } });
@@ -873,5 +883,38 @@ describe('ExpenseManager - fluxo completo (grid, pagar, despagar, excluir)', () 
     await waitFor(() => {
       expect(screen.getByText('Nenhuma despesa encontrada para esta competência.')).toBeInTheDocument();
     });
+  });
+});
+
+describe('ExpenseManager - aba "À pagar" do painel lateral', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+  });
+
+  it('shows real settlement data from this page when switching to the "À pagar" tab', async () => {
+    const user = userEvent.setup();
+
+    mockGetResponses([], {}, {
+      balances: [
+        { user_id: 533, name: 'QA Despesas', balance: 550 },
+        { user_id: 534, name: 'QA Membro 2', balance: -550 },
+      ],
+      settlements: [{ from_user_id: 534, to_user_id: 533, amount: 550 }],
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('tab', { name: 'Saldo' });
+
+    await user.click(screen.getByRole('tab', { name: 'À pagar' }));
+
+    expect(screen.getByText('QA Membro 2')).toBeInTheDocument();
+    expect(screen.getByText('QA Despesas')).toBeInTheDocument();
+    expect(screen.getByText('R$ 550,00')).toBeInTheDocument();
+    expect(screen.getByText(/deve pagar/)).toBeInTheDocument();
   });
 });
