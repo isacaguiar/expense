@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
@@ -30,16 +30,7 @@ import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
-
-// Tipo de despesa (ajuste conforme sua API)
-type Expense = {
-  id: number;
-  description: string;
-  value: number;
-  date: string;        // ISO string
-  payerName?: string;  // opcional, se vier do backend
-  isFixed?: boolean;
-};
+import { useGroupCycle } from '../hooks/useGroupCycle';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -49,72 +40,27 @@ const formatDate = (dateStr: string): string => {
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
 };
 
+// Rótulo curto (dia + mês abreviado) pro cabeçalho de competência — mesmo
+// formato usado em GroupSummary, pra não ter duas convenções de data na UI.
+const formatCycleBoundary = (dateStr: string): string => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+};
+
 const ExpenseManager: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { summary, loading, error, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
+  const expenses = summary?.expenses ?? [];
 
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
-
-  // Busca e filtro por tipo — client-side, sobre os dados do mês já carregados
+  // Busca e filtro por tipo — client-side, sobre os dados da competência já carregada
   const [search, setSearch] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'fixed' | 'variable'>('all');
 
   // Diálogo de remoção de despesa Fixa
   const [removeExpenseId, setRemoveExpenseId] = useState<number | null>(null);
   const [removeSuccess, setRemoveSuccess] = useState<boolean>(false);
-
-  // Helpers de mês/ano
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1; // 1-12
-
-  const monthLabel = currentDate.toLocaleDateString('pt-BR', {
-    month: 'long',
-    year: 'numeric'
-  });
-
-  const changeMonth = (delta: number) => {
-    setCurrentDate(prev => {
-      const d = new Date(prev);
-      d.setMonth(d.getMonth() + delta);
-      return d;
-    });
-  };
-
-  const loadExpenses = () => {
-    if (!groupId) return;
-
-    setLoading(true);
-    setError(null);
-
-    const token = localStorage.getItem('accessToken');
-    axios
-      .get<Expense[]>(`${API_BASE_URL}/api/groups/${groupId}/expenses`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' },
-        params: {
-          year,
-          month
-        }
-      })
-      .then(res => setExpenses(res.data))
-      .catch(err => {
-        console.error('Erro ao carregar despesas:', err);
-        if (err.response?.status === 401) {
-          navigate('/', { replace: true });
-          return;
-        }
-        setError('Falha ao carregar despesas.');
-      })
-      .finally(() => setLoading(false));
-  };
-
-  useEffect(() => {
-    loadExpenses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, year, month]);
 
   const stopFixedRecurrence = (cutoffYear: number, cutoffMonth: number) => {
     if (removeExpenseId === null) return;
@@ -130,7 +76,7 @@ const ExpenseManager: React.FC = () => {
       .then(() => {
         setRemoveExpenseId(null);
         setRemoveSuccess(true);
-        loadExpenses();
+        reload();
       })
       .catch(err => {
         console.error('Erro ao remover recorrência da despesa fixa:', err);
@@ -138,10 +84,18 @@ const ExpenseManager: React.FC = () => {
       });
   };
 
-  const handleRemoveFromThisMonth = () => stopFixedRecurrence(year, month);
+  const handleRemoveFromThisMonth = () => {
+    if (!summary) return;
+
+    const [year, month] = summary.cycle.start.split('-').map(Number);
+    stopFixedRecurrence(year, month);
+  };
 
   const handleRemoveFromNextMonth = () => {
-    const next = new Date(currentDate);
+    if (!summary) return;
+
+    const [year, month] = summary.cycle.start.split('-').map(Number);
+    const next = new Date(year, month - 1, 1);
     next.setMonth(next.getMonth() + 1);
     stopFixedRecurrence(next.getFullYear(), next.getMonth() + 1);
   };
@@ -175,7 +129,7 @@ const ExpenseManager: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Seletor de mês */}
+      {/* Seletor de competência */}
       <Box
         display="flex"
         alignItems="center"
@@ -183,13 +137,13 @@ const ExpenseManager: React.FC = () => {
         mb={3}
         gap={1}
       >
-        <IconButton onClick={() => changeMonth(-1)} aria-label="Mês anterior">
+        <IconButton onClick={goToPreviousCycle} aria-label="Competência anterior">
           <ArrowBackIosNewIcon />
         </IconButton>
         <Typography variant="h6" textTransform="capitalize">
-          {monthLabel}
+          {summary ? `${formatCycleBoundary(summary.cycle.start)} – ${formatCycleBoundary(summary.cycle.end)}` : ''}
         </Typography>
-        <IconButton onClick={() => changeMonth(1)} aria-label="Próximo mês">
+        <IconButton onClick={goToNextCycle} aria-label="Próxima competência">
           <ArrowForwardIosIcon />
         </IconButton>
       </Box>
@@ -223,7 +177,7 @@ const ExpenseManager: React.FC = () => {
       ) : error ? (
         <Typography color="error">{error}</Typography>
       ) : expenses.length === 0 ? (
-        <Typography color="text.secondary">Nenhuma despesa encontrada para este mês.</Typography>
+        <Typography color="text.secondary">Nenhuma despesa encontrada para esta competência.</Typography>
       ) : filteredExpenses.length === 0 ? (
         <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
       ) : (
