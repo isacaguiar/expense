@@ -54,6 +54,7 @@ const summaryResponse = {
     { user_id: 533, name: 'QA Resumo', balance: 550 },
     { user_id: 534, name: 'QA Membro 2', balance: -550 },
   ],
+  settlements: [] as { from_user_id: number; to_user_id: number; amount: number }[],
 };
 
 const currentUser = { name: 'QA Header Usuario', email: 'qa-header@example.com' };
@@ -194,5 +195,38 @@ describe('GroupSummary', () => {
 
     expect(await screen.findAllByText('0% do total')).toHaveLength(2);
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
+  it('does not show the "quem paga a quem" block when settlements is empty', async () => {
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('R$ 1.100,00');
+
+    expect(screen.queryByText('Quem paga a quem')).not.toBeInTheDocument();
+  });
+
+  it('shows the "quem paga a quem" block resolving names from balances', async () => {
+    mockGetResponses({
+      ...summaryResponse,
+      settlements: [{ from_user_id: 534, to_user_id: 533, amount: 550 }],
+    });
+
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Quem paga a quem')).toBeInTheDocument();
+    // Nomes já aparecem em "Saldos por pessoa" (mesmo mock) — usa
+    // getAllByText pra não quebrar por duplicidade, só confirma presença.
+    expect(screen.getAllByText('QA Membro 2').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('QA Resumo').length).toBeGreaterThan(0);
+    expect(screen.getByText('R$ 550,00')).toBeInTheDocument();
+    expect(screen.getByText(/deve pagar/)).toBeInTheDocument();
   });
 });
