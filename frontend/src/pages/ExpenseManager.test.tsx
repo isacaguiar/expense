@@ -189,8 +189,10 @@ describe('ExpenseManager - campos completos e ações condicionais', () => {
     );
 
     expect(await screen.findByText('Paga')).toBeInTheDocument();
-    expect(screen.getByText(/Credor: Isac/)).toBeInTheDocument();
-    expect(screen.getByText('Pagadores: Isac, Maria')).toBeInTheDocument();
+    // Colunas "Credor"/"Pagadores" da tabela já dão o rótulo — a célula só
+    // tem o valor, sem o prefixo que existia no card.
+    expect(screen.getByText('Isac')).toBeInTheDocument();
+    expect(screen.getByText('Isac, Maria')).toBeInTheDocument();
   });
 
   it('shows edit, delete and pay icons when the user owns and is the creditor of a pending variable expense', async () => {
@@ -842,9 +844,9 @@ describe('ExpenseManager - fluxo completo (grid, pagar, despagar, excluir)', () 
       </MemoryRouter>
     );
 
-    // Grid: listagem e "Saldo por pessoa" juntos na mesma tela.
+    // Grid: listagem e o painel lateral (SummarySidePanel) juntos na mesma tela.
     expect(await screen.findByText('Mercado')).toBeInTheDocument();
-    expect(screen.getByText('Saldo por pessoa')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Saldo' })).toBeInTheDocument();
 
     // Pendente: pode marcar como paga; "Desfazer pagamento" ainda não existe.
     expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument();
