@@ -354,15 +354,30 @@ class ExpenseController extends Controller
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
         $start = $cycle['start'];
         $end = $cycle['end'];
+        $status = $cycle['status'];
 
-        if ($cycle['status'] === 'closed') {
+        // Fechamento manual só existe para uma competência ainda `open` por
+        // data (`close()` só opera sobre "agora") — `closed`/`future` nunca
+        // têm um a considerar.
+        $manualSnapshot = $status === 'open'
+            ? GroupCycleSnapshot::where('group_id', $groupId)->where('cycle_start', $start->toDateString())->first()
+            : null;
+
+        if ($status === 'closed') {
             $summary = $this->cycleSnapshotFor($group, $groupId, $start, $end);
+        } elseif ($manualSnapshot && $manualSnapshot->isManuallyClosedAndActive()) {
+            $status = 'closed_manually';
+            $summary = [
+                'totals' => $manualSnapshot->totals,
+                'expenses' => $manualSnapshot->expenses,
+                'balances' => $manualSnapshot->balances,
+            ];
         } else {
             $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
         }
 
         return response()->json([
-            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => $cycle['status']],
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => $status],
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
