@@ -57,11 +57,13 @@ class InvitationController extends Controller
             return response()->json(['message' => 'Usuário não encontrado.'], 404);
         }
 
-        $tokenFromCache = Cache::get('password-reset-token:'.$user->email);
-        $isInvitationToken = Hash::check($request->token, $user->password);
-        $isResetTokenValid = $tokenFromCache && $tokenFromCache === $request->token;
+        $resetTokenFromCache = Cache::get('password-reset-token:'.$user->email);
+        $isResetTokenValid = $resetTokenFromCache && $resetTokenFromCache === $request->token;
 
-        if (! $isInvitationToken && ! $isResetTokenValid) {
+        $invitationTokenFromCache = Cache::get('invitation-token:'.$user->email);
+        $isInvitationTokenValid = $invitationTokenFromCache && $invitationTokenFromCache === $request->token;
+
+        if (! $isInvitationTokenValid && ! $isResetTokenValid) {
             return response()->json(['message' => 'Token inválido ou expirado.'], 401);
         }
 
@@ -70,9 +72,12 @@ class InvitationController extends Controller
         $user->email_verified_at = $user->email_verified_at ?? now();
         $user->save();
 
-        // Limpa token temporário se era recuperação de senha
+        // Limpa o token usado (uso único)
         if ($isResetTokenValid) {
             Cache::forget('password-reset-token:'.$user->email);
+        }
+        if ($isInvitationTokenValid) {
+            Cache::forget('invitation-token:'.$user->email);
         }
 
         // Envia e-mail de confirmação

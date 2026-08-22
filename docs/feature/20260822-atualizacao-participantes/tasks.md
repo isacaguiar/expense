@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20260822
 |---|---|---|---|---|---|
 | TASK-189 | Gerar token de convite dedicado (TTL 2 dias) em `GroupMemberController::store`, substituindo `Password::getRepository()` | backend | plan.md §3 | antes do merge | Concluída |
 | TASK-190 | Corrigir `UserInvitedMail` para renderizar `email.invitation` (em vez da view inexistente) citando quem convidou e o grupo | backend | plan.md §2 | antes do merge | Concluída |
-| TASK-191 | Adaptar `InvitationController::verify` para validar o novo token de convite (cache `invitation-token:{email}`) | backend | plan.md §4 | antes do merge | Pendente |
+| TASK-191 | Adaptar `InvitationController::verify` para validar o novo token de convite (cache `invitation-token:{email}`) | backend | plan.md §4 | antes do merge | Concluída |
 | TASK-192 | Remover `InvitationController::invite` e a rota `POST /invitations` (fluxo duplicado sem uso no frontend) | backend | plan.md §1 | antes do merge | Pendente |
 | TASK-193 | Criar página `/aceitar-convite` para o convidado definir senha, consumindo `POST /invitations/verify` | frontend | plan.md §4 | antes do merge | Pendente |
 
