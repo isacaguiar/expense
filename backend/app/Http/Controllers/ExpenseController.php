@@ -221,6 +221,15 @@ class ExpenseController extends Controller
             'quotas.*.value_quota' => 'required|numeric|min:0',
         ]);
 
+        // Ao contrário de update()/destroy(), aqui vale para todo expense_type
+        // (inclusive FIXED) — criar uma despesa nova com date_payment dentro de
+        // uma competência já fechada não tem a mesma justificativa de "definição
+        // recorrente não presa a um ciclo" que existe para editar uma FIXED já
+        // existente.
+        if ($response = $this->rejectIfCompetenceClosed($group, Carbon::parse($request->date_payment))) {
+            return $response;
+        }
+
         if ($request->expense_type === 'FIXED') {
             if ((int) $request->installments !== 1) {
                 return response()->json(['error' => 'Despesa fixa deve ter installments=1.'], 422);
