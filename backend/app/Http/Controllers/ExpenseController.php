@@ -194,7 +194,6 @@ class ExpenseController extends Controller
             'quotas' => 'required|array|min:1',
             'quotas.*.date_expected' => 'required|date',
             'quotas.*.number' => 'required|integer',
-            'quotas.*.paid' => 'required|boolean',
             'quotas.*.value_quota' => 'required|numeric|min:0',
         ]);
 
@@ -242,10 +241,12 @@ class ExpenseController extends Controller
 
             // Quotas
             foreach ($request->quotas as $quotaData) {
+                // Despesa nasce sempre PENDENTE — o cliente não decide o status
+                // inicial de pagamento, mesmo que envie 'paid' no payload.
                 $expense->quotas()->create([
                     'date_expected' => $quotaData['date_expected'],
                     'number' => $quotaData['number'],
-                    'paid' => $quotaData['paid'],
+                    'paid' => false,
                     'value_quota' => $quotaData['value_quota'],
                 ]);
             }
