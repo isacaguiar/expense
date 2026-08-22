@@ -34,7 +34,11 @@ type SummaryExpenseFixture = {
   payerName?: string | null;
   participants?: string[];
   isFixed?: boolean;
+  userPayerId?: number;
+  userCreatorId?: number;
 };
+
+const CURRENT_USER_ID = 500;
 
 function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
   return {
@@ -43,6 +47,8 @@ function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverri
     expenses: expensesList.map(exp => ({
       paid: false,
       participants: [],
+      userPayerId: CURRENT_USER_ID,
+      userCreatorId: CURRENT_USER_ID,
       ...exp,
     })),
     balances: [],
@@ -53,6 +59,9 @@ function mockGetResponses(expensesList: SummaryExpenseFixture[] = [], cycleOverr
   vi.mocked(axios.get).mockImplementation((url: string) => {
     if (url.includes('/expenses/summary')) {
       return Promise.resolve({ data: summaryResponse(expensesList, cycleOverride) });
+    }
+    if (url.includes('/api/me')) {
+      return Promise.resolve({ data: { id: CURRENT_USER_ID } });
     }
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
@@ -119,7 +128,7 @@ describe('ExpenseManager - listagem em cards', () => {
 
     expect(screen.queryByText('Aluguel')).not.toBeInTheDocument();
     expect(screen.getByText('Mercado')).toBeInTheDocument();
-    expect(axios.get).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(axios.get).mock.calls.filter(call => (call[0] as string).includes('/expenses/summary'))).toHaveLength(1);
   });
 
   it('displays the expense date without an off-by-one-day shift in negative timezones', async () => {
@@ -151,6 +160,178 @@ describe('ExpenseManager - listagem em cards', () => {
 
     expect(screen.getByText('Aluguel')).toBeInTheDocument();
     expect(screen.queryByText('Mercado')).not.toBeInTheDocument();
+  });
+});
+
+describe('ExpenseManager - campos completos e ações condicionais', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+  });
+
+  it('shows status chip, credor and pagadores', async () => {
+    mockGetResponses([
+      {
+        id: 20,
+        description: 'Mercado',
+        value: 300,
+        date: '2026-08-10',
+        payerName: 'Isac',
+        participants: ['Isac', 'Maria'],
+        paid: true,
+        isFixed: false,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Paga')).toBeInTheDocument();
+    expect(screen.getByText(/Credor: Isac/)).toBeInTheDocument();
+    expect(screen.getByText('Pagadores: Isac, Maria')).toBeInTheDocument();
+  });
+
+  it('shows edit, delete and pay icons when the user owns and is the creditor of a pending variable expense', async () => {
+    mockGetResponses([
+      {
+        id: 21,
+        description: 'Mercado',
+        value: 300,
+        date: '2026-08-10',
+        payerName: 'Isac',
+        paid: false,
+        isFixed: false,
+        userPayerId: CURRENT_USER_ID,
+        userCreatorId: CURRENT_USER_ID,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Mercado');
+
+    expect(screen.getByRole('link', { name: 'Editar despesa' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Excluir despesa' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument();
+  });
+
+  it('hides delete and pay icons when the expense is already paid', async () => {
+    mockGetResponses([
+      {
+        id: 22,
+        description: 'Mercado',
+        value: 300,
+        date: '2026-08-10',
+        payerName: 'Isac',
+        paid: true,
+        isFixed: false,
+        userPayerId: CURRENT_USER_ID,
+        userCreatorId: CURRENT_USER_ID,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Mercado');
+
+    expect(screen.getByRole('link', { name: 'Editar despesa' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Excluir despesa' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Marcar como paga' })).not.toBeInTheDocument();
+  });
+
+  it('hides delete icon for FIXED expenses (uses "Remover despesa fixa" instead)', async () => {
+    mockGetResponses([
+      {
+        id: 23,
+        description: 'Aluguel',
+        value: 1200,
+        date: '2026-08-01',
+        payerName: 'Isac',
+        paid: false,
+        isFixed: true,
+        userPayerId: CURRENT_USER_ID,
+        userCreatorId: CURRENT_USER_ID,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+
+    expect(screen.getByRole('button', { name: 'Remover despesa fixa' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Excluir despesa' })).not.toBeInTheDocument();
+  });
+
+  it('hides the pay icon when the current user is not the creditor', async () => {
+    mockGetResponses([
+      {
+        id: 24,
+        description: 'Mercado',
+        value: 300,
+        date: '2026-08-10',
+        payerName: 'Outra Pessoa',
+        paid: false,
+        isFixed: false,
+        userPayerId: CURRENT_USER_ID + 1,
+        userCreatorId: CURRENT_USER_ID,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Mercado');
+
+    expect(screen.getByRole('link', { name: 'Editar despesa' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Marcar como paga' })).not.toBeInTheDocument();
+  });
+
+  it('hides all action icons when the cycle is not open', async () => {
+    mockGetResponses(
+      [
+        {
+          id: 25,
+          description: 'Mercado',
+          value: 300,
+          date: '2026-07-10',
+          payerName: 'Isac',
+          paid: false,
+          isFixed: false,
+          userPayerId: CURRENT_USER_ID,
+          userCreatorId: CURRENT_USER_ID,
+        },
+      ],
+      { status: 'closed' }
+    );
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Mercado');
+
+    expect(screen.queryByRole('link', { name: 'Editar despesa' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Excluir despesa' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Marcar como paga' })).not.toBeInTheDocument();
   });
 });
 

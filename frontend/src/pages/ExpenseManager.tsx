@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
@@ -21,16 +21,19 @@ import {
   Snackbar,
   TextField,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Tooltip
 } from '@mui/material';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
-import { useGroupCycle } from '../hooks/useGroupCycle';
+import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import BalanceCards from '../components/BalanceCards';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
@@ -54,6 +57,16 @@ const ExpenseManager: React.FC = () => {
 
   const { summary, loading, error, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
   const expenses = summary?.expenses ?? [];
+
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    axios
+      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers: { Authorization: token ? `Bearer ${token}` : '' } })
+      .then(res => setCurrentUserId(res.data.id))
+      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
+  }, []);
 
   // Busca e filtro por tipo — client-side, sobre os dados da competência já carregada
   const [search, setSearch] = useState<string>('');
@@ -110,6 +123,22 @@ const ExpenseManager: React.FC = () => {
       if (typeFilter === 'variable') return !exp.isFixed;
       return true;
     });
+
+  // Ações de edição/exclusão/pagamento só existem enquanto a competência
+  // selecionada está aberta — competências fechadas (automática ou
+  // manualmente) e futuras são refletidas aqui, não decididas à parte: a API
+  // recusaria a ação de qualquer forma, isto só evita mostrar um botão que
+  // levaria a um erro.
+  const cycleIsOpen = summary?.cycle.status === 'open';
+
+  const isOwner = (exp: SummaryExpense) =>
+    currentUserId !== null && (currentUserId === exp.userCreatorId || currentUserId === exp.userPayerId);
+
+  const isCreditor = (exp: SummaryExpense) => currentUserId !== null && currentUserId === exp.userPayerId;
+
+  const canEdit = (exp: SummaryExpense) => cycleIsOpen && isOwner(exp);
+  const canDelete = (exp: SummaryExpense) => cycleIsOpen && !exp.isFixed && !exp.paid && isOwner(exp);
+  const canPay = (exp: SummaryExpense) => cycleIsOpen && !exp.paid && isCreditor(exp);
 
   return (
     <>
@@ -200,27 +229,69 @@ const ExpenseManager: React.FC = () => {
                               )}
                               <Typography variant="subtitle1">{exp.description}</Typography>
                             </Box>
-                            <Chip label={exp.isFixed ? 'Fixa' : 'Variável'} size="small" />
+                            <Box display="flex" gap={0.5}>
+                              <Chip label={exp.isFixed ? 'Fixa' : 'Variável'} size="small" />
+                              <Chip
+                                label={exp.paid ? 'Paga' : 'Pendente'}
+                                color={exp.paid ? 'success' : 'warning'}
+                                size="small"
+                              />
+                            </Box>
                           </Box>
                           <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
                             R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {formatDate(exp.date)} · Pago por {exp.payerName || '-'}
+                            {formatDate(exp.date)} · Credor: {exp.payerName || '-'}
                           </Typography>
+                          <Tooltip title={exp.participants.join(', ') || 'Ninguém'}>
+                            <Typography variant="body2" color="text.secondary" noWrap>
+                              Pagadores: {exp.participants.join(', ') || '-'}
+                            </Typography>
+                          </Tooltip>
                         </CardContent>
                       </CardActionArea>
-                      {exp.isFixed && (
-                        <CardActions>
-                          <IconButton
-                            aria-label="Remover despesa fixa"
-                            size="small"
-                            onClick={() => setRemoveExpenseId(exp.id)}
-                          >
-                            <DeleteOutlineIcon fontSize="small" />
-                          </IconButton>
-                        </CardActions>
-                      )}
+                      <CardActions>
+                        {exp.isFixed && cycleIsOpen && (
+                          <Tooltip title="Remover despesa fixa">
+                            <IconButton
+                              aria-label="Remover despesa fixa"
+                              size="small"
+                              onClick={() => setRemoveExpenseId(exp.id)}
+                            >
+                              <DeleteOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {canEdit(exp) && (
+                          <Tooltip title="Editar despesa">
+                            <IconButton
+                              aria-label="Editar despesa"
+                              size="small"
+                              component={Link}
+                              to={`/groups/${groupId}/expenses/${exp.id}`}
+                            >
+                              <EditOutlinedIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {canDelete(exp) && (
+                          // TASK-175 conecta o diálogo de confirmação de exclusão.
+                          <Tooltip title="Excluir despesa">
+                            <IconButton aria-label="Excluir despesa" size="small">
+                              <DeleteOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                        {canPay(exp) && (
+                          // TASK-177 conecta a chamada de POST .../pay.
+                          <Tooltip title="Marcar como paga">
+                            <IconButton aria-label="Marcar como paga" size="small">
+                              <CheckCircleOutlineIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      </CardActions>
                     </Card>
                   </Grid>
                 ))}
