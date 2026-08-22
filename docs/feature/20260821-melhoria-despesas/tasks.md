@@ -27,7 +27,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-167 | `ExpenseController::destroy` — bloquear exclusão se a despesa tem `Quota` da competência paga | backend | plan.md §2 | antes do merge | Implementada |
 | TASK-168 | Testes — exclusão bloqueada se paga; permitida se pendente e competência aberta | backend | plan.md §2 | nenhum | Implementada |
 | TASK-169 | Teste — saldo por pessoa (`computeCycleSummary`) continua correto após materialização de `Quota` para `FIXED` | backend | plan.md §7 | nenhum | Implementada |
-| TASK-170 | Extrair hook `useGroupCycle` de `GroupSummary.tsx` para reuso de navegação por ciclo | frontend | plan.md §1, §8 | antes do merge | Pendente |
+| TASK-170 | Extrair hook `useGroupCycle` de `GroupSummary.tsx` para reuso de navegação por ciclo | frontend | plan.md §1, §8 | antes do merge | Implementada |
 | TASK-171 | Extrair componente `<BalanceCards />` de `GroupSummary.tsx` para reuso dos cards de saldo por pessoa | frontend | plan.md §1, §7 | antes do merge | Pendente |
 | TASK-172 | `ExpenseManager.tsx` — adotar `useGroupCycle`/`GET .../expenses/summary` no lugar da navegação por mês calendário | frontend | plan.md §1, §8 | antes do merge | Pendente |
 | TASK-173 | `ExpenseManager.tsx` — layout em grid (listagem principal + `<BalanceCards />`) | frontend | plan.md §1, §7 | antes do merge | Pendente |
