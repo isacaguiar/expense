@@ -26,7 +26,15 @@ import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
 
-type SummaryCycle = { start: string; end: string };
+type CycleStatus = 'closed' | 'open' | 'future';
+
+type SummaryCycle = { start: string; end: string; status: CycleStatus };
+
+const cycleStatusChip: Record<CycleStatus, { label: string; color: 'default' | 'info'; variant?: 'outlined' }> = {
+  closed: { label: 'Ciclo fechado', color: 'default' },
+  open: { label: 'Ciclo em andamento', color: 'info' },
+  future: { label: 'Ciclo futuro', color: 'default', variant: 'outlined' },
+};
 type SummaryTotals = { total: number; paid: number; pending: number };
 
 type SummaryExpense = {
@@ -132,12 +140,20 @@ const GroupSummary: React.FC = () => {
               {formatDate(summary.cycle.start)} – {formatDate(summary.cycle.end)}
             </Typography>
             <IconButton
-              onClick={() => setCyclesAgo(prev => Math.max(prev - 1, 0))}
+              onClick={() => setCyclesAgo(prev => prev - 1)}
               aria-label="Próximo ciclo"
-              disabled={cyclesAgo === 0}
             >
               <ArrowForwardIosIcon />
             </IconButton>
+          </Box>
+
+          <Box display="flex" justifyContent="center" mb={3}>
+            <Chip
+              label={cycleStatusChip[summary.cycle.status].label}
+              color={cycleStatusChip[summary.cycle.status].color}
+              variant={cycleStatusChip[summary.cycle.status].variant}
+              size="small"
+            />
           </Box>
 
           <Grid container spacing={2} mb={3}>

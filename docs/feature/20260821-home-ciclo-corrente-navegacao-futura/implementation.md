@@ -26,6 +26,6 @@ TASK-134 a TASK-145 (todo o backend) foram implementadas juntas, direto na branc
 | TASK-143 | Implementada | 2026-08-21 | IA (Claude Code) | `php artisan test --filter=ExpenseControllerCycleFreezeTest` — 7 passed (27 assertions) | `update`/`destroy` de `IN_CASH`/`IN_INSTALLMENTS` de ciclo fechado retornam 422 (`rejectIfCycleClosed`) |
 | TASK-144 | Implementada | 2026-08-21 | IA (Claude Code) | `php artisan test --filter=ExpenseControllerStopRecurrenceTest` — 5 passed | `stopRecurrence` rejeita cutoff em ciclo fechado |
 | TASK-145 | Implementada | 2026-08-21 | IA (Claude Code) | `php artisan test` (suíte completa) — 114 passed (311 assertions); `./vendor/bin/pint --test` limpo nos arquivos tocados | Testes de bloqueio cobertos em `ExpenseControllerCycleFreezeTest` e `ExpenseControllerStopRecurrenceTest` |
-| TASK-146 | Pendente | — | — | — | — |
-| TASK-147 | Pendente | — | — | — | — |
-| TASK-148 | Pendente | — | — | — | — |
+| TASK-146 | Implementada | 2026-08-21 | IA (Claude Code) | `npx tsc --noEmit` — sem erros; verificação manual no navegador (ver TASK-148) | Botão "próximo" sem clamp/disabled, simétrico ao "anterior" |
+| TASK-147 | Implementada | 2026-08-21 | IA (Claude Code) | `npx tsc --noEmit` — sem erros | `Chip` de status do ciclo adicionado ao cabeçalho |
+| TASK-148 | Implementada | 2026-08-21 | IA (Claude Code) | `npx vitest run src/pages/GroupSummary.test.tsx` — 10 passed; verificação manual: login real, grupo/despesa criados via API, navegação confirmada no navegador — Ago/2026 abre com "Ciclo em andamento", "Próximo ciclo" leva a Set/2026 com "Ciclo futuro", "Ciclo anterior" 2x leva a Jul/2026 com "Ciclo fechado" | 3 testes novos (seta "próximo" chama `cycles_ago:-1`, chip por status via `it.each`) |

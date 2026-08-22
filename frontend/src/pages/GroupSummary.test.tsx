@@ -23,8 +23,10 @@ const groups = [
   { id: 2, name: 'Grupo B' },
 ];
 
+type CycleStatus = 'closed' | 'open' | 'future';
+
 const summaryResponse = {
-  cycle: { start: '2026-07-16', end: '2026-08-15' },
+  cycle: { start: '2026-07-16', end: '2026-08-15', status: 'closed' as CycleStatus },
   totals: { total: 1100, paid: 300, pending: 800 },
   expenses: [
     {
@@ -132,6 +134,42 @@ describe('GroupSummary', () => {
       expect(lastCall?.[0]).toContain('/expenses/summary');
       expect((lastCall?.[1] as { params: { cycles_ago: number } }).params.cycles_ago).toBe(1);
     });
+  });
+
+  it('requests the next cycle when the forward arrow is clicked, even past the current cycle', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('R$ 1.100,00');
+
+    await user.click(screen.getByLabelText('Próximo ciclo'));
+
+    await waitFor(() => {
+      const lastCall = vi.mocked(axios.get).mock.calls.at(-1);
+      expect(lastCall?.[0]).toContain('/expenses/summary');
+      expect((lastCall?.[1] as { params: { cycles_ago: number } }).params.cycles_ago).toBe(-1);
+    });
+  });
+
+  it.each([
+    ['closed', 'Ciclo fechado'],
+    ['open', 'Ciclo em andamento'],
+    ['future', 'Ciclo futuro'],
+  ] as const)('shows a %s cycle status chip', async (status, label) => {
+    mockGetResponses({ ...summaryResponse, cycle: { ...summaryResponse.cycle, status } });
+
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(label)).toBeInTheDocument();
   });
 
   it('shows the paid/pending percentage of the total', async () => {
