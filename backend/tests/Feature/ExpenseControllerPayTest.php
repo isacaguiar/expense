@@ -186,4 +186,154 @@ class ExpenseControllerPayTest extends TestCase
 
         $response->assertStatus(404);
     }
+
+    public function test_creditor_can_unpay_in_cash_expense(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $quota = $expense->quotas()->create([
+            'date_expected' => '2026-08-10',
+            'number' => 1,
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'value_quota' => 100,
+        ]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/unpay");
+
+        $response->assertStatus(200)->assertJsonPath('paid', false);
+
+        $quota->refresh();
+        $this->assertFalse((bool) $quota->paid);
+        $this->assertNull($quota->paid_at);
+        $this->assertNull($quota->paid_by);
+    }
+
+    public function test_non_creditor_cannot_unpay(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->sync([$creditor->id, $participant->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-08-10', 'number' => 1, 'paid' => true,
+            'paid_at' => now(), 'paid_by' => $creditor->id, 'value_quota' => 100,
+        ]);
+
+        $response = $this->withToken($this->tokenFor($participant))
+            ->postJson("/api/expenses/{$expense->id}/unpay");
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => true]);
+    }
+
+    public function test_unpay_fails_when_expense_is_not_paid(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/unpay");
+
+        $response->assertStatus(422);
+    }
+
+    public function test_unpay_does_not_materialize_a_fixed_quota_that_was_never_paid(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 300,
+        ]);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 300]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/unpay");
+
+        $response->assertStatus(422);
+        // Continua só com a Quota original — unpay() não congela o valor do
+        // mês vigente à toa quando não havia nada pago pra desfazer.
+        $this->assertSame(1, Quota::where('expense_id', $expense->id)->count());
+    }
+
+    public function test_cannot_unpay_in_a_manually_closed_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create([
+            'date_expected' => '2026-08-10', 'number' => 1, 'paid' => true,
+            'paid_at' => now(), 'paid_by' => $creditor->id, 'value_quota' => 100,
+        ]);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/unpay");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => true]);
+    }
+
+    public function test_unpay_requires_group_membership(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $outsider = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create([
+            'date_expected' => '2026-08-10', 'number' => 1, 'paid' => true,
+            'paid_at' => now(), 'paid_by' => $creditor->id, 'value_quota' => 100,
+        ]);
+
+        $response = $this->withToken($this->tokenFor($outsider))
+            ->postJson("/api/expenses/{$expense->id}/unpay");
+
+        $response->assertStatus(404);
+    }
 }

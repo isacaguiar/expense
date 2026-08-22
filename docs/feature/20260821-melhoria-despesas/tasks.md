@@ -21,7 +21,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-161 | Rota + `ExpenseController::reopen` — `POST /groups/{groupId}/expenses/reopen`, só permitido na competência ainda vigente | backend | plan.md §5 | antes do merge | Implementada |
 | TASK-162 | Testes — reabertura permitida só no mês vigente; negada após a virada mesmo com snapshot manual existente | backend | plan.md §5 | nenhum | Implementada |
 | TASK-163 | Rota + `ExpenseController::pay` — `POST /expenses/{expenseId}/pay`, só credor, só competência aberta, materializa `FIXED` se preciso | backend | plan.md §6 | antes do merge | Implementada |
-| TASK-164 | Rota + `ExpenseController::unpay` — `POST /expenses/{expenseId}/unpay`, só credor, só competência aberta | backend | plan.md §6 | antes do merge | Pendente |
+| TASK-164 | Rota + `ExpenseController::unpay` — `POST /expenses/{expenseId}/unpay`, só credor, só competência aberta | backend | plan.md §6 | antes do merge | Implementada |
 | TASK-165 | `ExpenseController::update` — bloquear alteração de valor quando a `Quota` da competência já está paga | backend | plan.md §6 | antes do merge | Pendente |
 | TASK-166 | Testes — pay/unpay só pelo credor e só com competência aberta; update de valor bloqueado se pago | backend | plan.md §6 | nenhum | Pendente |
 | TASK-167 | `ExpenseController::destroy` — bloquear exclusão se a despesa tem `Quota` da competência paga | backend | plan.md §2 | antes do merge | Pendente |

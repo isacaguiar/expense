@@ -516,6 +516,46 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Desfaz o pagamento da ocorrência desta despesa na competência vigente.
+     * Mesmas regras de `pay`: só o credor, só com a competência aberta. Ao
+     * contrário de `pay`, não materializa `Quota` de `FIXED` sob demanda —
+     * uma ocorrência ainda virtual nunca está paga (`collectCycleEntries`
+     * projeta `paid: false` até existir uma Quota real), então não há o que
+     * desfazer nesse caso.
+     */
+    public function unpay($expenseId)
+    {
+        $expense = $this->findExpenseForMember($expenseId);
+
+        if (auth()->id() !== $expense->user_payer_id) {
+            abort(403, 'Só o credor pode desfazer o pagamento desta despesa.');
+        }
+
+        $group = $expense->group;
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+
+        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
+            return $response;
+        }
+
+        $quota = $expense->quotas()
+            ->whereBetween('date_expected', [$cycle['start']->toDateString(), $cycle['end']->toDateString()])
+            ->first();
+
+        if (! $quota || ! $quota->paid) {
+            return response()->json(['error' => 'Esta despesa não está paga na competência vigente.'], 422);
+        }
+
+        $quota->update([
+            'paid' => false,
+            'paid_at' => null,
+            'paid_by' => null,
+        ]);
+
+        return response()->json($quota->fresh());
+    }
+
+    /**
      * Foto imutável de um ciclo já fechado: devolve a foto já persistida, ou
      * computa ao vivo (uma única vez) e persiste antes de devolver. A partir
      * daí, este ciclo nunca mais é recalculado — edições/exclusões de
