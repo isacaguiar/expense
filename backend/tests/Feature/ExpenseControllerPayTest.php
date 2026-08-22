@@ -9,6 +9,8 @@ use App\Models\Quota;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class ExpenseControllerPayTest extends TestCase
@@ -65,6 +67,77 @@ class ExpenseControllerPayTest extends TestCase
         $this->assertTrue((bool) $quota->paid);
         $this->assertNotNull($quota->paid_at);
         $this->assertSame($creditor->id, $quota->paid_by);
+    }
+
+    public function test_pay_without_file_leaves_payment_proof_path_null(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        // Fluxo antigo de ExpenseManager.tsx chama /pay sem corpo nenhum — o
+        // comprovante tem que continuar opcional pra não quebrar esse fluxo.
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay");
+
+        $response->assertStatus(200)->assertJsonPath('payment_proof_url', null);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertNull($quota->payment_proof_path);
+    }
+
+    public function test_pay_with_photo_stores_it_and_exposes_the_url(): void
+    {
+        Storage::fake('public');
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ]);
+
+        $response->assertStatus(200)->assertJsonPath('paid', true);
+        $this->assertNotNull($response->json('payment_proof_url'));
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertNotNull($quota->payment_proof_path);
+        Storage::disk('public')->assertExists($quota->payment_proof_path);
+    }
+
+    public function test_pay_rejects_non_image_proof_file(): void
+    {
+        Storage::fake('public');
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->create('comprovante.pdf', 100, 'application/pdf'),
+            ], ['Accept' => 'application/json']);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false, 'payment_proof_path' => null]);
     }
 
     public function test_creditor_can_pay_fixed_expense_materializing_the_current_month_quota(): void
@@ -215,6 +288,37 @@ class ExpenseControllerPayTest extends TestCase
         $this->assertFalse((bool) $quota->paid);
         $this->assertNull($quota->paid_at);
         $this->assertNull($quota->paid_by);
+    }
+
+    public function test_unpay_deletes_stored_proof_photo_and_clears_the_path(): void
+    {
+        Storage::fake('public');
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ])->assertStatus(200);
+
+        $path = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+        Storage::disk('public')->assertExists($path);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/unpay");
+
+        $response->assertStatus(200)->assertJsonPath('payment_proof_url', null);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertNull($quota->payment_proof_path);
+        Storage::disk('public')->assertMissing($path);
     }
 
     public function test_non_creditor_cannot_unpay(): void
