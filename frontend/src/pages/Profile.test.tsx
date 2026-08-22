@@ -23,6 +23,7 @@ const me = {
   pix: 'ana@pix.com',
   whatsapp: '(71) 99999-9999',
   notify_whatsapp: true,
+  avatar_url: null as string | null,
 };
 
 describe('Profile', () => {
@@ -161,6 +162,33 @@ describe('Profile', () => {
 
     await screen.findByDisplayValue('Ana Silva');
     expect(await screen.findByText('Não foi possível vincular sua conta Google.')).toBeInTheDocument();
+  });
+
+  it('shows the initials avatar when there is no avatar_url', async () => {
+    render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+    expect(screen.getByText('AS')).toBeInTheDocument();
+  });
+
+  it('shows the Google photo as avatar when avatar_url is present', async () => {
+    vi.mocked(axios.get).mockResolvedValueOnce({
+      data: { ...me, avatar_url: 'https://google.example/pic.jpg' },
+    });
+
+    const { container } = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+    const avatarImg = container.querySelector('img');
+    expect(avatarImg).toHaveAttribute('src', 'https://google.example/pic.jpg');
   });
 
   it('shows the backend validation error on failure', async () => {
