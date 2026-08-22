@@ -30,7 +30,7 @@ Versão: 1.0 · Criado em: 20260822
 | TASK-170 | Extrair hook `useGroupCycle` de `GroupSummary.tsx` para reuso de navegação por ciclo | frontend | plan.md §1, §8 | antes do merge | Implementada |
 | TASK-171 | Extrair componente `<BalanceCards />` de `GroupSummary.tsx` para reuso dos cards de saldo por pessoa | frontend | plan.md §1, §7 | antes do merge | Implementada |
 | TASK-172 | `ExpenseManager.tsx` — adotar `useGroupCycle`/`GET .../expenses/summary` no lugar da navegação por mês calendário | frontend | plan.md §1, §8 | antes do merge | Implementada |
-| TASK-173 | `ExpenseManager.tsx` — layout em grid (listagem principal + `<BalanceCards />`) | frontend | plan.md §1, §7 | antes do merge | Pendente |
+| TASK-173 | `ExpenseManager.tsx` — layout em grid (listagem principal + `<BalanceCards />`) | frontend | plan.md §1, §7 | antes do merge | Implementada |
 | TASK-174 | `ExpenseManager.tsx` — campos completos por despesa (Tipo, Competência, Credor, Pagadores, Status) e ícones de ação condicionais com tooltip | frontend | plan.md §1 | antes do merge | Pendente |
 | TASK-175 | `ExpenseManager.tsx` — modal de confirmação de exclusão de despesa variável | frontend | plan.md §2 | antes do merge | Pendente |
 | TASK-176 | `ExpenseManager.tsx` — botões "Fechar mês" / "Reabrir mês" | frontend | plan.md §4, §5 | antes do merge | Pendente |
