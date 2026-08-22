@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -40,7 +40,11 @@ type SummaryExpenseFixture = {
 
 const CURRENT_USER_ID = 500;
 
-function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
+function summaryResponse(
+  expensesList: SummaryExpenseFixture[] = [],
+  cycleOverride: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {}
+) {
   return {
     cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open', ...cycleOverride },
     totals: { total: 0, paid: 0, pending: 0 },
@@ -52,13 +56,19 @@ function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverri
       ...exp,
     })),
     balances: [],
+    settlements: [],
+    ...extra,
   };
 }
 
-function mockGetResponses(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
+function mockGetResponses(
+  expensesList: SummaryExpenseFixture[] = [],
+  cycleOverride: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {}
+) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
     if (url.includes('/expenses/summary')) {
-      return Promise.resolve({ data: summaryResponse(expensesList, cycleOverride) });
+      return Promise.resolve({ data: summaryResponse(expensesList, cycleOverride, extra) });
     }
     if (url.includes('/api/me')) {
       return Promise.resolve({ data: { id: CURRENT_USER_ID } });
@@ -131,7 +141,7 @@ describe('ExpenseManager - listagem em cards', () => {
     expect(vi.mocked(axios.get).mock.calls.filter(call => (call[0] as string).includes('/expenses/summary'))).toHaveLength(1);
   });
 
-  it('displays the expense date without an off-by-one-day shift in negative timezones', async () => {
+  it('displays the expense date in the details modal without an off-by-one-day shift in negative timezones', async () => {
     mockGetResponses([
       { id: 11, description: 'Assinatura', value: 50, date: '2026-07-16', payerName: 'Isac', isFixed: false },
     ]);
@@ -142,8 +152,12 @@ describe('ExpenseManager - listagem em cards', () => {
       </MemoryRouter>
     );
 
-    expect(await screen.findByText('Assinatura')).toBeInTheDocument();
-    expect(screen.getByText(/16\/07\/2026/)).toBeInTheDocument();
+    await screen.findByText('Assinatura');
+    // Data não é mais coluna da tabela (TASK-006) — só aparece no modal de
+    // detalhes (TASK-007), aberto pelo ícone "Ver detalhes".
+    await userEvent.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+    expect(await screen.findByText(/16\/07\/2026/)).toBeInTheDocument();
   });
 
   it('filters by type (Fixas/Variáveis) on the client side', async () => {
@@ -168,7 +182,7 @@ describe('ExpenseManager - campos completos e ações condicionais', () => {
     vi.mocked(axios.get).mockReset();
   });
 
-  it('shows status chip, credor and pagadores', async () => {
+  it('shows status chip and credor with an initials avatar', async () => {
     mockGetResponses([
       {
         id: 20,
@@ -189,8 +203,11 @@ describe('ExpenseManager - campos completos e ações condicionais', () => {
     );
 
     expect(await screen.findByText('Paga')).toBeInTheDocument();
-    expect(screen.getByText(/Credor: Isac/)).toBeInTheDocument();
-    expect(screen.getByText('Pagadores: Isac, Maria')).toBeInTheDocument();
+    // Coluna "Credor" já dá o rótulo — a célula só tem o avatar de iniciais
+    // e o valor, sem prefixo. "Pagadores" não é mais coluna da tabela (fica
+    // acessível pelo modal de detalhes, TASK-007).
+    expect(screen.getByText('Isac')).toBeInTheDocument();
+    expect(screen.getByText('I')).toBeInTheDocument();
   });
 
   it('shows edit, delete and pay icons when the user owns and is the creditor of a pending variable expense', async () => {
@@ -842,9 +859,9 @@ describe('ExpenseManager - fluxo completo (grid, pagar, despagar, excluir)', () 
       </MemoryRouter>
     );
 
-    // Grid: listagem e "Saldo por pessoa" juntos na mesma tela.
+    // Grid: listagem e o painel lateral (SummarySidePanel) juntos na mesma tela.
     expect(await screen.findByText('Mercado')).toBeInTheDocument();
-    expect(screen.getByText('Saldo por pessoa')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Saldo' })).toBeInTheDocument();
 
     // Pendente: pode marcar como paga; "Desfazer pagamento" ainda não existe.
     expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument();
@@ -871,5 +888,87 @@ describe('ExpenseManager - fluxo completo (grid, pagar, despagar, excluir)', () 
     await waitFor(() => {
       expect(screen.getByText('Nenhuma despesa encontrada para esta competência.')).toBeInTheDocument();
     });
+  });
+});
+
+describe('ExpenseManager - aba "À pagar" do painel lateral', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+  });
+
+  it('shows real settlement data from this page when switching to the "À pagar" tab', async () => {
+    const user = userEvent.setup();
+
+    mockGetResponses([], {}, {
+      balances: [
+        { user_id: 533, name: 'QA Despesas', balance: 550 },
+        { user_id: 534, name: 'QA Membro 2', balance: -550 },
+      ],
+      settlements: [{ from_user_id: 534, to_user_id: 533, amount: 550 }],
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByRole('tab', { name: 'Saldo' });
+
+    await user.click(screen.getByRole('tab', { name: 'À pagar' }));
+
+    expect(screen.getByText('QA Membro 2')).toBeInTheDocument();
+    expect(screen.getByText('QA Despesas')).toBeInTheDocument();
+    expect(screen.getByText('R$ 550,00')).toBeInTheDocument();
+    expect(screen.getByText(/deve pagar/)).toBeInTheDocument();
+  });
+});
+
+describe('ExpenseManager - modal de detalhes', () => {
+  beforeEach(() => {
+    navigateMock.mockClear();
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.delete).mockReset();
+  });
+
+  it('shows description, type, status, value, date, credor and pagadores, and closes without navigating or changing data', async () => {
+    mockGetResponses([
+      {
+        id: 60,
+        description: 'Internet',
+        value: 120,
+        date: '2026-08-05',
+        payerName: 'Isac',
+        participants: ['Isac', 'Maria'],
+        paid: false,
+        isFixed: true,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Internet');
+    await userEvent.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+    expect(await screen.findByText('Detalhes da despesa')).toBeInTheDocument();
+    const modal = within(screen.getByRole('dialog'));
+    expect(modal.getByText('R$ 120,00')).toBeInTheDocument();
+    expect(modal.getByText(/05\/08\/2026/)).toBeInTheDocument();
+    expect(modal.getByText('Credor: Isac')).toBeInTheDocument();
+    expect(modal.getByText('Isac, Maria')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Detalhes da despesa')).not.toBeInTheDocument();
+    });
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(axios.post).not.toHaveBeenCalled();
+    expect(axios.delete).not.toHaveBeenCalled();
   });
 });
