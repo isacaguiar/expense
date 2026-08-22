@@ -20,8 +20,7 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { useGroupCycle, cycleStatusChip } from '../hooks/useGroupCycle';
-import BalanceCards from '../components/BalanceCards';
-import SettlementList from '../components/SettlementList';
+import SummarySidePanel from '../components/SummarySidePanel';
 
 // new Date('YYYY-MM-DD') interpreta a string como UTC-meia-noite, o que desloca
 // a data em 1 dia para trás em fusos negativos (ex.: America/Sao_Paulo) —
@@ -171,19 +170,7 @@ const GroupSummary: React.FC = () => {
             </Grid>
 
             <Grid size={{ xs: 12, sm: 12, lg: 4 }}>
-              <Typography variant="h6" gutterBottom>
-                Saldos por pessoa
-              </Typography>
-              <BalanceCards balances={summary.balances} />
-
-              {summary.settlements.length > 0 && (
-                <>
-                  <Typography variant="h6" gutterBottom mt={3}>
-                    Quem paga a quem
-                  </Typography>
-                  <SettlementList settlements={summary.settlements} balances={summary.balances} />
-                </>
-              )}
+              <SummarySidePanel balances={summary.balances} settlements={summary.settlements} />
             </Grid>
           </Grid>
         </>
