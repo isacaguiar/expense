@@ -274,6 +274,33 @@ class ExpenseControllerCloseTest extends TestCase
         );
     }
 
+    public function test_close_persists_settlements_in_the_snapshot(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10', 'total_value' => 200]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 200]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->postJson("/api/groups/{$group->id}/expenses/close");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'from_user_id' => $participant->id,
+            'to_user_id' => $payer->id,
+            'amount' => 100,
+        ]);
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)->where('cycle_start', '2026-08-01')->firstOrFail();
+        $this->assertNotNull($snapshot->settlements);
+        $this->assertCount(1, $snapshot->settlements);
+    }
+
     public function test_close_requires_group_membership(): void
     {
         $outsider = User::factory()->create();
