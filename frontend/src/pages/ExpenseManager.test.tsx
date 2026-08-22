@@ -456,3 +456,90 @@ describe('ExpenseManager - remover despesa Fixa', () => {
     expect(payload).toEqual({ year: 2026, month: 9 });
   });
 });
+
+describe('ExpenseManager - excluir despesa variável', () => {
+  const deletableExpense: SummaryExpenseFixture = {
+    id: 30,
+    description: 'Mercado',
+    value: 300,
+    date: '2026-08-10',
+    payerName: 'Isac',
+    paid: false,
+    isFixed: false,
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+  };
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.delete).mockReset();
+    mockGetResponses([deletableExpense]);
+  });
+
+  it('shows the expense description in the confirmation dialog', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir despesa' }));
+
+    expect(await screen.findByText('"Mercado"', { exact: false })).toBeInTheDocument();
+  });
+
+  it('does not call DELETE when cancelled', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir despesa' }));
+    await screen.findByText('Excluir despesa');
+    await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(axios.delete).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByText('Excluir despesa')).not.toBeInTheDocument());
+  });
+
+  it('calls DELETE and shows a success toast when confirmed', async () => {
+    vi.mocked(axios.delete).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir despesa' }));
+    await screen.findByText('Excluir despesa');
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+
+    await waitFor(() => expect(axios.delete).toHaveBeenCalled());
+    const [url] = vi.mocked(axios.delete).mock.calls[0];
+    expect(url).toContain('/api/expenses/30');
+    expect(await screen.findByText('Despesa excluída com sucesso.')).toBeInTheDocument();
+  });
+
+  it('shows the error message returned by the API when deletion fails', async () => {
+    vi.mocked(axios.delete).mockRejectedValue({
+      response: { data: { error: 'Não é possível excluir uma despesa já paga. Desfaça o pagamento primeiro.' } },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Excluir despesa' }));
+    await screen.findByText('Excluir despesa');
+    await userEvent.click(screen.getByRole('button', { name: 'Excluir' }));
+
+    expect(
+      await screen.findByText('Não é possível excluir uma despesa já paga. Desfaça o pagamento primeiro.')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Excluir despesa')).toBeInTheDocument();
+  });
+});
