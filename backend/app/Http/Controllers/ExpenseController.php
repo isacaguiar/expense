@@ -151,11 +151,12 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Ciclo passado é só leitura: `IN_CASH`/`IN_INSTALLMENTS` cujo `date_payment`
-     * cai num ciclo já fechado não podem mais ser editados/apagados. `FIXED`
-     * fica de fora dessa checagem — é uma definição recorrente, não presa a um
-     * único ciclo, e a foto do ciclo fechado (`GroupCycleSnapshot`) já garante
-     * que editar/apagar uma despesa Fixa depois não muda o passado.
+     * Competência passada é só leitura: `IN_CASH`/`IN_INSTALLMENTS` cujo
+     * `date_payment` cai numa competência já fechada não podem mais ser
+     * editados/apagados. `FIXED` fica de fora dessa checagem — é uma definição
+     * recorrente, não presa a uma única competência; a materialização da
+     * `Quota` de cada mês (`materializeFixedOccurrenceQuota`) já garante que
+     * editar o valor depois não muda competências já congeladas.
      */
     private function rejectIfCycleClosed(Expense $expense): ?\Illuminate\Http\JsonResponse
     {
@@ -163,10 +164,33 @@ class ExpenseController extends Controller
             return null;
         }
 
-        $status = BillingCycle::statusFor($expense->group->closing_day, $expense->date_payment, Carbon::now());
+        return $this->rejectIfCompetenceClosed($expense->group, $expense->date_payment);
+    }
 
-        if ($status === 'closed') {
-            return response()->json(['error' => 'Não é possível alterar uma despesa de um ciclo já fechado.'], 422);
+    /**
+     * Retorna uma resposta 422 se a competência (mês de fatura, `BillingCycle`)
+     * que contém `$referenceDate` está fechada — automaticamente (por data,
+     * definitivo) ou manualmente (`GroupCycleSnapshot::closed_manually_at`
+     * ainda ativo, revisável até a virada do mês). `null` se estiver aberta.
+     * Único ponto de checagem de competência fechada, reaproveitado por toda
+     * ação nova (fechar, reabrir, pagar, despagar, criar).
+     */
+    private function rejectIfCompetenceClosed(Group $group, Carbon $referenceDate): ?\Illuminate\Http\JsonResponse
+    {
+        $closedResponse = response()->json(['error' => 'Não é possível alterar dados de uma competência já fechada.'], 422);
+
+        if (BillingCycle::statusFor($group->closing_day, $referenceDate, Carbon::now()) === 'closed') {
+            return $closedResponse;
+        }
+
+        $cycleStart = BillingCycle::cycleFor($group->closing_day, $referenceDate)['start'];
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', $cycleStart->toDateString())
+            ->first();
+
+        if ($snapshot && $snapshot->isManuallyClosedAndActive()) {
+            return $closedResponse;
         }
 
         return null;
