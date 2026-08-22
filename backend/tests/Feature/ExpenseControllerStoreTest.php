@@ -74,6 +74,19 @@ class ExpenseControllerStoreTest extends TestCase
         $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
     }
 
+    public function test_cannot_create_expense_in_deleted_group(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'deleted' => true]);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member));
+
+        $response->assertStatus(404);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
     public function test_payer_must_be_member_of_group(): void
     {
         $member = User::factory()->create();

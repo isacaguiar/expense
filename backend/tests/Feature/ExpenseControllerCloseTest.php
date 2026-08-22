@@ -73,6 +73,21 @@ class ExpenseControllerCloseTest extends TestCase
         $this->assertTrue($snapshot->isManuallyClosedAndActive());
     }
 
+    public function test_cannot_close_deleted_group(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'deleted' => true]);
+        $group->members()->attach($payer->id);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->postJson("/api/groups/{$group->id}/expenses/close");
+
+        $response->assertStatus(404);
+        $this->assertDatabaseMissing('ex_group_cycle_snapshots', ['group_id' => $group->id]);
+    }
+
     public function test_close_materializes_fixed_occurrence_quota(): void
     {
         Carbon::setTestNow('2026-08-19');

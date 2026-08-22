@@ -81,7 +81,7 @@ const GroupForm: React.FC = () => {
         response = await axios.post(`${API_BASE_URL}/api/groups`, payload, config);
       }
       const groupId = (response.data as Group).id;
-      navigate('/dashboard');
+      navigate('/meus-grupos');
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setError(message || 'Erro ao salvar grupo. Tente novamente.');
@@ -147,7 +147,7 @@ const GroupForm: React.FC = () => {
             </Button>
             <Button
               variant="outlined"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/meus-grupos')}
               disabled={submitting}
             >
               Cancelar

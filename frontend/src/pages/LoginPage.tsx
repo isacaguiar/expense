@@ -35,7 +35,7 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', data.access_token);
       localStorage.setItem('refreshToken', data.refresh_token);
 
-      navigate('/dashboard');
+      navigate('/meus-grupos');
     } catch (err) {
       console.error('Falha no login:', err);
     }

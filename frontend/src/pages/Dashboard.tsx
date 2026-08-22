@@ -44,6 +44,7 @@ type Group = {
   created_by: number | null;
   creator?: { id: number; email: string } | null;
   members: Member[];
+  cycle_snapshots_exists: boolean;
 };
 
 const MAX_GROUPS_CREATED_PER_USER = 3;
@@ -55,7 +56,7 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<string>('');
   const [removeGroupId, setRemoveGroupId] = useState<number | null>(null);
-  const [removeSuccess, setRemoveSuccess] = useState<boolean>(false);
+  const [removeSuccessMessage, setRemoveSuccessMessage] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -95,13 +96,13 @@ const Dashboard: React.FC = () => {
 
     const token = localStorage.getItem('accessToken');
     axios
-      .delete(`${API_BASE_URL}/api/groups/${removeGroupId}`, {
+      .delete<{ message: string }>(`${API_BASE_URL}/api/groups/${removeGroupId}`, {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
-      .then(() => {
+      .then(res => {
         setGroups(prev => prev.filter(group => group.id !== removeGroupId));
         setRemoveGroupId(null);
-        setRemoveSuccess(true);
+        setRemoveSuccessMessage(res.data.message ?? 'Grupo excluído com sucesso.');
       })
       .catch(err => {
         console.error('Erro ao excluir grupo:', err);
@@ -219,11 +220,18 @@ const Dashboard: React.FC = () => {
       >
         <DialogTitle>Excluir grupo</DialogTitle>
         <DialogContent dividers>
-          <Typography>
+          <Typography gutterBottom>
             {removeGroup
               ? `Tem certeza que deseja excluir o grupo "${removeGroup.name}"?`
               : 'Tem certeza que deseja excluir este grupo?'}
           </Typography>
+          {removeGroup && (
+            <Alert severity={removeGroup.cycle_snapshots_exists ? 'info' : 'warning'}>
+              {removeGroup.cycle_snapshots_exists
+                ? 'O histórico deste grupo (despesas, participantes e fechamentos) será preservado. Ele deixa de aparecer em "Meus Grupos" e não aceita mais novas despesas, participantes ou fechamentos.'
+                : 'Esta ação é irreversível: o grupo e todas as despesas, participações e fechamentos associados serão apagados permanentemente.'}
+            </Alert>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setRemoveGroupId(null)}>Cancelar</Button>
@@ -234,13 +242,13 @@ const Dashboard: React.FC = () => {
       </Dialog>
 
       <Snackbar
-        open={removeSuccess}
+        open={removeSuccessMessage !== null}
         autoHideDuration={4000}
-        onClose={() => setRemoveSuccess(false)}
+        onClose={() => setRemoveSuccessMessage(null)}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={() => setRemoveSuccess(false)} severity="success" variant="filled">
-          Grupo excluído com sucesso.
+        <Alert onClose={() => setRemoveSuccessMessage(null)} severity="success" variant="filled">
+          {removeSuccessMessage}
         </Alert>
       </Snackbar>
     </>
