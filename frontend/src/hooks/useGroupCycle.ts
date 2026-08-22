@@ -21,6 +21,8 @@ export type SummaryExpense = {
   payerName: string | null;
   participants: string[];
   isFixed: boolean;
+  userPayerId: number;
+  userCreatorId: number;
 };
 
 export type SummaryBalance = {
