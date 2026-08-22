@@ -15,6 +15,7 @@ class GroupCycleSnapshot extends Model
         'totals',
         'expenses',
         'balances',
+        'settlements',
         'closed_manually_at',
         'reopened_at',
     ];
@@ -25,6 +26,7 @@ class GroupCycleSnapshot extends Model
         'totals' => 'array',
         'expenses' => 'array',
         'balances' => 'array',
+        'settlements' => 'array',
         'closed_manually_at' => 'datetime',
         'reopened_at' => 'datetime',
     ];

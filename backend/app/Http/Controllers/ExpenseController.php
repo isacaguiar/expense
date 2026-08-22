@@ -399,6 +399,7 @@ class ExpenseController extends Controller
                 'totals' => $manualSnapshot->totals,
                 'expenses' => $manualSnapshot->expenses,
                 'balances' => $manualSnapshot->balances,
+                'settlements' => $manualSnapshot->settlements,
             ];
         } else {
             $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
@@ -409,6 +410,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
+            'settlements' => $summary['settlements'],
         ]);
     }
 
@@ -448,6 +450,7 @@ class ExpenseController extends Controller
                 'totals' => $summary['totals'],
                 'expenses' => $summary['expenses'],
                 'balances' => $summary['balances'],
+                'settlements' => $summary['settlements'],
                 'closed_manually_at' => Carbon::now(),
                 'reopened_at' => null,
             ]
@@ -458,6 +461,7 @@ class ExpenseController extends Controller
             'totals' => $snapshot->totals,
             'expenses' => $snapshot->expenses,
             'balances' => $snapshot->balances,
+            'settlements' => $snapshot->settlements,
         ]);
     }
 
@@ -496,6 +500,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
+            'settlements' => $summary['settlements'],
         ]);
     }
 
@@ -582,7 +587,7 @@ class ExpenseController extends Controller
      * daí, este ciclo nunca mais é recalculado — edições/exclusões de
      * despesa depois de fotografado não mudam mais o resultado.
      *
-     * @return array{totals: array, expenses: array, balances: array}
+     * @return array{totals: array, expenses: array, balances: array, settlements: array}
      */
     private function cycleSnapshotFor(Group $group, $groupId, Carbon $start, Carbon $end): array
     {
@@ -595,6 +600,7 @@ class ExpenseController extends Controller
                 'totals' => $snapshot->totals,
                 'expenses' => $snapshot->expenses,
                 'balances' => $snapshot->balances,
+                'settlements' => $snapshot->settlements,
             ];
         }
 
@@ -608,6 +614,7 @@ class ExpenseController extends Controller
                 'totals' => $summary['totals'],
                 'expenses' => $summary['expenses'],
                 'balances' => $summary['balances'],
+                'settlements' => $summary['settlements'],
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
             // Violação de unique(group_id, cycle_start): outra requisição já
@@ -621,6 +628,7 @@ class ExpenseController extends Controller
                 'totals' => $snapshot->totals,
                 'expenses' => $snapshot->expenses,
                 'balances' => $snapshot->balances,
+                'settlements' => $snapshot->settlements,
             ];
         }
 
@@ -628,10 +636,11 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Calcula totais, lista de despesas e saldos por pessoa de um ciclo
-     * [start, end], sempre ao vivo a partir de `Expense`/`Quota`.
+     * Calcula totais, lista de despesas, saldos por pessoa e liquidação
+     * par-a-par (quem paga a quem) de um ciclo [start, end], sempre ao vivo
+     * a partir de `Expense`/`Quota`.
      *
-     * @return array{totals: array, expenses: array, balances: array}
+     * @return array{totals: array, expenses: array, balances: array, settlements: array}
      */
     private function computeCycleSummary(Group $group, $groupId, Carbon $start, Carbon $end): array
     {
@@ -669,6 +678,12 @@ class ExpenseController extends Controller
             $balances[$member->id] = ['user_id' => $member->id, 'name' => $member->name, 'balance' => 0.0];
         }
 
+        // $owed[$credorId][$devedorId] = quanto o devedor deve ao credor,
+        // somado em bruto por despesa (antes de netar par a par). Base para
+        // $settlements abaixo; $balances continua vindo do mesmo loop, só
+        // agregando direto por pessoa em vez de por par.
+        $owed = [];
+
         foreach ($entries as $entry) {
             $expense = $entry['expense'];
             $participants = $expense->payers;
@@ -688,6 +703,8 @@ class ExpenseController extends Controller
                 if (isset($balances[$payerId])) {
                     $balances[$payerId]['balance'] += $valuePerPerson;
                 }
+
+                $owed[$payerId][$participant->id] = ($owed[$payerId][$participant->id] ?? 0) + $valuePerPerson;
             }
         }
 
@@ -700,7 +717,41 @@ class ExpenseController extends Controller
             ->values()
             ->all();
 
-        return ['totals' => $totals, 'expenses' => $expenses, 'balances' => $balances];
+        // Liquidação par-a-par: neta cada par (credor, devedor) contra o
+        // sentido inverso (mesma lógica de
+        // GroupExpenseReportController::reportByGroupAndYearMonthlySettlement,
+        // aqui chaveada por user_id em vez de nome) — cada par gera no máximo
+        // 1 entrada, na direção líquida. Marca pares já resolvidos por uma
+        // chave normalizada (não por "quem tem o menor id"): um par só existe
+        // em $owed[maiorCredorId] se aquela pessoa alguma vez pagou por
+        // alguém — pode não existir do lado do menor id, então não dá pra
+        // usar "id < id" pra decidir quem processa sem perder pares.
+        $settlements = [];
+        $processedPairs = [];
+        foreach ($owed as $creditorId => $debtors) {
+            foreach ($debtors as $debtorId => $amount) {
+                if ($debtorId === $creditorId) {
+                    continue;
+                }
+
+                $pairKey = min($creditorId, $debtorId).':'.max($creditorId, $debtorId);
+                if (isset($processedPairs[$pairKey])) {
+                    continue;
+                }
+                $processedPairs[$pairKey] = true;
+
+                $reverse = $owed[$debtorId][$creditorId] ?? 0;
+                $net = round($amount - $reverse, 2);
+
+                if ($net > 0) {
+                    $settlements[] = ['from_user_id' => $debtorId, 'to_user_id' => $creditorId, 'amount' => $net];
+                } elseif ($net < 0) {
+                    $settlements[] = ['from_user_id' => $creditorId, 'to_user_id' => $debtorId, 'amount' => round(-$net, 2)];
+                }
+            }
+        }
+
+        return ['totals' => $totals, 'expenses' => $expenses, 'balances' => $balances, 'settlements' => $settlements];
     }
 
     /**
