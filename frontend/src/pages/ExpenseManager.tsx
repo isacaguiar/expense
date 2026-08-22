@@ -350,7 +350,7 @@ const ExpenseManager: React.FC = () => {
         <Typography color="error">{error}</Typography>
       ) : (
         <Grid container spacing={3}>
-          <Grid size={{ xs: 12, md: 8 }}>
+          <Grid size={{ xs: 12, sm: 12, lg: 8 }}>
             {/* Busca e filtro por tipo */}
             <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
               <TextField
@@ -481,7 +481,7 @@ const ExpenseManager: React.FC = () => {
             )}
           </Grid>
 
-          <Grid size={{ xs: 12, md: 4 }}>
+          <Grid size={{ xs: 12, sm: 12, lg: 4 }}>
             <Typography variant="h6" gutterBottom>
               Saldo por pessoa
             </Typography>
