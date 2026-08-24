@@ -93,6 +93,56 @@ class ExpenseControllerSummaryTest extends TestCase
         ]);
     }
 
+    public function test_expense_entries_include_value_per_person_and_null_payment_proof_url(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participantA = User::factory()->create();
+        $participantB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participantA->id, $participantB->id]);
+
+        // 3 participantes dividindo 300 -> 100 por pessoa.
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 300]);
+        $expense->payers()->sync([$payer->id, $participantA->id, $participantB->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 300]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'value' => 300,
+            'valuePerPerson' => 100,
+            'paymentProofUrl' => null,
+        ]);
+    }
+
+    public function test_paid_expense_entry_exposes_payment_proof_url_when_present(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 100]);
+        $expense->payers()->sync([$payer->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-08-05', 'number' => 1, 'paid' => true,
+            'value_quota' => 100, 'payment_proof_path' => 'comprovantes/exemplo.jpg',
+        ]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200);
+        $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
+        $this->assertNotNull($entry['paymentProofUrl']);
+        $this->assertStringContainsString('comprovantes/exemplo.jpg', $entry['paymentProofUrl']);
+    }
+
     public function test_future_cycle_without_expenses_returns_zero_totals(): void
     {
         Carbon::setTestNow('2026-08-19');
