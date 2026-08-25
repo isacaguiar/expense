@@ -48,4 +48,22 @@ class GroupMemberControllerTest extends TestCase
         $this->assertSame(0, $group->members()->count());
         Mail::assertNothingSent();
     }
+
+    public function test_cannot_add_member_to_deleted_group(): void
+    {
+        Mail::fake();
+
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'deleted' => true]);
+        $group->members()->attach($member->id);
+        $newMemberEmail = 'novo.membro.'.uniqid().'@example.com';
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/groups/'.$group->id.'/members', ['email' => $newMemberEmail]);
+
+        $response->assertStatus(404);
+        $this->assertDatabaseMissing('ex_users', ['email' => $newMemberEmail]);
+        $this->assertSame(1, $group->members()->count());
+        Mail::assertNothingSent();
+    }
 }

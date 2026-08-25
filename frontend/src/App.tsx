@@ -1,6 +1,7 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
+import AcceptInvitePage from './pages/AcceptInvitePage';
 import Dashboard from './pages/Dashboard';
 import GroupForm from './pages/GroupForm';
 import GroupMembersForm from './pages/GroupMembersForm';
@@ -10,6 +11,8 @@ import ExpenseView from './pages/ExpenseView';
 import ExpensesEntry from './pages/ExpensesEntry';
 import GroupSummary from './pages/GroupSummary';
 import SummaryEntry from './pages/SummaryEntry';
+import Payments from './pages/Payments';
+import PaymentsEntry from './pages/PaymentsEntry';
 import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
 import RequireAuth from './components/RequireAuth';
@@ -20,12 +23,14 @@ const App = () => {
   return (
     <Routes>
       <Route path="/" element={<LoginPage />} />
+      <Route path="/aceitar-convite" element={<AcceptInvitePage />} />
 
       {/* Rotas privadas */}
       <Route element={<RequireAuth />}>
         {/* Com grupo selecionado: sidebar/navegação de grupo (GroupShellLayout) */}
         <Route element={<GroupShellLayout />}>
           <Route path="/groups/:id/summary" element={<GroupSummary />} />
+          <Route path="/groups/:id/payments" element={<Payments />} />
           <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
           <Route path="/groups/:id/expenses/new" element={<ExpenseForm />} />
           <Route path="/groups/:id/expenses/:expenseId" element={<ExpenseView />} />
@@ -35,10 +40,12 @@ const App = () => {
 
         {/* Sem grupo selecionado: cabeçalho simples (SimpleShellLayout) */}
         <Route element={<SimpleShellLayout />}>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/meus-grupos" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Navigate to="/meus-grupos" replace />} />
           <Route path="/groups/new" element={<GroupForm />} />
           <Route path="/expenses" element={<ExpensesEntry />} />
           <Route path="/summary" element={<SummaryEntry />} />
+          <Route path="/payments" element={<PaymentsEntry />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/change-password" element={<ChangePassword />} />
         </Route>

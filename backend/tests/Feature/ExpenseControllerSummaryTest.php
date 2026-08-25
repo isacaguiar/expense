@@ -66,6 +66,83 @@ class ExpenseControllerSummaryTest extends TestCase
             ->assertJsonPath('totals.pending', 0);
     }
 
+    public function test_expense_entries_include_creditor_and_creator_ids(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $creator->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-08-05',
+            'user_creator_id' => $creator->id,
+            'user_payer_id' => $payer->id,
+        ]);
+        $expense->payers()->sync([$payer->id, $creator->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'userPayerId' => $payer->id,
+            'userCreatorId' => $creator->id,
+        ]);
+    }
+
+    public function test_expense_entries_include_value_per_person_and_null_payment_proof_url(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participantA = User::factory()->create();
+        $participantB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participantA->id, $participantB->id]);
+
+        // 3 participantes dividindo 300 -> 100 por pessoa.
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 300]);
+        $expense->payers()->sync([$payer->id, $participantA->id, $participantB->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 300]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'value' => 300,
+            'valuePerPerson' => 100,
+            'paymentProofUrl' => null,
+        ]);
+    }
+
+    public function test_paid_expense_entry_exposes_payment_proof_url_when_present(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 100]);
+        $expense->payers()->sync([$payer->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-08-05', 'number' => 1, 'paid' => true,
+            'value_quota' => 100, 'payment_proof_path' => 'comprovantes/exemplo.jpg',
+        ]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200);
+        $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
+        $this->assertNotNull($entry['paymentProofUrl']);
+        $this->assertStringContainsString('comprovantes/exemplo.jpg', $entry['paymentProofUrl']);
+    }
+
     public function test_future_cycle_without_expenses_returns_zero_totals(): void
     {
         Carbon::setTestNow('2026-08-19');
@@ -179,6 +256,40 @@ class ExpenseControllerSummaryTest extends TestCase
         ]);
     }
 
+    public function test_fixed_expense_uses_materialized_quota_value_when_present(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'closing_day' => 15]);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 500,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 500]);
+
+        // Ocorrência do ciclo corrente (16/ago-15/set cai em 05/set) já foi congelada
+        // com um valor diferente do total_value atual — o resumo deve refletir isso,
+        // não o total_value ao vivo (500).
+        $expense->quotas()->create(['date_expected' => '2026-09-05', 'number' => 1, 'paid' => true, 'value_quota' => 350]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'id' => $expense->id,
+            'date' => '2026-09-05',
+            'value' => 350,
+            'paid' => true,
+            'isFixed' => true,
+        ]);
+    }
+
     public function test_balances_include_every_member_and_sum_to_zero(): void
     {
         Carbon::setTestNow('2026-08-19');
@@ -200,6 +311,45 @@ class ExpenseControllerSummaryTest extends TestCase
             ->assertJsonFragment(['user_id' => $payer->id, 'balance' => 100])
             ->assertJsonFragment(['user_id' => $participant->id, 'balance' => -100])
             ->assertJsonFragment(['user_id' => $uninvolved->id, 'balance' => 0]);
+    }
+
+    public function test_balances_are_unchanged_after_the_fixed_occurrence_quota_is_materialized(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 200,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 200]);
+
+        $before = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $before->assertStatus(200);
+        $balancesBefore = $before->json('balances');
+
+        // Materializa a ocorrência do mês corrente (agosto) exatamente como
+        // materializeFixedOccurrenceQuota faria — a origem do dado (Quota
+        // real em vez de projeção ao vivo) muda, mas o valor é o mesmo.
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 200]);
+
+        $after = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $after->assertStatus(200);
+        $balancesAfter = $after->json('balances');
+
+        $this->assertSame($balancesBefore, $balancesAfter);
+        $after->assertJsonFragment(['user_id' => $payer->id, 'balance' => 100])
+            ->assertJsonFragment(['user_id' => $participant->id, 'balance' => -100]);
     }
 
     public function test_cycles_ago_navigates_to_previous_closed_cycle(): void
@@ -235,5 +385,184 @@ class ExpenseControllerSummaryTest extends TestCase
             ->getJson("/api/groups/{$group->id}/expenses/summary");
 
         $response->assertStatus(404);
+    }
+
+    public function test_settlements_has_no_self_owed_entry_and_reconciles_with_balances(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10', 'total_value' => 200]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => true, 'value_quota' => 200]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)->assertJsonFragment([
+            'from_user_id' => $participant->id,
+            'to_user_id' => $payer->id,
+            'amount' => 100,
+        ]);
+
+        $settlements = $response->json('settlements');
+        $balances = $response->json('balances');
+
+        foreach ($settlements as $settlement) {
+            $this->assertNotSame($settlement['from_user_id'], $settlement['to_user_id']);
+        }
+
+        $this->assertNetBalancesMatchSettlements($balances, $settlements);
+    }
+
+    public function test_settlements_nets_mutual_debt_between_the_same_pair_into_one_entry(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $alice = User::factory()->create();
+        $bob = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$alice->id, $bob->id]);
+
+        // Alice paga 300 divididos com Bob (Bob deve 150 a Alice).
+        $expenseA = $this->createExpense($group, $alice, ['date_payment' => '2026-08-05', 'total_value' => 300]);
+        $expenseA->payers()->sync([$alice->id, $bob->id]);
+        $expenseA->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => true, 'value_quota' => 300]);
+
+        // Bob paga 100 divididos com Alice (Alice deve 50 a Bob).
+        $expenseB = $this->createExpense($group, $bob, ['date_payment' => '2026-08-12', 'total_value' => 100]);
+        $expenseB->payers()->sync([$alice->id, $bob->id]);
+        $expenseB->quotas()->create(['date_expected' => '2026-08-12', 'number' => 1, 'paid' => true, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($alice))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200);
+        $settlements = $response->json('settlements');
+
+        // Só a diferença líquida (150 - 50 = 100), numa única entrada — nunca
+        // as duas dívidas brutas separadas.
+        $this->assertCount(1, $settlements);
+        $this->assertSame($bob->id, $settlements[0]['from_user_id']);
+        $this->assertSame($alice->id, $settlements[0]['to_user_id']);
+        $this->assertEquals(100, $settlements[0]['amount']);
+    }
+
+    public function test_settlements_regression_scenario_from_the_summary_discrepancy_conversation(): void
+    {
+        Carbon::setTestNow('2026-08-22');
+
+        $isac = User::factory()->create(['name' => 'Isac']);
+        $joao = User::factory()->create(['name' => 'João']);
+        $maria = User::factory()->create(['name' => 'Maria']);
+        $novemax = User::factory()->create(['name' => 'novemaxdev']);
+        $group = Group::create(['name' => 'Familiar']);
+        $group->members()->attach([$isac->id, $joao->id, $maria->id, $novemax->id]);
+
+        // Água #1: 150, só Isac (não gera dívida).
+        $agua1 = $this->createExpense($group, $isac, ['date_payment' => '2026-08-19', 'description' => 'Água #1', 'total_value' => 150]);
+        $agua1->payers()->sync([$isac->id]);
+        $agua1->quotas()->create(['date_expected' => '2026-08-19', 'number' => 1, 'paid' => true, 'value_quota' => 150]);
+
+        // Água #2: 150, Isac/João/Maria (50 cada).
+        $agua2 = $this->createExpense($group, $isac, ['date_payment' => '2026-08-19', 'description' => 'Água #2', 'total_value' => 150]);
+        $agua2->payers()->sync([$isac->id, $joao->id, $maria->id]);
+        $agua2->quotas()->create(['date_expected' => '2026-08-19', 'number' => 1, 'paid' => true, 'value_quota' => 150]);
+
+        // Luz: 200, Isac/Maria (100 cada).
+        $luz = $this->createExpense($group, $isac, ['date_payment' => '2026-08-19', 'description' => 'Luz', 'total_value' => 200]);
+        $luz->payers()->sync([$isac->id, $maria->id]);
+        $luz->quotas()->create(['date_expected' => '2026-08-19', 'number' => 1, 'paid' => false, 'value_quota' => 200]);
+
+        // Placa Solar: 600, Isac/João/Maria (200 cada).
+        $placaSolar = $this->createExpense($group, $isac, ['date_payment' => '2026-08-22', 'description' => 'Placa Solar', 'total_value' => 600]);
+        $placaSolar->payers()->sync([$isac->id, $joao->id, $maria->id]);
+        $placaSolar->quotas()->create(['date_expected' => '2026-08-22', 'number' => 1, 'paid' => false, 'value_quota' => 600]);
+
+        // Mercado: 450, os 4 (112,50 cada).
+        $mercado = $this->createExpense($group, $joao, ['date_payment' => '2026-08-22', 'description' => 'Mercado', 'total_value' => 450]);
+        $mercado->payers()->sync([$isac->id, $joao->id, $maria->id, $novemax->id]);
+        $mercado->quotas()->create(['date_expected' => '2026-08-22', 'number' => 1, 'paid' => false, 'value_quota' => 450]);
+
+        $response = $this->withToken($this->tokenFor($isac))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200)
+            ->assertJsonFragment(['user_id' => $isac->id, 'balance' => 487.50])
+            ->assertJsonFragment(['user_id' => $joao->id, 'balance' => 87.50])
+            ->assertJsonFragment(['user_id' => $maria->id, 'balance' => -462.50])
+            ->assertJsonFragment(['user_id' => $novemax->id, 'balance' => -112.50]);
+
+        $response
+            ->assertJsonFragment(['from_user_id' => $maria->id, 'to_user_id' => $isac->id, 'amount' => 350.0])
+            ->assertJsonFragment(['from_user_id' => $joao->id, 'to_user_id' => $isac->id, 'amount' => 137.50])
+            ->assertJsonFragment(['from_user_id' => $maria->id, 'to_user_id' => $joao->id, 'amount' => 112.50])
+            ->assertJsonFragment(['from_user_id' => $novemax->id, 'to_user_id' => $joao->id, 'amount' => 112.50]);
+
+        $settlements = $response->json('settlements');
+        $this->assertCount(4, $settlements);
+
+        $this->assertNetBalancesMatchSettlements($response->json('balances'), $settlements);
+    }
+
+    public function test_closed_cycle_settlements_are_immutable_after_a_new_expense_is_created(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-06-10', 'total_value' => 200]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-10', 'number' => 1, 'paid' => true, 'value_quota' => 200]);
+
+        $before = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=2");
+        $before->assertStatus(200);
+        $settlementsBefore = $before->json('settlements');
+
+        // Despesa nova criada depois do ciclo já fotografado — não deve
+        // alterar o `settlements` já persistido no snapshot.
+        $newExpense = $this->createExpense($group, $participant, ['date_payment' => '2026-06-15', 'total_value' => 1000]);
+        $newExpense->payers()->sync([$payer->id, $participant->id]);
+        $newExpense->quotas()->create(['date_expected' => '2026-06-15', 'number' => 1, 'paid' => true, 'value_quota' => 1000]);
+
+        $after = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=2");
+        $after->assertStatus(200);
+
+        // assertEquals (não assertSame): a ordem das chaves de cada item pode
+        // mudar depois de ida e volta pelo cast `json` do MySQL (que
+        // canonicaliza a ordem das chaves do objeto) — o conteúdo é que
+        // precisa ser idêntico, não a ordem de serialização.
+        $this->assertEquals($settlementsBefore, $after->json('settlements'));
+    }
+
+    /**
+     * Para todo user_id presente em $balances, a soma de `amount` recebido
+     * (settlement.to_user_id) menos o pago (settlement.from_user_id) deve
+     * bater com o `balance` líquido dessa pessoa.
+     */
+    private function assertNetBalancesMatchSettlements(array $balances, array $settlements): void
+    {
+        $net = [];
+        foreach ($balances as $balance) {
+            $net[$balance['user_id']] = 0.0;
+        }
+
+        foreach ($settlements as $settlement) {
+            $net[$settlement['to_user_id']] = ($net[$settlement['to_user_id']] ?? 0) + $settlement['amount'];
+            $net[$settlement['from_user_id']] = ($net[$settlement['from_user_id']] ?? 0) - $settlement['amount'];
+        }
+
+        foreach ($balances as $balance) {
+            $this->assertEqualsWithDelta($balance['balance'], round($net[$balance['user_id']], 2), 0.01, "user_id {$balance['user_id']}");
+        }
     }
 }

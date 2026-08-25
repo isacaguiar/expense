@@ -27,6 +27,7 @@ type Group = {
   created_by: number | null;
   creator?: { id: number; email: string } | null;
   members: Member[];
+  cycle_snapshots_exists: boolean;
 };
 
 const groups: Group[] = [
@@ -38,6 +39,7 @@ const groups: Group[] = [
     created_by: 10,
     creator: { id: 10, email: 'dono@example.com' },
     members: [{ id: 10, name: 'Dono', email: 'dono@example.com' }, { id: 11, name: 'Ana Silva', email: 'ana@example.com' }],
+    cycle_snapshots_exists: false,
   },
   {
     id: 2,
@@ -47,6 +49,7 @@ const groups: Group[] = [
     created_by: 99,
     creator: { id: 99, email: 'outro@example.com' },
     members: [{ id: 99, name: 'Outro', email: 'outro@example.com' }],
+    cycle_snapshots_exists: false,
   },
 ];
 
@@ -184,7 +187,7 @@ describe('Dashboard', () => {
   });
 
   it('falls back to a dash when the group has no creator recorded', async () => {
-    mockGroupsAndMe([{ id: 3, name: 'Grupo antigo', description: '', create_date: '2026-01-01', created_by: null, creator: null, members: [] }]);
+    mockGroupsAndMe([{ id: 3, name: 'Grupo antigo', description: '', create_date: '2026-01-01', created_by: null, creator: null, members: [], cycle_snapshots_exists: false }]);
 
     render(
       <MemoryRouter>
@@ -199,9 +202,9 @@ describe('Dashboard', () => {
 
   it('disables "Novo grupo" when the current user already created 3 groups', async () => {
     const threeOwnGroups: Group[] = [
-      { id: 1, name: 'Grupo 1', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [] },
-      { id: 2, name: 'Grupo 2', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [] },
-      { id: 3, name: 'Grupo 3', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [] },
+      { id: 1, name: 'Grupo 1', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [], cycle_snapshots_exists: false },
+      { id: 2, name: 'Grupo 2', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [], cycle_snapshots_exists: false },
+      { id: 3, name: 'Grupo 3', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [], cycle_snapshots_exists: false },
     ];
     mockGroupsAndMe(threeOwnGroups, 10);
 
@@ -230,9 +233,9 @@ describe('Dashboard', () => {
     expect(screen.getByRole('link', { name: 'Novo grupo' })).not.toHaveAttribute('aria-disabled', 'true');
   });
 
-  it('deletes a group after confirming in the dialog', async () => {
+  it('deletes a group after confirming in the dialog, showing the backend message', async () => {
     mockGroupsAndMe(groups);
-    vi.mocked(axios.delete).mockResolvedValue({ data: { message: 'ok' } });
+    vi.mocked(axios.delete).mockResolvedValue({ data: { message: 'Grupo excluído permanentemente.' } });
     const user = userEvent.setup();
 
     render(
@@ -254,7 +257,45 @@ describe('Dashboard', () => {
     await waitFor(() => {
       expect(screen.queryByText('Viagem SP')).not.toBeInTheDocument();
     });
-    expect(await screen.findByText('Grupo excluído com sucesso.')).toBeInTheDocument();
+    expect(await screen.findByText('Grupo excluído permanentemente.')).toBeInTheDocument();
+  });
+
+  it('warns about irreversible physical deletion when the group has no closed cycle', async () => {
+    mockGroupsAndMe(groups);
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+
+    await user.click(screen.getAllByLabelText('Excluir grupo')[0]);
+
+    expect(
+      await screen.findByText(/Esta ação é irreversível: o grupo e todas as despesas, participações e fechamentos associados serão apagados permanentemente\./)
+    ).toBeInTheDocument();
+  });
+
+  it('warns that history is preserved when the group has a closed cycle', async () => {
+    mockGroupsAndMe([{ ...groups[0], cycle_snapshots_exists: true }, groups[1]]);
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+
+    await user.click(screen.getAllByLabelText('Excluir grupo')[0]);
+
+    expect(
+      await screen.findByText(/O histórico deste grupo \(despesas, participantes e fechamentos\) será preservado\./)
+    ).toBeInTheDocument();
   });
 
   it('cancels the delete dialog without calling the API', async () => {

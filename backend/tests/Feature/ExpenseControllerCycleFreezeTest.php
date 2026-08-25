@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -213,5 +214,130 @@ class ExpenseControllerCycleFreezeTest extends TestCase
 
         $destroyResponse->assertStatus(200);
         $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => true]);
+    }
+
+    public function test_fixed_expense_value_edited_later_does_not_change_a_month_whose_quota_was_already_materialized(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 350,
+        ]);
+        $expense->payers()->attach($payer->id);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 350]);
+
+        // Simula que a ocorrência de julho (competência já fechada hoje, mas cujo
+        // resumo ninguém leu ainda — logo, sem GroupCycleSnapshot) já tinha sido
+        // congelada com o valor vigente na época (350), via fechamento manual de
+        // julho quando ainda era o mês vigente (materializeFixedOccurrenceQuota).
+        $expense->quotas()->create(['date_expected' => '2026-07-05', 'number' => 1, 'paid' => false, 'value_quota' => 350]);
+
+        // Só depois disso o valor da despesa Fixa é alterado.
+        $expense->update(['total_value' => 999]);
+
+        // Primeira leitura do resumo de julho (fechado) — é aqui que o snapshot
+        // seria criado pela primeira vez. Antes da Quota materializada existir,
+        // isso teria congelado o valor errado (999); com ela, usa o valor certo.
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'closed')
+            ->assertJsonPath('totals.total', 350)
+            ->assertJsonFragment(['id' => $expense->id, 'date' => '2026-07-05', 'value' => 350]);
+    }
+
+    public function test_update_of_in_cash_expense_in_manually_closed_open_cycle_is_rejected(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        // Agosto ainda está aberto por data (BillingCycle), mas foi fechado
+        // manualmente — simula o resultado esperado do fechamento manual
+        // (TASK-157, ainda não implementada nesta task).
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($payer->id);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->putJson("/api/expenses/{$expense->id}", ['description' => 'Tentativa de alterar']);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'description' => 'Despesa de teste']);
+    }
+
+    public function test_destroy_of_in_cash_expense_in_manually_closed_open_cycle_is_rejected(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($payer->id);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->deleteJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'deleted' => false]);
+    }
+
+    public function test_update_of_in_cash_expense_is_allowed_again_after_manual_reopening(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now()->subHour(),
+            'reopened_at' => now(),
+        ]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($payer->id);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->putJson("/api/expenses/{$expense->id}", ['description' => 'Alterado']);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'description' => 'Alterado']);
     }
 }

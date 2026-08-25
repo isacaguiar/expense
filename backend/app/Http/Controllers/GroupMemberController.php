@@ -6,8 +6,8 @@ use App\Mail\UserInvitedMail;
 use App\Models\Group;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
 class GroupMemberController extends Controller
@@ -35,6 +35,11 @@ class GroupMemberController extends Controller
         $group = Group::findOrFail($groupId);
         $this->authorizeMembership($group);
 
+        // Grupo excluído (logicamente) não aceita novos participantes — 404
+        // pelo mesmo motivo do authorizeMembership: não confirmar a um membro
+        // antigo que o grupo ainda "existe" para escrita.
+        abort_if($group->deleted, 404);
+
         // 3) Tenta carregar o usuário
         $user = User::where('email', $data['email'])->first();
         $isNewUser = false;
@@ -50,13 +55,15 @@ class GroupMemberController extends Controller
                 'password' => bcrypt($password),
             ]);
 
-            // 3.2) Gera token de reset para montar link de convite
-            // $token = Password::broker()->createToken($user);
-            $token = Password::getRepository()->create($user);
+            // 3.2) Gera token de convite dedicado (2 dias) — não usa
+            // Password::getRepository()/config('auth.passwords.users.expire'),
+            // que é infraestrutura genérica de "esqueci senha" (60 min).
+            $token = bin2hex(random_bytes(32));
+            Cache::put('invitation-token:'.$user->email, $token, now()->addDays(2));
 
             // 3.3) Dispara e‑mail de convite
             Mail::to($user->email)
-                ->send(new UserInvitedMail($user, $group, $token));
+                ->send(new UserInvitedMail($user, $group, $token, auth()->user()));
         }
 
         // 4) Evita duplicata no pivot

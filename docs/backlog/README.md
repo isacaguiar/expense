@@ -57,6 +57,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 027 | [dashboard-grouplist-duplicados.md](dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 031 | [dashboard-visao-financeira-credor-devedores.md](dashboard-visao-financeira-credor-devedores.md) | Dashboard sem dado financeiro (resumo Credor→devedores + Pix por grupo) | branch descartada backend/20260821-regras-mensalidade-entrada-despesas | 2026-08-22 | BAIXA | Aberto |
 
 ## Itens concluídos
 

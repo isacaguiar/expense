@@ -1,0 +1,23 @@
+# Implementation — Reestruturação do Resumo do Grupo
+
+> Como as tasks de `tasks.md` viram código. O fluxo (branch, checklist pré-PR, gates) é o de `docs/sdd/04-implementation.md` — só documente aqui um desvio específico desta feature, se houver.
+
+Versão: 1.0 · Criado em: 20260822
+
+---
+
+## 1. Desvios do fluxo padrão (se houver)
+
+<Deixe vazio/apague esta seção se a feature segue `04-implementation.md` sem exceção.>
+
+## 2. Log de implementação
+
+Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. Cite o comando real executado e o resultado obtido — não basta escrever "testado"/"validado" em prosa.
+
+| Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
+|---|---|---|---|---|---|
+| TASK-001 | Concluída | 20260822 | IA (Claude Code) | `cd frontend && npx tsc --noEmit` — sem erro. `npx vitest run src/pages/GroupSummary.test.tsx` — 12/12 testes passaram (Test Files 1 passed, Tests 12 passed). Verificação visual manual feita pelo usuário em `localhost:3000` (login próprio, fora do escopo do agente). | `Grid container spacing={3}` com `Grid size={{ xs: 12, sm: 12, lg: 8 }}` (despesas) e `Grid size={{ xs: 12, sm: 12, lg: 4 }}` (Saldos por pessoa + Quem paga a quem) em `GroupSummary.tsx`, sem alterar conteúdo/lógica de nenhum bloco — só reposicionamento. Abas Saldo/À pagar ainda não existem (escopo de TASK-002). |
+| TASK-002 | Concluída | 20260822 | IA (Claude Code) | `npx tsc --noEmit` — sem erro. `npx vitest run src/pages/GroupSummary.test.tsx` — 11/12 passaram, 1 falha esperada (`GroupSummary.test.tsx:224`, "shows the 'quem paga a quem' block resolving names from balances") — o texto "Quem paga a quem" não existe mais fora da aba "À pagar" (achado 2.4 do specify.md); correção é escopo de TASK-004, não desta task. | Novo `frontend/src/components/SummarySidePanel.tsx` (Card + Tabs Saldo/À pagar, reaproveita `BalanceCards`/`SettlementList` sem alteração; estado vazio novo "Nenhuma pendência entre os membros neste ciclo." quando `settlements` vazio). `GroupSummary.tsx` importa e renderiza `SummarySidePanel` na coluna direita, removendo os imports diretos de `BalanceCards`/`SettlementList`. |
+| TASK-003 | Concluída | 20260822 | IA (Claude Code) | `npx tsc --noEmit` — sem erro. `npx vitest run src/pages/GroupSummary.test.tsx` — 11/12 passaram, mesma 1 falha pré-existente de TASK-002 (`GroupSummary.test.tsx:224`), sem regressão nova. | `SummarySidePanel` ganhou prop `cycleStatus: CycleStatus`; `Chip` "Prévia" (`UpdateIcon`, cor `info`) quando `open`/`future`, "Definitivo" (`PaidOutlinedIcon`, cor `success`) quando `closed`/`closed_manually`, acima da `Tabs`. `GroupSummary.tsx` passa `cycleStatus={summary.cycle.status}`. |
+| TASK-004 | Concluída | 20260822 | IA (Claude Code) | `npx tsc --noEmit` — sem erro. `npx vitest run src/pages/GroupSummary.test.tsx` — 12/12 passaram (Test Files 1 passed, Tests 12 passed) — a falha pendente desde TASK-002 foi resolvida. | Os 2 testes que citavam `queryByText`/`findByText('Quem paga a quem')` (`GroupSummary.test.tsx:200-231` na numeração anterior) agora clicam em `screen.getByRole('tab', { name: 'À pagar' })` antes de checar o estado vazio ou o conteúdo de `SettlementList`; comentário sobre `getAllByText` por duplicidade removido (nomes agora aparecem só 1x, já que a aba "Saldo" some do DOM ao trocar de aba). |
+| TASK-005 | Concluída | 20260822 | IA (Claude Code) | `npx tsc --noEmit` — sem erro. `npx vitest run src/pages/GroupSummary.test.tsx` — 18/18 passaram (12 anteriores + 3 novos, 1 deles parametrizado em 4 casos). `npx vitest run` (suíte completa do frontend) — 125/126 passaram; 1 falha em `GroupForm.test.tsx` ("sends closing_day in the payload when filled", timeout de 5000ms) não relacionada a esta feature (arquivo não tocado); reexecutada isolada (`npx vitest run src/pages/GroupForm.test.tsx`) e passou 3/3 — confirmado flake por contenção de recursos ao rodar a suíte inteira, não regressão desta task. | Type local `CycleStatus` do teste estendido com `'closed_manually'` pra bater com o tipo real de `useGroupCycle.ts`. 3 testes novos: aba "Saldo" com `aria-selected="true"` por padrão; troca de aba não muda a contagem de chamadas `axios.get`; `it.each` cobrindo os 4 status (`closed`/`closed_manually` → "Definitivo", `open`/`future` → "Prévia"). |

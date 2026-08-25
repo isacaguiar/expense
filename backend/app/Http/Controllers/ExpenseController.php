@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
@@ -127,6 +128,16 @@ class ExpenseController extends Controller
             'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
         ]);
 
+        // FIXED fica de fora: seu total_value é o valor do template pra
+        // ocorrências futuras/ainda não materializadas — uma ocorrência já
+        // paga já tem Quota própria congelada (materializeFixedOccurrenceQuota)
+        // e não é afetada por essa edição, então não há o que proteger aqui.
+        if ($expense->expense_type !== 'FIXED'
+            && array_key_exists('total_value', $data)
+            && $expense->quotas()->where('paid', true)->exists()) {
+            return response()->json(['error' => 'Não é possível alterar o valor de uma despesa já paga.'], 422);
+        }
+
         $expense->update(Arr::except($data, ['payers']));
 
         if (array_key_exists('payers', $data)) {
@@ -145,17 +156,26 @@ class ExpenseController extends Controller
             return $response;
         }
 
+        // Ao contrário de `update()`, aqui não há bypass de FIXED: excluir
+        // apaga a definição inteira (todas as ocorrências, inclusive as já
+        // pagas), não só o template pra frente — se qualquer ocorrência está
+        // paga, é preciso desfazer o pagamento antes.
+        if ($expense->quotas()->where('paid', true)->exists()) {
+            return response()->json(['error' => 'Não é possível excluir uma despesa já paga. Desfaça o pagamento primeiro.'], 422);
+        }
+
         $expense->update(['deleted' => true]);
 
         return response()->json(['message' => 'Despesa marcada como deletada.']);
     }
 
     /**
-     * Ciclo passado é só leitura: `IN_CASH`/`IN_INSTALLMENTS` cujo `date_payment`
-     * cai num ciclo já fechado não podem mais ser editados/apagados. `FIXED`
-     * fica de fora dessa checagem — é uma definição recorrente, não presa a um
-     * único ciclo, e a foto do ciclo fechado (`GroupCycleSnapshot`) já garante
-     * que editar/apagar uma despesa Fixa depois não muda o passado.
+     * Competência passada é só leitura: `IN_CASH`/`IN_INSTALLMENTS` cujo
+     * `date_payment` cai numa competência já fechada não podem mais ser
+     * editados/apagados. `FIXED` fica de fora dessa checagem — é uma definição
+     * recorrente, não presa a uma única competência; a materialização da
+     * `Quota` de cada mês (`materializeFixedOccurrenceQuota`) já garante que
+     * editar o valor depois não muda competências já congeladas.
      */
     private function rejectIfCycleClosed(Expense $expense): ?\Illuminate\Http\JsonResponse
     {
@@ -163,10 +183,33 @@ class ExpenseController extends Controller
             return null;
         }
 
-        $status = BillingCycle::statusFor($expense->group->closing_day, $expense->date_payment, Carbon::now());
+        return $this->rejectIfCompetenceClosed($expense->group, $expense->date_payment);
+    }
 
-        if ($status === 'closed') {
-            return response()->json(['error' => 'Não é possível alterar uma despesa de um ciclo já fechado.'], 422);
+    /**
+     * Retorna uma resposta 422 se a competência (mês de fatura, `BillingCycle`)
+     * que contém `$referenceDate` está fechada — automaticamente (por data,
+     * definitivo) ou manualmente (`GroupCycleSnapshot::closed_manually_at`
+     * ainda ativo, revisável até a virada do mês). `null` se estiver aberta.
+     * Único ponto de checagem de competência fechada, reaproveitado por toda
+     * ação nova (fechar, reabrir, pagar, despagar, criar).
+     */
+    private function rejectIfCompetenceClosed(Group $group, Carbon $referenceDate): ?\Illuminate\Http\JsonResponse
+    {
+        $closedResponse = response()->json(['error' => 'Não é possível alterar dados de uma competência já fechada.'], 422);
+
+        if (BillingCycle::statusFor($group->closing_day, $referenceDate, Carbon::now()) === 'closed') {
+            return $closedResponse;
+        }
+
+        $cycleStart = BillingCycle::cycleFor($group->closing_day, $referenceDate)['start'];
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', $cycleStart->toDateString())
+            ->first();
+
+        if ($snapshot && $snapshot->isManuallyClosedAndActive()) {
+            return $closedResponse;
         }
 
         return null;
@@ -180,6 +223,7 @@ class ExpenseController extends Controller
 
         $group = Group::findOrFail($request->group_id);
         $this->authorizeGroupMembership($group);
+        abort_if($group->deleted, 404);
 
         $request->validate([
             'date_payment' => 'required|date',
@@ -194,9 +238,17 @@ class ExpenseController extends Controller
             'quotas' => 'required|array|min:1',
             'quotas.*.date_expected' => 'required|date',
             'quotas.*.number' => 'required|integer',
-            'quotas.*.paid' => 'required|boolean',
             'quotas.*.value_quota' => 'required|numeric|min:0',
         ]);
+
+        // Ao contrário de update()/destroy(), aqui vale para todo expense_type
+        // (inclusive FIXED) — criar uma despesa nova com date_payment dentro de
+        // uma competência já fechada não tem a mesma justificativa de "definição
+        // recorrente não presa a um ciclo" que existe para editar uma FIXED já
+        // existente.
+        if ($response = $this->rejectIfCompetenceClosed($group, Carbon::parse($request->date_payment))) {
+            return $response;
+        }
 
         if ($request->expense_type === 'FIXED') {
             if ((int) $request->installments !== 1) {
@@ -242,10 +294,12 @@ class ExpenseController extends Controller
 
             // Quotas
             foreach ($request->quotas as $quotaData) {
+                // Despesa nasce sempre PENDENTE — o cliente não decide o status
+                // inicial de pagamento, mesmo que envie 'paid' no payload.
                 $expense->quotas()->create([
                     'date_expected' => $quotaData['date_expected'],
                     'number' => $quotaData['number'],
-                    'paid' => $quotaData['paid'],
+                    'paid' => false,
                     'value_quota' => $quotaData['value_quota'],
                 ]);
             }
@@ -329,19 +383,226 @@ class ExpenseController extends Controller
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
         $start = $cycle['start'];
         $end = $cycle['end'];
+        $status = $cycle['status'];
 
-        if ($cycle['status'] === 'closed') {
+        // Fechamento manual só existe para uma competência ainda `open` por
+        // data (`close()` só opera sobre "agora") — `closed`/`future` nunca
+        // têm um a considerar.
+        $manualSnapshot = $status === 'open'
+            ? GroupCycleSnapshot::where('group_id', $groupId)->where('cycle_start', $start->toDateString())->first()
+            : null;
+
+        if ($status === 'closed') {
             $summary = $this->cycleSnapshotFor($group, $groupId, $start, $end);
+        } elseif ($manualSnapshot && $manualSnapshot->isManuallyClosedAndActive()) {
+            $status = 'closed_manually';
+            $summary = [
+                'totals' => $manualSnapshot->totals,
+                'expenses' => $manualSnapshot->expenses,
+                'balances' => $manualSnapshot->balances,
+                'settlements' => $manualSnapshot->settlements,
+            ];
         } else {
             $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
         }
 
         return response()->json([
-            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => $cycle['status']],
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => $status],
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
+            'settlements' => $summary['settlements'],
         ]);
+    }
+
+    /**
+     * Fechamento manual da competência vigente: congela a composição e os
+     * valores considerados (inclusive de despesas FIXED, materializando a
+     * Quota de cada ocorrência antes de calcular) num `GroupCycleSnapshot`.
+     * Sempre opera sobre a competência que contém "agora" — que, por
+     * construção de `BillingCycle::cycleFor` com `cyclesAgo=0`, está sempre
+     * aberta em relação a "agora" (não há como chamar isto sobre uma
+     * competência já fechada por data). Chamar de novo (re-fechar) recalcula
+     * e sobrescreve a foto (upsert), o que cobre "a cópia pode ser
+     * atualizada até a virada do mês".
+     */
+    public function close($groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+        abort_if($group->deleted, 404);
+
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+        $start = $cycle['start'];
+        $end = $cycle['end'];
+
+        foreach ($this->collectCycleEntries($groupId, $start, $end) as $entry) {
+            if ($entry['expense']->expense_type === 'FIXED') {
+                $this->materializeFixedOccurrenceQuota($entry['expense'], $entry['date']);
+            }
+        }
+
+        $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+        $snapshot = GroupCycleSnapshot::updateOrCreate(
+            ['group_id' => $groupId, 'cycle_start' => $start->toDateString()],
+            [
+                'cycle_end' => $end->toDateString(),
+                'totals' => $summary['totals'],
+                'expenses' => $summary['expenses'],
+                'balances' => $summary['balances'],
+                'settlements' => $summary['settlements'],
+                'closed_manually_at' => Carbon::now(),
+                'reopened_at' => null,
+            ]
+        );
+
+        return response()->json([
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => 'closed_manually'],
+            'totals' => $snapshot->totals,
+            'expenses' => $snapshot->expenses,
+            'balances' => $snapshot->balances,
+            'settlements' => $snapshot->settlements,
+        ]);
+    }
+
+    /**
+     * Reabertura de um fechamento manual ainda vigente. Só encontra algo pra
+     * reabrir quando o fechamento manual pertence à competência que contém
+     * "agora" — depois da virada do mês, a competência antiga simplesmente
+     * não é mais a que este método consulta (sem precisar de uma checagem
+     * extra de `BillingCycle`), então "reabrir competência antiga" já falha
+     * por não achar snapshot nenhum aqui.
+     */
+    public function reopen($groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+        abort_if($group->deleted, 404);
+
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+        $start = $cycle['start'];
+        $end = $cycle['end'];
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->first();
+
+        if (! $snapshot || ! $snapshot->isManuallyClosedAndActive()) {
+            return response()->json(['error' => 'Não há fechamento manual ativo para reabrir nesta competência.'], 422);
+        }
+
+        $snapshot->update(['reopened_at' => Carbon::now()]);
+
+        $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+        return response()->json([
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => 'open'],
+            'totals' => $summary['totals'],
+            'expenses' => $summary['expenses'],
+            'balances' => $summary['balances'],
+            'settlements' => $summary['settlements'],
+        ]);
+    }
+
+    /**
+     * Marca como paga a ocorrência desta despesa na competência vigente.
+     * Só o credor (`user_payer_id`) pode confirmar o pagamento, e só enquanto
+     * a competência ainda está aberta (nem automática nem manualmente
+     * fechada). Despesa nova nasce sem Quota na competência vigente quando é
+     * `FIXED` — materializa antes de marcar.
+     *
+     * Comprovante (`comprovante`) é opcional no contrato da API: o fluxo
+     * antigo de `ExpenseManager` chama este endpoint sem corpo e precisa
+     * continuar funcionando; a Tela de Pagamentos é quem exige a foto,
+     * do lado do cliente, antes de chamar isto.
+     */
+    public function pay($expenseId, Request $request)
+    {
+        $expense = $this->findExpenseForMember($expenseId);
+
+        if (auth()->id() !== $expense->user_payer_id) {
+            abort(403, 'Só o credor pode marcar esta despesa como paga.');
+        }
+
+        $data = $request->validate([
+            'comprovante' => 'nullable|image|max:5120',
+        ]);
+
+        $group = $expense->group;
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+
+        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
+            return $response;
+        }
+
+        $quota = $this->resolveQuotaForCurrentCompetence($expense, $cycle['start'], $cycle['end']);
+
+        if (! $quota) {
+            return response()->json(['error' => 'Esta despesa não tem ocorrência na competência vigente.'], 422);
+        }
+
+        $update = [
+            'paid' => true,
+            'paid_at' => Carbon::now(),
+            'paid_by' => auth()->id(),
+        ];
+
+        if (! empty($data['comprovante'])) {
+            $update['payment_proof_path'] = $request->file('comprovante')->store('comprovantes', 'public');
+        }
+
+        $quota->update($update);
+
+        return response()->json($quota->fresh());
+    }
+
+    /**
+     * Desfaz o pagamento da ocorrência desta despesa na competência vigente.
+     * Mesmas regras de `pay`: só o credor, só com a competência aberta. Ao
+     * contrário de `pay`, não materializa `Quota` de `FIXED` sob demanda —
+     * uma ocorrência ainda virtual nunca está paga (`collectCycleEntries`
+     * projeta `paid: false` até existir uma Quota real), então não há o que
+     * desfazer nesse caso.
+     *
+     * Se a quota tinha comprovante, apaga o arquivo do disco — um pagamento
+     * desfeito não deve manter "prova" de um estado que não vale mais.
+     */
+    public function unpay($expenseId)
+    {
+        $expense = $this->findExpenseForMember($expenseId);
+
+        if (auth()->id() !== $expense->user_payer_id) {
+            abort(403, 'Só o credor pode desfazer o pagamento desta despesa.');
+        }
+
+        $group = $expense->group;
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+
+        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
+            return $response;
+        }
+
+        $quota = $expense->quotas()
+            ->whereBetween('date_expected', [$cycle['start']->toDateString(), $cycle['end']->toDateString()])
+            ->first();
+
+        if (! $quota || ! $quota->paid) {
+            return response()->json(['error' => 'Esta despesa não está paga na competência vigente.'], 422);
+        }
+
+        if ($quota->payment_proof_path) {
+            Storage::disk('public')->delete($quota->payment_proof_path);
+        }
+
+        $quota->update([
+            'paid' => false,
+            'paid_at' => null,
+            'paid_by' => null,
+            'payment_proof_path' => null,
+        ]);
+
+        return response()->json($quota->fresh());
     }
 
     /**
@@ -350,7 +611,7 @@ class ExpenseController extends Controller
      * daí, este ciclo nunca mais é recalculado — edições/exclusões de
      * despesa depois de fotografado não mudam mais o resultado.
      *
-     * @return array{totals: array, expenses: array, balances: array}
+     * @return array{totals: array, expenses: array, balances: array, settlements: array}
      */
     private function cycleSnapshotFor(Group $group, $groupId, Carbon $start, Carbon $end): array
     {
@@ -363,6 +624,7 @@ class ExpenseController extends Controller
                 'totals' => $snapshot->totals,
                 'expenses' => $snapshot->expenses,
                 'balances' => $snapshot->balances,
+                'settlements' => $snapshot->settlements,
             ];
         }
 
@@ -376,6 +638,7 @@ class ExpenseController extends Controller
                 'totals' => $summary['totals'],
                 'expenses' => $summary['expenses'],
                 'balances' => $summary['balances'],
+                'settlements' => $summary['settlements'],
             ]);
         } catch (\Illuminate\Database\QueryException $e) {
             // Violação de unique(group_id, cycle_start): outra requisição já
@@ -389,6 +652,7 @@ class ExpenseController extends Controller
                 'totals' => $snapshot->totals,
                 'expenses' => $snapshot->expenses,
                 'balances' => $snapshot->balances,
+                'settlements' => $snapshot->settlements,
             ];
         }
 
@@ -396,26 +660,39 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Calcula totais, lista de despesas e saldos por pessoa de um ciclo
-     * [start, end], sempre ao vivo a partir de `Expense`/`Quota`.
+     * Calcula totais, lista de despesas, saldos por pessoa e liquidação
+     * par-a-par (quem paga a quem) de um ciclo [start, end], sempre ao vivo
+     * a partir de `Expense`/`Quota`.
      *
-     * @return array{totals: array, expenses: array, balances: array}
+     * @return array{totals: array, expenses: array, balances: array, settlements: array}
      */
     private function computeCycleSummary(Group $group, $groupId, Carbon $start, Carbon $end): array
     {
         $entries = $this->collectCycleEntries($groupId, $start, $end);
 
         $expenses = $entries
-            ->map(fn (array $entry) => [
-                'id' => $entry['expense']->id,
-                'description' => $entry['expense']->description,
-                'date' => $entry['date']->toDateString(),
-                'value' => $entry['value'],
-                'paid' => $entry['paid'],
-                'payerName' => $entry['expense']->payer->name ?? null,
-                'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
-                'isFixed' => $entry['expense']->expense_type === 'FIXED',
-            ])
+            ->map(function (array $entry) {
+                $participantsCount = max($entry['expense']->payers->count(), 1);
+
+                return [
+                    'id' => $entry['expense']->id,
+                    'description' => $entry['expense']->description,
+                    'date' => $entry['date']->toDateString(),
+                    'value' => $entry['value'],
+                    'valuePerPerson' => round($entry['value'] / $participantsCount, 2),
+                    'paid' => $entry['paid'],
+                    'paymentProofUrl' => $entry['paymentProofUrl'],
+                    'payerName' => $entry['expense']->payer->name ?? null,
+                    'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
+                    'isFixed' => $entry['expense']->expense_type === 'FIXED',
+                    // IDs (não só nomes) — o frontend precisa deles pra decidir se o
+                    // usuário logado é o credor (pode pagar) ou dono (pode editar/
+                    // excluir: authorizeExpenseOwner() aceita criador OU credor),
+                    // sem depender de comparar nomes.
+                    'userPayerId' => $entry['expense']->user_payer_id,
+                    'userCreatorId' => $entry['expense']->user_creator_id,
+                ];
+            })
             ->sortBy('date')
             ->values()
             ->all();
@@ -430,6 +707,12 @@ class ExpenseController extends Controller
         foreach ($group->members as $member) {
             $balances[$member->id] = ['user_id' => $member->id, 'name' => $member->name, 'balance' => 0.0];
         }
+
+        // $owed[$credorId][$devedorId] = quanto o devedor deve ao credor,
+        // somado em bruto por despesa (antes de netar par a par). Base para
+        // $settlements abaixo; $balances continua vindo do mesmo loop, só
+        // agregando direto por pessoa em vez de por par.
+        $owed = [];
 
         foreach ($entries as $entry) {
             $expense = $entry['expense'];
@@ -450,6 +733,8 @@ class ExpenseController extends Controller
                 if (isset($balances[$payerId])) {
                     $balances[$payerId]['balance'] += $valuePerPerson;
                 }
+
+                $owed[$payerId][$participant->id] = ($owed[$payerId][$participant->id] ?? 0) + $valuePerPerson;
             }
         }
 
@@ -462,7 +747,41 @@ class ExpenseController extends Controller
             ->values()
             ->all();
 
-        return ['totals' => $totals, 'expenses' => $expenses, 'balances' => $balances];
+        // Liquidação par-a-par: neta cada par (credor, devedor) contra o
+        // sentido inverso (mesma lógica de
+        // GroupExpenseReportController::reportByGroupAndYearMonthlySettlement,
+        // aqui chaveada por user_id em vez de nome) — cada par gera no máximo
+        // 1 entrada, na direção líquida. Marca pares já resolvidos por uma
+        // chave normalizada (não por "quem tem o menor id"): um par só existe
+        // em $owed[maiorCredorId] se aquela pessoa alguma vez pagou por
+        // alguém — pode não existir do lado do menor id, então não dá pra
+        // usar "id < id" pra decidir quem processa sem perder pares.
+        $settlements = [];
+        $processedPairs = [];
+        foreach ($owed as $creditorId => $debtors) {
+            foreach ($debtors as $debtorId => $amount) {
+                if ($debtorId === $creditorId) {
+                    continue;
+                }
+
+                $pairKey = min($creditorId, $debtorId).':'.max($creditorId, $debtorId);
+                if (isset($processedPairs[$pairKey])) {
+                    continue;
+                }
+                $processedPairs[$pairKey] = true;
+
+                $reverse = $owed[$debtorId][$creditorId] ?? 0;
+                $net = round($amount - $reverse, 2);
+
+                if ($net > 0) {
+                    $settlements[] = ['from_user_id' => $debtorId, 'to_user_id' => $creditorId, 'amount' => $net];
+                } elseif ($net < 0) {
+                    $settlements[] = ['from_user_id' => $creditorId, 'to_user_id' => $debtorId, 'amount' => round(-$net, 2)];
+                }
+            }
+        }
+
+        return ['totals' => $totals, 'expenses' => $expenses, 'balances' => $balances, 'settlements' => $settlements];
     }
 
     /**
@@ -471,7 +790,7 @@ class ExpenseController extends Controller
      * regra de corte de recorrência de indexByGroup, adaptada de mês único para
      * intervalo de datas, que pode atravessar dois meses calendário).
      *
-     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool}>
+     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool, paymentProofUrl: ?string}>
      */
     private function collectCycleEntries($groupId, Carbon $start, Carbon $end)
     {
@@ -497,6 +816,7 @@ class ExpenseController extends Controller
                 'date' => $expense->date_payment->copy(),
                 'value' => (float) ($quota->value_quota ?? $expense->total_value),
                 'paid' => (bool) ($quota->paid ?? false),
+                'paymentProofUrl' => $quota->payment_proof_url ?? null,
             ]);
         }
 
@@ -518,6 +838,7 @@ class ExpenseController extends Controller
                 'date' => $quota->date_expected->copy(),
                 'value' => (float) $quota->value_quota,
                 'paid' => (bool) $quota->paid,
+                'paymentProofUrl' => $quota->payment_proof_url,
             ]);
         }
 
@@ -529,7 +850,7 @@ class ExpenseController extends Controller
                 $query->whereNull('fixed_recurrence_ends_at')
                     ->orWhere('fixed_recurrence_ends_at', '>', $start);
             })
-            ->with(['payer', 'payers'])
+            ->with(['payer', 'payers', 'quotas'])
             ->get();
 
         foreach ($fixedCandidates as $expense) {
@@ -543,11 +864,17 @@ class ExpenseController extends Controller
                     || $expense->fixed_recurrence_ends_at->gt($occurrence);
 
                 if ($occurrence->between($start, $end) && $recurrenceActive) {
+                    // Se a ocorrência já foi congelada (materializeFixedOccurrenceQuota,
+                    // chamado no fechamento ou no pagamento), usa o valor/status
+                    // persistidos; senão projeta ao vivo a partir do total_value atual.
+                    $quota = $expense->quotas->first(fn (Quota $quota) => $quota->date_expected->isSameDay($occurrence));
+
                     $entries->push([
                         'expense' => $expense,
                         'date' => $occurrence,
-                        'value' => (float) $expense->total_value,
-                        'paid' => false,
+                        'value' => (float) ($quota->value_quota ?? $expense->total_value),
+                        'paid' => (bool) ($quota->paid ?? false),
+                        'paymentProofUrl' => $quota->payment_proof_url ?? null,
                     ]);
                 }
 
@@ -556,6 +883,52 @@ class ExpenseController extends Controller
         }
 
         return $entries;
+    }
+
+    /**
+     * Congela a ocorrência mensal de uma despesa FIXED numa Quota real, usando
+     * o `total_value` vigente no momento da chamada. Chamar de novo para o
+     * mesmo mês não duplica — devolve a Quota já materializada. A partir daqui,
+     * essa competência passa a ler o valor congelado (via `collectCycleEntries`),
+     * independente de o `total_value` da despesa mudar depois.
+     */
+    private function materializeFixedOccurrenceQuota(Expense $expense, Carbon $occurrenceDate): Quota
+    {
+        $existing = $expense->quotas()
+            ->whereDate('date_expected', $occurrenceDate->toDateString())
+            ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return $expense->quotas()->create([
+            'date_expected' => $occurrenceDate->toDateString(),
+            'number' => 1,
+            'paid' => false,
+            'value_quota' => $expense->total_value,
+        ]);
+    }
+
+    /**
+     * Quota que representa esta despesa na competência [start, end] — para
+     * `FIXED`, materializa a ocorrência se ainda não existir; para as demais,
+     * a Quota já existe desde a criação (uma por competência, por design).
+     * `null` se a despesa não tiver ocorrência nessa competência (ex.: FIXED
+     * cuja recorrência já foi cortada antes dela).
+     */
+    private function resolveQuotaForCurrentCompetence(Expense $expense, Carbon $start, Carbon $end): ?Quota
+    {
+        if ($expense->expense_type === 'FIXED') {
+            $entry = $this->collectCycleEntries($expense->group_id, $start, $end)
+                ->first(fn (array $entry) => $entry['expense']->id === $expense->id);
+
+            return $entry ? $this->materializeFixedOccurrenceQuota($expense, $entry['date']) : null;
+        }
+
+        return $expense->quotas()
+            ->whereBetween('date_expected', [$start->toDateString(), $end->toDateString()])
+            ->first();
     }
 
     private function findExpenseForMember($id): Expense

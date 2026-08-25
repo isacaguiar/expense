@@ -29,7 +29,7 @@ export function groupNavItems(groupId: string, navigate: NavigateFunction): Grou
     { label: 'Home', icon: HomeOutlinedIcon, to: `/groups/${groupId}/summary` },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: `/groups/${groupId}/expenses` },
     { label: 'Participantes', icon: PeopleOutlineOutlinedIcon, to: `/groups/${groupId}/members` },
-    { label: 'Pagamentos', icon: PaymentsOutlinedIcon },
+    { label: 'Pagamentos', icon: PaymentsOutlinedIcon, to: `/groups/${groupId}/payments` },
     { label: 'Relatórios', icon: AssessmentOutlinedIcon },
     {
       label: 'Configurações',

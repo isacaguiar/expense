@@ -15,6 +15,9 @@ class GroupCycleSnapshot extends Model
         'totals',
         'expenses',
         'balances',
+        'settlements',
+        'closed_manually_at',
+        'reopened_at',
     ];
 
     protected $casts = [
@@ -23,10 +26,27 @@ class GroupCycleSnapshot extends Model
         'totals' => 'array',
         'expenses' => 'array',
         'balances' => 'array',
+        'settlements' => 'array',
+        'closed_manually_at' => 'datetime',
+        'reopened_at' => 'datetime',
     ];
 
     public function group()
     {
         return $this->belongsTo(Group::class, 'group_id');
+    }
+
+    /**
+     * Fechamento manual ainda vigente: existe `closed_manually_at` e nenhuma
+     * reabertura mais recente. Não diz nada sobre o fechamento automático por
+     * data (`BillingCycle`) — os dois estados são independentes.
+     */
+    public function isManuallyClosedAndActive(): bool
+    {
+        if ($this->closed_manually_at === null) {
+            return false;
+        }
+
+        return $this->reopened_at === null || $this->reopened_at->lt($this->closed_manually_at);
     }
 }

@@ -2,12 +2,9 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
+  Avatar,
   Box,
   Button,
-  Card,
-  CardActionArea,
-  CardActions,
-  CardContent,
   Chip,
   Typography,
   CircularProgress,
@@ -18,28 +15,36 @@ import {
   DialogActions,
   Grid,
   IconButton,
+  Link as MuiLink,
+  Paper,
   Snackbar,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
   TextField,
   ToggleButton,
-  ToggleButtonGroup
+  ToggleButtonGroup,
+  Tooltip
 } from '@mui/material';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import UndoIcon from '@mui/icons-material/Undo';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
-
-// Tipo de despesa (ajuste conforme sua API)
-type Expense = {
-  id: number;
-  description: string;
-  value: number;
-  date: string;        // ISO string
-  payerName?: string;  // opcional, se vier do backend
-  isFixed?: boolean;
-};
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
+import { usePaymentActions } from '../hooks/usePaymentActions';
+import SummarySidePanel from '../components/SummarySidePanel';
+import { getInitials } from '../layouts/group/getInitials';
+import { brandColors } from '../theme/brandColors';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -49,72 +54,114 @@ const formatDate = (dateStr: string): string => {
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
 };
 
+// Rótulo curto (dia + mês abreviado) pro cabeçalho de competência — mesmo
+// formato usado em GroupSummary, pra não ter duas convenções de data na UI.
+const formatCycleBoundary = (dateStr: string): string => {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+};
+
 const ExpenseManager: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
+  const expenses = summary?.expenses ?? [];
 
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
-  // Busca e filtro por tipo — client-side, sobre os dados do mês já carregados
+  useEffect(() => {
+    const token = localStorage.getItem('accessToken');
+    axios
+      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers: { Authorization: token ? `Bearer ${token}` : '' } })
+      .then(res => setCurrentUserId(res.data.id))
+      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
+  }, []);
+
+  // Busca e filtro por tipo — client-side, sobre os dados da competência já carregada
   const [search, setSearch] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'fixed' | 'variable'>('all');
+
+  // Modal de detalhamento da despesa
+  const [detailExpenseId, setDetailExpenseId] = useState<number | null>(null);
 
   // Diálogo de remoção de despesa Fixa
   const [removeExpenseId, setRemoveExpenseId] = useState<number | null>(null);
   const [removeSuccess, setRemoveSuccess] = useState<boolean>(false);
 
-  // Helpers de mês/ano
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth() + 1; // 1-12
+  // Diálogo de exclusão de despesa variável
+  const [deleteExpenseId, setDeleteExpenseId] = useState<number | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<boolean>(false);
+  const [deleteSuccess, setDeleteSuccess] = useState<boolean>(false);
 
-  const monthLabel = currentDate.toLocaleDateString('pt-BR', {
-    month: 'long',
-    year: 'numeric'
-  });
+  // Marcar como paga / desfazer pagamento (hook compartilhado com Payments.tsx)
+  const {
+    payingExpenseId,
+    payError,
+    paySuccess,
+    unpaySuccess,
+    dismissPayError,
+    dismissPaySuccess,
+    dismissUnpaySuccess,
+    canPay,
+    canUnpay,
+    handlePay,
+    handleUnpay
+  } = usePaymentActions(currentUserId, summary, reload);
 
-  const changeMonth = (delta: number) => {
-    setCurrentDate(prev => {
-      const d = new Date(prev);
-      d.setMonth(d.getMonth() + delta);
-      return d;
-    });
-  };
+  // Fechar/reabrir a competência vigente
+  const [closingMonth, setClosingMonth] = useState<boolean>(false);
+  const [reopeningMonth, setReopeningMonth] = useState<boolean>(false);
+  const [closeReopenError, setCloseReopenError] = useState<string | null>(null);
+  const [closeSuccess, setCloseSuccess] = useState<boolean>(false);
+  const [reopenSuccess, setReopenSuccess] = useState<boolean>(false);
 
-  const loadExpenses = () => {
+  const handleCloseMonth = () => {
     if (!groupId) return;
 
-    setLoading(true);
-    setError(null);
+    setClosingMonth(true);
+    setCloseReopenError(null);
 
     const token = localStorage.getItem('accessToken');
+
     axios
-      .get<Expense[]>(`${API_BASE_URL}/api/groups/${groupId}/expenses`, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' },
-        params: {
-          year,
-          month
-        }
+      .post(`${API_BASE_URL}/api/groups/${groupId}/expenses/close`, null, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
-      .then(res => setExpenses(res.data))
+      .then(() => {
+        setCloseSuccess(true);
+        reload();
+      })
       .catch(err => {
-        console.error('Erro ao carregar despesas:', err);
-        if (err.response?.status === 401) {
-          navigate('/', { replace: true });
-          return;
-        }
-        setError('Falha ao carregar despesas.');
+        console.error('Erro ao fechar a competência:', err);
+        setCloseReopenError(err.response?.data?.error ?? 'Falha ao fechar a competência.');
       })
-      .finally(() => setLoading(false));
+      .finally(() => setClosingMonth(false));
   };
 
-  useEffect(() => {
-    loadExpenses();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupId, year, month]);
+  const handleReopenMonth = () => {
+    if (!groupId) return;
+
+    setReopeningMonth(true);
+    setCloseReopenError(null);
+
+    const token = localStorage.getItem('accessToken');
+
+    axios
+      .post(`${API_BASE_URL}/api/groups/${groupId}/expenses/reopen`, null, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setReopenSuccess(true);
+        reload();
+      })
+      .catch(err => {
+        console.error('Erro ao reabrir a competência:', err);
+        setCloseReopenError(err.response?.data?.error ?? 'Falha ao reabrir a competência.');
+      })
+      .finally(() => setReopeningMonth(false));
+  };
 
   const stopFixedRecurrence = (cutoffYear: number, cutoffMonth: number) => {
     if (removeExpenseId === null) return;
@@ -130,7 +177,7 @@ const ExpenseManager: React.FC = () => {
       .then(() => {
         setRemoveExpenseId(null);
         setRemoveSuccess(true);
-        loadExpenses();
+        reload();
       })
       .catch(err => {
         console.error('Erro ao remover recorrência da despesa fixa:', err);
@@ -138,15 +185,56 @@ const ExpenseManager: React.FC = () => {
       });
   };
 
-  const handleRemoveFromThisMonth = () => stopFixedRecurrence(year, month);
+  const handleRemoveFromThisMonth = () => {
+    if (!summary) return;
+
+    const [year, month] = summary.cycle.start.split('-').map(Number);
+    stopFixedRecurrence(year, month);
+  };
 
   const handleRemoveFromNextMonth = () => {
-    const next = new Date(currentDate);
+    if (!summary) return;
+
+    const [year, month] = summary.cycle.start.split('-').map(Number);
+    const next = new Date(year, month - 1, 1);
     next.setMonth(next.getMonth() + 1);
     stopFixedRecurrence(next.getFullYear(), next.getMonth() + 1);
   };
 
   const removeExpense = expenses.find(exp => exp.id === removeExpenseId) ?? null;
+  const deleteExpense = expenses.find(exp => exp.id === deleteExpenseId) ?? null;
+  const detailExpense = expenses.find(exp => exp.id === detailExpenseId) ?? null;
+
+  const closeDeleteDialog = () => {
+    setDeleteExpenseId(null);
+    setDeleteError(null);
+  };
+
+  const confirmDelete = () => {
+    if (deleteExpenseId === null) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    const token = localStorage.getItem('accessToken');
+
+    axios
+      .delete(`${API_BASE_URL}/api/expenses/${deleteExpenseId}`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setDeleteExpenseId(null);
+        setDeleteSuccess(true);
+        reload();
+      })
+      .catch(err => {
+        console.error('Erro ao excluir despesa:', err);
+        // O backend valida as regras de domínio (competência fechada, despesa
+        // paga) — o cliente só exibe o motivo que a API devolveu.
+        setDeleteError(err.response?.data?.error ?? 'Falha ao excluir despesa.');
+      })
+      .finally(() => setDeleting(false));
+  };
 
   const filteredExpenses = expenses
     .filter(exp => exp.description.toLowerCase().includes(search.toLowerCase()))
@@ -155,6 +243,19 @@ const ExpenseManager: React.FC = () => {
       if (typeFilter === 'variable') return !exp.isFixed;
       return true;
     });
+
+  // Ações de edição/exclusão/pagamento só existem enquanto a competência
+  // selecionada está aberta — competências fechadas (automática ou
+  // manualmente) e futuras são refletidas aqui, não decididas à parte: a API
+  // recusaria a ação de qualquer forma, isto só evita mostrar um botão que
+  // levaria a um erro.
+  const cycleIsOpen = summary?.cycle.status === 'open';
+
+  const isOwner = (exp: SummaryExpense) =>
+    currentUserId !== null && (currentUserId === exp.userCreatorId || currentUserId === exp.userPayerId);
+
+  const canEdit = (exp: SummaryExpense) => cycleIsOpen && isOwner(exp);
+  const canDelete = (exp: SummaryExpense) => cycleIsOpen && !exp.isFixed && !exp.paid && isOwner(exp);
 
   return (
     <>
@@ -175,7 +276,7 @@ const ExpenseManager: React.FC = () => {
         </Button>
       </Box>
 
-      {/* Seletor de mês */}
+      {/* Seletor de competência */}
       <Box
         display="flex"
         alignItems="center"
@@ -183,91 +284,285 @@ const ExpenseManager: React.FC = () => {
         mb={3}
         gap={1}
       >
-        <IconButton onClick={() => changeMonth(-1)} aria-label="Mês anterior">
+        <IconButton onClick={goToPreviousCycle} aria-label="Competência anterior">
           <ArrowBackIosNewIcon />
         </IconButton>
         <Typography variant="h6" textTransform="capitalize">
-          {monthLabel}
+          {summary ? `${formatCycleBoundary(summary.cycle.start)} – ${formatCycleBoundary(summary.cycle.end)}` : ''}
         </Typography>
-        <IconButton onClick={() => changeMonth(1)} aria-label="Próximo mês">
+        <IconButton onClick={goToNextCycle} aria-label="Próxima competência">
           <ArrowForwardIosIcon />
         </IconButton>
       </Box>
 
-      {/* Busca e filtro por tipo */}
-      <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
-        <TextField
-          label="Buscar despesa"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          size="small"
-          sx={{ minWidth: 240 }}
-        />
-        <ToggleButtonGroup
-          value={typeFilter}
-          exclusive
-          size="small"
-          onChange={(_, value) => value && setTypeFilter(value)}
-        >
-          <ToggleButton value="all">Todas</ToggleButton>
-          <ToggleButton value="fixed">Fixas</ToggleButton>
-          <ToggleButton value="variable">Variáveis</ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+      {/* Fechar/reabrir — só faz sentido na competência vigente (cyclesAgo=0):
+          close()/reopen() sempre operam sobre "agora", nunca sobre a
+          competência navegada via as setas acima. */}
+      {summary && cyclesAgo === 0 && (summary.cycle.status === 'open' || summary.cycle.status === 'closed_manually') && (
+        <Box display="flex" flexDirection="column" alignItems="center" mb={3} gap={1}>
+          {summary.cycle.status === 'open' ? (
+            <Button variant="outlined" onClick={handleCloseMonth} disabled={closingMonth}>
+              Fechar mês
+            </Button>
+          ) : (
+            <Button variant="outlined" onClick={handleReopenMonth} disabled={reopeningMonth}>
+              Reabrir mês
+            </Button>
+          )}
+          {closeReopenError && (
+            <Alert severity="error" sx={{ maxWidth: 480 }}>
+              {closeReopenError}
+            </Alert>
+          )}
+        </Box>
+      )}
 
-      {/* Lista de despesas */}
+      {/* Grid principal: listagem à esquerda, saldo por pessoa à direita */}
       {loading ? (
         <Box display="flex" justifyContent="center" mt={4}>
           <CircularProgress />
         </Box>
       ) : error ? (
         <Typography color="error">{error}</Typography>
-      ) : expenses.length === 0 ? (
-        <Typography color="text.secondary">Nenhuma despesa encontrada para este mês.</Typography>
-      ) : filteredExpenses.length === 0 ? (
-        <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
       ) : (
-        <Grid container spacing={2}>
-          {filteredExpenses.map(exp => (
-            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={exp.id}>
-              <Card elevation={3} sx={{ borderRadius: 2 }}>
-                <CardActionArea component={Link} to={`/groups/${groupId}/expenses/${exp.id}`}>
-                  <CardContent>
-                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
-                      <Box display="flex" alignItems="center" gap={1}>
-                        {exp.isFixed ? (
-                          <AutorenewOutlinedIcon color="action" fontSize="small" />
-                        ) : (
-                          <ReceiptOutlinedIcon color="action" fontSize="small" />
-                        )}
-                        <Typography variant="subtitle1">{exp.description}</Typography>
-                      </Box>
-                      <Chip label={exp.isFixed ? 'Fixa' : 'Variável'} size="small" />
-                    </Box>
-                    <Typography variant="h6" color="primary" sx={{ mt: 1 }}>
-                      R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {formatDate(exp.date)} · Pago por {exp.payerName || '-'}
-                    </Typography>
-                  </CardContent>
-                </CardActionArea>
-                {exp.isFixed && (
-                  <CardActions>
-                    <IconButton
-                      aria-label="Remover despesa fixa"
-                      size="small"
-                      onClick={() => setRemoveExpenseId(exp.id)}
-                    >
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </CardActions>
-                )}
-              </Card>
-            </Grid>
-          ))}
+        <Grid container spacing={3}>
+          <Grid size={{ xs: 12, sm: 12, lg: 8 }}>
+            {/* Busca e filtro por tipo */}
+            <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
+              <TextField
+                label="Buscar despesa"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                size="small"
+                sx={{ minWidth: 240 }}
+              />
+              <ToggleButtonGroup
+                value={typeFilter}
+                exclusive
+                size="small"
+                onChange={(_, value) => value && setTypeFilter(value)}
+              >
+                <ToggleButton value="all">Todas</ToggleButton>
+                <ToggleButton value="fixed">Fixas</ToggleButton>
+                <ToggleButton value="variable">Variáveis</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {expenses.length === 0 ? (
+              <Typography color="text.secondary">Nenhuma despesa encontrada para esta competência.</Typography>
+            ) : filteredExpenses.length === 0 ? (
+              <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
+            ) : (
+              <TableContainer component={Paper} elevation={3}>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Tipo</TableCell>
+                      <TableCell>Despesa</TableCell>
+                      <TableCell>Valor</TableCell>
+                      <TableCell>Credor</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell align="right">Ações</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {filteredExpenses.map(exp => (
+                      <TableRow key={exp.id} hover>
+                        <TableCell>
+                          <Tooltip title={exp.isFixed ? 'Fixa' : 'Variável'}>
+                            {exp.isFixed ? (
+                              <AutorenewOutlinedIcon color="action" fontSize="small" />
+                            ) : (
+                              <ReceiptOutlinedIcon color="action" fontSize="small" />
+                            )}
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <MuiLink component={Link} to={`/groups/${groupId}/expenses/${exp.id}`} underline="hover">
+                            {exp.description}
+                          </MuiLink>
+                        </TableCell>
+                        <TableCell>
+                          R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </TableCell>
+                        <TableCell>
+                          <Box display="flex" alignItems="center" gap={1}>
+                            <Avatar
+                              sx={{
+                                bgcolor: brandColors.primaryLight,
+                                color: brandColors.primary,
+                                width: 28,
+                                height: 28,
+                                fontSize: '0.75rem'
+                              }}
+                            >
+                              {getInitials(exp.payerName || '-')}
+                            </Avatar>
+                            {exp.payerName || '-'}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={exp.paid ? 'Paga' : 'Pendente'}
+                            color={exp.paid ? 'success' : 'warning'}
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Box display="flex" gap={0.5} justifyContent="flex-end">
+                            <Tooltip title="Ver detalhes">
+                              <IconButton
+                                aria-label="Ver detalhes"
+                                size="small"
+                                onClick={() => setDetailExpenseId(exp.id)}
+                              >
+                                <InfoOutlinedIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                            {exp.isFixed && cycleIsOpen && (
+                              <Tooltip title="Remover despesa fixa">
+                                <IconButton
+                                  aria-label="Remover despesa fixa"
+                                  size="small"
+                                  onClick={() => setRemoveExpenseId(exp.id)}
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canEdit(exp) && (
+                              <Tooltip title="Editar despesa">
+                                <IconButton
+                                  aria-label="Editar despesa"
+                                  size="small"
+                                  component={Link}
+                                  to={`/groups/${groupId}/expenses/${exp.id}`}
+                                >
+                                  <EditOutlinedIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canDelete(exp) && (
+                              <Tooltip title="Excluir despesa">
+                                <IconButton
+                                  aria-label="Excluir despesa"
+                                  size="small"
+                                  onClick={() => setDeleteExpenseId(exp.id)}
+                                >
+                                  <DeleteOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canPay(exp) && (
+                              <Tooltip title="Marcar como paga">
+                                <IconButton
+                                  aria-label="Marcar como paga"
+                                  size="small"
+                                  disabled={payingExpenseId === exp.id}
+                                  onClick={() => handlePay(exp.id)}
+                                >
+                                  <CheckCircleOutlineIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                            {canUnpay(exp) && (
+                              <Tooltip title="Desfazer pagamento">
+                                <IconButton
+                                  aria-label="Desfazer pagamento"
+                                  size="small"
+                                  disabled={payingExpenseId === exp.id}
+                                  onClick={() => handleUnpay(exp.id)}
+                                >
+                                  <UndoIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
+          </Grid>
+
+          <Grid size={{ xs: 12, sm: 12, lg: 4 }}>
+            {summary && (
+              <SummarySidePanel
+                balances={summary.balances}
+                settlements={summary.settlements}
+                cycleStatus={summary.cycle.status}
+              />
+            )}
+          </Grid>
         </Grid>
       )}
+
+      {/* Modal de detalhamento da despesa */}
+      <Dialog
+        open={detailExpenseId !== null}
+        onClose={() => setDetailExpenseId(null)}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Detalhes da despesa</DialogTitle>
+        <DialogContent dividers>
+          {detailExpense && (
+            <Box display="flex" flexDirection="column" gap={1.5}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
+                <Typography variant="subtitle1">{detailExpense.description}</Typography>
+                <Box display="flex" gap={0.5}>
+                  <Chip label={detailExpense.isFixed ? 'Fixa' : 'Variável'} size="small" />
+                  <Chip
+                    label={detailExpense.paid ? 'Paga' : 'Pendente'}
+                    color={detailExpense.paid ? 'success' : 'warning'}
+                    size="small"
+                  />
+                </Box>
+              </Box>
+
+              <Typography variant="h6" color="primary">
+                R${' '}
+                {detailExpense.value.toLocaleString('pt-BR', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}
+              </Typography>
+
+              <Typography variant="body2" color="text.secondary">
+                {formatDate(detailExpense.date)}
+              </Typography>
+
+              <Box display="flex" alignItems="center" gap={1}>
+                <Avatar
+                  sx={{
+                    bgcolor: brandColors.primaryLight,
+                    color: brandColors.primary,
+                    width: 32,
+                    height: 32,
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  {getInitials(detailExpense.payerName || '-')}
+                </Avatar>
+                <Typography variant="body2">Credor: {detailExpense.payerName || '-'}</Typography>
+              </Box>
+
+              <Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Pagadores
+                </Typography>
+                <Typography variant="body2">{detailExpense.participants.join(', ') || '-'}</Typography>
+              </Box>
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDetailExpenseId(null)}>Fechar</Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Diálogo de remoção de despesa Fixa */}
       <Dialog
@@ -300,6 +595,97 @@ const ExpenseManager: React.FC = () => {
       >
         <Alert onClose={() => setRemoveSuccess(false)} severity="success" variant="filled">
           Despesa fixa removida com sucesso.
+        </Alert>
+      </Snackbar>
+
+      {/* Diálogo de exclusão de despesa variável */}
+      <Dialog open={deleteExpenseId !== null} onClose={closeDeleteDialog} PaperProps={{ sx: { borderRadius: 2 } }}>
+        <DialogTitle>Excluir despesa</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            {deleteExpense
+              ? `Tem certeza que deseja excluir "${deleteExpense.description}"? Essa ação não pode ser desfeita.`
+              : 'Tem certeza que deseja excluir esta despesa? Essa ação não pode ser desfeita.'}
+          </Typography>
+          {deleteError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {deleteError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeDeleteDialog} disabled={deleting}>
+            Cancelar
+          </Button>
+          <Button variant="contained" color="error" onClick={confirmDelete} disabled={deleting}>
+            Excluir
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={deleteSuccess}
+        autoHideDuration={4000}
+        onClose={() => setDeleteSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setDeleteSuccess(false)} severity="success" variant="filled">
+          Despesa excluída com sucesso.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={closeSuccess}
+        autoHideDuration={4000}
+        onClose={() => setCloseSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setCloseSuccess(false)} severity="success" variant="filled">
+          Competência fechada com sucesso.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={reopenSuccess}
+        autoHideDuration={4000}
+        onClose={() => setReopenSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setReopenSuccess(false)} severity="success" variant="filled">
+          Competência reaberta com sucesso.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={paySuccess}
+        autoHideDuration={4000}
+        onClose={dismissPaySuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissPaySuccess} severity="success" variant="filled">
+          Despesa marcada como paga.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={unpaySuccess}
+        autoHideDuration={4000}
+        onClose={dismissUnpaySuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissUnpaySuccess} severity="success" variant="filled">
+          Pagamento desfeito.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={payError !== null}
+        autoHideDuration={6000}
+        onClose={dismissPayError}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissPayError} severity="error" variant="filled">
+          {payError}
         </Alert>
       </Snackbar>
     </>

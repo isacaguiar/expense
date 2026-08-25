@@ -36,6 +36,7 @@ class User extends Authenticatable implements JWTSubject
     protected $hidden = [
         'password',
         'remember_token',
+        'google_id',
     ];
 
     /**
@@ -46,6 +47,7 @@ class User extends Authenticatable implements JWTSubject
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'notify_whatsapp' => 'boolean',
     ];
 
     protected $attributes = [

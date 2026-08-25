@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -17,20 +18,42 @@ vi.mock('react-router-dom', async importOriginal => {
   };
 });
 
-const expenses = [
-  { id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true },
-  { id: 10, description: 'Mercado', value: 150, date: '2026-08-05', payerName: 'João', isFixed: false },
+const members = [
+  { id: 500, name: 'Isac' },
+  { id: 501, name: 'João' },
 ];
+
+const expenseDetail = {
+  id: 9,
+  description: 'Aluguel',
+  total_value: '1200.00',
+  date_payment: '2026-08-01',
+  expense_type: 'FIXED' as const,
+  user_payer_id: 500,
+  payers: [{ id: 500, name: 'Isac' }, { id: 501, name: 'João' }],
+};
+
+function mockGetResponses(overrides: { expense?: unknown; members?: unknown } = {}) {
+  vi.mocked(axios.get).mockImplementation((url: string) => {
+    if (url.includes('/expenses/9')) {
+      return Promise.resolve({ data: overrides.expense ?? expenseDetail });
+    }
+    if (url.includes('/members')) {
+      return Promise.resolve({ data: overrides.members ?? members });
+    }
+    return Promise.reject(new Error(`unexpected GET ${url}`));
+  });
+}
 
 describe('ExpenseView', () => {
   beforeEach(() => {
     navigateMock.mockClear();
     vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.put).mockReset();
+    mockGetResponses();
   });
 
-  it('shows the expense details when it is found in the currently loaded month', async () => {
-    vi.mocked(axios.get).mockResolvedValueOnce({ data: expenses });
-
+  it('shows the expense details fetched by id', async () => {
     render(
       <MemoryRouter>
         <ExpenseView />
@@ -40,11 +63,18 @@ describe('ExpenseView', () => {
     expect(await screen.findByText('Aluguel')).toBeInTheDocument();
     expect(screen.getByText('R$ 1.200,00')).toBeInTheDocument();
     expect(screen.getByText('Fixa')).toBeInTheDocument();
-    expect(screen.getByText('Pago por Isac')).toBeInTheDocument();
+    expect(await screen.findByText('Credor: Isac')).toBeInTheDocument();
+
+    expect(vi.mocked(axios.get).mock.calls.some(call => (call[0] as string).includes('/api/expenses/9'))).toBe(true);
   });
 
-  it('shows "não encontrada" with a link back when the expense is not in the loaded month', async () => {
-    vi.mocked(axios.get).mockResolvedValueOnce({ data: [expenses[1]] });
+  it('shows "não encontrada" with a link back when the expense does not exist or is not accessible', async () => {
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/9')) {
+        return Promise.reject({ response: { status: 404 } });
+      }
+      return Promise.resolve({ data: members });
+    });
 
     render(
       <MemoryRouter>
@@ -60,7 +90,12 @@ describe('ExpenseView', () => {
   });
 
   it('redirects to login on a 401', async () => {
-    vi.mocked(axios.get).mockRejectedValueOnce({ response: { status: 401 } });
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/9')) {
+        return Promise.reject({ response: { status: 401 } });
+      }
+      return Promise.resolve({ data: members });
+    });
 
     render(
       <MemoryRouter>
@@ -71,5 +106,69 @@ describe('ExpenseView', () => {
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/', { replace: true });
     });
+  });
+
+  it('enters edit mode with the current values pre-filled and saves via PUT', async () => {
+    const user = userEvent.setup();
+    vi.mocked(axios.put).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+
+    expect(await screen.findByText('Editar despesa')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Aluguel')).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText('Descrição'));
+    await user.type(screen.getByLabelText('Descrição'), 'Aluguel reajustado');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(axios.put).toHaveBeenCalled());
+    const [url, payload] = vi.mocked(axios.put).mock.calls[0];
+    expect(url).toContain('/api/expenses/9');
+    expect(payload).toMatchObject({ description: 'Aluguel reajustado', user_payer_id: 500, payers: [500, 501] });
+  });
+
+  it('shows the error message returned by the API when saving fails', async () => {
+    const user = userEvent.setup();
+    vi.mocked(axios.put).mockRejectedValue({
+      response: { data: { error: 'Não é possível alterar o valor de uma despesa já paga.' } },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await screen.findByText('Editar despesa');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText('Não é possível alterar o valor de uma despesa já paga.')).toBeInTheDocument();
+  });
+
+  it('cancels edit mode without saving', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await screen.findByText('Editar despesa');
+    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+    expect(await screen.findByText('R$ 1.200,00')).toBeInTheDocument();
+    expect(axios.put).not.toHaveBeenCalled();
   });
 });

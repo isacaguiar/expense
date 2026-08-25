@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 import Box from '@mui/material/Box';
-import Select, { SelectChangeEvent } from '@mui/material/Select';
-import MenuItem from '@mui/material/MenuItem';
-import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import LoginBrandingPanel from './login/LoginBrandingPanel';
@@ -12,12 +9,7 @@ import LoginPageFooter from './login/LoginPageFooter';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [language, setLanguage] = useState('pt-BR');
   const navigate = useNavigate();
-
-  const handleLanguageChange = (event: SelectChangeEvent) => {
-    setLanguage(event.target.value);
-  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,7 +27,7 @@ export default function LoginPage() {
       localStorage.setItem('accessToken', data.access_token);
       localStorage.setItem('refreshToken', data.refresh_token);
 
-      navigate('/dashboard');
+      navigate('/meus-grupos');
     } catch (err) {
       console.error('Falha no login:', err);
     }
@@ -44,25 +36,6 @@ export default function LoginPage() {
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ display: 'flex', flex: 1, position: 'relative' }}>
-        <Select
-          value={language}
-          onChange={handleLanguageChange}
-          size="small"
-          startAdornment={<LanguageOutlinedIcon fontSize="small" sx={{ mr: 1 }} />}
-          sx={{
-            position: 'absolute',
-            top: 24,
-            right: 24,
-            zIndex: 1,
-            bgcolor: 'background.paper',
-            fontSize: '0.875rem',
-            '& .MuiSelect-select': { display: 'flex', alignItems: 'center', py: 0.75 },
-          }}
-        >
-          <MenuItem value="pt-BR">Português (Brasil)</MenuItem>
-          <MenuItem value="en-US">English (US)</MenuItem>
-        </Select>
-
         <LoginBrandingPanel />
 
         <Box

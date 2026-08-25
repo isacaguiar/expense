@@ -59,7 +59,7 @@ describe('GroupShellLayout', () => {
     localStorage.setItem('accessToken', 'a-token');
   });
 
-  it('renders the sidebar with real links for Home/Despesas/Participantes and placeholders for the rest', async () => {
+  it('renders the sidebar with real links for Home/Despesas/Participantes/Pagamentos and a placeholder for Relatórios', async () => {
     renderShell('/groups/1/summary');
 
     await screen.findByText('Conteúdo Resumo');
@@ -67,7 +67,7 @@ describe('GroupShellLayout', () => {
     expect(screen.getByRole('link', { name: /Home/ })).toHaveAttribute('href', '/groups/1/summary');
     expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/groups/1/expenses');
     expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '/groups/1/members');
-    expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '/groups/1/payments');
     expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '#');
   });
 
@@ -82,7 +82,7 @@ describe('GroupShellLayout', () => {
 
     await user.click(screen.getByText('Configurações'));
 
-    expect(screen.getByRole('link', { name: 'Meus Grupos' })).toHaveAttribute('href', '/dashboard');
+    expect(screen.getByRole('link', { name: 'Meus Grupos' })).toHaveAttribute('href', '/meus-grupos');
     expect(screen.getByRole('link', { name: 'Minha Conta' })).toHaveAttribute('href', '/profile');
     expect(screen.getByRole('link', { name: 'Alterar Senha' })).toHaveAttribute('href', '/change-password');
   });

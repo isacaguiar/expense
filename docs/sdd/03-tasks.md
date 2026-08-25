@@ -41,7 +41,7 @@ Regra de atomicidade: uma task deve ser completável, revisável e testável **i
 | ID | Título | Tipo | Gate humano |
 |---|---|---|---|
 | TASK-018 | Decidir e, se aprovado, implementar persistência real de `Participation` (status pago/pendente) | backend | decisão de produto antes de iniciar |
-| TASK-019 | Unificar os dois fluxos de convite (`InvitationController::invite` e `GroupMemberController::store`) | backend | antes do merge |
+| TASK-019 | ~~Unificar os dois fluxos de convite (`InvitationController::invite` e `GroupMemberController::store`)~~ — migrada para `docs/feature/20260822-atualizacao-participantes/` em 2026-08-22, ver `tasks.md` lá (TASK-189 a TASK-193) para status atualizado | backend | antes do merge |
 | TASK-020 | Extrair Service de cálculo de saldo compartilhado entre `reportByGroupAndYear` e `reportByGroupAndYearMonthlySettlement` (hoje duplicado) | backend | nenhum |
 | TASK-021 | Decidir destino das credenciais Google OAuth órfãs (implementar login social ou remover referências) | doc/produto | decisão de produto |
 

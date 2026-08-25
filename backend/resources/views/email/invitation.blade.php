@@ -50,7 +50,10 @@
 
     <h2>Você foi convidado para acessar a plataforma Novemax!</h2>
 
-    <p><strong>{{ $inviterName }}</strong> convidou você para participar da nossa plataforma.</p>
+    <p>
+      <strong>{{ $inviterName }}</strong>
+      convidou você para participar do grupo <strong>{{ $groupName }}</strong> na plataforma Novemax.
+    </p>
 
     @if($inviteMessage)
       <p><em>Mensagem:</em> "{{ $inviteMessage }}"</p>

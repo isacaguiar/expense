@@ -157,7 +157,7 @@ const GroupMembersForm: React.FC = () => {
                   </Button>
                   <Button
                     variant="outlined"
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate('/meus-grupos')}
                   >
                     Voltar
                   </Button>
