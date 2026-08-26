@@ -131,7 +131,42 @@ describe('ExpenseView', () => {
     await waitFor(() => expect(axios.put).toHaveBeenCalled());
     const [url, payload] = vi.mocked(axios.put).mock.calls[0];
     expect(url).toContain('/api/expenses/9');
-    expect(payload).toMatchObject({ description: 'Aluguel reajustado', user_payer_id: 500, payers: [500, 501] });
+    expect(payload).toMatchObject({
+      description: 'Aluguel reajustado',
+      user_payer_id: 500,
+      payers: [500, 501],
+      // Regressão: total_value vem da API como "1200.00" (formato de
+      // máquina). Sem reformatar pro padrão pt-BR que o parser de Valor
+      // espera, salvar sem tocar no campo mandava 120000 (multiplicado por
+      // ~100) em vez de 1200.
+      total_value: 1200,
+    });
+  });
+
+  it('does not corrupt total_value when saving without touching the Valor field', async () => {
+    const user = userEvent.setup();
+    vi.mocked(axios.put).mockResolvedValue({ data: {} });
+
+    mockGetResponses({ expense: { ...expenseDetail, total_value: '1234.56' } });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await screen.findByText('Editar despesa');
+
+    // O campo já vem pré-preenchido no formato pt-BR (não o formato cru da API).
+    expect(screen.getByDisplayValue('1.234,56')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(axios.put).toHaveBeenCalled());
+    const [, payload] = vi.mocked(axios.put).mock.calls[0];
+    expect(payload).toMatchObject({ total_value: 1234.56 });
   });
 
   it('shows the error message returned by the API when saving fails', async () => {

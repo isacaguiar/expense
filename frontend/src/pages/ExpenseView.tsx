@@ -130,7 +130,14 @@ const ExpenseView: React.FC = () => {
     if (!expense) return;
 
     setDescription(expense.description);
-    setValue(String(expense.total_value));
+    // handleSave() faz parse de `value` como número digitado em pt-BR (ponto =
+    // separador de milhar, vírgula = decimal — mesmo formato do placeholder
+    // "Ex: 150,00"). expense.total_value vem da API em formato de máquina
+    // ("100.00", decimal:2 do backend) — pré-preencher com esse valor cru faz
+    // o parser ler o ponto decimal como separador de milhar e multiplicar o
+    // valor por ~100 se o usuário salvar sem tocar no campo. Formatando aqui
+    // pro mesmo padrão pt-BR que o parser espera.
+    setValue(Number(expense.total_value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     setDate(expense.date_payment);
     setPayerId(String(expense.user_payer_id));
     setParticipantIds(expense.payers.map(p => p.id));
