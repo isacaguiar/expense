@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20260826
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-204 | Extrair `NavList` reutilizável de `Sidebar.tsx` | frontend | plan.md §1 | nenhum | Concluída |
-| TASK-205 | Criar `MobileNavDrawer` usando `NavList` | frontend | plan.md §2 | nenhum | Pendente |
+| TASK-205 | Criar `MobileNavDrawer` usando `NavList` | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-206 | Adicionar botão hambúrguer ao `GroupHeader`, visível abaixo de `md` | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-207 | Integrar `MobileNavDrawer` ao `GroupShellLayout` | frontend | plan.md §4 | nenhum | Pendente |
 
