@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-204 | Integrada na branch da feature | 2026-08-26 | Claude | `npx vitest run src/layouts/Sidebar.test.tsx` — 5/5 verde; `npx tsc --noEmit` — sem erro; `npx vitest run src/layouts/` — 17/17 verde | Extraída `NavList`/`NavListItem` de `Sidebar.tsx` para `frontend/src/layouts/NavList.tsx`, com `onNavigate?: () => void` opcional (não usado ainda por `Sidebar`, será usado pelo `MobileNavDrawer` na TASK-205). Primeira task da feature — implementada direto na branch `frontend/20260826-navegacao-mobile-group-shell`, sem sub-branch. |
