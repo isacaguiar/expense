@@ -35,9 +35,15 @@ type SummaryExpenseFixture = {
 
 const CURRENT_USER_ID = 700;
 
-function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
+type SummaryOverrides = {
+  cycle?: Record<string, unknown>;
+  balances?: { user_id: number; name: string; balance: number }[];
+  settlements?: { from_user_id: number; to_user_id: number; amount: number }[];
+};
+
+function summaryResponse(expensesList: SummaryExpenseFixture[] = [], overrides: SummaryOverrides = {}) {
   return {
-    cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open', ...cycleOverride },
+    cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open', ...overrides.cycle },
     totals: { total: 0, paid: 0, pending: 0 },
     expenses: expensesList.map(exp => ({
       paid: false,
@@ -48,18 +54,27 @@ function summaryResponse(expensesList: SummaryExpenseFixture[] = [], cycleOverri
       userCreatorId: CURRENT_USER_ID,
       ...exp,
     })),
-    balances: [],
-    settlements: [],
+    balances: overrides.balances ?? [],
+    settlements: overrides.settlements ?? [],
   };
 }
 
-function mockGetResponses(expensesList: SummaryExpenseFixture[] = [], cycleOverride: Record<string, unknown> = {}) {
+type MemberFixture = { id: number; name: string; email: string; pix: string | null };
+
+function mockGetResponses(
+  expensesList: SummaryExpenseFixture[] = [],
+  overrides: SummaryOverrides = {},
+  members: MemberFixture[] = []
+) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
     if (url.includes('/expenses/summary')) {
-      return Promise.resolve({ data: summaryResponse(expensesList, cycleOverride) });
+      return Promise.resolve({ data: summaryResponse(expensesList, overrides) });
     }
     if (url.includes('/api/me')) {
       return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+    }
+    if (url.includes('/members')) {
+      return Promise.resolve({ data: members });
     }
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
@@ -191,5 +206,78 @@ describe('Payments', () => {
     expect(url).toContain('/api/expenses/13/unpay');
     expect(body).toBeNull();
     expect(await screen.findByText('Pagamento desfeito.')).toBeInTheDocument();
+  });
+
+  it('shows the "valores a pagar" region and opens the Pix dialog when the creditor has a key registered', async () => {
+    const user = userEvent.setup();
+
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/pix/generate')) {
+        return Promise.resolve({ data: { qrcode: 'data:image/png;base64,abc', copiacola: '00020126...6304ABCD' } });
+      }
+      if (url.includes('/expenses/summary')) {
+        return Promise.resolve({
+          data: summaryResponse([], {
+            balances: [
+              { user_id: CURRENT_USER_ID, name: 'Isac', balance: -50 },
+              { user_id: 999, name: 'Maria', balance: 50 },
+            ],
+            settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+          })
+        });
+      }
+      if (url.includes('/api/me')) {
+        return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      }
+      if (url.includes('/members')) {
+        return Promise.resolve({ data: [{ id: 999, name: 'Maria', email: 'maria@example.com', pix: 'maria@pix.com' }] });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await user.click(await screen.findByRole('button', { name: /deve pagar/ }));
+
+    expect(await screen.findByRole('img', { name: /QR Code Pix para pagar Maria/ })).toBeInTheDocument();
+    expect(screen.getByDisplayValue('00020126...6304ABCD')).toBeInTheDocument();
+
+    const [, config] = vi.mocked(axios.get).mock.calls.find(call => (call[0] as string).includes('/pix/generate'))!;
+    expect((config as { params?: Record<string, unknown> }).params).toMatchObject({
+      email: 'maria@example.com',
+      valor: '50.00',
+    });
+  });
+
+  it('warns instead of opening the dialog when the creditor has no Pix key', async () => {
+    const user = userEvent.setup();
+
+    mockGetResponses(
+      [],
+      {
+        balances: [
+          { user_id: CURRENT_USER_ID, name: 'Isac', balance: -50 },
+          { user_id: 999, name: 'Maria', balance: 50 },
+        ],
+        settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+      },
+      [{ id: 999, name: 'Maria', email: 'maria@example.com', pix: null }]
+    );
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await user.click(await screen.findByRole('button', { name: /deve pagar/ }));
+
+    expect(await screen.findByText('Maria ainda não cadastrou uma chave Pix.')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: /QR Code Pix/ })).not.toBeInTheDocument();
+    expect(vi.mocked(axios.get).mock.calls.some(call => (call[0] as string).includes('/pix/generate'))).toBe(false);
   });
 });
