@@ -16,13 +16,7 @@ export default function MobileNavDrawer({ items, open, onClose }: MobileNavDrawe
   const location = useLocation();
 
   return (
-    <Drawer
-      variant="temporary"
-      open={open}
-      onClose={onClose}
-      ModalProps={{ keepMounted: true }}
-      sx={{ display: { xs: 'block', md: 'none' } }}
-    >
+    <Drawer variant="temporary" open={open} onClose={onClose} sx={{ display: { xs: 'block', md: 'none' } }}>
       <Box sx={{ width: 280, display: 'flex', flexDirection: 'column', py: 3 }}>
         <Box sx={{ px: 3, mb: 3 }}>
           <BrandWordmark />

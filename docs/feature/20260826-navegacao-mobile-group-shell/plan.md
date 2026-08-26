@@ -16,8 +16,8 @@ Versão: 1.0 · Criado em: 20260826
 ## 2. Drawer mobile (specify §2.1)
 
 - Novo componente `frontend/src/layouts/MobileNavDrawer.tsx`: props `items: GroupNavItem[]`, `open: boolean`, `onClose: () => void`.
-- Renderiza `<Drawer variant="temporary" open={open} onClose={onClose} ModalProps={{ keepMounted: true }}>` (MUI `Drawer`, já uma dependência do projeto via `@mui/material`) contendo `BrandWordmark` (mesmo cabeçalho visual da `Sidebar`) e `<NavList items={items} onNavigate={onClose} />` — fecha o drawer automaticamente ao navegar ou disparar uma ação (ex. "Sair").
-- `keepMounted: true` é o padrão recomendado pelo MUI para melhorar a experiência de abertura em mobile (evita remount custoso a cada toggle).
+- Renderiza `<Drawer variant="temporary" open={open} onClose={onClose}>` (MUI `Drawer`, já uma dependência do projeto via `@mui/material`) contendo `BrandWordmark` (mesmo cabeçalho visual da `Sidebar`) e `<NavList items={items} onNavigate={onClose} />` — fecha o drawer automaticamente ao navegar ou disparar uma ação (ex. "Sair").
+- **Atualizado durante TASK-207**: a versão inicial usava `ModalProps={{ keepMounted: true }}` (otimização padrão do MUI para evitar remount a cada toggle). Ao integrar no `GroupShellLayout`, isso manteve os itens do drawer sempre no DOM (só ocultos visualmente/via `aria-hidden`), duplicando texto/links já renderizados pela `Sidebar` desktop e quebrando testes existentes de `GroupShellLayout.test.tsx` que usam `getByText`/`getByRole` sem escopo (que passam a encontrar 2 ocorrências de "Configurações"/"Sair"). Removido `keepMounted` — o `Drawer` volta ao padrão do MUI de desmontar o conteúdo quando fechado, eliminando a duplicação sem custo de teste quebrado; o custo de remount só ocorre ao abrir o menu mobile, aceitável para este caso de uso.
 - Por quê essa abordagem e não outra: `Drawer` temporário é o padrão MUI para navegação mobile equivalente a uma sidebar desktop, e o app já usa MUI em todo o resto — não introduz dependência nova.
 
 ## 3. Botão hambúrguer no GroupHeader (specify §2.1)
