@@ -12,6 +12,12 @@
       "runtimeExecutable": "php",
       "runtimeArgs": ["backend/artisan", "serve"],
       "port": 8000
+    },
+    {
+      "name": "site-static",
+      "runtimeExecutable": "php",
+      "runtimeArgs": ["-S", "localhost:4173", "-t", "site/public"],
+      "port": 4173
     }
   ]
 }
