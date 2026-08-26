@@ -19,6 +19,9 @@ import {
   Typography
 } from '@mui/material';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import { brandColors } from '../theme/brandColors';
+import DespesasThemeScope from '../theme/DespesasThemeScope';
 
 type GroupMember = { id: number; name: string };
 
@@ -161,138 +164,148 @@ const ExpenseView: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" mt={4}>
-        <CircularProgress />
-      </Box>
+      <DespesasThemeScope>
+        <Box display="flex" justifyContent="center" mt={4}>
+          <CircularProgress />
+        </Box>
+      </DespesasThemeScope>
     );
   }
 
   if (notFound || !expense) {
     return (
-      <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 560, mx: 'auto' }}>
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Despesa não encontrada
-          </Typography>
-          <Typography color="text.secondary" sx={{ mb: 3 }}>
-            Essa despesa não existe mais, ou você não tem acesso a ela.
-          </Typography>
-          <MuiLink component={Link} to={`/groups/${groupId}/expenses`}>
-            Voltar para a listagem
-          </MuiLink>
-        </CardContent>
-      </Card>
+      <DespesasThemeScope>
+        <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
+          <CardContent sx={{ p: 4 }}>
+            <Typography variant="h6" fontWeight={700} gutterBottom>
+              Despesa não encontrada
+            </Typography>
+            <Typography color="text.secondary" sx={{ mb: 3 }}>
+              Essa despesa não existe mais, ou você não tem acesso a ela.
+            </Typography>
+            <MuiLink component={Link} to={`/groups/${groupId}/expenses`} sx={{ fontWeight: 600 }}>
+              Voltar para a listagem
+            </MuiLink>
+          </CardContent>
+        </Card>
+      </DespesasThemeScope>
     );
   }
 
   if (editing) {
     return (
-      <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 560, mx: 'auto' }}>
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h6" gutterBottom>
-            Editar despesa
-          </Typography>
+      <DespesasThemeScope>
+        <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
+          <CardContent sx={{ p: 4 }}>
+            <Typography variant="h6" fontWeight={700} gutterBottom>
+              Editar despesa
+            </Typography>
 
-          {saveError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {saveError}
-            </Alert>
-          )}
+            {saveError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {saveError}
+              </Alert>
+            )}
 
-          <Box display="flex" flexDirection="column" gap={2} mt={2}>
-            <TextField
-              label="Descrição"
-              fullWidth
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-            />
+            <Box display="flex" flexDirection="column" gap={2} mt={2}>
+              <TextField
+                label="Descrição"
+                fullWidth
+                value={description}
+                onChange={e => setDescription(e.target.value)}
+              />
 
-            <TextField
-              label="Valor"
-              fullWidth
-              value={value}
-              onChange={e => setValue(e.target.value)}
-              placeholder="Ex: 150,00"
-            />
+              <TextField
+                label="Valor"
+                fullWidth
+                value={value}
+                onChange={e => setValue(e.target.value)}
+                placeholder="Ex: 150,00"
+              />
 
-            <TextField
-              label="Data"
-              type="date"
-              fullWidth
-              value={date}
-              onChange={e => setDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
+              <TextField
+                label="Data"
+                type="date"
+                fullWidth
+                value={date}
+                onChange={e => setDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
 
-            <TextField label="Credor" select fullWidth value={payerId} onChange={e => setPayerId(e.target.value)}>
-              {members.map(member => (
-                <MenuItem key={member.id} value={String(member.id)}>
-                  {member.name}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <Box>
-              <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
-              <FormGroup>
+              <TextField label="Credor" select fullWidth value={payerId} onChange={e => setPayerId(e.target.value)}>
                 {members.map(member => (
-                  <FormControlLabel
-                    key={member.id}
-                    control={
-                      <Checkbox
-                        checked={participantIds.includes(member.id)}
-                        onChange={() => toggleParticipant(member.id)}
-                      />
-                    }
-                    label={member.name}
-                  />
+                  <MenuItem key={member.id} value={String(member.id)}>
+                    {member.name}
+                  </MenuItem>
                 ))}
-              </FormGroup>
-            </Box>
+              </TextField>
 
-            <Box display="flex" gap={2} mt={1}>
-              <Button variant="contained" onClick={handleSave} disabled={saving}>
-                Salvar
-              </Button>
-              <Button variant="outlined" onClick={() => setEditing(false)} disabled={saving}>
-                Cancelar
-              </Button>
+              <Box>
+                <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
+                <FormGroup>
+                  {members.map(member => (
+                    <FormControlLabel
+                      key={member.id}
+                      control={
+                        <Checkbox
+                          checked={participantIds.includes(member.id)}
+                          onChange={() => toggleParticipant(member.id)}
+                        />
+                      }
+                      label={member.name}
+                    />
+                  ))}
+                </FormGroup>
+              </Box>
+
+              <Box display="flex" gap={2} mt={1}>
+                <Button variant="contained" onClick={handleSave} disabled={saving}>
+                  Salvar
+                </Button>
+                <Button variant="outlined" onClick={() => setEditing(false)} disabled={saving}>
+                  Cancelar
+                </Button>
+              </Box>
             </Box>
-          </Box>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </DespesasThemeScope>
     );
   }
 
   return (
-    <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 560, mx: 'auto' }}>
-      <CardContent sx={{ p: 4 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-          <Typography variant="h6">{expense.description}</Typography>
-          <Chip label={typeLabel[expense.expense_type]} size="small" />
-        </Box>
+    <DespesasThemeScope>
+      <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+            <Typography variant="h6" fontWeight={700}>
+              {expense.description}
+            </Typography>
+            <Chip label={typeLabel[expense.expense_type]} size="small" sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primaryDark }} />
+          </Box>
 
-        <Typography variant="h5" color="primary" gutterBottom>
-          R$ {formatMoney(Number(expense.total_value))}
-        </Typography>
+          <Typography variant="h5" color="primary" fontWeight={700} gutterBottom>
+            R$ {formatMoney(Number(expense.total_value))}
+          </Typography>
 
-        <Typography color="text.secondary">
-          {new Date(expense.date_payment).toLocaleDateString('pt-BR')}
-        </Typography>
-        <Typography color="text.secondary" sx={{ mb: 3 }}>
-          Credor: {creditorName}
-        </Typography>
+          <Typography color="text.secondary">
+            {new Date(expense.date_payment).toLocaleDateString('pt-BR')}
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            Credor: {creditorName}
+          </Typography>
 
-        <Box display="flex" gap={2}>
-          <Button variant="contained" onClick={startEditing}>
-            Editar
-          </Button>
-          <Button variant="outlined" component={Link} to={`/groups/${groupId}/expenses`}>
-            Voltar para a listagem
-          </Button>
-        </Box>
-      </CardContent>
-    </Card>
+          <Box display="flex" gap={2}>
+            <Button variant="contained" onClick={startEditing}>
+              Editar
+            </Button>
+            <Button variant="outlined" startIcon={<ArrowBackIosNewIcon sx={{ fontSize: 14 }} />} component={Link} to={`/groups/${groupId}/expenses`}>
+              Voltar para a listagem
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+    </DespesasThemeScope>
   );
 };
 

@@ -15,6 +15,7 @@ import {
   Typography
 } from '@mui/material';
 import { useNavigate, useParams } from 'react-router-dom';
+import DespesasThemeScope from '../theme/DespesasThemeScope';
 
 type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
 
@@ -167,103 +168,105 @@ const ExpenseForm: React.FC = () => {
       : 'Data';
 
   return (
-    <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 560, mx: 'auto' }}>
-      <CardContent sx={{ p: 4 }}>
-        <Typography variant="h6" gutterBottom>
-          Cadastrar nova despesa
-        </Typography>
+    <DespesasThemeScope>
+      <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Cadastrar nova despesa
+          </Typography>
 
-        <Box display="flex" flexDirection="column" gap={2} mt={2}>
-          <TextField
-            label="Descrição"
-            fullWidth
-            value={description}
-            onChange={e => setDescription(e.target.value)}
-          />
-
-          <TextField
-            label="Valor"
-            fullWidth
-            value={value}
-            onChange={e => setValue(e.target.value)}
-            placeholder="Ex: 150,00"
-          />
-
-          <TextField
-            label="Tipo de despesa"
-            select
-            fullWidth
-            value={expenseType}
-            onChange={e => setExpenseType(e.target.value as ExpenseType)}
-          >
-            <MenuItem value="IN_CASH">À Vista</MenuItem>
-            <MenuItem value="IN_INSTALLMENTS">Parcelada</MenuItem>
-            <MenuItem value="FIXED">Fixa</MenuItem>
-          </TextField>
-
-          <TextField
-            label={dateFieldLabel}
-            type="date"
-            fullWidth
-            value={date}
-            onChange={e => setDate(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-
-          {expenseType === 'IN_INSTALLMENTS' && (
+          <Box display="flex" flexDirection="column" gap={2} mt={2}>
             <TextField
-              label="Quantidade de parcelas"
-              type="number"
+              label="Descrição"
               fullWidth
-              value={installmentsCount}
-              onChange={e => setInstallmentsCount(e.target.value)}
-              inputProps={{ min: 2 }}
+              value={description}
+              onChange={e => setDescription(e.target.value)}
             />
-          )}
 
-          <TextField
-            label="Pagador"
-            select
-            fullWidth
-            value={payerId}
-            onChange={e => setPayerId(e.target.value)}
-          >
-            {members.map(member => (
-              <MenuItem key={member.id} value={String(member.id)}>
-                {member.name}
-              </MenuItem>
-            ))}
-          </TextField>
+            <TextField
+              label="Valor"
+              fullWidth
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              placeholder="Ex: 150,00"
+            />
 
-          <Box>
-            <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
-            <FormGroup>
+            <TextField
+              label="Tipo de despesa"
+              select
+              fullWidth
+              value={expenseType}
+              onChange={e => setExpenseType(e.target.value as ExpenseType)}
+            >
+              <MenuItem value="IN_CASH">À Vista</MenuItem>
+              <MenuItem value="IN_INSTALLMENTS">Parcelada</MenuItem>
+              <MenuItem value="FIXED">Fixa</MenuItem>
+            </TextField>
+
+            <TextField
+              label={dateFieldLabel}
+              type="date"
+              fullWidth
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+
+            {expenseType === 'IN_INSTALLMENTS' && (
+              <TextField
+                label="Quantidade de parcelas"
+                type="number"
+                fullWidth
+                value={installmentsCount}
+                onChange={e => setInstallmentsCount(e.target.value)}
+                inputProps={{ min: 2 }}
+              />
+            )}
+
+            <TextField
+              label="Pagador"
+              select
+              fullWidth
+              value={payerId}
+              onChange={e => setPayerId(e.target.value)}
+            >
               {members.map(member => (
-                <FormControlLabel
-                  key={member.id}
-                  control={
-                    <Checkbox
-                      checked={participantIds.includes(member.id)}
-                      onChange={() => toggleParticipant(member.id)}
-                    />
-                  }
-                  label={member.name}
-                />
+                <MenuItem key={member.id} value={String(member.id)}>
+                  {member.name}
+                </MenuItem>
               ))}
-            </FormGroup>
-          </Box>
+            </TextField>
 
-          <Box display="flex" gap={2} mt={1}>
-            <Button variant="contained" onClick={handleSave}>
-              Salvar
-            </Button>
-            <Button variant="outlined" onClick={() => navigate(`/groups/${groupId}/expenses`)}>
-              Cancelar
-            </Button>
+            <Box>
+              <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
+              <FormGroup>
+                {members.map(member => (
+                  <FormControlLabel
+                    key={member.id}
+                    control={
+                      <Checkbox
+                        checked={participantIds.includes(member.id)}
+                        onChange={() => toggleParticipant(member.id)}
+                      />
+                    }
+                    label={member.name}
+                  />
+                ))}
+              </FormGroup>
+            </Box>
+
+            <Box display="flex" gap={2} mt={1}>
+              <Button variant="contained" onClick={handleSave}>
+                Salvar
+              </Button>
+              <Button variant="outlined" onClick={() => navigate(`/groups/${groupId}/expenses`)}>
+                Cancelar
+              </Button>
+            </Box>
           </Box>
-        </Box>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </DespesasThemeScope>
   );
 };
 

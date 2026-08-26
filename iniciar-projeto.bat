@@ -12,9 +12,11 @@ if "%PROJECT_ROOT:~-1%"=="\" set "PROJECT_ROOT=%PROJECT_ROOT:~0,-1%"
 
 set "BACKEND_DIR=%PROJECT_ROOT%\backend"
 set "FRONTEND_DIR=%PROJECT_ROOT%\frontend"
+set "SITE_DIR=%PROJECT_ROOT%\site"
 
 set "PORT_BACKEND=8000"
 set "PORT_FRONTEND=3000"
+set "PORT_SITE=8080"
 set "PORT_MYSQL=3306"
 set "PORT_ADMINER=8081"
 
@@ -69,7 +71,7 @@ echo ============================================================
 echo               AMBIENTE LOCAL - CONTROLE DE DESPESAS
 echo ============================================================
 echo.
-echo  1 - Iniciar tudo (Docker + Backend + Frontend)
+echo  1 - Iniciar tudo (Docker + Backend + Frontend + Site)
 echo  2 - Abrir no Chrome
 echo  3 - Ver status
 echo  4 - Reiniciar tudo
@@ -78,10 +80,12 @@ echo.
 echo  6 - Iniciar Docker
 echo  7 - Iniciar Backend
 echo  8 - Iniciar Frontend
+echo  9 - Iniciar Site
 echo.
-echo  9 - Parar Docker
-echo 10 - Parar Backend
-echo 11 - Parar Frontend
+echo 10 - Parar Docker
+echo 11 - Parar Backend
+echo 12 - Parar Frontend
+echo 13 - Parar Site
 echo.
 echo  0 - Sair
 echo.
@@ -99,10 +103,12 @@ if "%OPTION%"=="5" goto stop_all
 if "%OPTION%"=="6" goto start_docker_menu
 if "%OPTION%"=="7" goto start_backend_menu
 if "%OPTION%"=="8" goto start_frontend_menu
+if "%OPTION%"=="9" goto start_site_menu
 
-if "%OPTION%"=="9" goto stop_docker_menu
-if "%OPTION%"=="10" goto stop_backend_menu
-if "%OPTION%"=="11" goto stop_frontend_menu
+if "%OPTION%"=="10" goto stop_docker_menu
+if "%OPTION%"=="11" goto stop_backend_menu
+if "%OPTION%"=="12" goto stop_frontend_menu
+if "%OPTION%"=="13" goto stop_site_menu
 
 if "%OPTION%"=="0" goto end
 
@@ -128,6 +134,7 @@ echo.
 call :start_docker
 call :start_backend
 call :start_frontend
+call :start_site
 
 echo.
 echo ============================================================
@@ -152,6 +159,7 @@ echo                    REINICIAR TUDO
 echo ============================================================
 echo.
 
+call :stop_site
 call :stop_frontend
 call :stop_backend
 call :stop_docker
@@ -167,6 +175,7 @@ echo.
 call :start_docker
 call :start_backend
 call :start_frontend
+call :start_site
 
 echo.
 echo [OK] Ambiente reiniciado.
@@ -189,6 +198,7 @@ echo                      PARAR TUDO
 echo ============================================================
 echo.
 
+call :stop_site
 call :stop_frontend
 call :stop_backend
 call :stop_docker
@@ -217,12 +227,14 @@ echo.
 call :show_docker_status
 call :show_status "Backend (Laravel)" "%PORT_BACKEND%" "php.exe"
 call :show_status "Frontend (Vite)" "%PORT_FRONTEND%" "node.exe"
+call :show_status "Site (PHP)" "%PORT_SITE%" "php.exe"
 
 echo.
 echo ============================================================
 echo URLs
 echo ============================================================
 echo.
+echo Site:     http://localhost:%PORT_SITE%
 echo Frontend: http://localhost:%PORT_FRONTEND%
 echo Backend:  http://localhost:%PORT_BACKEND%
 echo Adminer:  http://localhost:%PORT_ADMINER%
@@ -259,10 +271,11 @@ echo Abrindo nova janela do Chrome...
 echo.
 
 start "" "%CHROME%" --new-window ^
+    "http://localhost:%PORT_SITE%" ^
     "http://localhost:%PORT_FRONTEND%" ^
     "http://localhost:%PORT_ADMINER%"
 
-echo [OK] Chrome iniciado com 2 abas.
+echo [OK] Chrome iniciado com 3 abas.
 echo.
 
 pause
@@ -297,6 +310,14 @@ pause
 goto menu
 
 
+:start_site_menu
+
+cls
+call :start_site
+pause
+goto menu
+
+
 :: ============================================================
 :: OPCOES INDIVIDUAIS DO MENU (PARAR)
 :: ============================================================
@@ -321,6 +342,14 @@ goto menu
 
 cls
 call :stop_frontend
+pause
+goto menu
+
+
+:stop_site_menu
+
+cls
+call :stop_site
 pause
 goto menu
 
@@ -363,6 +392,9 @@ call :check_dir "Backend" "%BACKEND_DIR%"
 if errorlevel 1 exit /b 1
 
 call :check_dir "Frontend" "%FRONTEND_DIR%"
+if errorlevel 1 exit /b 1
+
+call :check_dir "Site" "%SITE_DIR%"
 if errorlevel 1 exit /b 1
 
 if not exist "%PROJECT_ROOT%\docker-compose.yml" (
@@ -756,7 +788,107 @@ exit /b 0
 
 
 :: ============================================================
-:: FUNCAO - STATUS GENERICO (BACKEND / FRONTEND)
+:: FUNCAO - INICIAR SITE (PHP INSTITUCIONAL)
+:: ============================================================
+
+:start_site
+
+call :is_port_running "%PORT_SITE%"
+
+if not errorlevel 1 (
+
+    call :get_pid_by_port "%PORT_SITE%"
+
+    echo [RODANDO] Site
+    echo           Porta: %PORT_SITE%
+    echo           PID  : !FOUND_PID!
+    echo.
+
+    exit /b 0
+)
+
+echo [INICIANDO] Site
+echo             Porta: %PORT_SITE%
+echo.
+
+wt -w "%TERMINAL_WINDOW%" ^
+    new-tab ^
+    --title "Site :%PORT_SITE%" ^
+    -d "%SITE_DIR%" ^
+    cmd.exe /k "php -S 127.0.0.1:%PORT_SITE% -t public"
+
+timeout /t 2 /nobreak >nul
+
+call :get_pid_by_port "%PORT_SITE%"
+
+if defined FOUND_PID (
+    echo [OK] Site iniciado.
+    echo      PID: !FOUND_PID!
+    echo.
+) else (
+    echo [AVISO] Servidor solicitado, mas o PID ainda nao foi identificado.
+    echo.
+)
+
+exit /b 0
+
+
+:: ============================================================
+:: FUNCAO - PARAR SITE (PHP INSTITUCIONAL)
+:: ============================================================
+
+:stop_site
+
+call :is_port_running "%PORT_SITE%"
+
+if errorlevel 1 (
+    echo [PARADO] Site
+    echo          Nenhum processo escutando na porta %PORT_SITE%.
+    echo.
+    exit /b 0
+)
+
+call :get_pid_by_port "%PORT_SITE%"
+
+if not defined FOUND_PID (
+    echo [ERRO] Nao foi possivel localizar o PID do Site.
+    echo.
+    exit /b 1
+)
+
+call :is_process "!FOUND_PID!" "php.exe"
+
+if errorlevel 1 (
+    echo [BLOQUEADO] Site
+    echo.
+    echo A porta %PORT_SITE% esta sendo utilizada pelo PID !FOUND_PID!,
+    echo mas o processo nao e php.exe.
+    echo.
+    echo Por seguranca, o launcher nao encerrara esse processo.
+    echo.
+    exit /b 1
+)
+
+echo [PARANDO] Site
+echo           Porta: %PORT_SITE%
+echo           PID  : !FOUND_PID!
+echo.
+
+taskkill /PID !FOUND_PID! /F >nul 2>&1
+
+if errorlevel 1 (
+    echo [ERRO] Nao foi possivel encerrar o processo.
+) else (
+    echo [OK] Site encerrado.
+)
+
+echo.
+
+exit /b 0
+
+
+:: ============================================================
+:: FUNCAO - STATUS GENERICO (BACKEND / FRONTEND / SITE)
 :: ============================================================
 
 :show_status

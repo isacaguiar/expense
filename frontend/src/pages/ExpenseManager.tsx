@@ -40,11 +40,14 @@ import UndoIcon from '@mui/icons-material/Undo';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import SavingsOutlinedIcon from '@mui/icons-material/SavingsOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import SummarySidePanel from '../components/SummarySidePanel';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
+import DespesasThemeScope from '../theme/DespesasThemeScope';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -258,7 +261,7 @@ const ExpenseManager: React.FC = () => {
   const canDelete = (exp: SummaryExpense) => cycleIsOpen && !exp.isFixed && !exp.paid && isOwner(exp);
 
   return (
-    <>
+    <DespesasThemeScope>
       {/* Cabeçalho */}
       <Box
         display="flex"
@@ -335,6 +338,9 @@ const ExpenseManager: React.FC = () => {
                 onChange={e => setSearch(e.target.value)}
                 size="small"
                 sx={{ minWidth: 240 }}
+                InputProps={{
+                  startAdornment: <SearchOutlinedIcon fontSize="small" sx={{ color: 'text.secondary', mr: 1 }} />
+                }}
               />
               <ToggleButtonGroup
                 value={typeFilter}
@@ -349,20 +355,54 @@ const ExpenseManager: React.FC = () => {
             </Box>
 
             {expenses.length === 0 ? (
-              <Typography color="text.secondary">Nenhuma despesa encontrada para esta competência.</Typography>
+              <Box display="flex" flexDirection="column" alignItems="center" textAlign="center" py={6} gap={2}>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  sx={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: '50%',
+                    bgcolor: brandColors.primaryLight,
+                    color: brandColors.primary
+                  }}
+                >
+                  <SavingsOutlinedIcon sx={{ fontSize: 36 }} />
+                </Box>
+                <Typography color="text.secondary">Nenhuma despesa encontrada para esta competência.</Typography>
+              </Box>
             ) : filteredExpenses.length === 0 ? (
-              <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
+              <Box display="flex" flexDirection="column" alignItems="center" textAlign="center" py={6} gap={2}>
+                <Box
+                  display="flex"
+                  alignItems="center"
+                  justifyContent="center"
+                  sx={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: '50%',
+                    bgcolor: brandColors.primaryLight,
+                    color: brandColors.primary
+                  }}
+                >
+                  <SavingsOutlinedIcon sx={{ fontSize: 36 }} />
+                </Box>
+                <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
+              </Box>
             ) : (
-              <TableContainer component={Paper} elevation={3}>
+              <TableContainer component={Paper} elevation={0}>
                 <Table>
                   <TableHead>
-                    <TableRow>
-                      <TableCell>Tipo</TableCell>
-                      <TableCell>Despesa</TableCell>
-                      <TableCell>Valor</TableCell>
-                      <TableCell>Credor</TableCell>
-                      <TableCell>Status</TableCell>
-                      <TableCell align="right">Ações</TableCell>
+                    <TableRow sx={{ bgcolor: 'grey.50' }}>
+                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Tipo</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Despesa</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Valor</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Credor</TableCell>
+                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Status</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                        Ações
+                      </TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -688,7 +728,7 @@ const ExpenseManager: React.FC = () => {
           {payError}
         </Alert>
       </Snackbar>
-    </>
+    </DespesasThemeScope>
   );
 };
 
