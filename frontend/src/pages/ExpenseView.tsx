@@ -16,18 +16,21 @@ import {
   Link as MuiLink,
   MenuItem,
   TextField,
+  Tooltip,
   Typography
 } from '@mui/material';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
+import { buildInstallmentQuotas } from '../utils/installments';
 
 type GroupMember = { id: number; name: string };
 
 type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
 
 type ExpenseQuota = {
+  number: number;
   date_expected: string;
   paid: boolean;
   payment_proof_url: string | null;
@@ -39,6 +42,7 @@ type ExpenseDetail = {
   total_value: string | number;
   date_payment: string;
   expense_type: ExpenseType;
+  installments: number;
   user_payer_id: number;
   payers: GroupMember[];
   quotas: ExpenseQuota[];
@@ -58,6 +62,15 @@ const latestPaidProof = (quotas: ExpenseQuota[] | undefined): string | null => {
 
   return paidWithProof[0]?.payment_proof_url ?? null;
 };
+
+/**
+ * Regra pedida pelo usuário: despesa parcelada com qualquer parcela paga
+ * trava a edição inteira ("só permite alteração no mês de cadastro") — mesmo
+ * gatilho que o backend usa em ExpenseController::update() (specify.md §R3
+ * de docs/feature/20260826-editar-tipo-despesa/).
+ */
+const isInstallmentsLocked = (expense: ExpenseDetail): boolean =>
+  expense.expense_type === 'IN_INSTALLMENTS' && expense.quotas.some(q => q.paid);
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -83,6 +96,8 @@ const ExpenseView: React.FC = () => {
   const [date, setDate] = useState<string>('');
   const [payerId, setPayerId] = useState<string>('');
   const [participantIds, setParticipantIds] = useState<number[]>([]);
+  const [expenseType, setExpenseType] = useState<ExpenseType>('IN_CASH');
+  const [installmentsCount, setInstallmentsCount] = useState<string>('');
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
 
@@ -134,6 +149,8 @@ const ExpenseView: React.FC = () => {
     setDate(expense.date_payment);
     setPayerId(String(expense.user_payer_id));
     setParticipantIds(expense.payers.map(p => p.id));
+    setExpenseType(expense.expense_type);
+    setInstallmentsCount(expense.expense_type === 'IN_INSTALLMENTS' ? String(expense.installments) : '');
     setSaveError(null);
     setEditing(true);
   };
@@ -145,13 +162,35 @@ const ExpenseView: React.FC = () => {
   };
 
   const handleSave = () => {
-    if (!expenseId) return;
+    if (!expenseId || !expense) return;
 
     const valueNumber = parseFloat(value.replace('.', '').replace(',', '.'));
 
     if (!description || isNaN(valueNumber) || !payerId || participantIds.length === 0) {
       setSaveError('Preencha descrição, valor, credor e ao menos um pagador.');
       return;
+    }
+
+    // O tipo só é editável (e só entra no payload) pra despesas que já não são
+    // Fixa — ver isso espelhado em §R2 do specify: mudar de/para Fixa não é
+    // suportado, então nem mostramos o campo pra ela (ver JSX abaixo).
+    let typeFields: { expense_type: ExpenseType; installments: number; quotas: ReturnType<typeof buildInstallmentQuotas> } | null = null;
+
+    if (expense.expense_type !== 'FIXED') {
+      if (expenseType === 'IN_INSTALLMENTS') {
+        const count = parseInt(installmentsCount, 10);
+        if (!Number.isInteger(count) || count < 2) {
+          setSaveError('Informe uma quantidade de parcelas válida (mínimo 2 — para 1 parcela use À Vista).');
+          return;
+        }
+        typeFields = { expense_type: 'IN_INSTALLMENTS', installments: count, quotas: buildInstallmentQuotas(valueNumber, count, date) };
+      } else {
+        typeFields = {
+          expense_type: 'IN_CASH',
+          installments: 1,
+          quotas: [{ number: 1, date_expected: date, paid: false, value_quota: valueNumber }]
+        };
+      }
     }
 
     setSaving(true);
@@ -167,7 +206,8 @@ const ExpenseView: React.FC = () => {
           date_payment: date,
           total_value: valueNumber,
           user_payer_id: Number(payerId),
-          payers: participantIds
+          payers: participantIds,
+          ...typeFields
         },
         { headers: { Authorization: token ? `Bearer ${token}` : '' } }
       )
@@ -178,11 +218,14 @@ const ExpenseView: React.FC = () => {
       .catch(err => {
         console.error('Erro ao salvar despesa:', err);
         // O backend valida as regras de domínio (competência fechada, valor de
-        // despesa já paga) — o cliente só exibe o motivo que a API devolveu.
+        // despesa já paga, parcelada com 1ª parcela já paga) — o cliente só
+        // exibe o motivo que a API devolveu.
         setSaveError(err.response?.data?.error ?? 'Falha ao salvar despesa.');
       })
       .finally(() => setSaving(false));
   };
+
+  const dateFieldLabel = expenseType === 'IN_INSTALLMENTS' ? 'Mês de início das parcelas' : 'Data';
 
   // Um único DespesasThemeScope embrulha qualquer que seja o conteúdo abaixo
   // (nunca um por branch) — evita recriar o ThemeProvider a cada transição de
@@ -242,14 +285,40 @@ const ExpenseView: React.FC = () => {
               placeholder="Ex: 150,00"
             />
 
+            {/* Fixa fica de fora — converter de/pra ela não é suportado
+                (docs/feature/20260826-editar-tipo-despesa/specify.md §R2) */}
+            {expense.expense_type !== 'FIXED' && (
+              <TextField
+                label="Tipo de despesa"
+                select
+                fullWidth
+                value={expenseType}
+                onChange={e => setExpenseType(e.target.value as ExpenseType)}
+              >
+                <MenuItem value="IN_CASH">À Vista</MenuItem>
+                <MenuItem value="IN_INSTALLMENTS">Parcelada</MenuItem>
+              </TextField>
+            )}
+
             <TextField
-              label="Data"
+              label={dateFieldLabel}
               type="date"
               fullWidth
               value={date}
               onChange={e => setDate(e.target.value)}
               InputLabelProps={{ shrink: true }}
             />
+
+            {expenseType === 'IN_INSTALLMENTS' && (
+              <TextField
+                label="Quantidade de parcelas"
+                type="number"
+                fullWidth
+                value={installmentsCount}
+                onChange={e => setInstallmentsCount(e.target.value)}
+                inputProps={{ min: 2 }}
+              />
+            )}
 
             <TextField label="Credor" select fullWidth value={payerId} onChange={e => setPayerId(e.target.value)}>
               {members.map(member => (
@@ -322,9 +391,19 @@ const ExpenseView: React.FC = () => {
           )}
 
           <Box display="flex" gap={2}>
-            <Button variant="contained" onClick={startEditing}>
-              Editar
-            </Button>
+            <Tooltip
+              title={
+                isInstallmentsLocked(expense)
+                  ? 'Despesa parcelada com a 1ª parcela já paga não pode mais ser editada.'
+                  : ''
+              }
+            >
+              <span>
+                <Button variant="contained" onClick={startEditing} disabled={isInstallmentsLocked(expense)}>
+                  Editar
+                </Button>
+              </span>
+            </Tooltip>
             <Button
               variant="outlined"
               startIcon={<ArrowBackIosNewIcon sx={{ fontSize: 14 }} />}
