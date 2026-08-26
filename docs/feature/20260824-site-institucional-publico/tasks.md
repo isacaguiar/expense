@@ -16,6 +16,7 @@ para PHP + landing page completa a partir do mockup do usuário. Ver log da v1.0
 | TASK-008 | Migrar Termos de Serviço para `site/public/termos.php` usando os templates novos | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-009 | Remover arquivos da v1.0 (`site/index.html`, `privacidade.html`, `termos.html`, `site/assets/*` antigos) e apontar `.claude/launch.json` pro servidor embutido do PHP | infra | plan.md §5 | nenhum | Concluída |
 | TASK-010 | Passar `impeccable polish` em `site/public/index.php` (plugin de design instalado a pedido do usuário) contra o mockup e corrigir os defeitos reais encontrados | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-011 | Trocar o ícone da marca (SVG desenhado à mão) pelo logo real (`assets/images/logo-expense.png`, fora do repo) em todos os usos do site; gerar variante recolorida (bonecos brancos/#e4e4e4) para o `.cta-banner` de fundo escuro | frontend | plan.md §2 | nenhum | Concluída |
 
 ## Critérios de aceite
 
@@ -25,3 +26,4 @@ para PHP + landing page completa a partir do mockup do usuário. Ver log da v1.0
 - **TASK-008**: abrir `termos.php` mostra o mesmo texto de termos já aprovado na v1.0, agora dentro do novo header/nav/footer, com o link de contato funcionando.
 - **TASK-009**: `site/index.html`, `site/privacidade.html`, `site/termos.html` não existem mais no repo; `.claude/launch.json` inicia PHP em vez de `python -m http.server`.
 - **TASK-010**: contraste de todos os pares texto/fundo (incluindo badges "Paga"/"Pendente" e valores "A pagar") ≥4.5:1 (WCAG AA), verificável por cálculo de luminância; `node .../scripts/detect.mjs --json site/public/index.php site/public/assets/style.css` retorna `[]`; sem overflow horizontal em viewport 375px.
+- **TASK-011**: `site/public/assets/logo-expense.png` e `logo-expense-footer.png` existem e são usados via `<img>` no nav, na sidebar do preview do dashboard e no `.cta-banner`; no `.cta-banner` (fundo `--bg-dark`) os dois "bonecos" do ícone e a palavra "Shared" do wordmark ficam brancos/`#e4e4e4`, sem pixel do ícone original navy/verde visível sobre fundo escuro.

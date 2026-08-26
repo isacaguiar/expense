@@ -213,7 +213,7 @@ require __DIR__ . '/../src/templates/nav.php';
   <section class="cta-banner">
     <div class="container cta-banner-inner">
       <div class="cta-banner-heading">
-        <?php include __DIR__ . '/../src/templates/logo.php'; ?>
+        <?php $logoVariant = 'dark'; include __DIR__ . '/../src/templates/logo.php'; ?>
         <div>
           <h2>Pronto para simplificar suas contas?</h2>
           <p>Comece agora mesmo e tenha controle total das despesas do seu grupo.</p>

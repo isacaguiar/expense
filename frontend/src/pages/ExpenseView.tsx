@@ -19,6 +19,9 @@ import {
   Typography
 } from '@mui/material';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
+import { brandColors } from '../theme/brandColors';
+import DespesasThemeScope from '../theme/DespesasThemeScope';
 
 type GroupMember = { id: number; name: string };
 
@@ -159,37 +162,39 @@ const ExpenseView: React.FC = () => {
       .finally(() => setSaving(false));
   };
 
+  // Um único DespesasThemeScope embrulha qualquer que seja o conteúdo abaixo
+  // (nunca um por branch) — evita recriar o ThemeProvider a cada transição de
+  // estado (loading/notFound/editing/visualização), que causava reconciliação
+  // instável dos botões da Card (ver docs/feature/20260825-redesign-visual-despesas/implementation.md).
+  let content: React.ReactNode;
+
   if (loading) {
-    return (
+    content = (
       <Box display="flex" justifyContent="center" mt={4}>
         <CircularProgress />
       </Box>
     );
-  }
-
-  if (notFound || !expense) {
-    return (
-      <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 560, mx: 'auto' }}>
+  } else if (notFound || !expense) {
+    content = (
+      <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
         <CardContent sx={{ p: 4 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
             Despesa não encontrada
           </Typography>
           <Typography color="text.secondary" sx={{ mb: 3 }}>
             Essa despesa não existe mais, ou você não tem acesso a ela.
           </Typography>
-          <MuiLink component={Link} to={`/groups/${groupId}/expenses`}>
+          <MuiLink component={Link} to={`/groups/${groupId}/expenses`} sx={{ fontWeight: 600 }}>
             Voltar para a listagem
           </MuiLink>
         </CardContent>
       </Card>
     );
-  }
-
-  if (editing) {
-    return (
-      <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 560, mx: 'auto' }}>
+  } else if (editing) {
+    content = (
+      <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
         <CardContent sx={{ p: 4 }}>
-          <Typography variant="h6" gutterBottom>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
             Editar despesa
           </Typography>
 
@@ -262,38 +267,47 @@ const ExpenseView: React.FC = () => {
         </CardContent>
       </Card>
     );
+  } else {
+    content = (
+      <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
+            <Typography variant="h6" fontWeight={700}>
+              {expense.description}
+            </Typography>
+            <Chip label={typeLabel[expense.expense_type]} size="small" sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primaryDark }} />
+          </Box>
+
+          <Typography variant="h5" color="primary" fontWeight={700} gutterBottom>
+            R$ {formatMoney(Number(expense.total_value))}
+          </Typography>
+
+          <Typography color="text.secondary">
+            {new Date(expense.date_payment).toLocaleDateString('pt-BR')}
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            Credor: {creditorName}
+          </Typography>
+
+          <Box display="flex" gap={2}>
+            <Button variant="contained" onClick={startEditing}>
+              Editar
+            </Button>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIosNewIcon sx={{ fontSize: 14 }} />}
+              component={Link}
+              to={`/groups/${groupId}/expenses`}
+            >
+              Voltar para a listagem
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
+    );
   }
 
-  return (
-    <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 560, mx: 'auto' }}>
-      <CardContent sx={{ p: 4 }}>
-        <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-          <Typography variant="h6">{expense.description}</Typography>
-          <Chip label={typeLabel[expense.expense_type]} size="small" />
-        </Box>
-
-        <Typography variant="h5" color="primary" gutterBottom>
-          R$ {formatMoney(Number(expense.total_value))}
-        </Typography>
-
-        <Typography color="text.secondary">
-          {new Date(expense.date_payment).toLocaleDateString('pt-BR')}
-        </Typography>
-        <Typography color="text.secondary" sx={{ mb: 3 }}>
-          Credor: {creditorName}
-        </Typography>
-
-        <Box display="flex" gap={2}>
-          <Button variant="contained" onClick={startEditing}>
-            Editar
-          </Button>
-          <Button variant="outlined" component={Link} to={`/groups/${groupId}/expenses`}>
-            Voltar para a listagem
-          </Button>
-        </Box>
-      </CardContent>
-    </Card>
-  );
+  return <DespesasThemeScope>{content}</DespesasThemeScope>;
 };
 
 export default ExpenseView;
