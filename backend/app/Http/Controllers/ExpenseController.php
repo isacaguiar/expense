@@ -127,22 +127,98 @@ class ExpenseController extends Controller
             'user_payer_id' => ['sometimes', 'required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id)],
             'payers' => 'sometimes|required|array|min:1',
             'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
+            // expense_type/installments/quotas: edição de tipo (só À Vista <->
+            // Parcelada — Fixa fica de fora dos dois lados, ver abaixo).
+            // docs/feature/20260826-editar-tipo-despesa/plan.md §1.
+            'expense_type' => 'sometimes|required|in:IN_CASH,IN_INSTALLMENTS',
+            'installments' => 'sometimes|required|integer|min:2',
+            'quotas' => 'sometimes|required|array|min:1',
+            'quotas.*.date_expected' => 'required_with:quotas|date',
+            'quotas.*.number' => 'required_with:quotas|integer',
+            'quotas.*.value_quota' => 'required_with:quotas|numeric|min:0',
         ]);
+
+        $changingType = array_key_exists('expense_type', $data);
+
+        // Transição de/para FIXED não é suportada por esta feature — é um
+        // compromisso recorrente (materializa quota novo mês a mês), converter
+        // de/pra ela é uma decisão maior que fica pra outro pedido. A regra
+        // `in:IN_CASH,IN_INSTALLMENTS` já recusa 'FIXED' como alvo; falta só
+        // recusar a origem.
+        if ($expense->expense_type === 'FIXED' && $changingType) {
+            return response()->json(['error' => 'Não é possível mudar o tipo de uma despesa fixa.'], 422);
+        }
 
         // FIXED fica de fora: seu total_value é o valor do template pra
         // ocorrências futuras/ainda não materializadas — uma ocorrência já
         // paga já tem Quota própria congelada (materializeFixedOccurrenceQuota)
         // e não é afetada por essa edição, então não há o que proteger aqui.
-        if ($expense->expense_type !== 'FIXED'
-            && array_key_exists('total_value', $data)
-            && $expense->quotas()->where('paid', true)->exists()) {
-            return response()->json(['error' => 'Não é possível alterar o valor de uma despesa já paga.'], 422);
+        if ($expense->expense_type !== 'FIXED') {
+            $anyQuotaPaid = $expense->quotas()->where('paid', true)->exists();
+
+            // Regra pedida explicitamente pelo usuário: despesa parcelada com
+            // qualquer parcela paga (na prática, sempre a 1ª primeiro) trava a
+            // edição inteira — não só tipo/valor. Mesmo precedente de
+            // destroy() (bloqueia a ação inteira, não um campo).
+            if ($expense->expense_type === 'IN_INSTALLMENTS' && $anyQuotaPaid) {
+                return response()->json(['error' => 'Não é possível editar uma despesa parcelada depois que a primeira parcela foi paga.'], 422);
+            }
+
+            if ($anyQuotaPaid && (array_key_exists('total_value', $data) || $changingType)) {
+                return response()->json(['error' => 'Não é possível alterar o valor ou o tipo de uma despesa já paga.'], 422);
+            }
         }
 
-        $expense->update(Arr::except($data, ['payers']));
+        if ($changingType) {
+            $finalTotalValue = round((float) ($data['total_value'] ?? $expense->total_value), 2);
+
+            if ($data['expense_type'] === 'IN_INSTALLMENTS') {
+                if (! array_key_exists('installments', $data) || ! array_key_exists('quotas', $data)) {
+                    return response()->json(['error' => 'Informe installments e quotas para parcelar a despesa.'], 422);
+                }
+
+                if (count($data['quotas']) !== (int) $data['installments']) {
+                    return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
+                }
+
+                $quotasSum = round(array_sum(array_column($data['quotas'], 'value_quota')), 2);
+                if (abs($quotasSum - $finalTotalValue) > 0.01) {
+                    return response()->json(['error' => 'A soma das quotas deve ser igual a total_value.'], 422);
+                }
+
+                $newQuotas = $data['quotas'];
+            } else {
+                $data['installments'] = 1;
+                $newQuotas = [[
+                    'number' => 1,
+                    'date_expected' => $data['date_payment'] ?? $expense->date_payment->toDateString(),
+                    'value_quota' => $finalTotalValue,
+                ]];
+            }
+        }
+
+        $expense->update(Arr::except($data, ['payers', 'quotas']));
 
         if (array_key_exists('payers', $data)) {
             $expense->payers()->sync($data['payers']);
+        }
+
+        if ($changingType) {
+            // Seguro: só alcançado depois de confirmar acima que nenhuma quota
+            // está paga. ex_quotas não tem coluna de soft delete — são linhas
+            // geradas a partir de expense_type/installments/total_value, não
+            // uma entidade de negócio própria (Constitution §1.5 é sobre
+            // grupo/despesa).
+            $expense->quotas()->delete();
+
+            foreach ($newQuotas as $quota) {
+                $expense->quotas()->create([
+                    'date_expected' => $quota['date_expected'],
+                    'number' => $quota['number'],
+                    'paid' => false,
+                    'value_quota' => $quota['value_quota'],
+                ]);
+            }
         }
 
         return response()->json($expense->fresh(['payers', 'quotas']));
