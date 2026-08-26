@@ -162,119 +162,113 @@ const ExpenseView: React.FC = () => {
       .finally(() => setSaving(false));
   };
 
+  // Um único DespesasThemeScope embrulha qualquer que seja o conteúdo abaixo
+  // (nunca um por branch) — evita recriar o ThemeProvider a cada transição de
+  // estado (loading/notFound/editing/visualização), que causava reconciliação
+  // instável dos botões da Card (ver docs/feature/20260825-redesign-visual-despesas/implementation.md).
+  let content: React.ReactNode;
+
   if (loading) {
-    return (
-      <DespesasThemeScope>
-        <Box display="flex" justifyContent="center" mt={4}>
-          <CircularProgress />
-        </Box>
-      </DespesasThemeScope>
+    content = (
+      <Box display="flex" justifyContent="center" mt={4}>
+        <CircularProgress />
+      </Box>
     );
-  }
-
-  if (notFound || !expense) {
-    return (
-      <DespesasThemeScope>
-        <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
-          <CardContent sx={{ p: 4 }}>
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              Despesa não encontrada
-            </Typography>
-            <Typography color="text.secondary" sx={{ mb: 3 }}>
-              Essa despesa não existe mais, ou você não tem acesso a ela.
-            </Typography>
-            <MuiLink component={Link} to={`/groups/${groupId}/expenses`} sx={{ fontWeight: 600 }}>
-              Voltar para a listagem
-            </MuiLink>
-          </CardContent>
-        </Card>
-      </DespesasThemeScope>
+  } else if (notFound || !expense) {
+    content = (
+      <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Despesa não encontrada
+          </Typography>
+          <Typography color="text.secondary" sx={{ mb: 3 }}>
+            Essa despesa não existe mais, ou você não tem acesso a ela.
+          </Typography>
+          <MuiLink component={Link} to={`/groups/${groupId}/expenses`} sx={{ fontWeight: 600 }}>
+            Voltar para a listagem
+          </MuiLink>
+        </CardContent>
+      </Card>
     );
-  }
+  } else if (editing) {
+    content = (
+      <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
+        <CardContent sx={{ p: 4 }}>
+          <Typography variant="h6" fontWeight={700} gutterBottom>
+            Editar despesa
+          </Typography>
 
-  if (editing) {
-    return (
-      <DespesasThemeScope>
-        <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
-          <CardContent sx={{ p: 4 }}>
-            <Typography variant="h6" fontWeight={700} gutterBottom>
-              Editar despesa
-            </Typography>
+          {saveError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {saveError}
+            </Alert>
+          )}
 
-            {saveError && (
-              <Alert severity="error" sx={{ mb: 2 }}>
-                {saveError}
-              </Alert>
-            )}
+          <Box display="flex" flexDirection="column" gap={2} mt={2}>
+            <TextField
+              label="Descrição"
+              fullWidth
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+            />
 
-            <Box display="flex" flexDirection="column" gap={2} mt={2}>
-              <TextField
-                label="Descrição"
-                fullWidth
-                value={description}
-                onChange={e => setDescription(e.target.value)}
-              />
+            <TextField
+              label="Valor"
+              fullWidth
+              value={value}
+              onChange={e => setValue(e.target.value)}
+              placeholder="Ex: 150,00"
+            />
 
-              <TextField
-                label="Valor"
-                fullWidth
-                value={value}
-                onChange={e => setValue(e.target.value)}
-                placeholder="Ex: 150,00"
-              />
+            <TextField
+              label="Data"
+              type="date"
+              fullWidth
+              value={date}
+              onChange={e => setDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
 
-              <TextField
-                label="Data"
-                type="date"
-                fullWidth
-                value={date}
-                onChange={e => setDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-              />
+            <TextField label="Credor" select fullWidth value={payerId} onChange={e => setPayerId(e.target.value)}>
+              {members.map(member => (
+                <MenuItem key={member.id} value={String(member.id)}>
+                  {member.name}
+                </MenuItem>
+              ))}
+            </TextField>
 
-              <TextField label="Credor" select fullWidth value={payerId} onChange={e => setPayerId(e.target.value)}>
+            <Box>
+              <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
+              <FormGroup>
                 {members.map(member => (
-                  <MenuItem key={member.id} value={String(member.id)}>
-                    {member.name}
-                  </MenuItem>
+                  <FormControlLabel
+                    key={member.id}
+                    control={
+                      <Checkbox
+                        checked={participantIds.includes(member.id)}
+                        onChange={() => toggleParticipant(member.id)}
+                      />
+                    }
+                    label={member.name}
+                  />
                 ))}
-              </TextField>
-
-              <Box>
-                <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
-                <FormGroup>
-                  {members.map(member => (
-                    <FormControlLabel
-                      key={member.id}
-                      control={
-                        <Checkbox
-                          checked={participantIds.includes(member.id)}
-                          onChange={() => toggleParticipant(member.id)}
-                        />
-                      }
-                      label={member.name}
-                    />
-                  ))}
-                </FormGroup>
-              </Box>
-
-              <Box display="flex" gap={2} mt={1}>
-                <Button variant="contained" onClick={handleSave} disabled={saving}>
-                  Salvar
-                </Button>
-                <Button variant="outlined" onClick={() => setEditing(false)} disabled={saving}>
-                  Cancelar
-                </Button>
-              </Box>
+              </FormGroup>
             </Box>
-          </CardContent>
-        </Card>
-      </DespesasThemeScope>
-    );
-  }
 
-  return (
-    <DespesasThemeScope>
+            <Box display="flex" gap={2} mt={1}>
+              <Button variant="contained" onClick={handleSave} disabled={saving}>
+                Salvar
+              </Button>
+              <Button variant="outlined" onClick={() => setEditing(false)} disabled={saving}>
+                Cancelar
+              </Button>
+            </Box>
+          </Box>
+        </CardContent>
+      </Card>
+    );
+  } else {
+    content = (
       <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
         <CardContent sx={{ p: 4 }}>
           <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
@@ -299,14 +293,21 @@ const ExpenseView: React.FC = () => {
             <Button variant="contained" onClick={startEditing}>
               Editar
             </Button>
-            <Button variant="outlined" startIcon={<ArrowBackIosNewIcon sx={{ fontSize: 14 }} />} component={Link} to={`/groups/${groupId}/expenses`}>
+            <Button
+              variant="outlined"
+              startIcon={<ArrowBackIosNewIcon sx={{ fontSize: 14 }} />}
+              component={Link}
+              to={`/groups/${groupId}/expenses`}
+            >
               Voltar para a listagem
             </Button>
           </Box>
         </CardContent>
       </Card>
-    </DespesasThemeScope>
-  );
+    );
+  }
+
+  return <DespesasThemeScope>{content}</DespesasThemeScope>;
 };
 
 export default ExpenseView;
