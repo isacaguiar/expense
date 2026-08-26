@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
+use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -411,7 +412,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
-            'settlements' => $summary['settlements'],
+            'settlements' => $this->attachSettlementConfirmations($groupId, $start, $summary['settlements']),
         ]);
     }
 
@@ -462,7 +463,7 @@ class ExpenseController extends Controller
             'totals' => $snapshot->totals,
             'expenses' => $snapshot->expenses,
             'balances' => $snapshot->balances,
-            'settlements' => $snapshot->settlements,
+            'settlements' => $this->attachSettlementConfirmations($groupId, $start, $snapshot->settlements),
         ]);
     }
 
@@ -501,7 +502,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
-            'settlements' => $summary['settlements'],
+            'settlements' => $this->attachSettlementConfirmations($groupId, $start, $summary['settlements']),
         ]);
     }
 
@@ -603,6 +604,64 @@ class ExpenseController extends Controller
         ]);
 
         return response()->json($quota->fresh());
+    }
+
+    /**
+     * Confirma que o usuário autenticado (devedor) pagou via Pix o valor
+     * líquido que deve a `to_user_id` neste ciclo — conceito distinto de
+     * `pay()`/`unpay()`, que confirmam uma despesa específica do lado do
+     * credor. O comprovante aqui é obrigatório (é o conteúdo da ação, não
+     * um anexo opcional como em `pay()`). Só aceita se existir de fato um
+     * settlement `from_user_id === auth()->id()` pra esse `to_user_id` na
+     * competência vigente — evita confirmar um valor que não corresponde a
+     * nada real. Reenviar substitui o comprovante anterior (`updateOrCreate`
+     * — sem endpoint de "desfazer", ver
+     * docs/feature/20260825-pagamentos-grid-pix/specify.md §4).
+     */
+    public function confirmSettlement(Request $request, $groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $data = $request->validate([
+            'to_user_id' => 'required|integer|exists:ex_users,id',
+            'comprovante' => 'required|image|max:5120',
+        ]);
+
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+
+        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
+            return $response;
+        }
+
+        $summary = $this->computeCycleSummary($group, $groupId, $cycle['start'], $cycle['end']);
+
+        $settlement = collect($summary['settlements'])->first(
+            fn ($s) => $s['from_user_id'] === auth()->id() && $s['to_user_id'] === (int) $data['to_user_id']
+        );
+
+        if (! $settlement) {
+            return response()->json(['error' => 'Não há valor a pagar para esse credor nesta competência.'], 422);
+        }
+
+        $path = $request->file('comprovante')->store('comprovantes-settlements', 'public');
+
+        $confirmation = SettlementConfirmation::updateOrCreate(
+            [
+                'group_id' => $groupId,
+                'cycle_start' => $cycle['start']->toDateString(),
+                'from_user_id' => auth()->id(),
+                'to_user_id' => $data['to_user_id'],
+            ],
+            [
+                'cycle_end' => $cycle['end']->toDateString(),
+                'amount' => $settlement['amount'],
+                'proof_path' => $path,
+                'confirmed_at' => Carbon::now(),
+            ]
+        );
+
+        return response()->json($confirmation->fresh());
     }
 
     /**
@@ -782,6 +841,35 @@ class ExpenseController extends Controller
         }
 
         return ['totals' => $totals, 'expenses' => $expenses, 'balances' => $balances, 'settlements' => $settlements];
+    }
+
+    /**
+     * Decora cada settlement com o comprovante de confirmação do devedor, se
+     * existir (`SettlementConfirmation`, specify.md §2.7) — chamado nos 3
+     * pontos que devolvem `settlements` na resposta HTTP (`summary()`,
+     * `close()`, `reopen()`), depois que qualquer um dos 3 caminhos que
+     * produzem o array (`computeCycleSummary` ao vivo, snapshot manual,
+     * snapshot fechado por data) já rodou — não precisa decorar dentro de
+     * cada um separadamente.
+     */
+    private function attachSettlementConfirmations($groupId, Carbon $start, array $settlements): array
+    {
+        $confirmations = SettlementConfirmation::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->get()
+            ->keyBy(fn ($c) => "{$c->from_user_id}-{$c->to_user_id}");
+
+        return collect($settlements)
+            ->map(function (array $settlement) use ($confirmations) {
+                $confirmation = $confirmations->get("{$settlement['from_user_id']}-{$settlement['to_user_id']}");
+
+                $settlement['confirmedProofUrl'] = $confirmation?->proof_url;
+                $settlement['confirmedAt'] = $confirmation?->confirmed_at?->toIso8601String();
+
+                return $settlement;
+            })
+            ->values()
+            ->all();
     }
 
     /**

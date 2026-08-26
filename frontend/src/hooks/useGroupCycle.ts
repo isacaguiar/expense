@@ -37,6 +37,8 @@ export type SummarySettlement = {
   from_user_id: number;
   to_user_id: number;
   amount: number;
+  confirmedProofUrl: string | null;
+  confirmedAt: string | null;
 };
 
 export type Summary = {

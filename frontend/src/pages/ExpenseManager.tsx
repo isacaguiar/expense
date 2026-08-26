@@ -42,6 +42,7 @@ import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SavingsOutlinedIcon from '@mui/icons-material/SavingsOutlined';
+import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import SummarySidePanel from '../components/SummarySidePanel';
@@ -459,6 +460,20 @@ const ExpenseManager: React.FC = () => {
                                 <InfoOutlinedIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>
+                            {exp.paid && exp.paymentProofUrl && (
+                              <Tooltip title="Ver comprovante">
+                                <IconButton
+                                  aria-label="Ver comprovante"
+                                  size="small"
+                                  component="a"
+                                  href={exp.paymentProofUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                >
+                                  <ImageOutlinedIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            )}
                             {exp.isFixed && cycleIsOpen && (
                               <Tooltip title="Remover despesa fixa">
                                 <IconButton
@@ -596,6 +611,12 @@ const ExpenseManager: React.FC = () => {
                 </Typography>
                 <Typography variant="body2">{detailExpense.participants.join(', ') || '-'}</Typography>
               </Box>
+
+              {detailExpense.paid && detailExpense.paymentProofUrl && (
+                <MuiLink href={detailExpense.paymentProofUrl} target="_blank" rel="noreferrer" variant="body2">
+                  Ver comprovante
+                </MuiLink>
+              )}
             </Box>
           )}
         </DialogContent>

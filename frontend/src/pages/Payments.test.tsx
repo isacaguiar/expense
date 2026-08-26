@@ -241,7 +241,7 @@ describe('Payments', () => {
       </MemoryRouter>
     );
 
-    await user.click(await screen.findByRole('button', { name: /deve pagar/ }));
+    await user.click(await screen.findByRole('button', { name: 'Pagar com Pix' }));
 
     expect(await screen.findByRole('img', { name: /QR Code Pix para pagar Maria/ })).toBeInTheDocument();
     expect(screen.getByDisplayValue('00020126...6304ABCD')).toBeInTheDocument();
@@ -274,10 +274,55 @@ describe('Payments', () => {
       </MemoryRouter>
     );
 
-    await user.click(await screen.findByRole('button', { name: /deve pagar/ }));
+    await user.click(await screen.findByRole('button', { name: 'Pagar com Pix' }));
 
     expect(await screen.findByText('Maria ainda não cadastrou uma chave Pix.')).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: /QR Code Pix/ })).not.toBeInTheDocument();
     expect(vi.mocked(axios.get).mock.calls.some(call => (call[0] as string).includes('/pix/generate'))).toBe(false);
+  });
+
+  it('sends the debtor proof as multipart to /settlements/confirm and shows a success message', async () => {
+    const user = userEvent.setup();
+
+    mockGetResponses(
+      [],
+      {
+        balances: [
+          { user_id: CURRENT_USER_ID, name: 'Isac', balance: -50 },
+          { user_id: 999, name: 'Maria', balance: 50 },
+        ],
+        settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+      },
+      [{ id: 999, name: 'Maria', email: 'maria@example.com', pix: 'maria@pix.com' }]
+    );
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar comprovante' }));
+
+    const confirmButton = await screen.findByRole('button', { name: 'Confirmar' });
+    expect(confirmButton).toBeDisabled();
+
+    const file = new File(['foto'], 'pix.png', { type: 'image/png' });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, file);
+
+    expect(confirmButton).toBeEnabled();
+
+    await user.click(confirmButton);
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/groups/1/settlements/confirm');
+    expect(body).toBeInstanceOf(FormData);
+    expect((body as FormData).get('to_user_id')).toBe('999');
+    expect((body as FormData).get('comprovante')).toBe(file);
+
+    expect(await screen.findByText('Comprovante enviado.')).toBeInTheDocument();
   });
 });
