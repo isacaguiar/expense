@@ -23,7 +23,7 @@ describe('MobileNavDrawer', () => {
     expect(screen.getByRole('link', { name: 'Resumo' })).toHaveAttribute('href', '/summary');
   });
 
-  it('does not expose the navigation items to accessibility queries when closed', () => {
+  it('does not render the navigation items when closed', () => {
     renderDrawer(false, vi.fn());
 
     expect(screen.queryByRole('link', { name: 'Resumo' })).not.toBeInTheDocument();
