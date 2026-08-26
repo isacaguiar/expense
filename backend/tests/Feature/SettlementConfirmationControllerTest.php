@@ -129,7 +129,14 @@ class SettlementConfirmationControllerTest extends TestCase
             ]);
 
         $response->assertStatus(422);
-        $this->assertDatabaseCount('ex_settlement_confirmations', 0);
+        // Escopado por grupo/par em vez de assertDatabaseCount(...,0) global —
+        // o banco local de dev é compartilhado com o servidor rodando fora do
+        // teste, então pode ter outras linhas legítimas de outras execuções.
+        $this->assertDatabaseMissing('ex_settlement_confirmations', [
+            'group_id' => $group->id,
+            'from_user_id' => $stranger->id,
+            'to_user_id' => $creditor->id,
+        ]);
     }
 
     public function test_resending_replaces_the_previous_proof(): void
@@ -146,13 +153,22 @@ class SettlementConfirmationControllerTest extends TestCase
 
         $token = $this->tokenFor($debtor);
 
+        // Escopado por grupo/par em todo canto abaixo — o banco local de dev
+        // é compartilhado com o servidor rodando fora do teste, então uma
+        // query sem filtro (SettlementConfirmation::firstOrFail(), sem
+        // orderBy) pode pegar uma linha de outra execução em vez da deste
+        // teste.
+        $confirmationForThisPair = fn () => SettlementConfirmation::where('group_id', $group->id)
+            ->where('from_user_id', $debtor->id)
+            ->where('to_user_id', $creditor->id);
+
         $this->withToken($token)
             ->post("/api/groups/{$group->id}/settlements/confirm", [
                 'to_user_id' => $creditor->id,
                 'comprovante' => UploadedFile::fake()->image('primeiro.jpg'),
             ])->assertStatus(200);
 
-        $firstPath = SettlementConfirmation::firstOrFail()->proof_path;
+        $firstPath = $confirmationForThisPair()->firstOrFail()->proof_path;
 
         $this->withToken($token)
             ->post("/api/groups/{$group->id}/settlements/confirm", [
@@ -160,8 +176,8 @@ class SettlementConfirmationControllerTest extends TestCase
                 'comprovante' => UploadedFile::fake()->image('segundo.jpg'),
             ])->assertStatus(200);
 
-        $this->assertDatabaseCount('ex_settlement_confirmations', 1);
-        $secondPath = SettlementConfirmation::firstOrFail()->proof_path;
+        $this->assertSame(1, $confirmationForThisPair()->count());
+        $secondPath = $confirmationForThisPair()->firstOrFail()->proof_path;
 
         $this->assertNotSame($firstPath, $secondPath);
         Storage::disk('public')->assertExists($secondPath);

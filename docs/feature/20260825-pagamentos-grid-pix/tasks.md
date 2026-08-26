@@ -8,11 +8,11 @@ Versão: 1.0 · Criado em: 20260825
 |---|---|---|---|---|---|
 | TASK-001 | Criar `PixPaymentDialog` (QR Code + copia-e-cola via `/pix/generate`) | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-002 | Criar `PayableSettlementList` (settlements clicáveis) | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-003 | Buscar membros com email/pix e montar o grid final em `Payments.tsx` | frontend | plan.md §1, §4 | nenhum | Concluída (não commitada) |
-| TASK-004 | Migration + model `SettlementConfirmation` | backend | plan.md §5 | nenhum | Concluída (não commitada) |
-| TASK-005 | Endpoint `POST /groups/{id}/settlements/confirm` + expor confirmação em `settlements` | backend | plan.md §5 | nenhum | Concluída (não commitada) |
-| TASK-006 | Botões de comprovante do devedor em `PayableSettlementList`/`Payments.tsx` | frontend | plan.md §6 | nenhum | Concluída (não commitada) |
-| TASK-007 | Corrigir comprovante ausente em `ExpenseManager.tsx`/`ExpenseView.tsx` | frontend | plan.md §7 | nenhum | Concluída (não commitada) |
+| TASK-003 | Buscar membros com email/pix e montar o grid final em `Payments.tsx` | frontend | plan.md §1, §4 | nenhum | Concluída |
+| TASK-004 | Migration + model `SettlementConfirmation` | backend | plan.md §5 | nenhum | Concluída |
+| TASK-005 | Endpoint `POST /groups/{id}/settlements/confirm` + expor confirmação em `settlements` | backend | plan.md §5 | nenhum | Concluída |
+| TASK-006 | Botões de comprovante do devedor em `PayableSettlementList`/`Payments.tsx` | frontend | plan.md §6 | nenhum | Concluída |
+| TASK-007 | Corrigir comprovante ausente em `ExpenseManager.tsx`/`ExpenseView.tsx` | frontend | plan.md §7 | nenhum | Concluída |
 
 ## Critérios de aceite
 
