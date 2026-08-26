@@ -23,6 +23,7 @@ import { useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
+import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
@@ -127,6 +128,53 @@ const Payments: React.FC = () => {
     }
 
     setPixTarget({ settlement, member: creditor });
+  };
+
+  // Enviar comprovante do pagamento do settlement (devedor) — conceito
+  // distinto de confirmar uma despesa (isso continua com o credor, acima).
+  // Ver docs/feature/20260825-pagamentos-grid-pix/plan.md §6.
+  const [confirmSettlementTarget, setConfirmSettlementTarget] = useState<SummarySettlement | null>(null);
+  const [selectedSettlementFile, setSelectedSettlementFile] = useState<File | null>(null);
+  const [confirmingSettlement, setConfirmingSettlement] = useState<boolean>(false);
+  const [settlementConfirmError, setSettlementConfirmError] = useState<string | null>(null);
+  const [settlementConfirmSuccess, setSettlementConfirmSuccess] = useState<boolean>(false);
+
+  const openConfirmSettlementDialog = (settlement: SummarySettlement) => {
+    setConfirmSettlementTarget(settlement);
+    setSelectedSettlementFile(null);
+    setSettlementConfirmError(null);
+  };
+
+  const closeConfirmSettlementDialog = () => {
+    setConfirmSettlementTarget(null);
+    setSelectedSettlementFile(null);
+  };
+
+  const confirmSettlementPayment = () => {
+    if (!confirmSettlementTarget || !selectedSettlementFile || !groupId) return;
+
+    setConfirmingSettlement(true);
+    setSettlementConfirmError(null);
+
+    const token = localStorage.getItem('accessToken');
+    const form = new FormData();
+    form.append('to_user_id', String(confirmSettlementTarget.to_user_id));
+    form.append('comprovante', selectedSettlementFile);
+
+    axios
+      .post(`${API_BASE_URL}/api/groups/${groupId}/settlements/confirm`, form, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(() => {
+        setSettlementConfirmSuccess(true);
+        closeConfirmSettlementDialog();
+        reload();
+      })
+      .catch(err => {
+        console.error('Erro ao confirmar pagamento do settlement:', err);
+        setSettlementConfirmError(err.response?.data?.error ?? 'Falha ao enviar o comprovante.');
+      })
+      .finally(() => setConfirmingSettlement(false));
   };
 
   const expenses = summary?.expenses ?? [];
@@ -246,7 +294,9 @@ const Payments: React.FC = () => {
               <PayableSettlementList
                 settlements={summary.settlements}
                 balances={summary.balances}
-                onSelect={handleSelectSettlement}
+                currentUserId={currentUserId}
+                onPayWithPix={handleSelectSettlement}
+                onSendProof={openConfirmSettlementDialog}
               />
             </Grid>
           </Grid>
@@ -289,6 +339,42 @@ const Payments: React.FC = () => {
         />
       )}
 
+      <Dialog open={confirmSettlementTarget !== null} onClose={closeConfirmSettlementDialog} fullWidth maxWidth="xs">
+        <DialogTitle>Enviar comprovante do Pix</DialogTitle>
+        <DialogContent>
+          <DialogContentText mb={2}>
+            Anexe o comprovante do seu pagamento via Pix para confirmar.
+          </DialogContentText>
+          <Button variant="outlined" component="label" fullWidth startIcon={<UploadFileOutlinedIcon />}>
+            {selectedSettlementFile ? selectedSettlementFile.name : 'Selecionar comprovante'}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={e => setSelectedSettlementFile(e.target.files?.[0] ?? null)}
+            />
+          </Button>
+          {settlementConfirmError && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {settlementConfirmError}
+            </Alert>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeConfirmSettlementDialog} disabled={confirmingSettlement}>
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            disabled={!selectedSettlementFile || confirmingSettlement}
+            onClick={confirmSettlementPayment}
+          >
+            Confirmar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar
         open={paySuccess}
         autoHideDuration={4000}
@@ -319,6 +405,17 @@ const Payments: React.FC = () => {
       >
         <Alert onClose={dismissPayError} severity="error" variant="filled">
           {payError}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={settlementConfirmSuccess}
+        autoHideDuration={4000}
+        onClose={() => setSettlementConfirmSuccess(false)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setSettlementConfirmSuccess(false)} severity="success" variant="filled">
+          Comprovante enviado.
         </Alert>
       </Snackbar>
 

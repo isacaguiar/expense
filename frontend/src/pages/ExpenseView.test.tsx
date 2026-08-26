@@ -171,4 +171,43 @@ describe('ExpenseView', () => {
     expect(await screen.findByText('R$ 1.200,00')).toBeInTheDocument();
     expect(axios.put).not.toHaveBeenCalled();
   });
+
+  it('shows a "Ver comprovante" link when the latest paid quota has a proof', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        quotas: [
+          { date_expected: '2026-07-01', paid: true, payment_proof_url: 'http://localhost/storage/julho.jpg' },
+          { date_expected: '2026-08-01', paid: true, payment_proof_url: 'http://localhost/storage/agosto.jpg' },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    const link = await screen.findByRole('link', { name: 'Ver comprovante' });
+    expect(link).toHaveAttribute('href', 'http://localhost/storage/agosto.jpg');
+  });
+
+  it('does not show "Ver comprovante" when no quota is paid with a proof', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        quotas: [{ date_expected: '2026-08-01', paid: false, payment_proof_url: null }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    expect(screen.queryByRole('link', { name: 'Ver comprovante' })).not.toBeInTheDocument();
+  });
 });

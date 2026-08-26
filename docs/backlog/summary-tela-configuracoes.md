@@ -4,7 +4,9 @@ ID: 019
 Origem: docs/feature/20260819-novo-layout-tela-entrada/specify.md §2.3/R2 (item "Configurações" da sidebar como placeholder `href="#"`)
 Criado em: 2026-08-19
 Prioridade: BAIXA
-Status: Aberto
+Status: Aberto (parcialmente obsoleto — ver nota 2026-08-26)
+
+> Nota 2026-08-26 (revisão de backlog): a única necessidade concreta que este item registrava — "o dia de fechamento do grupo não tem lugar na UI para ser editado depois da criação" — já foi resolvida: `GroupForm.tsx` (rota `/groups/:id/edit`, acessível pelo ícone de editar na tabela de grupos) tem o campo "Dia de fechamento (opcional)" desde a feature `20260821-melhoria-menu-tela-grupos-perfil`. O que sobra deste item é genérico ("outras configurações que o mockup sugere"), sem escopo concreto. Recomendação: fechar, ou reabrir só quando houver uma configuração específica nova a adicionar.
 
 ## Descrição
 

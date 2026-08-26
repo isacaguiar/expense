@@ -27,6 +27,12 @@ type GroupMember = { id: number; name: string };
 
 type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
 
+type ExpenseQuota = {
+  date_expected: string;
+  paid: boolean;
+  payment_proof_url: string | null;
+};
+
 type ExpenseDetail = {
   id: number;
   description: string;
@@ -35,6 +41,22 @@ type ExpenseDetail = {
   expense_type: ExpenseType;
   user_payer_id: number;
   payers: GroupMember[];
+  quotas: ExpenseQuota[];
+};
+
+/**
+ * Uma despesa pode ter várias Quota (uma por mês, em IN_INSTALLMENTS/FIXED)
+ * — sem seletor de competência nesta tela, mostramos o comprovante da quota
+ * paga mais recente (a mais relevante pra conferir "já paguei isso?"), não
+ * necessariamente a do ciclo vigente. Ver
+ * docs/feature/20260825-pagamentos-grid-pix/specify.md §2.8.
+ */
+const latestPaidProof = (quotas: ExpenseQuota[] | undefined): string | null => {
+  const paidWithProof = (quotas ?? [])
+    .filter(q => q.paid && q.payment_proof_url)
+    .sort((a, b) => (a.date_expected < b.date_expected ? 1 : -1));
+
+  return paidWithProof[0]?.payment_proof_url ?? null;
 };
 
 const formatMoney = (value: number): string =>
@@ -268,6 +290,8 @@ const ExpenseView: React.FC = () => {
       </Card>
     );
   } else {
+    const proofUrl = latestPaidProof(expense.quotas);
+
     content = (
       <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
         <CardContent sx={{ p: 4 }}>
@@ -285,9 +309,17 @@ const ExpenseView: React.FC = () => {
           <Typography color="text.secondary">
             {new Date(expense.date_payment).toLocaleDateString('pt-BR')}
           </Typography>
-          <Typography color="text.secondary" sx={{ mb: 3 }}>
+          <Typography color="text.secondary" sx={{ mb: proofUrl ? 1 : 3 }}>
             Credor: {creditorName}
           </Typography>
+
+          {proofUrl && (
+            <Typography sx={{ mb: 3 }}>
+              <MuiLink href={proofUrl} target="_blank" rel="noreferrer">
+                Ver comprovante
+              </MuiLink>
+            </Typography>
+          )}
 
           <Box display="flex" gap={2}>
             <Button variant="contained" onClick={startEditing}>
