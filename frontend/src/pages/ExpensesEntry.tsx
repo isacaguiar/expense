@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { API_BASE_URL } from '../config';
 import { mostActiveGroup } from './mostActiveGroup';
+import DespesasThemeScope from '../theme/DespesasThemeScope';
 
 type Group = {
   id: number;
@@ -46,9 +47,11 @@ const ExpensesEntry: React.FC = () => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" mt={4}>
-        <CircularProgress />
-      </Box>
+      <DespesasThemeScope>
+        <Box display="flex" justifyContent="center" mt={4}>
+          <CircularProgress />
+        </Box>
+      </DespesasThemeScope>
     );
   }
 
