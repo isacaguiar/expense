@@ -62,6 +62,7 @@ export default function GroupShellLayout() {
           groupId={groupId ?? ''}
           onGroupChange={handleGroupChange}
           userName={userName}
+          onMenuClick={() => {}}
         />
         <Outlet />
       </Container>
