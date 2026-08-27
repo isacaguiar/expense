@@ -36,7 +36,7 @@ Toda feature encontra, no caminho, achados que não bloqueiam nenhuma task dela 
 
 Essa separação existe porque um achado não-bloqueante costuma sobreviver à feature que o descobriu — ele é conhecimento do projeto, não artefato descartável de uma pasta de trabalho.
 
-Quando alguém decide de fato executar um item do backlog, o slash command `/promover-backlog <ID>` conduz o processo completo — scaffold da feature, depois Specify → Tech Plan → Tasks → execução de cada task, pedindo aprovação humana explícita entre cada etapa (mesmo espírito do `/nova-feature`, só que partindo de um item já existente e indo até a execução). Ver `.claude/commands/promover-backlog.md`.
+Quando alguém decide de fato executar um item do backlog, o slash command `/promover-backlog <ID>` conduz o processo completo — scaffold da feature, depois Specify → Tech Plan → Tasks → execução de cada task, pedindo aprovação humana explícita entre cada etapa (mesmo espírito do `/nova-feature`, só que partindo de um item já existente e indo até a execução). Ver `.claude/skills/promover-backlog/SKILL.md`.
 
 ## Skills e portabilidade
 
