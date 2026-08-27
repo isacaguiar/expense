@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -113,6 +113,31 @@ describe('GroupShellLayout', () => {
     await user.click(await screen.findByRole('option', { name: 'Grupo B' }));
 
     expect(navigateMock).toHaveBeenCalledWith('/groups/2/expenses');
+  });
+
+  it('opens the mobile nav drawer via the header menu button, and closes it after navigating', async () => {
+    const user = userEvent.setup();
+    renderShell('/groups/1/summary');
+
+    await screen.findByText('Conteúdo Resumo');
+
+    expect(document.querySelector('.MuiDrawer-paper')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Abrir menu de navegação' }));
+
+    const drawerPaper = await waitFor(() => {
+      const paper = document.querySelector('.MuiDrawer-paper');
+      expect(paper).not.toBeNull();
+      return paper as HTMLElement;
+    });
+    const drawerLink = within(drawerPaper).getByRole('link', { name: /Despesas/ });
+
+    await user.click(drawerLink);
+
+    await screen.findByText('Conteúdo Despesas');
+    await waitFor(() => {
+      expect(document.querySelector('.MuiDrawer-paper')).not.toBeInTheDocument();
+    });
   });
 
   it('logs out when "Sair" is clicked, as a top-level item (not nested)', async () => {
