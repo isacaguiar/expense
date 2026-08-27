@@ -5,7 +5,7 @@ Origem: docs/feature/20260819-novo-layout-tela-entrada/specify.md §2.3/R2 (item
 Criado em: 2026-08-19
 Reenquadrado em: 2026-08-22 — de "expor relatório anual/mensal calendário" para "expor histórico de ciclos de fechamento", após `docs/feature/20260822-acerto-de-contas-ciclo` confirmar que o mecanismo de ciclo já é a fonte de verdade do produto (ver Descrição)
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-209
 
 ## Descrição
 
