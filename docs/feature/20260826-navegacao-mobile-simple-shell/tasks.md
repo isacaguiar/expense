@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20260826
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-208 | Integrar `MobileNavDrawer` ao `SimpleShellLayout` | frontend | plan.md §1 | nenhum | Pendente |
+| TASK-208 | Integrar `MobileNavDrawer` ao `SimpleShellLayout` | frontend | plan.md §1 | nenhum | Concluída (validada manualmente) |
 
 ## Critérios de aceite
 
