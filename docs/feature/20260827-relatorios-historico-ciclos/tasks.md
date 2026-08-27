@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20260827
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-209 | Criar endpoint `GET /groups/{groupId}/expenses/cycles` (histórico paginado) | backend | plan.md §1 | nenhum | Pendente |
+| TASK-209 | Criar endpoint `GET /groups/{groupId}/expenses/cycles` (histórico paginado) | backend | plan.md §1 | nenhum | Concluída |
 | TASK-210 | Extrair `CycleDetailPanel` reutilizável de `GroupSummary.tsx` | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-211 | Criar tela de Relatórios (lista + detalhe) e ligar rota/sidebar | frontend | plan.md §3 | nenhum | Pendente |
 
