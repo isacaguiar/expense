@@ -628,7 +628,7 @@ class ExpenseController extends Controller
 
             if (! isset($creditors[$creditor->id])) {
                 $creditors[$creditor->id] = [
-                    'creditor' => ['id' => $creditor->id, 'name' => $creditor->name, 'email' => $creditor->email],
+                    'creditor' => ['id' => $creditor->id, 'name' => $creditor->name, 'email' => $creditor->email, 'pix' => $creditor->pix],
                     'debtors' => [],
                 ];
             }

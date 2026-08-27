@@ -60,7 +60,7 @@ class ExpenseControllerGrossDebtsTest extends TestCase
     {
         Carbon::setTestNow('2026-08-19');
 
-        $payer = User::factory()->create(['name' => 'Credor']);
+        $payer = User::factory()->create(['name' => 'Credor', 'pix' => 'credor@pix.example']);
         $debtorA = User::factory()->create(['name' => 'Devedor A']);
         $debtorB = User::factory()->create(['name' => 'Devedor B']);
         $group = Group::create(['name' => 'Grupo de teste']);
@@ -79,6 +79,7 @@ class ExpenseControllerGrossDebtsTest extends TestCase
         $this->assertCount(1, $creditors);
         $this->assertSame($payer->id, $creditors[0]['creditor']['id']);
         $this->assertSame($payer->email, $creditors[0]['creditor']['email']);
+        $this->assertSame('credor@pix.example', $creditors[0]['creditor']['pix']);
 
         $debtors = collect($creditors[0]['debtors'])->keyBy('id');
         $this->assertSame(100, $debtors[$debtorA->id]['amount']);
