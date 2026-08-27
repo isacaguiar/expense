@@ -7,11 +7,13 @@ import { API_BASE_URL } from '../config';
 import Sidebar from './Sidebar';
 import { simpleNavItems } from './simpleNavItems';
 import GroupHeader from './group/GroupHeader';
+import MobileNavDrawer from './MobileNavDrawer';
 
 export default function SimpleShellLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [userName, setUserName] = useState<string | null>(null);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -30,6 +32,7 @@ export default function SimpleShellLayout() {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar items={simpleNavItems(navigate)} />
+      <MobileNavDrawer items={simpleNavItems(navigate)} open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <Container component="main" sx={{ flex: 1, mt: 4, mb: 4 }}>
         <GroupHeader
           title={title}
@@ -37,7 +40,7 @@ export default function SimpleShellLayout() {
           groupId=""
           onGroupChange={() => {}}
           userName={userName}
-          onMenuClick={() => {}}
+          onMenuClick={() => setMobileNavOpen(true)}
         />
         <Outlet />
       </Container>
