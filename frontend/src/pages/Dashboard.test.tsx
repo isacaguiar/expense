@@ -53,9 +53,18 @@ const groups: Group[] = [
   },
 ];
 
-function mockGroupsAndMe(groupsData: Group[], meId = 10) {
+type GrossDebtsByGroup = Record<number, { cycle: { start: string; end: string; status: string }; creditors: unknown[] }>;
+
+function mockGroupsAndMe(groupsData: Group[], meId = 10, grossDebtsByGroup: GrossDebtsByGroup = {}) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
     if (url.includes('/api/me')) return Promise.resolve({ data: { id: meId } });
+    const grossDebtsMatch = url.match(/\/groups\/(\d+)\/expenses\/gross-debts/);
+    if (grossDebtsMatch) {
+      const groupId = Number(grossDebtsMatch[1]);
+      return Promise.resolve({
+        data: grossDebtsByGroup[groupId] ?? { cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open' }, creditors: [] }
+      });
+    }
     return Promise.resolve({ data: groupsData });
   });
 }
@@ -316,5 +325,70 @@ describe('Dashboard', () => {
 
     expect(axios.delete).not.toHaveBeenCalled();
     expect(screen.getByText('Viagem SP')).toBeInTheDocument();
+  });
+
+  it('expands a row to show the gross debts panel, and collapses it back', async () => {
+    mockGroupsAndMe(groups, 10, {
+      1: {
+        cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open' },
+        creditors: [{ creditor: { id: 10, name: 'Dono', email: 'dono@example.com', pix: null }, debtors: [{ id: 11, name: 'Ana Silva', amount: 50 }] }],
+      },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+    expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Ver pendências de Viagem SP' }));
+
+    expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
+    expect(screen.getByText('R$ 50,00')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Recolher pendências de Viagem SP' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
+    });
+  });
+
+  it('keeps two expanded rows independent from each other', async () => {
+    mockGroupsAndMe(groups, 10, {
+      1: {
+        cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open' },
+        creditors: [{ creditor: { id: 10, name: 'Dono', email: 'dono@example.com', pix: null }, debtors: [{ id: 11, name: 'Ana Silva', amount: 50 }] }],
+      },
+      2: {
+        cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open' },
+        creditors: [{ creditor: { id: 99, name: 'Outro', email: 'outro@example.com', pix: null }, debtors: [{ id: 12, name: 'Beto Souza', amount: 75 }] }],
+      },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+
+    await user.click(screen.getByRole('button', { name: 'Ver pendências de Viagem SP' }));
+    await user.click(screen.getByRole('button', { name: 'Ver pendências de Casa' }));
+
+    expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
+    expect(await screen.findByText('Beto Souza')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Recolher pendências de Viagem SP' }));
+
+    await waitFor(() => {
+      expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('Beto Souza')).toBeInTheDocument();
   });
 });
