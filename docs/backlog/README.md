@@ -44,7 +44,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
-| 018 | [summary-tela-relatorios.md](summary-tela-relatorios.md) | Criar tela de Relatórios do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
+| 018 | [summary-tela-relatorios.md](summary-tela-relatorios.md) | Criar tela de Relatórios do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Promovido para TASK-209 |
 | 020 | [sistema-notificacoes-frontend.md](sistema-notificacoes-frontend.md) | Implementar sistema de notificações | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 021 | [avatar-foto-usuario.md](avatar-foto-usuario.md) | Suportar foto de perfil do usuário | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 024 | [expense-campo-categoria.md](expense-campo-categoria.md) | Adicionar campo "categoria" em despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
