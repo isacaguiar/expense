@@ -4,7 +4,7 @@ ID: 032
 Origem: docs/feature/20260826-navegacao-mobile-group-shell/ (achado durante TASK-206, tangencial à feature — não bloqueia nenhuma task dela)
 Criado em: 2026-08-26
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-208
 
 ## Descrição
 

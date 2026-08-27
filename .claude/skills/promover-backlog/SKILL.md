@@ -1,10 +1,11 @@
 ---
+name: promover-backlog
 description: Recebe o ID de um item de docs/backlog/ e conduz o processo completo até virar código — Specify → Tech Plan → Tasks → execução de cada task — pedindo aprovação humana explícita entre cada etapa.
 ---
 
-O usuário passou como argumento o ID numérico de um item do backlog (ex.: `001`): `$ARGUMENTS`
+O usuário passou como argumento o ID numérico de um item do backlog (ex.: `001`) — texto após `/promover-backlog`.
 
-Este comando promove um item de `docs/backlog/` (achado que não bloqueava nenhuma task quando foi registrado) para uma feature completa do SDD, seguindo o mesmo espírito do `/nova-feature`, mas partindo de um item já existente e indo até a execução — com um gate de revisão humana entre cada etapa. **Nunca avance de etapa sem uma aprovação explícita do usuário na conversa** (ex. "aprovado", "pode seguir", "ajusta X e segue") — silêncio ou a ausência de objeção não é aprovação.
+Este skill promove um item de `docs/backlog/` (achado que não bloqueava nenhuma task quando foi registrado) para uma feature completa do SDD, seguindo o mesmo espírito do `/nova-feature`, mas partindo de um item já existente e indo até a execução — com um gate de revisão humana entre cada etapa. **Nunca avance de etapa sem uma aprovação explícita do usuário na conversa** (ex. "aprovado", "pode seguir", "ajusta X e segue") — silêncio ou a ausência de objeção não é aprovação.
 
 ## 0. Localizar o item
 
@@ -47,7 +48,7 @@ Só depois do `tasks.md` aprovado. Para cada task, na ordem do arquivo:
 1. Siga o fluxo já documentado em `docs/sdd/04-implementation.md` §1: branch `<tipo>/<AAAAMMDD>-<slug-da-feature>-TASK-0xx` a partir de `dev` atualizada, implemente só o escopo da task (extra descoberto vira task nova em `tasks.md`, não expande a atual).
 2. Para codar, use a skill do domínio (`expense-backend`/`expense-frontend`) — carrega convenções e gates automaticamente.
 3. Antes de abrir o PR, rode o checklist pré-PR (ou use o agent `pr-readiness-checker`).
-4. Abra o PR contra `dev` referenciando o `TASK-0xx`. **Não faça merge, não faça deploy** — esses continuam gate humano explícito (`00-constitution.md` §5.2), este comando não pula isso.
+4. Abra o PR contra `dev` referenciando o `TASK-0xx`. **Não faça merge, não faça deploy** — esses continuam gate humano explícito (`00-constitution.md` §5.2), este skill não pula isso.
 5. Registre uma linha em `implementation.md` da feature: task, status, data, comando executado + resultado real (não "testado" em prosa).
 6. Pare após abrir o PR da task e pergunte ao usuário se segue para a próxima task ou para por aqui — não execute todas as tasks em sequência sem checar.
 7. Quando todas as tasks da feature já estiverem mergeadas em `dev` e validadas lá, abrir o PR de promoção `dev` → `main` é um passo à parte (fora do loop por task acima) — não abrir esse PR automaticamente ao final da última task sem antes confirmar com o usuário que a validação em `dev` foi feita.

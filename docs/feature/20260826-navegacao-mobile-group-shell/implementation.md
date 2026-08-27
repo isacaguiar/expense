@@ -8,7 +8,12 @@ Versão: 1.0 · Criado em: 20260826
 
 ## 1. Desvios do fluxo padrão (se houver)
 
-Nenhum. Segue `04-implementation.md` §1 (fluxo ADR-003: branch única da feature, sub-branch por task mergeada nela localmente sem PR, checklist antes de integrar e antes do PR único da feature contra `dev`).
+O plano original era um único PR da branch da feature contra `dev`, aberto pela IA e mergeado só após aprovação humana (fluxo ADR-003 padrão). Na prática, o merge em `dev` aconteceu em **dois PRs**, abertos e mergeados diretamente pelo usuário (fora do fluxo conduzido pela IA nesta conversa):
+
+- **PR #66** (`frontend/20260826-navegacao-mobile-group-shell` → `dev`): trouxe todo o histórico da branch da feature até o commit `cb19daaf8` ("updates"). Esse commit foi um acidente de execução: um `git checkout origin/dev -- .` da IA, tentando comparar um teste falho com o estado de `dev`, sobrescreveu a working tree revertendo `Sidebar.tsx`, `GroupShellLayout.tsx`, `GroupHeader.tsx`, `SimpleShellLayout.tsx` e `GroupShellLayout.test.tsx` para as versões anteriores às TASK-205/206/207 — desfazendo o botão hambúrguer e a integração do `MobileNavDrawer` sem que isso fosse percebido antes do commit e do PR.
+- **PR #67** (mesma branch, recriada após o merge do #66 apagar a remota): trouxe só o commit `8ed888c4a` ("Revert 'updates'"), que desfez exatamente o dano do commit anterior, restaurando o comportamento das TASK-205/206/207.
+
+Resultado líquido em `dev` (tip `d3cb1181f`): equivalente ao estado planejado — TASK-204 a TASK-207 completas e funcionando — confirmado após o merge com `npx tsc --noEmit` (sem erro) e `npx vitest run src/layouts/` (24/24 verde) rodados direto na `dev` atualizada. Registrado aqui para rastreabilidade; não repetir esse padrão de `git checkout <tree> -- .` sem stash prévio em branch com trabalho não commitado.
 
 ## 2. Log de implementação
 
