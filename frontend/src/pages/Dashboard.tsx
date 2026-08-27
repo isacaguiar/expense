@@ -8,6 +8,7 @@ import {
   Box,
   Button,
   CircularProgress,
+  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -28,11 +29,14 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import { API_BASE_URL } from '../config';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
+import GroupGrossDebtsPanel from '../components/GroupGrossDebtsPanel';
 
 type Member = { id: number; name: string; email: string };
 
@@ -57,7 +61,20 @@ const Dashboard: React.FC = () => {
   const [search, setSearch] = useState<string>('');
   const [removeGroupId, setRemoveGroupId] = useState<number | null>(null);
   const [removeSuccessMessage, setRemoveSuccessMessage] = useState<string | null>(null);
+  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<number>>(new Set());
   const navigate = useNavigate();
+
+  const toggleExpanded = (groupId: number) => {
+    setExpandedGroupIds(prev => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -156,6 +173,7 @@ const Dashboard: React.FC = () => {
           <Table>
             <TableHead>
               <TableRow>
+                <TableCell padding="checkbox" />
                 <TableCell>Nome</TableCell>
                 <TableCell>Responsável</TableCell>
                 <TableCell>Integrantes</TableCell>
@@ -163,51 +181,73 @@ const Dashboard: React.FC = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {filteredGroups.map(group => (
-                <TableRow key={group.id} hover>
-                  <TableCell>
-                    <Typography
-                      component={Link}
-                      to={`/groups/${group.id}/summary`}
-                      color="primary"
-                      sx={{ textDecoration: 'none', fontWeight: 500 }}
-                    >
-                      {group.name}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <Typography variant="body2" color="text.secondary">
-                      {group.creator?.email ?? '—'}
-                    </Typography>
-                  </TableCell>
-                  <TableCell>
-                    <AvatarGroup max={5} sx={{ justifyContent: 'flex-end' }}>
-                      {group.members.map(member => (
-                        <Avatar
-                          key={member.id}
-                          sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.8rem', width: 32, height: 32 }}
+              {filteredGroups.map(group => {
+                const expanded = expandedGroupIds.has(group.id);
+
+                return (
+                  <React.Fragment key={group.id}>
+                    <TableRow hover>
+                      <TableCell padding="checkbox">
+                        <IconButton
+                          size="small"
+                          onClick={() => toggleExpanded(group.id)}
+                          aria-label={expanded ? `Recolher pendências de ${group.name}` : `Ver pendências de ${group.name}`}
                         >
-                          {getInitials(member.email)}
-                        </Avatar>
-                      ))}
-                    </AvatarGroup>
-                  </TableCell>
-                  <TableCell align="right">
-                    <IconButton onClick={() => navigate(`/groups/${group.id}/edit`)} aria-label="Editar grupo">
-                      <EditOutlinedIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton onClick={() => navigate(`/groups/${group.id}/members`)} aria-label="Participantes">
-                      <PeopleOutlineOutlinedIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton onClick={() => navigate(`/groups/${group.id}/expenses`)} aria-label="Despesas">
-                      <ReceiptLongOutlinedIcon fontSize="small" />
-                    </IconButton>
-                    <IconButton onClick={() => setRemoveGroupId(group.id)} aria-label="Excluir grupo">
-                      <DeleteOutlineIcon fontSize="small" />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
+                          {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+                        </IconButton>
+                      </TableCell>
+                      <TableCell>
+                        <Typography
+                          component={Link}
+                          to={`/groups/${group.id}/summary`}
+                          color="primary"
+                          sx={{ textDecoration: 'none', fontWeight: 500 }}
+                        >
+                          {group.name}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="text.secondary">
+                          {group.creator?.email ?? '—'}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <AvatarGroup max={5} sx={{ justifyContent: 'flex-end' }}>
+                          {group.members.map(member => (
+                            <Avatar
+                              key={member.id}
+                              sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.8rem', width: 32, height: 32 }}
+                            >
+                              {getInitials(member.email)}
+                            </Avatar>
+                          ))}
+                        </AvatarGroup>
+                      </TableCell>
+                      <TableCell align="right">
+                        <IconButton onClick={() => navigate(`/groups/${group.id}/edit`)} aria-label="Editar grupo">
+                          <EditOutlinedIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton onClick={() => navigate(`/groups/${group.id}/members`)} aria-label="Participantes">
+                          <PeopleOutlineOutlinedIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton onClick={() => navigate(`/groups/${group.id}/expenses`)} aria-label="Despesas">
+                          <ReceiptLongOutlinedIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton onClick={() => setRemoveGroupId(group.id)} aria-label="Excluir grupo">
+                          <DeleteOutlineIcon fontSize="small" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell colSpan={5} sx={{ py: 0, borderBottom: expanded ? undefined : 'none' }}>
+                        <Collapse in={expanded} unmountOnExit>
+                          <GroupGrossDebtsPanel groupId={String(group.id)} />
+                        </Collapse>
+                      </TableCell>
+                    </TableRow>
+                  </React.Fragment>
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>
