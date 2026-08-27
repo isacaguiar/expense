@@ -4,7 +4,7 @@ ID: 031
 Origem: análise de branch local descartada (backend/20260821-regras-mensalidade-entrada-despesas, nunca mergeada — docs/feature/20260821-regras-mensalidade-entrada-despesas/specify.md §2.3/R3, TASK-113/TASK-114) — decisão de produto já confirmada pelo usuário em 2026-08-21 nessa branch, mas nunca implementada
 Criado em: 2026-08-22
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-212
 
 ## Descrição
 
