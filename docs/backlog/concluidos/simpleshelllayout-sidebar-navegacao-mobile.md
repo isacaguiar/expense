@@ -17,3 +17,10 @@ A feature `navegacao-mobile-group-shell` resolveu isso só para o `GroupShellLay
 Mesma regressão de usabilidade do item `022`: em mobile, o usuário perde a navegação (voltar para grupos, ir para Minha Conta/Alterar Senha) nessas telas específicas. Como o `MobileNavDrawer` e o `NavList` já foram criados e testados pela feature `navegacao-mobile-group-shell`, o custo de resolver este item é baixo — é replicar a integração já feita em `GroupShellLayout.tsx` para `SimpleShellLayout.tsx`, passando `simpleNavItems(navigate)` em vez de `groupNavItems(groupId, navigate)`.
 
 Tipo sugerido: frontend
+
+## Resolução
+
+Concluído em: 2026-08-27
+Feature: docs/feature/20260826-navegacao-mobile-simple-shell/
+Tasks: TASK-208
+PRs: https://github.com/isacaguiar/expense/pull/69
