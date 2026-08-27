@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20260827
 |---|---|---|---|---|---|
 | TASK-212 | Criar endpoint `GET /groups/{groupId}/expenses/gross-debts` (árvore Credor→devedores) | backend | plan.md §1 | nenhum | Concluída |
 | TASK-213 | Criar hook `useGroupGrossDebts` e componente `GroupGrossDebtsPanel` (árvore + Pix + informar pagamento) | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-214 | Tornar linhas do Dashboard expansíveis, integrando `GroupGrossDebtsPanel` | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-214 | Tornar linhas do Dashboard expansíveis, integrando `GroupGrossDebtsPanel` | frontend | plan.md §3 | nenhum | Concluída |
 
 ## Critérios de aceite
 
