@@ -20,3 +20,10 @@ A tela "Relatórios" passa a fazer mais sentido como um **histórico de ciclos f
 Existe um mecanismo de ciclo completo (totais, saldos, par-a-par) já calculado e persistido por ciclo fechado, mas hoje só acessível ciclo a ciclo pela tela de Resumo — não há visão de histórico. Construir "Relatórios" como esse histórico aproveita dado e cálculo já prontos, sem depender do endpoint antigo de `GroupExpenseReportController` (que segue como está, sem uso — ver `docs/feature/20260822-acerto-de-contas-ciclo/specify.md` §4 "Fora de escopo"). Ainda assim, fora do escopo de qualquer feature já fechada — segue como ideia de backlog.
 
 Tipo sugerido: frontend (com possível endpoint novo de listagem de `GroupCycleSnapshot` por grupo no backend)
+
+## Resolução
+
+Concluído em: 2026-08-27
+Feature: docs/feature/20260827-relatorios-historico-ciclos/
+Tasks: TASK-209, TASK-210, TASK-211
+PRs: https://github.com/isacaguiar/expense/pull/73
