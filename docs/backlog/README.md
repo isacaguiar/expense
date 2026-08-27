@@ -40,7 +40,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
 |---|---|---|---|---|---|---|
 | 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
-| 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Aberto |
+| 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Promovido para TASK-215 |
 | 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
@@ -49,6 +49,8 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 024 | [expense-campo-categoria.md](expense-campo-categoria.md) | Adicionar campo "categoria" em despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
+| 033 | [eslint-setup-frontend.md](eslint-setup-frontend.md) | Configurar ESLint no frontend | ci-frontend | 2026-08-27 | BAIXA | Aberto |
+| 034 | [workflow-ci-backend.md](workflow-ci-backend.md) | Workflow de CI (verificação) para o backend | ci-frontend | 2026-08-27 | MEDIA | Aberto |
 
 ## Itens concluídos
 

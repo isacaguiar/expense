@@ -4,7 +4,7 @@ ID: 008
 Origem: solicitação direta do usuário (conversa), 2026-08-18
 Criado em: 2026-08-18
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-215
 
 ## Descrição
 
