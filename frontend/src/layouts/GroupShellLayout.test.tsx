@@ -59,7 +59,7 @@ describe('GroupShellLayout', () => {
     localStorage.setItem('accessToken', 'a-token');
   });
 
-  it('renders the sidebar with real links for Home/Despesas/Participantes/Pagamentos and a placeholder for Relatórios', async () => {
+  it('renders the sidebar with real links for Home/Despesas/Participantes/Pagamentos/Relatórios', async () => {
     renderShell('/groups/1/summary');
 
     await screen.findByText('Conteúdo Resumo');
@@ -68,7 +68,7 @@ describe('GroupShellLayout', () => {
     expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/groups/1/expenses');
     expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '/groups/1/members');
     expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '/groups/1/payments');
-    expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '/groups/1/reports');
   });
 
   it('nests "Meus Grupos", "Minha Conta" and "Alterar Senha" under "Configurações" instead of linking straight to the group edit page', async () => {
