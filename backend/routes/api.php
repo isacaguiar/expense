@@ -39,6 +39,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/expenses/{expenseId}/stop-recurrence', [ExpenseController::class, 'stopRecurrence']);
     Route::post('/expenses/{expenseId}/pay', [ExpenseController::class, 'pay']);
     Route::post('/expenses/{expenseId}/unpay', [ExpenseController::class, 'unpay']);
+    Route::post('/groups/{groupId}/settlements/confirm', [ExpenseController::class, 'confirmSettlement']);
 
     Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
     Route::get('/groups/{groupId}/expenses/monthly', [ExpenseController::class, 'getMonthlyExpenses']);

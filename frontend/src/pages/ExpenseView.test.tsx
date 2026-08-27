@@ -131,7 +131,42 @@ describe('ExpenseView', () => {
     await waitFor(() => expect(axios.put).toHaveBeenCalled());
     const [url, payload] = vi.mocked(axios.put).mock.calls[0];
     expect(url).toContain('/api/expenses/9');
-    expect(payload).toMatchObject({ description: 'Aluguel reajustado', user_payer_id: 500, payers: [500, 501] });
+    expect(payload).toMatchObject({
+      description: 'Aluguel reajustado',
+      user_payer_id: 500,
+      payers: [500, 501],
+      // Regressão: total_value vem da API como "1200.00" (formato de
+      // máquina). Sem reformatar pro padrão pt-BR que o parser de Valor
+      // espera, salvar sem tocar no campo mandava 120000 (multiplicado por
+      // ~100) em vez de 1200.
+      total_value: 1200,
+    });
+  });
+
+  it('does not corrupt total_value when saving without touching the Valor field', async () => {
+    const user = userEvent.setup();
+    vi.mocked(axios.put).mockResolvedValue({ data: {} });
+
+    mockGetResponses({ expense: { ...expenseDetail, total_value: '1234.56' } });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await screen.findByText('Editar despesa');
+
+    // O campo já vem pré-preenchido no formato pt-BR (não o formato cru da API).
+    expect(screen.getByDisplayValue('1.234,56')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(axios.put).toHaveBeenCalled());
+    const [, payload] = vi.mocked(axios.put).mock.calls[0];
+    expect(payload).toMatchObject({ total_value: 1234.56 });
   });
 
   it('shows the error message returned by the API when saving fails', async () => {
@@ -170,5 +205,159 @@ describe('ExpenseView', () => {
 
     expect(await screen.findByText('R$ 1.200,00')).toBeInTheDocument();
     expect(axios.put).not.toHaveBeenCalled();
+  });
+
+  it('shows a "Ver comprovante" link when the latest paid quota has a proof', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        quotas: [
+          { date_expected: '2026-07-01', paid: true, payment_proof_url: 'http://localhost/storage/julho.jpg' },
+          { date_expected: '2026-08-01', paid: true, payment_proof_url: 'http://localhost/storage/agosto.jpg' },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    const link = await screen.findByRole('link', { name: 'Ver comprovante' });
+    expect(link).toHaveAttribute('href', 'http://localhost/storage/agosto.jpg');
+  });
+
+  it('does not show "Ver comprovante" when no quota is paid with a proof', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        quotas: [{ date_expected: '2026-08-01', paid: false, payment_proof_url: null }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    expect(screen.queryByRole('link', { name: 'Ver comprovante' })).not.toBeInTheDocument();
+  });
+
+  it('does not show a type selector for a FIXED expense (default fixture)', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+
+    await screen.findByText('Editar despesa');
+    expect(screen.queryByLabelText('Tipo de despesa')).not.toBeInTheDocument();
+  });
+
+  it('shows a type selector and lets an IN_CASH expense switch to installments, sending expense_type/installments/quotas', async () => {
+    const user = userEvent.setup();
+    vi.mocked(axios.put).mockResolvedValue({ data: {} });
+
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_CASH',
+        installments: 1,
+        total_value: '100.00',
+        quotas: [{ number: 1, date_expected: '2026-08-01', paid: false, payment_proof_url: null }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await screen.findByText('Editar despesa');
+
+    // Retypa o Valor no formato pt-BR que o parser espera — o pré-preenchimento
+    // vem cru da API ("100.00") e só é reformatado por
+    // docs/feature/20260826-fix-edicao-despesa-valor-corrompido/ (branch
+    // separada, ainda não integrada aqui); o teste não deve depender de qual
+    // das duas branches mergeia primeiro.
+    await user.clear(screen.getByLabelText('Valor'));
+    await user.type(screen.getByLabelText('Valor'), '100,00');
+
+    const typeField = screen.getByLabelText('Tipo de despesa');
+    await user.click(typeField);
+    await user.click(await screen.findByRole('option', { name: 'Parcelada' }));
+
+    const installmentsField = await screen.findByLabelText('Quantidade de parcelas');
+    await user.type(installmentsField, '2');
+
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(axios.put).toHaveBeenCalled());
+    const [, payload] = vi.mocked(axios.put).mock.calls[0];
+    expect(payload).toMatchObject({
+      expense_type: 'IN_INSTALLMENTS',
+      installments: 2,
+      quotas: [
+        { number: 1, value_quota: 50 },
+        { number: 2, value_quota: 50 },
+      ],
+    });
+  });
+
+  it('disables "Editar" for an installments expense once any quota is paid', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_INSTALLMENTS',
+        installments: 2,
+        quotas: [
+          { number: 1, date_expected: '2026-08-01', paid: true, payment_proof_url: null },
+          { number: 2, date_expected: '2026-09-01', paid: false, payment_proof_url: null },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    expect(screen.getByRole('button', { name: 'Editar' })).toBeDisabled();
+  });
+
+  it('keeps "Editar" enabled for an installments expense when no quota is paid yet', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_INSTALLMENTS',
+        installments: 2,
+        quotas: [
+          { number: 1, date_expected: '2026-08-01', paid: false, payment_proof_url: null },
+          { number: 2, date_expected: '2026-09-01', paid: false, payment_proof_url: null },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    expect(screen.getByRole('button', { name: 'Editar' })).toBeEnabled();
   });
 });

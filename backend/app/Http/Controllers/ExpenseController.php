@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
+use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -126,22 +127,98 @@ class ExpenseController extends Controller
             'user_payer_id' => ['sometimes', 'required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id)],
             'payers' => 'sometimes|required|array|min:1',
             'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
+            // expense_type/installments/quotas: edição de tipo (só À Vista <->
+            // Parcelada — Fixa fica de fora dos dois lados, ver abaixo).
+            // docs/feature/20260826-editar-tipo-despesa/plan.md §1.
+            'expense_type' => 'sometimes|required|in:IN_CASH,IN_INSTALLMENTS',
+            'installments' => 'sometimes|required|integer|min:2',
+            'quotas' => 'sometimes|required|array|min:1',
+            'quotas.*.date_expected' => 'required_with:quotas|date',
+            'quotas.*.number' => 'required_with:quotas|integer',
+            'quotas.*.value_quota' => 'required_with:quotas|numeric|min:0',
         ]);
+
+        $changingType = array_key_exists('expense_type', $data);
+
+        // Transição de/para FIXED não é suportada por esta feature — é um
+        // compromisso recorrente (materializa quota novo mês a mês), converter
+        // de/pra ela é uma decisão maior que fica pra outro pedido. A regra
+        // `in:IN_CASH,IN_INSTALLMENTS` já recusa 'FIXED' como alvo; falta só
+        // recusar a origem.
+        if ($expense->expense_type === 'FIXED' && $changingType) {
+            return response()->json(['error' => 'Não é possível mudar o tipo de uma despesa fixa.'], 422);
+        }
 
         // FIXED fica de fora: seu total_value é o valor do template pra
         // ocorrências futuras/ainda não materializadas — uma ocorrência já
         // paga já tem Quota própria congelada (materializeFixedOccurrenceQuota)
         // e não é afetada por essa edição, então não há o que proteger aqui.
-        if ($expense->expense_type !== 'FIXED'
-            && array_key_exists('total_value', $data)
-            && $expense->quotas()->where('paid', true)->exists()) {
-            return response()->json(['error' => 'Não é possível alterar o valor de uma despesa já paga.'], 422);
+        if ($expense->expense_type !== 'FIXED') {
+            $anyQuotaPaid = $expense->quotas()->where('paid', true)->exists();
+
+            // Regra pedida explicitamente pelo usuário: despesa parcelada com
+            // qualquer parcela paga (na prática, sempre a 1ª primeiro) trava a
+            // edição inteira — não só tipo/valor. Mesmo precedente de
+            // destroy() (bloqueia a ação inteira, não um campo).
+            if ($expense->expense_type === 'IN_INSTALLMENTS' && $anyQuotaPaid) {
+                return response()->json(['error' => 'Não é possível editar uma despesa parcelada depois que a primeira parcela foi paga.'], 422);
+            }
+
+            if ($anyQuotaPaid && (array_key_exists('total_value', $data) || $changingType)) {
+                return response()->json(['error' => 'Não é possível alterar o valor ou o tipo de uma despesa já paga.'], 422);
+            }
         }
 
-        $expense->update(Arr::except($data, ['payers']));
+        if ($changingType) {
+            $finalTotalValue = round((float) ($data['total_value'] ?? $expense->total_value), 2);
+
+            if ($data['expense_type'] === 'IN_INSTALLMENTS') {
+                if (! array_key_exists('installments', $data) || ! array_key_exists('quotas', $data)) {
+                    return response()->json(['error' => 'Informe installments e quotas para parcelar a despesa.'], 422);
+                }
+
+                if (count($data['quotas']) !== (int) $data['installments']) {
+                    return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
+                }
+
+                $quotasSum = round(array_sum(array_column($data['quotas'], 'value_quota')), 2);
+                if (abs($quotasSum - $finalTotalValue) > 0.01) {
+                    return response()->json(['error' => 'A soma das quotas deve ser igual a total_value.'], 422);
+                }
+
+                $newQuotas = $data['quotas'];
+            } else {
+                $data['installments'] = 1;
+                $newQuotas = [[
+                    'number' => 1,
+                    'date_expected' => $data['date_payment'] ?? $expense->date_payment->toDateString(),
+                    'value_quota' => $finalTotalValue,
+                ]];
+            }
+        }
+
+        $expense->update(Arr::except($data, ['payers', 'quotas']));
 
         if (array_key_exists('payers', $data)) {
             $expense->payers()->sync($data['payers']);
+        }
+
+        if ($changingType) {
+            // Seguro: só alcançado depois de confirmar acima que nenhuma quota
+            // está paga. ex_quotas não tem coluna de soft delete — são linhas
+            // geradas a partir de expense_type/installments/total_value, não
+            // uma entidade de negócio própria (Constitution §1.5 é sobre
+            // grupo/despesa).
+            $expense->quotas()->delete();
+
+            foreach ($newQuotas as $quota) {
+                $expense->quotas()->create([
+                    'date_expected' => $quota['date_expected'],
+                    'number' => $quota['number'],
+                    'paid' => false,
+                    'value_quota' => $quota['value_quota'],
+                ]);
+            }
         }
 
         return response()->json($expense->fresh(['payers', 'quotas']));
@@ -411,7 +488,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
-            'settlements' => $summary['settlements'],
+            'settlements' => $this->attachSettlementConfirmations($groupId, $start, $summary['settlements']),
         ]);
     }
 
@@ -462,7 +539,7 @@ class ExpenseController extends Controller
             'totals' => $snapshot->totals,
             'expenses' => $snapshot->expenses,
             'balances' => $snapshot->balances,
-            'settlements' => $snapshot->settlements,
+            'settlements' => $this->attachSettlementConfirmations($groupId, $start, $snapshot->settlements),
         ]);
     }
 
@@ -501,7 +578,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
-            'settlements' => $summary['settlements'],
+            'settlements' => $this->attachSettlementConfirmations($groupId, $start, $summary['settlements']),
         ]);
     }
 
@@ -603,6 +680,64 @@ class ExpenseController extends Controller
         ]);
 
         return response()->json($quota->fresh());
+    }
+
+    /**
+     * Confirma que o usuário autenticado (devedor) pagou via Pix o valor
+     * líquido que deve a `to_user_id` neste ciclo — conceito distinto de
+     * `pay()`/`unpay()`, que confirmam uma despesa específica do lado do
+     * credor. O comprovante aqui é obrigatório (é o conteúdo da ação, não
+     * um anexo opcional como em `pay()`). Só aceita se existir de fato um
+     * settlement `from_user_id === auth()->id()` pra esse `to_user_id` na
+     * competência vigente — evita confirmar um valor que não corresponde a
+     * nada real. Reenviar substitui o comprovante anterior (`updateOrCreate`
+     * — sem endpoint de "desfazer", ver
+     * docs/feature/20260825-pagamentos-grid-pix/specify.md §4).
+     */
+    public function confirmSettlement(Request $request, $groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $data = $request->validate([
+            'to_user_id' => 'required|integer|exists:ex_users,id',
+            'comprovante' => 'required|image|max:5120',
+        ]);
+
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+
+        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
+            return $response;
+        }
+
+        $summary = $this->computeCycleSummary($group, $groupId, $cycle['start'], $cycle['end']);
+
+        $settlement = collect($summary['settlements'])->first(
+            fn ($s) => $s['from_user_id'] === auth()->id() && $s['to_user_id'] === (int) $data['to_user_id']
+        );
+
+        if (! $settlement) {
+            return response()->json(['error' => 'Não há valor a pagar para esse credor nesta competência.'], 422);
+        }
+
+        $path = $request->file('comprovante')->store('comprovantes-settlements', 'public');
+
+        $confirmation = SettlementConfirmation::updateOrCreate(
+            [
+                'group_id' => $groupId,
+                'cycle_start' => $cycle['start']->toDateString(),
+                'from_user_id' => auth()->id(),
+                'to_user_id' => $data['to_user_id'],
+            ],
+            [
+                'cycle_end' => $cycle['end']->toDateString(),
+                'amount' => $settlement['amount'],
+                'proof_path' => $path,
+                'confirmed_at' => Carbon::now(),
+            ]
+        );
+
+        return response()->json($confirmation->fresh());
     }
 
     /**
@@ -782,6 +917,35 @@ class ExpenseController extends Controller
         }
 
         return ['totals' => $totals, 'expenses' => $expenses, 'balances' => $balances, 'settlements' => $settlements];
+    }
+
+    /**
+     * Decora cada settlement com o comprovante de confirmação do devedor, se
+     * existir (`SettlementConfirmation`, specify.md §2.7) — chamado nos 3
+     * pontos que devolvem `settlements` na resposta HTTP (`summary()`,
+     * `close()`, `reopen()`), depois que qualquer um dos 3 caminhos que
+     * produzem o array (`computeCycleSummary` ao vivo, snapshot manual,
+     * snapshot fechado por data) já rodou — não precisa decorar dentro de
+     * cada um separadamente.
+     */
+    private function attachSettlementConfirmations($groupId, Carbon $start, array $settlements): array
+    {
+        $confirmations = SettlementConfirmation::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->get()
+            ->keyBy(fn ($c) => "{$c->from_user_id}-{$c->to_user_id}");
+
+        return collect($settlements)
+            ->map(function (array $settlement) use ($confirmations) {
+                $confirmation = $confirmations->get("{$settlement['from_user_id']}-{$settlement['to_user_id']}");
+
+                $settlement['confirmedProofUrl'] = $confirmation?->proof_url;
+                $settlement['confirmedAt'] = $confirmation?->confirmed_at?->toIso8601String();
+
+                return $settlement;
+            })
+            ->values()
+            ->all();
     }
 
     /**

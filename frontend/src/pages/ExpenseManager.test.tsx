@@ -31,6 +31,7 @@ type SummaryExpenseFixture = {
   date: string;
   value: number;
   paid?: boolean;
+  paymentProofUrl?: string | null;
   payerName?: string | null;
   participants?: string[];
   isFixed?: boolean;
@@ -50,6 +51,7 @@ function summaryResponse(
     totals: { total: 0, paid: 0, pending: 0 },
     expenses: expensesList.map(exp => ({
       paid: false,
+      paymentProofUrl: null,
       participants: [],
       userPayerId: CURRENT_USER_ID,
       userCreatorId: CURRENT_USER_ID,
@@ -122,6 +124,44 @@ describe('ExpenseManager - listagem em cards', () => {
     expect(screen.getByText('Mercado')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Aluguel/ })).toHaveAttribute('href', '/groups/1/expenses/9');
     expect(screen.getByRole('link', { name: /Mercado/ })).toHaveAttribute('href', '/groups/1/expenses/10');
+  });
+
+  it('shows a "Ver comprovante" link (row and detail modal) when the expense is paid with a proof', async () => {
+    const user = userEvent.setup();
+
+    mockGetResponses([
+      {
+        id: 9,
+        description: 'Aluguel',
+        value: 1200,
+        date: '2026-08-01',
+        payerName: 'Isac',
+        isFixed: true,
+        paid: true,
+        paymentProofUrl: 'http://localhost/storage/comprovantes/aluguel.jpg',
+      },
+      { id: 10, description: 'Mercado', value: 150, date: '2026-08-05', payerName: 'João', isFixed: false },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+
+    const proofLinks = screen.getAllByRole('link', { name: 'Ver comprovante' });
+    expect(proofLinks).toHaveLength(1);
+    expect(proofLinks[0]).toHaveAttribute('href', 'http://localhost/storage/comprovantes/aluguel.jpg');
+
+    await user.click(screen.getAllByRole('button', { name: 'Ver detalhes' })[0]);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('link', { name: 'Ver comprovante' })).toHaveAttribute(
+      'href',
+      'http://localhost/storage/comprovantes/aluguel.jpg'
+    );
   });
 
   it('filters by description on the client side', async () => {

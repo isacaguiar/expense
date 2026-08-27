@@ -15,3 +15,10 @@ Status: Aberto
 Manter duas telas quase idênticas duplica manutenção (qualquer ajuste visual/funcional precisa ser feito duas vezes) e é confuso para o usuário ter duas rotas para "a mesma coisa". Vale decidir qual delas é a canônica (ou fundir as duas) antes/durante a modernização visual dessas páginas.
 
 Tipo sugerido: frontend
+
+## Resolução
+
+Concluído em: 2026-08-20
+Feature: docs/feature/20260820-atualizacao-layout-paginas/
+Tasks: TASK-092 (`Dashboard.tsx` vira a página única "Meus Grupos"; `GroupList.tsx`/`GroupList.test.tsx` e a rota `/groups` removidos; busca e botão "Novo grupo" portados; guard de 401 adicionado; resíduo de debug "Meus Grupos XXX" eliminado). Rota canônica passou a `/meus-grupos` (com `/dashboard` → redirect) na feature posterior `20260821-melhoria-menu-tela-grupos-perfil`.
+PRs: feature `atualizacao-layout-paginas` mergeada em `dev`.

@@ -18,3 +18,11 @@ Duas causas independentes, ambas com o mesmo sintoma (tela de despesas nunca car
 A tela de despesas do grupo nunca carrega nada em produção hoje — sempre fica vazia/em loading eterno, independente de autenticação ou dado existente. É um bug funcional visível para qualquer usuário que abrir "Despesas do Grupo", não um débito técnico silencioso. Corrigir só a causa 1 sem also alinhar o path com a rota real do backend (ou criar a rota que falta) não resolve o problema.
 
 Tipo sugerido: frontend (causa 1) + backend ou contrato de API (causa 2) — decidir ao promover se a rota `GET /api/groups/{groupId}/expenses` deve ser criada no backend, ou se o frontend deve passar a chamar `/expenses/monthly`.
+
+## Resolução
+
+Concluído em: 2026-08-18
+Feature: docs/feature/20260818-fluxo-despesas-grupo/
+Tasks: TASK-033 (causa 1 — leitura do parâmetro de rota), TASK-034 (causa 2 — criação da rota `GET /api/groups/{groupId}/expenses` com checagem de membership), TASK-035 (consumo do endpoint no frontend)
+PRs: #12, #14, #15 (todos mergeados em `dev`)
+Nota: a decisão de contrato foi criar a rota no backend (não redirecionar o frontend para `/expenses/monthly`).
