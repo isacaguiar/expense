@@ -45,14 +45,13 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 018 | [summary-tela-relatorios.md](summary-tela-relatorios.md) | Criar tela de Relatórios do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
-| 019 | [summary-tela-configuracoes.md](summary-tela-configuracoes.md) | Criar tela de Configurações do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 020 | [sistema-notificacoes-frontend.md](sistema-notificacoes-frontend.md) | Implementar sistema de notificações | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 021 | [avatar-foto-usuario.md](avatar-foto-usuario.md) | Suportar foto de perfil do usuário | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 024 | [expense-campo-categoria.md](expense-campo-categoria.md) | Adicionar campo "categoria" em despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 031 | [dashboard-visao-financeira-credor-devedores.md](dashboard-visao-financeira-credor-devedores.md) | Dashboard sem dado financeiro (resumo Credor→devedores + Pix por grupo) | branch descartada backend/20260821-regras-mensalidade-entrada-despesas | 2026-08-22 | BAIXA | Aberto |
-| 032 | [simpleshelllayout-sidebar-navegacao-mobile.md](simpleshelllayout-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar do SimpleShellLayout em mobile | navegacao-mobile-group-shell | 2026-08-26 | MEDIA | Aberto |
+| 032 | [simpleshelllayout-sidebar-navegacao-mobile.md](simpleshelllayout-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar do SimpleShellLayout em mobile | navegacao-mobile-group-shell | 2026-08-26 | MEDIA | Promovido para TASK-208 |
 
 ## Itens concluídos
 
@@ -78,3 +77,4 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 017 | [summary-tela-pagamentos.md](concluidos/summary-tela-pagamentos.md) | Criar tela de Pagamentos do grupo | 2026-08-22 (fora do fluxo `/promover-backlog` — feature criada sob demanda) | criacao-tela-pagamentos + pagamentos-grid-pix | — |
 | 027 | [dashboard-grouplist-duplicados.md](concluidos/dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | 2026-08-20 (resolvido como parte de uma feature de layout, não por `/promover-backlog`) | atualizacao-layout-paginas | TASK-092 |
 | 022 | [summary-sidebar-navegacao-mobile.md](concluidos/summary-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar da tela de Resumo em mobile | 2026-08-27 | navegacao-mobile-group-shell | TASK-204, TASK-205, TASK-206, TASK-207 |
+| 019 | [summary-tela-configuracoes.md](concluidos/summary-tela-configuracoes.md) | Criar tela de Configurações do grupo | 2026-08-26 (fechado sem promoção — necessidade concreta já resolvida em `GroupForm.tsx`) | — | — |
