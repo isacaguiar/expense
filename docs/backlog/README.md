@@ -48,7 +48,6 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 019 | [summary-tela-configuracoes.md](summary-tela-configuracoes.md) | Criar tela de Configurações do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 020 | [sistema-notificacoes-frontend.md](sistema-notificacoes-frontend.md) | Implementar sistema de notificações | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 021 | [avatar-foto-usuario.md](avatar-foto-usuario.md) | Suportar foto de perfil do usuário | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
-| 022 | [summary-sidebar-navegacao-mobile.md](summary-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar da tela de Resumo em mobile | novo-layout-tela-entrada | 2026-08-19 | MEDIA | Promovido para TASK-204 |
 | 024 | [expense-campo-categoria.md](expense-campo-categoria.md) | Adicionar campo "categoria" em despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
@@ -78,3 +77,4 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 010 | [expense-store-sem-checagem-membership-payer.md](concluidos/expense-store-sem-checagem-membership-payer.md) | POST /api/expenses não checa se user_payer_id/payers são membros do grupo | 2026-08-18 | expense-payer-membership | TASK-039, TASK-040, TASK-041 |
 | 017 | [summary-tela-pagamentos.md](concluidos/summary-tela-pagamentos.md) | Criar tela de Pagamentos do grupo | 2026-08-22 (fora do fluxo `/promover-backlog` — feature criada sob demanda) | criacao-tela-pagamentos + pagamentos-grid-pix | — |
 | 027 | [dashboard-grouplist-duplicados.md](concluidos/dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | 2026-08-20 (resolvido como parte de uma feature de layout, não por `/promover-backlog`) | atualizacao-layout-paginas | TASK-092 |
+| 022 | [summary-sidebar-navegacao-mobile.md](concluidos/summary-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar da tela de Resumo em mobile | 2026-08-27 | navegacao-mobile-group-shell | TASK-204, TASK-205, TASK-206, TASK-207 |
