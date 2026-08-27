@@ -7,7 +7,6 @@ import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import GroupSidebar, { groupNavItems } from './group/GroupSidebar';
 import GroupHeader from './group/GroupHeader';
-import MobileNavDrawer from './MobileNavDrawer';
 
 type GroupOption = {
   id: number;
@@ -21,7 +20,6 @@ export default function GroupShellLayout() {
 
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -43,8 +41,7 @@ export default function GroupShellLayout() {
       .catch(err => console.error('Erro ao carregar usuário logado:', err));
   }, []);
 
-  const navItems = groupNavItems(groupId ?? '', navigate);
-  const activeItem = navItems.find(item => item.to === location.pathname);
+  const activeItem = groupNavItems(groupId ?? '', navigate).find(item => item.to === location.pathname);
   const title = activeItem?.label ?? '';
 
   const handleGroupChange = (event: SelectChangeEvent<number>) => {
@@ -58,7 +55,6 @@ export default function GroupShellLayout() {
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <GroupSidebar groupId={groupId ?? ''} />
-      <MobileNavDrawer items={navItems} open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
       <Container component="main" sx={{ flex: 1, mt: 4, mb: 4 }}>
         <GroupHeader
           title={title}
@@ -66,7 +62,6 @@ export default function GroupShellLayout() {
           groupId={groupId ?? ''}
           onGroupChange={handleGroupChange}
           userName={userName}
-          onMenuClick={() => setMobileNavOpen(true)}
         />
         <Outlet />
       </Container>

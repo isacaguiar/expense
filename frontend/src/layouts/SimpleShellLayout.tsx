@@ -31,14 +31,7 @@ export default function SimpleShellLayout() {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar items={simpleNavItems(navigate)} />
       <Container component="main" sx={{ flex: 1, mt: 4, mb: 4 }}>
-        <GroupHeader
-          title={title}
-          groups={[]}
-          groupId=""
-          onGroupChange={() => {}}
-          userName={userName}
-          onMenuClick={() => {}}
-        />
+        <GroupHeader title={title} groups={[]} groupId="" onGroupChange={() => {}} userName={userName} />
         <Outlet />
       </Container>
     </Box>

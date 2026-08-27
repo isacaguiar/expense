@@ -6,7 +6,6 @@ import IconButton from '@mui/material/IconButton';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import { SelectChangeEvent } from '@mui/material';
-import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import { brandColors } from '../../theme/brandColors';
 import { getInitials } from './getInitials';
@@ -22,10 +21,9 @@ interface GroupHeaderProps {
   groupId: string;
   onGroupChange: (event: SelectChangeEvent<number>) => void;
   userName: string | null;
-  onMenuClick: () => void;
 }
 
-export default function GroupHeader({ title, groups, groupId, onGroupChange, userName, onMenuClick }: GroupHeaderProps) {
+export default function GroupHeader({ title, groups, groupId, onGroupChange, userName }: GroupHeaderProps) {
   return (
     <Box
       component="header"
@@ -38,19 +36,9 @@ export default function GroupHeader({ title, groups, groupId, onGroupChange, use
         pb: 3,
       }}
     >
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <IconButton
-          aria-label="Abrir menu de navegação"
-          onClick={onMenuClick}
-          sx={{ display: { xs: 'inline-flex', md: 'none' } }}
-        >
-          <MenuIcon />
-        </IconButton>
-
-        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-          {title}
-        </Typography>
-      </Box>
+      <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+        {title}
+      </Typography>
 
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         {groups.length > 0 && groupId && (
