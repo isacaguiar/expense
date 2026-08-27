@@ -583,6 +583,81 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Árvore Credor→devedores da competência (valores brutos, um por par
+     * credor/devedor, sem o netting que `computeCycleSummary`/`settlements`
+     * fazem) — usada pela linha expansível do Dashboard. Reaproveita
+     * `collectCycleEntries` (mesma fonte de `computeCycleSummary`), mas soma
+     * só as participações ainda não pagas, agrupadas por par, sem sugerir
+     * menor número de transferências.
+     */
+    public function grossDebts($groupId, Request $request)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $data = $request->validate([
+            'cycles_ago' => 'nullable|integer',
+        ]);
+
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
+        $start = $cycle['start'];
+        $end = $cycle['end'];
+
+        $entries = $this->collectCycleEntries($groupId, $start, $end);
+
+        $creditors = [];
+        foreach ($entries as $entry) {
+            if ($entry['paid']) {
+                continue;
+            }
+
+            $expense = $entry['expense'];
+            $creditor = $expense->payer;
+            $debtorsInExpense = $expense->payers->reject(fn ($debtor) => $debtor->id === $creditor->id);
+
+            if ($debtorsInExpense->isEmpty()) {
+                continue;
+            }
+
+            // Mesma fórmula de valuePerPerson em computeCycleSummary(): o valor
+            // é dividido por TODOS os participantes (inclusive o credor, se ele
+            // também participa da divisão) — só quem não é o credor entra na
+            // lista de devedores, mas o valor de cada fatia não muda por isso.
+            $participantsCount = max($expense->payers->count(), 1);
+            $share = round($entry['value'] / $participantsCount, 2);
+
+            if (! isset($creditors[$creditor->id])) {
+                $creditors[$creditor->id] = [
+                    'creditor' => ['id' => $creditor->id, 'name' => $creditor->name, 'email' => $creditor->email],
+                    'debtors' => [],
+                ];
+            }
+
+            foreach ($debtorsInExpense as $debtor) {
+                if (! isset($creditors[$creditor->id]['debtors'][$debtor->id])) {
+                    $creditors[$creditor->id]['debtors'][$debtor->id] = ['id' => $debtor->id, 'name' => $debtor->name, 'amount' => 0.0];
+                }
+
+                $creditors[$creditor->id]['debtors'][$debtor->id]['amount'] = round(
+                    $creditors[$creditor->id]['debtors'][$debtor->id]['amount'] + $share,
+                    2
+                );
+            }
+        }
+
+        $tree = collect($creditors)->values()->map(function (array $node) {
+            $node['debtors'] = collect($node['debtors'])->values()->all();
+
+            return $node;
+        })->all();
+
+        return response()->json([
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => $cycle['status']],
+            'creditors' => $tree,
+        ]);
+    }
+
+    /**
      * Marca como paga a ocorrência desta despesa na competência vigente.
      * Só o credor (`user_payer_id`) pode confirmar o pagamento, e só enquanto
      * a competência ainda está aberta (nem automática nem manualmente
