@@ -583,6 +583,42 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Histórico paginado de ciclos já fechados por data (anteriores à
+     * competência vigente) — usado pela tela de Relatórios. Só lê
+     * `GroupCycleSnapshot` já persistidos (nunca recalcula), no mesmo formato
+     * que `summary()` devolve para a competência vigente, mas sempre com
+     * `status: 'closed'`. A competência vigente nunca aparece aqui, mesmo
+     * fechada manualmente (`close()`) — fechamento manual é reversível
+     * (`reopen()`), então não é "histórico" imutável.
+     */
+    public function cycleHistory($groupId, Request $request)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $currentStart = BillingCycle::cycleFor($group->closing_day, Carbon::now())['start'];
+
+        $paginator = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', '<', $currentStart->toDateString())
+            ->orderByDesc('cycle_start')
+            ->paginate(10);
+
+        $paginator->getCollection()->transform(fn (GroupCycleSnapshot $snapshot) => [
+            'cycle' => [
+                'start' => $snapshot->cycle_start->toDateString(),
+                'end' => $snapshot->cycle_end->toDateString(),
+                'status' => 'closed',
+            ],
+            'totals' => $snapshot->totals,
+            'expenses' => $snapshot->expenses,
+            'balances' => $snapshot->balances,
+            'settlements' => $snapshot->settlements,
+        ]);
+
+        return response()->json($paginator);
+    }
+
+    /**
      * Marca como paga a ocorrência desta despesa na competência vigente.
      * Só o credor (`user_payer_id`) pode confirmar o pagamento, e só enquanto
      * a competência ainda está aberta (nem automática nem manualmente
