@@ -29,6 +29,14 @@ export default defineConfig({
     // flag nos processos worker do Vitest, sem depender de NODE_OPTIONS
     // no shell (cross-platform).
     execArgv: ['--no-experimental-webstorage'],
+    // Padrão do Vitest é 5000ms — curto demais quando a suíte completa roda
+    // em paralelo sob CPU compartilhada (runners do GitHub Actions têm só
+    // 2 vCPUs), causando timeouts intermitentes sem relação com o código
+    // testado (confirmado: arquivos que "flakam" na suíte completa passam
+    // 100% quando rodados isolados). Timeout maior dá margem sem mascarar
+    // um hang real (segundos, não minutos).
+    testTimeout: 15000,
+    hookTimeout: 15000,
   },
 });
 
