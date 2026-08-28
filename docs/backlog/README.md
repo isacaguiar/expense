@@ -40,7 +40,6 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
 |---|---|---|---|---|---|---|
 | 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
-| 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Promovido para TASK-215 |
 | 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
@@ -80,3 +79,4 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 032 | [simpleshelllayout-sidebar-navegacao-mobile.md](concluidos/simpleshelllayout-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar do SimpleShellLayout em mobile | 2026-08-27 | navegacao-mobile-simple-shell | TASK-208 |
 | 031 | [dashboard-visao-financeira-credor-devedores.md](concluidos/dashboard-visao-financeira-credor-devedores.md) | Dashboard sem dado financeiro (resumo Credor→devedores + Pix por grupo) | 2026-08-27 | dashboard-resumo-credor-devedores | TASK-212, TASK-213, TASK-214 |
 | 018 | [summary-tela-relatorios.md](concluidos/summary-tela-relatorios.md) | Criar tela de Relatórios do grupo | 2026-08-27 | relatorios-historico-ciclos | TASK-209, TASK-210, TASK-211 |
+| 008 | [workflow-cicd-frontend.md](concluidos/workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | 2026-08-28 | ci-frontend | TASK-215, TASK-216, TASK-217 |
