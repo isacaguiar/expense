@@ -1,12 +1,10 @@
 name: Deploy para Hostgator
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -22,11 +20,11 @@ jobs:
       # OPÇÃO 1: DEPLOY VIA FTP 
       # ============================================
       - name: Deploy via FTP para Hostgator
-        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USERNAME }}
-          password: ${{ secrets.SFTP_PASSWORD }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
           # server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
           port: 21
           local-dir: ./
