@@ -1,0 +1,42 @@
+name: Deploy para Hostgator
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: PROD
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      # ============================================
+      # OPÇÃO 1: DEPLOY VIA FTP 
+      # ============================================
+      - name: Deploy via FTP para Hostgator
+        uses: SamKirkland/FTP-Deploy-Action@4.3.0
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USERNAME }}
+          password: ${{ secrets.SFTP_PASSWORD }}
+          # server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
+          port: 21
+          local-dir: ./
+          state-name: '.ftp-deploy-sync-state.json'
+          dangerous-clean-slate: false
+          exclude: |
+            **/.git*
+            **/docs/**
+            **/frontend/**
+            **/backend/**
+
+      - name: Log de sucesso
+        run: echo "Deploy concluído com sucesso para Hostgator"
