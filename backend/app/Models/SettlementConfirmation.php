@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 /**
  * Confirmação de pagamento de um settlement (liquidação par-a-par de um
@@ -35,12 +35,21 @@ class SettlementConfirmation extends Model
         'confirmed_at' => 'datetime',
     ];
 
+    /**
+     * URL assinada de curta duração para baixar o comprovante pela rota
+     * `proofs.show` (fora do `jwt.auth` — a aba do browser não manda Bearer).
+     * Ver `docs/sdd/decisions/ADR-005-download-arquivo-signed-url.md`.
+     */
     public function getProofUrlAttribute(): ?string
     {
         if (! $this->proof_path) {
             return null;
         }
 
-        return Storage::disk('public')->url($this->proof_path);
+        return URL::temporarySignedRoute('proofs.show', now()->addMinutes(30), [
+            'groupId' => $this->group_id,
+            'type' => 'settlement',
+            'id' => $this->id,
+        ]);
     }
 }

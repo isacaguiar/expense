@@ -111,11 +111,15 @@ class ExpenseControllerPayTest extends TestCase
             ]);
 
         $response->assertStatus(200)->assertJsonPath('paid', true);
-        $this->assertNotNull($response->json('payment_proof_url'));
 
         $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
         $this->assertStringStartsWith("comprovantes/{$group->id}/", $quota->payment_proof_path);
         Storage::disk('local')->assertExists($quota->payment_proof_path);
+
+        // A URL exposta é uma signed route p/ proofs.show e baixa o arquivo.
+        $proofUrl = $response->json('payment_proof_url');
+        $this->assertStringContainsString("/groups/{$group->id}/proofs/quota/{$quota->id}", $proofUrl);
+        $this->get($proofUrl)->assertOk();
     }
 
     public function test_pay_rejects_non_image_proof_file(): void

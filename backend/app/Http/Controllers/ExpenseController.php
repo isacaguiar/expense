@@ -107,8 +107,22 @@ class ExpenseController extends Controller
     {
         $expense = $this->findExpenseForMember($id);
         $expense->load(['payers', 'quotas']);
+        $this->hydrateQuotaExpense($expense);
 
         return response()->json($expense);
+    }
+
+    /**
+     * Aponta a relação `expense` de cada Quota já carregada de volta para o
+     * próprio `$expense` — o accessor `payment_proof_url` precisa de
+     * `expense->group_id` para montar a URL assinada, e sem isso cada Quota
+     * dispararia um SELECT (N+1).
+     */
+    private function hydrateQuotaExpense(Expense $expense): void
+    {
+        if ($expense->relationLoaded('quotas')) {
+            $expense->quotas->each(fn (Quota $quota) => $quota->setRelation('expense', $expense));
+        }
     }
 
     public function update(Request $request, $id)
@@ -221,7 +235,10 @@ class ExpenseController extends Controller
             }
         }
 
-        return response()->json($expense->fresh(['payers', 'quotas']));
+        $fresh = $expense->fresh(['payers', 'quotas']);
+        $this->hydrateQuotaExpense($fresh);
+
+        return response()->json($fresh);
     }
 
     public function destroy($id)
@@ -742,7 +759,7 @@ class ExpenseController extends Controller
 
         $quota->update($update);
 
-        return response()->json($quota->fresh());
+        return response()->json($quota->fresh()->load('expense'));
     }
 
     /**
@@ -1088,6 +1105,7 @@ class ExpenseController extends Controller
 
         foreach ($direct as $expense) {
             $quota = $expense->quotas->first(fn (Quota $quota) => $quota->date_expected->between($start, $end));
+            $quota?->setRelation('expense', $expense);
 
             $entries->push([
                 'expense' => $expense,
@@ -1146,6 +1164,7 @@ class ExpenseController extends Controller
                     // chamado no fechamento ou no pagamento), usa o valor/status
                     // persistidos; senão projeta ao vivo a partir do total_value atual.
                     $quota = $expense->quotas->first(fn (Quota $quota) => $quota->date_expected->isSameDay($occurrence));
+                    $quota?->setRelation('expense', $expense);
 
                     $entries->push([
                         'expense' => $expense,
