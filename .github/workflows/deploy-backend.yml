@@ -93,5 +93,5 @@ jobs:
           port: 21
           server-dir: /api/
           local-dir: build-laravel/
-          log-level: verbose
+          log-level: minimal
 
