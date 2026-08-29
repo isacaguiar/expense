@@ -138,7 +138,7 @@ describe('ExpenseManager - listagem em cards', () => {
         payerName: 'Isac',
         isFixed: true,
         paid: true,
-        paymentProofUrl: 'http://localhost/storage/comprovantes/aluguel.jpg',
+        paymentProofUrl: '/api/groups/1/proofs/quota/9?signature=stub',
       },
       { id: 10, description: 'Mercado', value: 150, date: '2026-08-05', payerName: 'João', isFixed: false },
     ]);
@@ -153,14 +153,14 @@ describe('ExpenseManager - listagem em cards', () => {
 
     const proofLinks = screen.getAllByRole('link', { name: 'Ver comprovante' });
     expect(proofLinks).toHaveLength(1);
-    expect(proofLinks[0]).toHaveAttribute('href', 'http://localhost/storage/comprovantes/aluguel.jpg');
+    expect(proofLinks[0]).toHaveAttribute('href', '/api/groups/1/proofs/quota/9?signature=stub');
 
     await user.click(screen.getAllByRole('button', { name: 'Ver detalhes' })[0]);
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('link', { name: 'Ver comprovante' })).toHaveAttribute(
       'href',
-      'http://localhost/storage/comprovantes/aluguel.jpg'
+      '/api/groups/1/proofs/quota/9?signature=stub'
     );
   });
 
