@@ -8,6 +8,7 @@ use App\Http\Controllers\GroupExpenseReportController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\PixController;
+use App\Http\Controllers\ProofDownloadController;
 use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,3 +54,11 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/group/{groupId}/report-monthly/{year}', [GroupExpenseReportController::class, 'reportByGroupAndYearMonthlySettlement']);
 
 });
+
+// Download de comprovante de pagamento: fora de `jwt.auth` de propósito — a aba
+// do browser aberta pelo link não envia `Authorization: Bearer`. Autorizado
+// pela URL assinada de curta duração emitida nos accessors de `Quota` /
+// `SettlementConfirmation`. Ver ADR-005.
+Route::get('/groups/{groupId}/proofs/{type}/{id}', [ProofDownloadController::class, 'show'])
+    ->middleware('signed')
+    ->name('proofs.show');
