@@ -59,6 +59,49 @@ describe('LoginPage', () => {
     );
   });
 
+  it('shows an error message when the credentials are rejected', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 401,
+        json: async () => ({ error: 'Não autorizado' }),
+      })
+    );
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await user.type(screen.getByLabelText(/E-mail/), 'user@example.com');
+    await user.type(screen.getByLabelText(/^Senha/), 'wrong-password');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(await screen.findByText('E-mail ou senha inválidos.')).toBeInTheDocument();
+  });
+
+  it('shows a connection error message when the request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await user.type(screen.getByLabelText(/E-mail/), 'user@example.com');
+    await user.type(screen.getByLabelText(/^Senha/), 'secret123');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(
+      await screen.findByText('Não foi possível fazer login. Verifique sua conexão e tente novamente.')
+    ).toBeInTheDocument();
+  });
+
   it('renders the branding headline and the differentiators', () => {
     render(
       <MemoryRouter>

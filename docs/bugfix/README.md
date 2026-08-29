@@ -58,7 +58,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Criado em | Branch | Status |
 |---|---|---|---|---|
-| _(nenhum ainda)_ | | | | |
+| [20260828-login-sem-mensagem-erro.md](20260828-login-sem-mensagem-erro.md) | Tela de login não exibe mensagem de erro com credenciais inválidas | 2026-08-28 | `fix/20260828-login-sem-mensagem-erro` | Aberto |
 
 ## Concluídos
 
