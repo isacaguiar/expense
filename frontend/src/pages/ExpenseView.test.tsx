@@ -212,8 +212,8 @@ describe('ExpenseView', () => {
       expense: {
         ...expenseDetail,
         quotas: [
-          { date_expected: '2026-07-01', paid: true, payment_proof_url: 'http://localhost/storage/julho.jpg' },
-          { date_expected: '2026-08-01', paid: true, payment_proof_url: 'http://localhost/storage/agosto.jpg' },
+          { date_expected: '2026-07-01', paid: true, payment_proof_url: '/api/groups/1/proofs/quota/7?signature=stub' },
+          { date_expected: '2026-08-01', paid: true, payment_proof_url: '/api/groups/1/proofs/quota/8?signature=stub' },
         ],
       },
     });
@@ -225,7 +225,7 @@ describe('ExpenseView', () => {
     );
 
     const link = await screen.findByRole('link', { name: 'Ver comprovante' });
-    expect(link).toHaveAttribute('href', 'http://localhost/storage/agosto.jpg');
+    expect(link).toHaveAttribute('href', '/api/groups/1/proofs/quota/8?signature=stub');
   });
 
   it('does not show "Ver comprovante" when no quota is paid with a proof', async () => {
