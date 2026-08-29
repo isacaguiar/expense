@@ -61,7 +61,7 @@ class SettlementConfirmationControllerTest extends TestCase
 
     public function test_debtor_can_confirm_a_real_settlement(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -85,7 +85,8 @@ class SettlementConfirmationControllerTest extends TestCase
             ->where('to_user_id', $creditor->id)
             ->firstOrFail();
 
-        Storage::disk('public')->assertExists($confirmation->proof_path);
+        $this->assertStringStartsWith("comprovantes/{$group->id}/", $confirmation->proof_path);
+        Storage::disk('local')->assertExists($confirmation->proof_path);
     }
 
     public function test_confirm_requires_comprovante(): void
@@ -141,7 +142,7 @@ class SettlementConfirmationControllerTest extends TestCase
 
     public function test_resending_replaces_the_previous_proof(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -180,7 +181,8 @@ class SettlementConfirmationControllerTest extends TestCase
         $secondPath = $confirmationForThisPair()->firstOrFail()->proof_path;
 
         $this->assertNotSame($firstPath, $secondPath);
-        Storage::disk('public')->assertExists($secondPath);
+        Storage::disk('local')->assertExists($secondPath);
+        Storage::disk('local')->assertMissing($firstPath);
     }
 
     public function test_cannot_confirm_in_a_manually_closed_cycle(): void
