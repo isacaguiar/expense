@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Alert from '@mui/material/Alert';
 import Avatar from '@mui/material/Avatar';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
@@ -21,6 +22,7 @@ import { brandColors } from '../../theme/brandColors';
 interface LoginFormCardProps {
   email: string;
   password: string;
+  error?: string | null;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
@@ -29,6 +31,7 @@ interface LoginFormCardProps {
 export default function LoginFormCard({
   email,
   password,
+  error,
   onEmailChange,
   onPasswordChange,
   onSubmit,
@@ -60,6 +63,11 @@ export default function LoginFormCard({
       </Typography>
 
       <Box component="form" onSubmit={onSubmit} noValidate sx={{ mt: 3, width: '100%' }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 1, fontSize: '0.8rem' }}>
+            {error}
+          </Alert>
+        )}
         <TextField
           margin="normal"
           required
