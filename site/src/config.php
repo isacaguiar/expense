@@ -15,10 +15,11 @@ return [
     'contact_email' => 'novemax@gmail.com',
     'updated_at' => '24 de agosto de 2026',
 
-    // Ainda não existe domínio de produção nem tela de login/cadastro publicada — placeholders
-    // explícitos até essas URLs existirem de verdade.
-    'app_login_url' => '#',
-    'app_signup_url' => '#',
+    // O app React é servido em /app pelo mesmo domínio (ver
+    // docs/feature/20260829-deploy-topologia-unificada/). Não há tela de
+    // cadastro ainda — "Cadastre-se" aponta para o login até existir registro.
+    'app_login_url' => '/app/',
+    'app_signup_url' => '/app/',
 
     'nav' => [
         ['label' => 'Recursos', 'href' => '#recursos'],

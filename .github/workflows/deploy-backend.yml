@@ -91,7 +91,7 @@ jobs:
           password: ${{ secrets.SFTP_PASS }}
           protocol: ftp
           port: 21
-          server-dir: /backend/
+          server-dir: /api/
           local-dir: build-laravel/
           log-level: verbose
 

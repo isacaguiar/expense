@@ -24,4 +24,6 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-228 | Concluída | 2026-08-29 | IA (feature branch) | `git diff` — só `server-dir: /backend/` → `/api/` | `deploy-backend.yml`. Nada no código Laravel. Pendência de infra registrada em §1. |
+| TASK-229 | Concluída | 2026-08-29 | IA (feature branch) | YAML sem tabs, 42 linhas · estrutura conferida | `deploy-site.yml` reescrito: `name` "Build e Deploy Site", `checkout@v4` + 2 passos `FTP-Deploy-Action@v4.3.5` (`site/public/`→`/www/`, `site/src/`→`/src/`). Removidos `local-dir: ./`, `exclude:`, `state-name`, `dangerous-clean-slate`, `# server-dir`, `FORCE_JAVASCRIPT_ACTIONS_TO_NODE24`. |
+| TASK-230 | Concluída | 2026-08-29 | IA (feature branch) | `php -l site/src/config.php` → No syntax errors | `app_login_url` e `app_signup_url` → `/app/`; comentário ajustado (sem página de cadastro ainda). |
