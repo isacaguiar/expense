@@ -20,6 +20,8 @@ Spec-Driven Development do projeto, com **human-in-the-loop**: a IA (ou qualquer
 06-context-backend.md  → contexto de execução portátil para tarefas de backend
 ```
 
+Fluxos paralelos: `docs/feature/<AAAAMMDD>-<slug>/` (desenvolvimento novo — ver abaixo), `docs/backlog/` (ideia/débito não agendado), `docs/bugfix/` (correção de defeito — BFF, ver abaixo).
+
 Toda mudança relevante no sistema deve conseguir apontar: qual task → qual parte do plan → qual necessidade de negócio → dentro de quais regras (`00-constitution.md`).
 
 ## Trabalho por feature (`docs/feature/`)
@@ -35,6 +37,10 @@ Para criar a pasta de uma feature nova sem redigir os 4 documentos do zero, use 
 Toda feature encontra, no caminho, achados que não bloqueiam nenhuma task dela (ex.: um débito técnico tangencial, uma melhoria de DX, uma ideia de produto fora do `specify.md` atual). Esse tipo de achado **não fica preso à pasta da feature que o encontrou** — vai para `docs/backlog/` (diretório único, compartilhado por todo o projeto), um arquivo por ideia, com um `README.md` de índice. Formato e critério completos em `docs/backlog/README.md`; regra curta: se bloqueia uma task da feature atual, vira `TASK-0xx` ali mesmo; se não bloqueia, vira um arquivo em `docs/backlog/`, e só ganha `TASK-0xx` quando alguém decidir de fato executá-lo (nesse momento, promova o conteúdo para o `tasks.md` da feature/épico que for tocá-lo).
 
 Essa separação existe porque um achado não-bloqueante costuma sobreviver à feature que o descobriu — ele é conhecimento do projeto, não artefato descartável de uma pasta de trabalho.
+
+## Correção de bug (`docs/bugfix/`)
+
+Correção de defeito em comportamento que já existe não precisa dos 4 documentos de `docs/feature/`. Segue o **BFF (Bug-Fix Flow)**: um arquivo `docs/bugfix/<AAAAMMDD>-<slug>.md` (Triagem + Problema + Correção + log), branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` (merge = gate humano). A Triagem de 4 caixas no topo do arquivo decide: nenhuma marcada → BFF; qualquer uma marcada (toca auth/autorização/dado sensível; exige migration ou muda contrato de API; causa raiz obscura ou correção ampla; exige decisão de produto/arquitetura) → vira feature SDD normal. Slash command `/novo-bug <slug>`. Formato e regra de escalação completos em `docs/bugfix/README.md`; decisão em `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`.
 
 Quando alguém decide de fato executar um item do backlog, o slash command `/promover-backlog <ID>` conduz o processo completo — scaffold da feature, depois Specify → Tech Plan → Tasks → execução de cada task, pedindo aprovação humana explícita entre cada etapa (mesmo espírito do `/nova-feature`, só que partindo de um item já existente e indo até a execução). Ver `.claude/skills/promover-backlog/SKILL.md`.
 

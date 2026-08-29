@@ -40,3 +40,5 @@ Data: <AAAA-MM-DD>
 |---|---|---|
 | [ADR-001](ADR-001-migracao-frontend-expo.md) | Migração do frontend para Expo + React Native Paper | Aceita |
 | [ADR-002](ADR-002-sdd-por-feature.md) | SDD por feature (`docs/feature/<AAAAMMDD>-<slug>/`) em vez de arquivos únicos | Aceita |
+| [ADR-003](ADR-003-fluxo-branch-por-feature.md) | Fluxo de branch por feature (branch principal + tasks mergeadas nela) | Aceita |
+| [ADR-004](ADR-004-fluxo-bugfix.md) | Fluxo de correção de bug (BFF) paralelo ao SDD-por-feature | Aceita |
