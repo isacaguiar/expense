@@ -58,10 +58,11 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Criado em | Branch | Status |
 |---|---|---|---|---|
-| [20260829-deploy-site-secrets-quebrado.md](20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | `fix/20260829-deploy-site-secrets-quebrado` | Aberto |
+| _(nenhum ainda)_ | | | | |
 
 ## Concluídos
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
 | [concluidos/20260828-login-sem-mensagem-erro.md](concluidos/20260828-login-sem-mensagem-erro.md) | Tela de login não exibe mensagem de erro com credenciais inválidas | 2026-08-28 | #81 |
+| [concluidos/20260829-deploy-site-secrets-quebrado.md](concluidos/20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | #89 |

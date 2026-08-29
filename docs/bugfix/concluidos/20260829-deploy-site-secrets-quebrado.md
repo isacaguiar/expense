@@ -51,3 +51,11 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 |---|---|---|
 | 2026-08-29 | `git diff .github/workflows/deploy-site.yml` | só as linhas de `on:`, versão da action e nomes de secret alteradas |
 | 2026-08-29 | parse YAML (node: sem tabs, 41 linhas, estrutura íntegra) | OK |
+
+## Resolução
+
+Concluído em: 2026-08-29
+Branch: fix/20260829-deploy-site-secrets-quebrado
+PR: #89 (mergeado em `dev`)
+
+Escopo cumprido: o workflow deixou de falhar por secret ausente. Fora de escopo e ainda pendente: `deploy-site.yml` segue com `local-dir: ./` (publicaria a raiz do repo inteira — `.claude/`, `README.md`, `site/src/` — no destino) e sem `server-dir` definido. O dono indicou que o site vai para a raiz do FTP (`/expense/`); acertar `local-dir`/`server-dir` para publicar só `site/public/` (e resolver os includes de `site/src/`, hoje fora do docroot) é trabalho de feature, não bugfix — ver conversa de 2026-08-29.
