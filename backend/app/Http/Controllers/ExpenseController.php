@@ -8,11 +8,11 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
+use App\Support\ProofStorage;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
@@ -107,8 +107,22 @@ class ExpenseController extends Controller
     {
         $expense = $this->findExpenseForMember($id);
         $expense->load(['payers', 'quotas']);
+        $this->hydrateQuotaExpense($expense);
 
         return response()->json($expense);
+    }
+
+    /**
+     * Aponta a relação `expense` de cada Quota já carregada de volta para o
+     * próprio `$expense` — o accessor `payment_proof_url` precisa de
+     * `expense->group_id` para montar a URL assinada, e sem isso cada Quota
+     * dispararia um SELECT (N+1).
+     */
+    private function hydrateQuotaExpense(Expense $expense): void
+    {
+        if ($expense->relationLoaded('quotas')) {
+            $expense->quotas->each(fn (Quota $quota) => $quota->setRelation('expense', $expense));
+        }
     }
 
     public function update(Request $request, $id)
@@ -221,7 +235,10 @@ class ExpenseController extends Controller
             }
         }
 
-        return response()->json($expense->fresh(['payers', 'quotas']));
+        $fresh = $expense->fresh(['payers', 'quotas']);
+        $this->hydrateQuotaExpense($fresh);
+
+        return response()->json($fresh);
     }
 
     public function destroy($id)
@@ -737,12 +754,12 @@ class ExpenseController extends Controller
         ];
 
         if (! empty($data['comprovante'])) {
-            $update['payment_proof_path'] = $request->file('comprovante')->store('comprovantes', 'public');
+            $update['payment_proof_path'] = ProofStorage::store($request->file('comprovante'), $expense->group_id);
         }
 
         $quota->update($update);
 
-        return response()->json($quota->fresh());
+        return response()->json($quota->fresh()->load('expense'));
     }
 
     /**
@@ -779,9 +796,7 @@ class ExpenseController extends Controller
             return response()->json(['error' => 'Esta despesa não está paga na competência vigente.'], 422);
         }
 
-        if ($quota->payment_proof_path) {
-            Storage::disk('public')->delete($quota->payment_proof_path);
-        }
+        ProofStorage::delete($quota->payment_proof_path);
 
         $quota->update([
             'paid' => false,
@@ -831,22 +846,27 @@ class ExpenseController extends Controller
             return response()->json(['error' => 'Não há valor a pagar para esse credor nesta competência.'], 422);
         }
 
-        $path = $request->file('comprovante')->store('comprovantes-settlements', 'public');
+        $key = [
+            'group_id' => $groupId,
+            'cycle_start' => $cycle['start']->toDateString(),
+            'from_user_id' => auth()->id(),
+            'to_user_id' => $data['to_user_id'],
+        ];
 
-        $confirmation = SettlementConfirmation::updateOrCreate(
-            [
-                'group_id' => $groupId,
-                'cycle_start' => $cycle['start']->toDateString(),
-                'from_user_id' => auth()->id(),
-                'to_user_id' => $data['to_user_id'],
-            ],
-            [
-                'cycle_end' => $cycle['end']->toDateString(),
-                'amount' => $settlement['amount'],
-                'proof_path' => $path,
-                'confirmed_at' => Carbon::now(),
-            ]
-        );
+        $previousProofPath = SettlementConfirmation::where($key)->value('proof_path');
+
+        $path = ProofStorage::store($request->file('comprovante'), (int) $groupId);
+
+        $confirmation = SettlementConfirmation::updateOrCreate($key, [
+            'cycle_end' => $cycle['end']->toDateString(),
+            'amount' => $settlement['amount'],
+            'proof_path' => $path,
+            'confirmed_at' => Carbon::now(),
+        ]);
+
+        if ($previousProofPath && $previousProofPath !== $path) {
+            ProofStorage::delete($previousProofPath);
+        }
 
         return response()->json($confirmation->fresh());
     }
@@ -1085,6 +1105,7 @@ class ExpenseController extends Controller
 
         foreach ($direct as $expense) {
             $quota = $expense->quotas->first(fn (Quota $quota) => $quota->date_expected->between($start, $end));
+            $quota?->setRelation('expense', $expense);
 
             $entries->push([
                 'expense' => $expense,
@@ -1143,6 +1164,7 @@ class ExpenseController extends Controller
                     // chamado no fechamento ou no pagamento), usa o valor/status
                     // persistidos; senão projeta ao vivo a partir do total_value atual.
                     $quota = $expense->quotas->first(fn (Quota $quota) => $quota->date_expected->isSameDay($occurrence));
+                    $quota?->setRelation('expense', $expense);
 
                     $entries->push([
                         'expense' => $expense,

@@ -2,7 +2,7 @@
 
 > Este documento define as regras que **todo** trabalho no projeto (humano ou IA) deve seguir. Ele é o topo da hierarquia do SDD: Specify, Plan, Tasks e Implementation não podem contradizê-lo. Mudar a Constitution é sempre um **gate humano** (ver bloco Governança).
 
-Versão: 1.2 · Última atualização: 2026-08-28
+Versão: 1.3 · Última atualização: 2026-08-29
 
 ---
 
@@ -95,4 +95,6 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 5. Toda rota que expõe dado financeiro ou pessoal deve estar dentro do grupo `jwt.auth`, e o controller deve checar que o usuário autenticado tem relação com o recurso (é membro do grupo, é o dono do dado) antes de retornar/alterar. **Duas violações confirmadas hoje** (registradas como tasks de segurança prioritárias em `03-tasks.md`):
    - `GET /pix/generate` sem autenticação.
    - `GroupController@show/update/destroy` sem checagem de membership (IDOR).
+
+   **Exceção — download de arquivo (`ADR-005`):** uma rota cujo único propósito é entregar um arquivo a uma aba do browser (que não envia `Authorization: Bearer`) pode ficar fora do `jwt.auth` se, e somente se: (a) protegida pelo middleware `signed`; (b) a URL é temporária (`URL::temporarySignedRoute`, expiração curta); (c) a URL só é emitida dentro de contexto já autenticado e com checagem de membership; (d) o controller revalida que o recurso pertence ao escopo declarado na própria URL, respondendo 404 de forma indistinta; (e) a resposta entrega só o binário do arquivo. Fora dessas condições, a regra acima vale integralmente. Ver `docs/sdd/decisions/ADR-005-download-arquivo-signed-url.md`.
 6. Qualquer correção dos itens 1, 3 (violação existente) e 5 é código de segurança: pode ser **desenvolvido** de forma autônoma em branch, mas o **merge/deploy** segue o gate humano da tabela de Governança — e a rotação de credenciais (item 1) é sempre 100% humana.

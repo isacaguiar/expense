@@ -94,7 +94,7 @@ class ExpenseControllerPayTest extends TestCase
 
     public function test_pay_with_photo_stores_it_and_exposes_the_url(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -111,11 +111,15 @@ class ExpenseControllerPayTest extends TestCase
             ]);
 
         $response->assertStatus(200)->assertJsonPath('paid', true);
-        $this->assertNotNull($response->json('payment_proof_url'));
 
         $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
-        $this->assertNotNull($quota->payment_proof_path);
-        Storage::disk('public')->assertExists($quota->payment_proof_path);
+        $this->assertStringStartsWith("comprovantes/{$group->id}/", $quota->payment_proof_path);
+        Storage::disk('local')->assertExists($quota->payment_proof_path);
+
+        // A URL exposta é uma signed route p/ proofs.show e baixa o arquivo.
+        $proofUrl = $response->json('payment_proof_url');
+        $this->assertStringContainsString("/groups/{$group->id}/proofs/quota/{$quota->id}", $proofUrl);
+        $this->get($proofUrl)->assertOk();
     }
 
     public function test_pay_rejects_non_image_proof_file(): void
@@ -292,7 +296,7 @@ class ExpenseControllerPayTest extends TestCase
 
     public function test_unpay_deletes_stored_proof_photo_and_clears_the_path(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -309,7 +313,7 @@ class ExpenseControllerPayTest extends TestCase
             ])->assertStatus(200);
 
         $path = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('local')->assertExists($path);
 
         $response = $this->withToken($this->tokenFor($creditor))
             ->postJson("/api/expenses/{$expense->id}/unpay");
@@ -318,7 +322,7 @@ class ExpenseControllerPayTest extends TestCase
 
         $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
         $this->assertNull($quota->payment_proof_path);
-        Storage::disk('public')->assertMissing($path);
+        Storage::disk('local')->assertMissing($path);
     }
 
     public function test_non_creditor_cannot_unpay(): void
