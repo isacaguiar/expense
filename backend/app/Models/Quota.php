@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 
 class Quota extends Model
 {
@@ -34,6 +34,16 @@ class Quota extends Model
         'payment_proof_url',
     ];
 
+    /**
+     * `expense` é usada pelo accessor `payment_proof_url` (precisa de
+     * `expense->group_id`) e pode ser pré-carregada via `setRelation` nos
+     * pontos que serializam Quota junto com o Expense pai — escondê-la evita
+     * a recursão Expense→quotas→expense→quotas na serialização.
+     */
+    protected $hidden = [
+        'expense',
+    ];
+
     public function expense()
     {
         return $this->belongsTo(Expense::class, 'expense_id');
@@ -49,12 +59,21 @@ class Quota extends Model
         return $this->belongsTo(User::class, 'paid_by');
     }
 
+    /**
+     * URL assinada de curta duração para baixar o comprovante pela rota
+     * `proofs.show` (fora do `jwt.auth` — a aba do browser não manda Bearer).
+     * Ver `docs/sdd/decisions/ADR-005-download-arquivo-signed-url.md`.
+     */
     public function getPaymentProofUrlAttribute(): ?string
     {
         if (! $this->payment_proof_path) {
             return null;
         }
 
-        return Storage::disk('public')->url($this->payment_proof_path);
+        return URL::temporarySignedRoute('proofs.show', now()->addMinutes(30), [
+            'groupId' => $this->expense->group_id,
+            'type' => 'quota',
+            'id' => $this->id,
+        ]);
     }
 }

@@ -61,7 +61,7 @@ class SettlementConfirmationControllerTest extends TestCase
 
     public function test_debtor_can_confirm_a_real_settlement(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -78,14 +78,19 @@ class SettlementConfirmationControllerTest extends TestCase
             ]);
 
         $response->assertStatus(200)->assertJsonPath('amount', 100);
-        $this->assertNotNull($response->json('proof_url'));
 
         $confirmation = SettlementConfirmation::where('group_id', $group->id)
             ->where('from_user_id', $debtor->id)
             ->where('to_user_id', $creditor->id)
             ->firstOrFail();
 
-        Storage::disk('public')->assertExists($confirmation->proof_path);
+        $this->assertStringStartsWith("comprovantes/{$group->id}/", $confirmation->proof_path);
+        Storage::disk('local')->assertExists($confirmation->proof_path);
+
+        // A URL exposta é uma signed route p/ proofs.show e baixa o arquivo.
+        $proofUrl = $response->json('proof_url');
+        $this->assertStringContainsString("/groups/{$group->id}/proofs/settlement/{$confirmation->id}", $proofUrl);
+        $this->get($proofUrl)->assertOk();
     }
 
     public function test_confirm_requires_comprovante(): void
@@ -141,7 +146,7 @@ class SettlementConfirmationControllerTest extends TestCase
 
     public function test_resending_replaces_the_previous_proof(): void
     {
-        Storage::fake('public');
+        Storage::fake('local');
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -180,7 +185,8 @@ class SettlementConfirmationControllerTest extends TestCase
         $secondPath = $confirmationForThisPair()->firstOrFail()->proof_path;
 
         $this->assertNotSame($firstPath, $secondPath);
-        Storage::disk('public')->assertExists($secondPath);
+        Storage::disk('local')->assertExists($secondPath);
+        Storage::disk('local')->assertMissing($firstPath);
     }
 
     public function test_cannot_confirm_in_a_manually_closed_cycle(): void
