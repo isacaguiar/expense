@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-225 | Concluída | 2026-08-29 | IA (feature branch) | `cd frontend && npm run build` → `dist/.htaccess` gerado idêntico ao `public/.htaccess` (Vite copia `public/` p/ a raiz do `dist/`) | `frontend/public/.htaccess` novo, bloco `mod_rewrite` do plan §2. `frontend/public/` não existia antes. Churn de `frontend/dist/` (arquivos legados no índice, `dist/` é gitignore) revertida — não entra no commit. |
