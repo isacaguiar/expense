@@ -52,3 +52,9 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-08-28 | `cd frontend && npx vitest run src/pages/LoginPage.test.tsx` | 6/6 verde (2 novos) |
 | 2026-08-28 | `cd frontend && npx vitest run` | 26 arquivos, 174/174 verde |
 | 2026-08-28 | `cd frontend && npx vite build` | build OK em 11.35s (warning de chunk >500 kB é pré-existente) |
+
+## Resolução
+
+Concluído em: 2026-08-28
+Branch: fix/20260828-login-sem-mensagem-erro
+PR: #81 (merge em `dev` — commit `761c219e7`)
