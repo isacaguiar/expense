@@ -6,9 +6,9 @@ Versão: 1.0 · Criado em: 20260829
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-225 | Adicionar `frontend/public/.htaccess` com fallback SPA para `index.html` | infra | plan.md §2 | nenhum | Pendente |
-| TASK-226 | Criar `.github/workflows/deploy-frontend.yml` (push `main` → build → FTP `dist/` para `/frontend/`) | infra | plan.md §1 | antes do deploy (merge em `main`) | Pendente |
-| TASK-227 | Corrigir `server-dir` do `deploy-backend.yml` de `/expense/backend/` para `/backend/` | infra | plan.md §3 | antes do merge em `main` (muda o destino real do deploy de backend) | Pendente |
+| TASK-225 | Adicionar `frontend/public/.htaccess` com fallback SPA para `index.html` | infra | plan.md §2 | nenhum | Concluída |
+| TASK-226 | Criar `.github/workflows/deploy-frontend.yml` (push `main` → build → FTP `dist/` para `/frontend/`) | infra | plan.md §1 | antes do deploy (merge em `main`) | Concluída |
+| TASK-227 | Corrigir `server-dir` do `deploy-backend.yml` de `/expense/backend/` para `/backend/` | infra | plan.md §3 | antes do merge em `main` (muda o destino real do deploy de backend) | Concluída (commit `8d7c5f133`, pelo dono) |
 
 ## Critérios de aceite
 
