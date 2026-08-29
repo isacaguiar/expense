@@ -129,7 +129,7 @@ class ExpenseControllerSummaryTest extends TestCase
 
         $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 100]);
         $expense->payers()->sync([$payer->id]);
-        $expense->quotas()->create([
+        $quota = $expense->quotas()->create([
             'date_expected' => '2026-08-05', 'number' => 1, 'paid' => true,
             'value_quota' => 100, 'payment_proof_path' => 'comprovantes/exemplo.jpg',
         ]);
@@ -140,7 +140,11 @@ class ExpenseControllerSummaryTest extends TestCase
         $response->assertStatus(200);
         $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
         $this->assertNotNull($entry['paymentProofUrl']);
-        $this->assertStringContainsString('comprovantes/exemplo.jpg', $entry['paymentProofUrl']);
+        $this->assertStringContainsString(
+            "/groups/{$group->id}/proofs/quota/{$quota->id}",
+            $entry['paymentProofUrl']
+        );
+        $this->assertStringContainsString('signature=', $entry['paymentProofUrl']);
     }
 
     public function test_future_cycle_without_expenses_returns_zero_totals(): void

@@ -78,7 +78,6 @@ class SettlementConfirmationControllerTest extends TestCase
             ]);
 
         $response->assertStatus(200)->assertJsonPath('amount', 100);
-        $this->assertNotNull($response->json('proof_url'));
 
         $confirmation = SettlementConfirmation::where('group_id', $group->id)
             ->where('from_user_id', $debtor->id)
@@ -87,6 +86,11 @@ class SettlementConfirmationControllerTest extends TestCase
 
         $this->assertStringStartsWith("comprovantes/{$group->id}/", $confirmation->proof_path);
         Storage::disk('local')->assertExists($confirmation->proof_path);
+
+        // A URL exposta é uma signed route p/ proofs.show e baixa o arquivo.
+        $proofUrl = $response->json('proof_url');
+        $this->assertStringContainsString("/groups/{$group->id}/proofs/settlement/{$confirmation->id}", $proofUrl);
+        $this->get($proofUrl)->assertOk();
     }
 
     public function test_confirm_requires_comprovante(): void
