@@ -13,6 +13,7 @@ import GroupSummary from './pages/GroupSummary';
 import SummaryEntry from './pages/SummaryEntry';
 import Payments from './pages/Payments';
 import PaymentsEntry from './pages/PaymentsEntry';
+import GroupReports from './pages/GroupReports';
 import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
 import RequireAuth from './components/RequireAuth';
@@ -35,6 +36,7 @@ const App = () => {
           <Route path="/groups/:id/expenses/new" element={<ExpenseForm />} />
           <Route path="/groups/:id/expenses/:expenseId" element={<ExpenseView />} />
           <Route path="/groups/:id/members" element={<GroupMembersForm />} />
+          <Route path="/groups/:id/reports" element={<GroupReports />} />
           <Route path="/groups/:id/edit" element={<GroupForm />} />
         </Route>
 

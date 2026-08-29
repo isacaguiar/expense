@@ -40,18 +40,16 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
 |---|---|---|---|---|---|---|
 | 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
-| 008 | [workflow-cicd-frontend.md](workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | (solicitação direta) | 2026-08-18 | MEDIA | Aberto |
 | 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
-| 018 | [summary-tela-relatorios.md](summary-tela-relatorios.md) | Criar tela de Relatórios do grupo | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 020 | [sistema-notificacoes-frontend.md](sistema-notificacoes-frontend.md) | Implementar sistema de notificações | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 021 | [avatar-foto-usuario.md](avatar-foto-usuario.md) | Suportar foto de perfil do usuário | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Aberto |
 | 024 | [expense-campo-categoria.md](expense-campo-categoria.md) | Adicionar campo "categoria" em despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
-| 031 | [dashboard-visao-financeira-credor-devedores.md](dashboard-visao-financeira-credor-devedores.md) | Dashboard sem dado financeiro (resumo Credor→devedores + Pix por grupo) | branch descartada backend/20260821-regras-mensalidade-entrada-despesas | 2026-08-22 | BAIXA | Aberto |
-| 032 | [simpleshelllayout-sidebar-navegacao-mobile.md](simpleshelllayout-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar do SimpleShellLayout em mobile | navegacao-mobile-group-shell | 2026-08-26 | MEDIA | Promovido para TASK-208 |
+| 033 | [eslint-setup-frontend.md](eslint-setup-frontend.md) | Configurar ESLint no frontend | ci-frontend | 2026-08-27 | BAIXA | Aberto |
+| 034 | [workflow-ci-backend.md](workflow-ci-backend.md) | Workflow de CI (verificação) para o backend | ci-frontend | 2026-08-27 | MEDIA | Aberto |
 
 ## Itens concluídos
 
@@ -78,3 +76,7 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 027 | [dashboard-grouplist-duplicados.md](concluidos/dashboard-grouplist-duplicados.md) | Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas) | 2026-08-20 (resolvido como parte de uma feature de layout, não por `/promover-backlog`) | atualizacao-layout-paginas | TASK-092 |
 | 022 | [summary-sidebar-navegacao-mobile.md](concluidos/summary-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar da tela de Resumo em mobile | 2026-08-27 | navegacao-mobile-group-shell | TASK-204, TASK-205, TASK-206, TASK-207 |
 | 019 | [summary-tela-configuracoes.md](concluidos/summary-tela-configuracoes.md) | Criar tela de Configurações do grupo | 2026-08-26 (fechado sem promoção — necessidade concreta já resolvida em `GroupForm.tsx`) | — | — |
+| 032 | [simpleshelllayout-sidebar-navegacao-mobile.md](concluidos/simpleshelllayout-sidebar-navegacao-mobile.md) | Navegação alternativa para a sidebar do SimpleShellLayout em mobile | 2026-08-27 | navegacao-mobile-simple-shell | TASK-208 |
+| 031 | [dashboard-visao-financeira-credor-devedores.md](concluidos/dashboard-visao-financeira-credor-devedores.md) | Dashboard sem dado financeiro (resumo Credor→devedores + Pix por grupo) | 2026-08-27 | dashboard-resumo-credor-devedores | TASK-212, TASK-213, TASK-214 |
+| 018 | [summary-tela-relatorios.md](concluidos/summary-tela-relatorios.md) | Criar tela de Relatórios do grupo | 2026-08-27 | relatorios-historico-ciclos | TASK-209, TASK-210, TASK-211 |
+| 008 | [workflow-cicd-frontend.md](concluidos/workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | 2026-08-28 | ci-frontend | TASK-215, TASK-216, TASK-217 |

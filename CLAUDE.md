@@ -25,6 +25,7 @@ docs/sdd/06-context-backend.md  → contexto de execução para tarefas de backe
 Padrão de trabalho:
 
 1. Identifique se a tarefa é sobre entender o negócio (`01-specify.md`), uma feature/épico que já tem pasta em `docs/feature/` (leia `specify.md`→`plan.md`→`tasks.md` de lá), ou algo ainda só listado em `03-tasks.md` (épico antigo não migrado).
+1.1. **Se a tarefa é corrigir um defeito** em comportamento que já existe (não desenvolvimento novo), o caminho é o BFF (`docs/bugfix/`, ver `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`): rode `/novo-bug <slug>` e preencha a Triagem primeiro. Nenhum gatilho marcado → fluxo enxuto (1 arquivo + 1 branch `fix/...` + 1 PR contra `dev`, merge = gate humano). Qualquer gatilho marcado → `/nova-feature`. Escalar no meio do caminho é esperado.
 2. Toda mudança de código deve ser rastreável até uma task concreta. Se não existe nem como task antiga nem como feature, siga "Quando não houver task aplicável" abaixo antes de codar — inclusive antes de criar a pasta em `docs/feature/`.
 3. Ao começar a trabalhar num épico antigo de `03-tasks.md` que ainda não foi migrado, crie `docs/feature/<AAAAMMDD>-<slug>/` para ele primeiro (specify/plan/tasks puxando o conteúdo relevante) e deixe só um ponteiro em `03-tasks.md`, como já feito para o Épico B (`docs/feature/20260817-seguranca-api/`). O slash command `/nova-feature <slug-curto>` automatiza a criação da pasta a partir de `docs/sdd/templates/`.
 4. Para codar, use a skill correspondente ao domínio — `expense-backend` ou `expense-frontend` — que carrega automaticamente o contexto certo (`06-context-backend.md` ou `05-context-frontend.md`: convenções, arquivos de referência e gates human-in-the-loop daquela frente). Não é preciso invocar isso manualmente fora das skills. Para revisão de segurança de mudanças em rotas/controllers/middleware de auth, ou para conferir o checklist pré-PR, use os agents `security-reviewer` e `pr-readiness-checker` (`.claude/agents/`, catálogo em `docs/sdd/agents-roadmap.md`).
@@ -58,3 +59,5 @@ Padrão de trabalho:
 ## Quando não houver task aplicável
 
 Se o pedido não se encaixa em nenhuma task existente em `docs/sdd/03-tasks.md` nem em nenhuma feature já criada em `docs/feature/`, pare e pergunte ao usuário antes de agir — não improvise fora da estrutura do SDD nem crie uma pasta nova em `docs/feature/` sem confirmar antes (nome/slug da feature, escopo).
+
+Exceção: se o pedido é corrigir um bug em comportamento existente, o caminho não é parar nem criar feature — é `/novo-bug <slug>` + Triagem (ver "Padrão de trabalho" item 1.1). Só se a Triagem marcar um gatilho é que vira feature.

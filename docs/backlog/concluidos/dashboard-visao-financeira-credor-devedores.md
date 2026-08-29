@@ -4,7 +4,7 @@ ID: 031
 Origem: análise de branch local descartada (backend/20260821-regras-mensalidade-entrada-despesas, nunca mergeada — docs/feature/20260821-regras-mensalidade-entrada-despesas/specify.md §2.3/R3, TASK-113/TASK-114) — decisão de produto já confirmada pelo usuário em 2026-08-21 nessa branch, mas nunca implementada
 Criado em: 2026-08-22
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-212
 
 ## Descrição
 
@@ -15,3 +15,10 @@ Status: Aberto
 `Dashboard` e `GroupSummary` continuam telas separadas por decisão de produto (confirmada antes) — sem isso, a tela inicial do app não responde à pergunta "quem me deve o quê" sem o usuário entrar em cada grupo.
 
 Tipo sugerido: frontend
+
+## Resolução
+
+Concluído em: 2026-08-27
+Feature: docs/feature/20260827-dashboard-resumo-credor-devedores/
+Tasks: TASK-212, TASK-213, TASK-214
+PRs: https://github.com/isacaguiar/expense/pull/71
