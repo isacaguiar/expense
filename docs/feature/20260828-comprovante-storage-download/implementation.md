@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-218 | Concluída | 2026-08-28 | IA (feature branch) | `./vendor/bin/pint app/Support/ProofStorage.php tests/Unit/ProofStorageTest.php` limpo · `php artisan test --filter=ProofStorageTest` → 3 passed (8 assertions) | `App\Support\ProofStorage` com `store()` (grava `comprovantes/<groupId>/<uuid>.<ext>` no disco `local`), `resolveDisk()` (regex `^comprovantes/\d+/` → `local`, senão `public`), `delete()` (silencioso p/ path vazio). |
