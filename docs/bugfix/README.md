@@ -58,7 +58,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Criado em | Branch | Status |
 |---|---|---|---|---|
-| _(nenhum ainda)_ | | | | |
+| [20260829-deploy-site-secrets-quebrado.md](20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | `fix/20260829-deploy-site-secrets-quebrado` | Aberto |
 
 ## Concluídos
 
