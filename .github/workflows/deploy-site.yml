@@ -1,4 +1,4 @@
-name: Deploy para Hostgator
+name: Build e Deploy Site
 
 on:
   push:
@@ -8,33 +8,34 @@ on:
 
 jobs:
   deploy:
+    name: Publica o site institucional (PHP) via FTP
     runs-on: ubuntu-latest
     environment: PROD
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
     steps:
-      - name: Checkout do repositório
+      - name: 📥 Clonar o repositório
         uses: actions/checkout@v4
 
-      # ============================================
-      # OPÇÃO 1: DEPLOY VIA FTP 
-      # ============================================
-      - name: Deploy via FTP para Hostgator
+      - name: 🚀 Deploy do site (site/public → /www/)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.SFTP_HOST }}
           username: ${{ secrets.SFTP_USER }}
           password: ${{ secrets.SFTP_PASS }}
-          # server-dir: ${{ secrets.SFTP_REMOTE_PATH }}
+          protocol: ftp
           port: 21
-          local-dir: ./
-          state-name: '.ftp-deploy-sync-state.json'
-          dangerous-clean-slate: false
-          exclude: |
-            **/.git*
-            **/docs/**
-            **/frontend/**
-            **/backend/**
+          server-dir: /www/
+          local-dir: site/public/
+          log-level: verbose
 
-      - name: Log de sucesso
-        run: echo "Deploy concluído com sucesso para Hostgator"
+      - name: 🚀 Deploy dos templates (site/src → /src/)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.SFTP_HOST }}
+          username: ${{ secrets.SFTP_USER }}
+          password: ${{ secrets.SFTP_PASS }}
+          protocol: ftp
+          port: 21
+          server-dir: /src/
+          local-dir: site/src/
+          log-level: verbose
