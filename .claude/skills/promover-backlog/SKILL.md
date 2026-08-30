@@ -45,12 +45,12 @@ Depois de aprovado: atualize a linha do item em `docs/backlog/README.md` — `St
 
 Só depois do `tasks.md` aprovado. Para cada task, na ordem do arquivo:
 
-1. Siga o fluxo já documentado em `docs/sdd/04-implementation.md` §1: branch `<tipo>/<AAAAMMDD>-<slug-da-feature>-TASK-0xx` a partir de `dev` atualizada, implemente só o escopo da task (extra descoberto vira task nova em `tasks.md`, não expande a atual).
+1. Siga o fluxo de branch/checklist/merge já documentado em `docs/sdd/04-implementation.md` §1. Implemente só o escopo da task — extra descoberto vira task nova em `tasks.md`, não expande a atual.
 2. Para codar, use a skill do domínio (`expense-backend`/`expense-frontend`) — carrega convenções e gates automaticamente.
 3. Antes de abrir o PR, rode o checklist pré-PR (ou use o agent `pr-readiness-checker`).
 4. Abra o PR contra `dev` referenciando o `TASK-0xx`. **Não faça merge, não faça deploy** — esses continuam gate humano explícito (`00-constitution.md` §5.2), este skill não pula isso.
 5. Registre uma linha em `implementation.md` da feature: task, status, data, comando executado + resultado real (não "testado" em prosa).
-6. Pare após abrir o PR da task e pergunte ao usuário se segue para a próxima task ou para por aqui — não execute todas as tasks em sequência sem checar.
+6. Pare após abrir o PR da task e pergunte ao usuário se segue para a próxima task ou para por aqui — não execute todas as tasks em sequência sem checar. (Este checkpoint por task é um dos pontos de parada do loop — ver `docs/sdd/agent-architecture.md` §3.)
 7. Quando todas as tasks da feature já estiverem mergeadas em `dev` e validadas lá, abrir o PR de promoção `dev` → `main` é um passo à parte (fora do loop por task acima) — não abrir esse PR automaticamente ao final da última task sem antes confirmar com o usuário que a validação em `dev` foi feita.
 
 > Feature `docs/feature/20260817-config-url-api-frontend/` é a exceção: foi iniciada antes desta convenção existir e segue no fluxo antigo (branch/PR por task direto pra `main`) até o fim, para não trocar o processo no meio da execução — ver `docs/sdd/04-implementation.md` §1.

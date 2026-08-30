@@ -36,7 +36,7 @@ Mais simples que o `ADR-003` (que vale só para features com múltiplas tasks):
 1. `git checkout dev && git pull origin dev`
 2. `git checkout -b fix/<AAAAMMDD>-<slug>` — branch única, sem sub-branches.
 3. Corrigir só o escopo do bug. Achado extra não-bloqueante vira arquivo em `docs/backlog/`; achado que é outro bug vira outro `/novo-bug`.
-4. Checklist pré-PR (ou agent `pr-readiness-checker`): `./vendor/bin/pint --test` + `php artisan test` (se tocou `backend/`); `npx tsc --noEmit` + `vite build` + testes (se tocou `frontend/`); bug não reproduz mais, verificado; §3 do arquivo preenchida com comando + resultado; Triagem sem nenhuma caixa marcada.
+4. Checklist pré-PR (ou agent `pr-readiness-checker`): os comandos de `docs/sdd/04-implementation.md` §1 (item 3) para a frente tocada, mais — bug não reproduz mais (verificado); §3 do arquivo preenchida com comando + resultado; Triagem sem nenhuma caixa marcada.
 5. Um único PR `fix/...` → `dev`, referenciando `docs/bugfix/<arquivo>.md`. Abrir o PR é autônomo.
 6. **Merge em `dev` é gate humano** (revisão do PR — Constitution §5.2). Promoção `dev` → `main` inalterada (`docs/sdd/04-implementation.md` §1.8).
 
