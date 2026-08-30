@@ -58,7 +58,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Criado em | Branch | Status |
 |---|---|---|---|---|
-| _(nenhum)_ | | | | |
+| [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 
 ## Concluídos
 
