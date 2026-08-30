@@ -47,17 +47,17 @@ Só depois do `tasks.md` aprovado. Para cada task, na ordem do arquivo:
 
 1. Siga o fluxo de branch/checklist/merge já documentado em `docs/sdd/04-implementation.md` §1. Implemente só o escopo da task — extra descoberto vira task nova em `tasks.md`, não expande a atual.
 2. Para codar, use a skill do domínio (`expense-backend`/`expense-frontend`) — carrega convenções e gates automaticamente.
-3. Antes de abrir o PR, rode o checklist pré-PR (ou use o agent `pr-readiness-checker`).
-4. Abra o PR contra `dev` referenciando o `TASK-0xx`. **Não faça merge, não faça deploy** — esses continuam gate humano explícito (`00-constitution.md` §5.2), este skill não pula isso.
+3. Antes de integrar a task na branch da feature — e de novo antes de abrir o PR da feature (item 7) — rode o checklist pré-integração/pré-PR (ou use o agent `pr-readiness-checker`).
+4. Integre a task na branch da feature por merge local `--no-ff` — a primeira task da feature é feita direto na branch da feature (sem sub-branch); as seguintes saem de uma branch de task e voltam por `git merge --no-ff`. **Sem PR e sem gate humano** neste ponto: a branch da feature ainda não é `dev`/`main` (ver `docs/sdd/04-implementation.md` §1 e `ADR-003`). Não abra PR por task. Merge da feature em `dev`, promoção para `main` e deploy continuam gate humano explícito (`00-constitution.md` §5.2) — o PR único da feature entra no item 7 e este skill não pula esse gate.
 5. Registre uma linha em `implementation.md` da feature: task, status, data, comando executado + resultado real (não "testado" em prosa).
-6. Pare após abrir o PR da task e pergunte ao usuário se segue para a próxima task ou para por aqui — não execute todas as tasks em sequência sem checar. (Este checkpoint por task é um dos pontos de parada do loop — ver `docs/sdd/agent-architecture.md` §3.)
-7. Quando todas as tasks da feature já estiverem mergeadas em `dev` e validadas lá, abrir o PR de promoção `dev` → `main` é um passo à parte (fora do loop por task acima) — não abrir esse PR automaticamente ao final da última task sem antes confirmar com o usuário que a validação em `dev` foi feita.
+6. Pare após integrar a task na branch da feature e pergunte ao usuário se segue para a próxima task ou para por aqui — não execute todas as tasks em sequência sem checar. (Este checkpoint por task é um dos pontos de parada do loop — ver `docs/sdd/agent-architecture.md` §3.)
+7. Quando todas as tasks da feature estiverem integradas na branch da feature: rode o checklist de integração mais uma vez na branch da feature já completa (item 3, agora pegando problemas de integração entre tasks) e abra **um único PR** da branch da feature contra `dev`, referenciando a feature e as tasks incluídas — nunca um PR por task. O merge desse PR em `dev` é gate humano, por feature e não por task (`00-constitution.md` §5.2); **não faça merge nem deploy**. A promoção `dev` → `main` é um passo à parte (fora do loop por task acima): só depois da feature já mergeada e validada em `dev` — não abrir esse PR automaticamente ao final da última task sem antes confirmar com o usuário que a validação em `dev` foi feita.
 
 > Feature `docs/feature/20260817-config-url-api-frontend/` é a exceção: foi iniciada antes desta convenção existir e segue no fluxo antigo (branch/PR por task direto pra `main`) até o fim, para não trocar o processo no meio da execução — ver `docs/sdd/04-implementation.md` §1.
 
 ## 6. Fechamento
 
-Quando **todas** as tasks de `tasks.md` já tiverem PR aberto (não é preciso esperar merge/deploy — esses são gates humanos separados e podem demorar):
+Quando **todas** as tasks de `tasks.md` já estiverem integradas na branch da feature e o PR único da feature contra `dev` já estiver aberto (não é preciso esperar o merge em `dev` nem o deploy — esses são gates humanos separados e podem demorar):
 
 1. Para cada item de backlog que originou esta feature (um ou mais, se agrupados no passo 0.3), acrescente ao final do arquivo em `docs/backlog/<arquivo>.md` uma seção:
    ```
@@ -70,4 +70,4 @@ Quando **todas** as tasks de `tasks.md` já tiverem PR aberto (não é preciso e
 2. Mova o arquivo de `docs/backlog/<arquivo>.md` para `docs/backlog/concluidos/<arquivo>.md` (mesmo nome, só muda de pasta — histórico do "porquê" preservado no próprio arquivo).
 3. Em `docs/backlog/README.md`: remova a linha do item da tabela "Índice" (itens abertos) e adicione uma linha equivalente na tabela "Concluídos" (criar essa segunda tabela se ainda não existir), apontando para `concluidos/<arquivo>.md`.
 
-Finalize com um resumo curto: pasta da feature, o que foi aprovado em cada etapa, quais tasks foram executadas/têm PR aberto, quais ainda faltam, itens de backlog movidos para `concluidos/`, e quaisquer gates humanos pendentes (merge, deploy).
+Finalize com um resumo curto: pasta da feature, o que foi aprovado em cada etapa, quais tasks foram integradas na branch da feature, quais ainda faltam, se o PR único da feature contra `dev` já foi aberto, itens de backlog movidos para `concluidos/`, e quaisquer gates humanos pendentes (merge em `dev`, promoção `dev` → `main`, deploy).
