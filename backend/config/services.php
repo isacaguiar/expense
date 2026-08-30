@@ -39,4 +39,16 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
 
+    'whatsapp' => [
+        'enabled' => env('WHATSAPP_ENABLED', false),
+        'token' => env('WHATSAPP_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'api_version' => env('WHATSAPP_API_VERSION', 'v21.0'),
+        'locale' => env('WHATSAPP_LOCALE', 'pt_BR'),
+        'templates' => [
+            'expense_proof' => env('WHATSAPP_TEMPLATE_EXPENSE_PROOF', 'comprovante_despesa_pago'),
+            'settlement_proof' => env('WHATSAPP_TEMPLATE_SETTLEMENT_PROOF', 'comprovante_acerto_confirmado'),
+        ],
+    ],
+
 ];

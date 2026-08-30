@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\URL;
 
 /**
@@ -34,6 +35,18 @@ class SettlementConfirmation extends Model
         'amount' => 'float',
         'confirmed_at' => 'datetime',
     ];
+
+    /** Devedor que confirmou o pagamento (origem do settlement). */
+    public function fromUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'from_user_id');
+    }
+
+    /** Credor que recebe o pagamento (destino do settlement). */
+    public function toUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'to_user_id');
+    }
 
     /**
      * URL assinada de curta duração para baixar o comprovante pela rota

@@ -9,6 +9,7 @@ use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
 use App\Support\ProofStorage;
+use App\Support\WhatsApp\WhatsAppNotifier;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -759,6 +760,21 @@ class ExpenseController extends Controller
 
         $quota->update($update);
 
+        // Comprovante anexado pelo credor → avisa os pagadores por WhatsApp,
+        // depois da resposta (não segura o request, não quebra o pagamento se
+        // a Meta estiver fora). No-op se a feature está desligada.
+        if (array_key_exists('payment_proof_path', $update)) {
+            $quotaId = $quota->id;
+
+            dispatch(function () use ($quotaId) {
+                $quota = Quota::with('expense.payers', 'expense.payer')->find($quotaId);
+
+                if ($quota) {
+                    WhatsAppNotifier::expenseProofPaid($quota);
+                }
+            })->afterResponse();
+        }
+
         return response()->json($quota->fresh()->load('expense'));
     }
 
@@ -867,6 +883,18 @@ class ExpenseController extends Controller
         if ($previousProofPath && $previousProofPath !== $path) {
             ProofStorage::delete($previousProofPath);
         }
+
+        // Devedor confirmou o acerto com comprovante → avisa o credor por
+        // WhatsApp, depois da resposta. No-op se a feature está desligada.
+        $confirmationId = $confirmation->id;
+
+        dispatch(function () use ($confirmationId) {
+            $confirmation = SettlementConfirmation::with('fromUser', 'toUser')->find($confirmationId);
+
+            if ($confirmation) {
+                WhatsAppNotifier::settlementProofConfirmed($confirmation);
+            }
+        })->afterResponse();
 
         return response()->json($confirmation->fresh());
     }

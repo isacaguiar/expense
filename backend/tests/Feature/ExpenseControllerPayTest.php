@@ -10,6 +10,8 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -538,5 +540,129 @@ class ExpenseControllerPayTest extends TestCase
             ->postJson("/api/expenses/{$expense->id}/unpay");
 
         $response->assertStatus(404);
+    }
+
+    private function enableWhatsApp(): void
+    {
+        config()->set('services.whatsapp', [
+            'enabled' => true,
+            'token' => 'tok',
+            'phone_number_id' => '999',
+            'api_version' => 'v21.0',
+            'locale' => 'pt_BR',
+            'templates' => ['expense_proof' => 'tpl_e', 'settlement_proof' => 'tpl_s'],
+        ]);
+    }
+
+    private function optedInUser(string $whatsapp): User
+    {
+        $user = User::factory()->create();
+        $user->whatsapp = $whatsapp;
+        $user->notify_whatsapp = true;
+        $user->save();
+
+        return $user;
+    }
+
+    public function test_pay_com_comprovante_notifica_pagadores_opt_in(): void
+    {
+        Storage::fake('local');
+        Http::fake(['graph.facebook.com/*' => Http::response(['messages' => [['id' => 'x']]], 200)]);
+        Carbon::setTestNow('2026-08-19');
+        $this->enableWhatsApp();
+
+        $creditor = User::factory()->create();
+        $optIn = $this->optedInUser('(11) 90000-0002');
+        $optOut = User::factory()->create();
+        $optOut->whatsapp = '(11) 90000-0003';
+        $optOut->notify_whatsapp = false;
+        $optOut->save();
+
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $optIn->id, $optOut->id]);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->sync([$creditor->id, $optIn->id, $optOut->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ]);
+
+        $response->assertStatus(200)->assertJsonPath('paid', true);
+
+        Http::assertSentCount(1);
+        Http::assertSent(function ($request) use ($creditor, $group, $expense) {
+            return $request->url() === 'https://graph.facebook.com/v21.0/999/messages'
+                && $request['to'] === '5511900000002'
+                && $request['template']['name'] === 'tpl_e'
+                && $request['template']['language']['code'] === 'pt_BR'
+                && $request['template']['components'][0]['parameters'] === [
+                    ['type' => 'text', 'text' => $creditor->name],
+                    ['type' => 'text', 'text' => 'Despesa de teste'],
+                    ['type' => 'text', 'text' => 'À Vista'],
+                    ['type' => 'text', 'text' => 'R$ 100,00'],
+                    ['type' => 'text', 'text' => 'ago/2026'],
+                ]
+                && $request['template']['components'][1]['parameters'][0]['text'] === "groups/{$group->id}/expenses/{$expense->id}";
+        });
+    }
+
+    public function test_pay_sem_comprovante_nao_notifica(): void
+    {
+        Http::fake();
+        Carbon::setTestNow('2026-08-19');
+        $this->enableWhatsApp();
+
+        $creditor = User::factory()->create();
+        $participant = $this->optedInUser('(11) 90000-0002');
+
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->sync([$creditor->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay")
+            ->assertStatus(200);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_pay_com_meta_fora_do_ar_nao_quebra_o_pagamento(): void
+    {
+        Storage::fake('local');
+        Http::fake(['graph.facebook.com/*' => Http::response(['error' => ['message' => 'boom']], 500)]);
+        Log::spy();
+        Carbon::setTestNow('2026-08-19');
+        $this->enableWhatsApp();
+
+        $creditor = User::factory()->create();
+        $participant = $this->optedInUser('(11) 90000-0002');
+
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->sync([$creditor->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ]);
+
+        $response->assertStatus(200)->assertJsonPath('paid', true);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertTrue((bool) $quota->paid);
+        $this->assertNotNull($quota->payment_proof_path);
+
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn ($message) => str_contains($message, 'falha'))
+            ->atLeast()->once();
     }
 }
