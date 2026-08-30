@@ -2,7 +2,7 @@
 
 > Este documento define as regras que **todo** trabalho no projeto (humano ou IA) deve seguir. Ele é o topo da hierarquia do SDD: Specify, Plan, Tasks e Implementation não podem contradizê-lo. Mudar a Constitution é sempre um **gate humano** (ver bloco Governança).
 
-Versão: 1.3 · Última atualização: 2026-08-29
+Versão: 1.4 · Última atualização: 2026-08-30
 
 ---
 
@@ -56,9 +56,11 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 - De 2026-08-17 até `docs/feature/20260818-fluxo-despesas-grupo/` (última a segui-lo por completo): branch de task nasce de `dev` atualizada, PR de cada task direto contra `dev`, merge humano por task.
 - **A partir de 2026-08-18** (`ADR-003-fluxo-branch-por-feature.md`): fluxo por feature, em duas camadas. Uma **branch da feature** (`<tipo>/<AAAAMMDD>-<slug-da-feature>`, nome igual à pasta em `docs/feature/`) nasce de `dev` atualizada quando a primeira task começa — a primeira task é implementada direto nela, sem sub-branch própria. Cada task seguinte nasce numa branch própria (`<tipo>/<AAAAMMDD>-<slug-da-feature>-TASK-0xx`) a partir da branch da feature, e faz merge local (`--no-ff`, sem PR, sem gate humano) de volta nela. Só quando a feature estiver pronta abre-se **um único PR** da branch da feature contra `dev` — ver `04-implementation.md` §1 para o passo a passo completo, incluindo quando abrir o PR de promoção `dev` → `main`.
 
-1.2. **Fluxo de correção de bug (BFF)**: correção de defeito em comportamento já existente pode seguir o **Bug-Fix Flow** — artefato único em `docs/bugfix/<AAAAMMDD>-<slug>.md`, branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` — em vez das 5 fases e da pasta `docs/feature/`, **desde que** a Triagem de `docs/bugfix/README.md` não marque nenhum dos 4 gatilhos de escalação (toca auth/autorização/dado sensível; exige migration ou muda contrato de API; causa raiz obscura ou correção ampla; exige decisão de produto/arquitetura). Marcou qualquer um → segue o fluxo SDD completo (`docs/feature/`). Ver `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`.
+1.2. **Fluxo de correção de bug (BFF)**: correção de defeito em comportamento já existente pode seguir o **Bug-Fix Flow** — artefato único em `docs/bugfix/<AAAAMMDD>-<slug>.md`, branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` — em vez das 5 fases e da pasta `docs/feature/`, **desde que** a Triagem de `docs/bugfix/README.md` não marque nenhum gatilho de escalação. Marcou qualquer um → segue o fluxo SDD completo (`docs/feature/`). Gatilhos e critério: `docs/bugfix/README.md`; o porquê do fluxo: `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`.
 
-2. **Gates human-in-the-loop** — o que pode ser feito de forma autônoma vs. o que exige aprovação humana explícita antes de executar:
+1.3. **Condição de parada do loop de execução**: consolidada, com o desenho do loop, em `agent-architecture.md` §3.
+
+2. **Gates human-in-the-loop** — o que pode ser feito de forma autônoma vs. o que exige aprovação humana explícita antes de executar. Esta é a tabela normativa da fronteira de autonomia; o desenho está em `agent-architecture.md` §5.
 
 | Ação | Autônomo (IA/dev em branch) | Exige aprovação humana |
 |---|---|---|
@@ -80,21 +82,31 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 | Apagar dado definitivamente (hard delete) | ❌ | ✅ |
 | Corte de produção do frontend novo (`expense/app`) substituindo `expense/frontend` | ❌ | ✅ |
 
-3. Achados que **já exigem decisão humana** (não corrigir silenciosamente, registrar e esperar aprovação — ver `03-tasks.md`):
+3. Achados que **já exigem decisão humana** (não corrigir silenciosamente; estado de remediação em `docs/feature/20260817-seguranca-api/tasks.md`):
    - Segredos versionados em texto puro (`README.md` raiz: senha do jasypt; client-id/secret do Google OAuth; arquivo `client_secret_*.json` na raiz do repositório) → precisa rotacionar credenciais e remover do histórico/arquivo.
    - `.github/workflows/deploy-backend.yml` referencia `working-directory: backend-php`, mas a pasta real é `backend/` → deploy de produção provavelmente aponta para caminho errado.
    - `GET /pix/generate` está **fora** do grupo de middleware `jwt.auth` em `routes/api.php` → qualquer pessoa não autenticada pode gerar o QR Code Pix de um usuário informando só o e-mail dele (ver Segurança, item 5).
    - `GroupController@show/update/destroy` não verificam se o usuário autenticado é membro do grupo → qualquer usuário logado pode ver/editar/"deletar" (soft delete) grupo de outra pessoa pelo ID.
+   - `AuthController::login` loga `$credentials` inteiro via `Log::debug`, incluindo a senha em claro no log → dívida a corrigir (regra: Segurança, item 2).
 
 ## 6. Segurança
 
+### 6.0. Resumo — regras que nunca devem ser ignoradas
+
+Digest das invariantes que nenhum código novo pode violar (detalhe na regra citada):
+
+- Toda rota que expõe dado financeiro ou pessoal fica dentro do grupo `jwt.auth`, e o controller checa que o usuário autenticado tem relação com o recurso (é membro do grupo, é o dono do dado) antes de retornar/alterar — §6.5 (com a exceção de download do `ADR-005`).
+- Nunca commitar segredo em texto puro (senha, client secret, API key, token); nunca logar credencial — §6.1, §6.2. Rotação/remoção de segredo é 100% humana (§5.2).
+- Exclusão de registro de negócio (grupo, despesa) é sempre soft delete (coluna `deleted`); nunca `DELETE` físico sem o gate humano de hard delete — §1.5, §5.2.
+- Ao registrar rota (`apiResource` ou manual), todos os métodos referenciados devem existir e ter teste mínimo — §2.4.
+- Controller "stub" sem implementação fica fora de `routes/api.php` até ter conteúdo — §2.5.
+- Achados já conhecidos que aguardam decisão humana: §5.3.
+
 1. Nunca commitar segredo em texto puro (senha, client secret, API key, token). **Violação existente conhecida**: ver Governança item 3 — tratar como dívida prioritária, não como padrão aceitável para código novo.
-2. Senha de usuário sempre hasheada (`User::$casts['password'] = 'hashed'` — já correto). Nunca logar senha em texto puro (hoje `AuthController::login` loga `$credentials` inteiro via `Log::debug`, incluindo a senha em claro no log — dívida a corrigir).
+2. Senha de usuário sempre hasheada (`User::$casts['password'] = 'hashed'` — já correto). Nunca logar senha nem credencial em texto puro. Violação conhecida registrada em §5.3.
 3. Tokens de convite/reset de senha (`InvitationController`) hoje trafegam como **query string** na URL (`?token=...`) — evitar em código novo: preferir corpo de requisição (POST) ou, se precisar ir por link de e-mail, tratar como token de uso único e curto prazo (o `forgotPassword` já expira em 60 min, o que é correto; o padrão deve se estender a todo fluxo de convite).
 4. JWT deve ter expiração configurada (`JWT_TTL`) e o app cliente deve tratar expiração/refresh — não assumir token eterno.
-5. Toda rota que expõe dado financeiro ou pessoal deve estar dentro do grupo `jwt.auth`, e o controller deve checar que o usuário autenticado tem relação com o recurso (é membro do grupo, é o dono do dado) antes de retornar/alterar. **Duas violações confirmadas hoje** (registradas como tasks de segurança prioritárias em `03-tasks.md`):
-   - `GET /pix/generate` sem autenticação.
-   - `GroupController@show/update/destroy` sem checagem de membership (IDOR).
+5. Toda rota que expõe dado financeiro ou pessoal deve estar dentro do grupo `jwt.auth`, e o controller deve checar que o usuário autenticado tem relação com o recurso (é membro do grupo, é o dono do dado) antes de retornar/alterar. Violações confirmadas e ainda em remediação: ver §5.3.
 
    **Exceção — download de arquivo (`ADR-005`):** uma rota cujo único propósito é entregar um arquivo a uma aba do browser (que não envia `Authorization: Bearer`) pode ficar fora do `jwt.auth` se, e somente se: (a) protegida pelo middleware `signed`; (b) a URL é temporária (`URL::temporarySignedRoute`, expiração curta); (c) a URL só é emitida dentro de contexto já autenticado e com checagem de membership; (d) o controller revalida que o recurso pertence ao escopo declarado na própria URL, respondendo 404 de forma indistinta; (e) a resposta entrega só o binário do arquivo. Fora dessas condições, a regra acima vale integralmente. Ver `docs/sdd/decisions/ADR-005-download-arquivo-signed-url.md`.
-6. Qualquer correção dos itens 1, 3 (violação existente) e 5 é código de segurança: pode ser **desenvolvido** de forma autônoma em branch, mas o **merge/deploy** segue o gate humano da tabela de Governança — e a rotação de credenciais (item 1) é sempre 100% humana.
+6. Qualquer correção dos itens 1, 3 e 5 é código de segurança: pode ser **desenvolvida** de forma autônoma em branch, mas o **merge/deploy** segue o gate humano de §5.2 — e a rotação de credenciais (item 1) é sempre 100% humana.

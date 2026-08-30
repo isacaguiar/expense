@@ -2,11 +2,13 @@
 
 > Agents nativos do Claude Code (`.claude/agents/*.md`, com `tools` restritos) próprios deste projeto. Não é um catálogo para criar de uma vez — cada agent só é construído quando o gatilho abaixo vira concreto no repo. Registrar aqui um candidato sem construir evita tanto reinventar a ideia do zero da próxima vez quanto criar agent especulativo demais cedo (mesma lição do princípio "não criar estrutura vazia pra reservar espaço").
 
+Este "construir só quando o gatilho é concreto" é a alternativa descartada do padrão **orquestrador + subagentes** em `agent-architecture.md` §4.3 (o descartado seria criar todos os subagentes de antemão).
+
 ## Construídos
 
 | Agent | Arquivo | Domínio | Gatilho que justificou construir agora |
 |---|---|---|---|
-| `security-reviewer` | [`.claude/agents/security-reviewer.md`](../../.claude/agents/security-reviewer.md) | Backend — auth/autorização | Dois padrões de vulnerabilidade já confirmados e corrigidos no repo (`00-constitution.md` §5.3/§6, `docs/feature/20260817-seguranca-api/`): rota fora de `jwt.auth`, IDOR por falta de checagem de membership/ownership, segredo em texto puro/log. |
+| `security-reviewer` | [`.claude/agents/security-reviewer.md`](../../.claude/agents/security-reviewer.md) | Backend — auth/autorização | Padrões de vulnerabilidade já confirmados e corrigidos no repo — ver `00-constitution.md` §5.3 e `docs/feature/20260817-seguranca-api/`. |
 | `pr-readiness-checker` | [`.claude/agents/pr-readiness-checker.md`](../../.claude/agents/pr-readiness-checker.md) | Backend + frontend — checklist pré-PR | O checklist pré-PR de `04-implementation.md` já existe e é real, mas hoje depende de o executor lembrar de rodar cada comando manualmente — mesmo problema que a Constitution já reconhece para o Pint ("não há hook/CI que o obrigue"). |
 
 ## Candidatos futuros (não construir ainda)

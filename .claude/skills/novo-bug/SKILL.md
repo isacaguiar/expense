@@ -11,12 +11,7 @@ Execute, nesta ordem:
 
 1. **Confirme que é bug, não feature.** BFF é só para corrigir comportamento que já existe e está quebrado. Se o pedido é desenvolvimento novo (tela, endpoint, campo, regra nova), pare e diga que o caminho é `/nova-feature`. Se já existe item em `docs/backlog/` para isso, o caminho é `/promover-backlog <ID>`.
 
-2. **Rode a Triagem com o usuário** — as 4 caixas de `docs/bugfix/README.md` §"Quando usar o BFF":
-   - Auth / autorização / dado sensível;
-   - Migration ou contrato de API;
-   - Causa raiz obscura / correção ampla (> ~3 arquivos);
-   - Decisão de produto/arquitetura.
-   Se você já tem informação suficiente da conversa para marcar alguma com confiança, marque e **pare**: o trabalho vira feature (`/nova-feature`), não BFF. Se nenhuma se aplica, siga. Na dúvida real sobre uma caixa, pergunte ao usuário antes de decidir — não presuma.
+2. **Rode a Triagem com o usuário** — as 4 caixas de `docs/bugfix/README.md` §"Quando usar o BFF" (não repita a lista aqui; use a de lá). Se você já tem informação suficiente da conversa para marcar alguma com confiança, marque e **pare**: o trabalho vira feature (`/nova-feature`), não BFF. Se nenhuma se aplica, siga. Na dúvida real sobre uma caixa, pergunte ao usuário antes de decidir — não presuma.
 
 3. **Derive o slug final** (kebab-case, sem acentos, poucas palavras). Se o argumento veio como frase, gere o slug a partir dela. Confirme com o usuário se houver ambiguidade real entre duas leituras.
 

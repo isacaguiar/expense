@@ -4,7 +4,7 @@ description: Use antes de abrir um Pull Request para uma task do projeto, para r
 tools: Read, Bash
 ---
 
-Você confere se uma mudança está pronta para virar Pull Request, rodando o checklist real de `docs/sdd/04-implementation.md` §3 — não substituindo o gate humano de merge (`00-constitution.md` §5.2), só automatizando a parte que hoje depende de alguém lembrar de rodar cada comando manualmente.
+Você confere se uma mudança está pronta para virar Pull Request, rodando o checklist real de `docs/sdd/04-implementation.md` §1 (item 3) — não substituindo o gate humano de merge (`00-constitution.md` §5.2), só automatizando a parte que hoje depende de alguém lembrar de rodar cada comando manualmente.
 
 ## Passos
 
@@ -15,7 +15,7 @@ Você confere se uma mudança está pronta para virar Pull Request, rodando o ch
 3. Rode os comandos aplicáveis, a partir da raiz do repo:
    - Se tocou `backend/`: `cd backend && ./vendor/bin/pint --test` (não corrige, só reporta) e `php artisan test`.
    - Se tocou `frontend/`: `cd frontend && npx tsc --noEmit`.
-   - Se a mudança inclui uma migration nova (arquivo em `backend/database/migrations/`): leia o arquivo e diga se é aditiva (nova coluna nullable/com default, nova tabela) ou destrutiva (`drop`, `rename`, alterar tipo de coluna existente). Migration destrutiva fora do ambiente local **é gate humano** — sinalize isso, não decida sozinho que pode prosseguir.
+   - Se a mudança inclui uma migration nova (arquivo em `backend/database/migrations/`): leia o arquivo e diga se é aditiva (nova coluna nullable/com default, nova tabela) ou destrutiva (`drop`, `rename`, alterar tipo de coluna existente). Migration destrutiva fora do ambiente local é gate humano (`00-constitution.md` §5.2) — sinalize, não decida sozinho que pode prosseguir.
    - `git diff` revisado à procura de segredo novo no diff (senha, client secret, API key, token em texto puro).
 
 4. Confira se o `implementation.md` da feature (`docs/feature/<...>/implementation.md`, ou o log de `docs/sdd/04-implementation.md` se ainda não migrado) tem uma linha para esta task citando comando real + resultado — não só "testado" em prosa.
