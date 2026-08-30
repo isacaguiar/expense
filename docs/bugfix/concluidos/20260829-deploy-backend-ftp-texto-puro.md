@@ -49,4 +49,18 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 
 | Data | Comando | Resultado |
 |---|---|---|
-| <AAAA-MM-DD> | <ex.: `workflow_dispatch` de `deploy-backend.yml` + inspeção do log verboso da etapa FTP> | <ex.: handshake `AUTH TLS` / `Connection secured`, upload concluído> |
+| 2026-08-29 | `deploy-backend.yml` com `protocol: ftps` (commit `c204c1f6d`) rodado; inspeção do log verboso da etapa FTP | handshake sobe via `AUTH TLS`, autenticação OK, transferência inicia (credencial/dados cifrados). Upload **não completa**: `Error: Can't open data connection in passive mode: connect ECONNREFUSED 162.241.203.30:41226` |
+
+## Resolução
+
+Concluído em: 2026-08-29
+Branch: — a correção foi aplicada direto em `dev` (commit `c204c1f6d` "change protocol"), sem a branch `fix/...` / PR previstos no BFF.
+PR: — promovido a `main` via `dev` → `main` (PR #97).
+
+`deploy-backend.yml` passou de `protocol: ftp` para `protocol: ftps`: usuário/senha e dados deixam de trafegar em texto puro (`AUTH TLS` na porta 21). **Escopo deste bug — transmissão em texto puro — resolvido.**
+
+Aberto à parte (já previsto na §2 "Riscos"): o deploy não completa por `ECONNREFUSED` em modo passivo (`connect ECONNREFUSED 162.241.203.30:<porta passiva aleatória>`) — firewall / anti-brute-force do host, não relacionado ao texto puro. Encaminhamento:
+- **Se o HostGator liberar SSH:** migrar de FTP para rsync/SSH (porta 22, chave) → `/nova-feature` + ADR (canal único, sem modo passivo).
+- **Se não liberar:** substituir a action por passo `lftp` com retry inline + `net:connection-limit 1`, e abrir ticket pedindo faixa de portas passivas aberta / limites anti-hammer afrouxados → `/novo-bug deploy-ftp-modo-passivo`.
+
+Também pendente (gate humano): rotacionar `SFTP_PASS` — esteve em texto puro em todos os deploys anteriores a este.

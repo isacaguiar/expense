@@ -55,3 +55,13 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-08-29 | `cd backend && ./vendor/bin/pint --test config/cors.php tests/Feature/CorsConfigTest.php` | limpo |
 | 2026-08-29 | `cd backend && php artisan test --filter=CorsConfigTest` | 2 passed (2 assertions) |
 | 2026-08-29 | `cd backend && php artisan test` | 239 passed (722 assertions) |
+
+## Resolução
+
+Concluído em: 2026-08-29
+Branch: `fix/20260829-cors-nao-le-frontend-url`
+PR: #94 (mergeado em `dev`; promovido a `main` no PR #97)
+
+`config/cors.php` passou a incluir `env('FRONTEND_URL')` em `allowed_origins`. Correção de código encerrada.
+
+Pendente fora do código (gate humano, ação do dono): setar o secret `ENV_FRONTEND_URL = https://expense.novemax.com.br` e re-rodar `deploy-backend.yml` (regenera `.env` + `config:cache`) para a correção valer em produção. Esbarra no `ECONNREFUSED` de modo passivo do FTP — ver `concluidos/20260829-deploy-backend-ftp-texto-puro.md`.
