@@ -61,6 +61,12 @@ jobs:
           echo "FRONTEND_URL=${{ secrets.ENV_FRONTEND_URL }}" >> .env
           echo "FRONTEND_NETWORK_URL=${{ secrets.ENV_FRONTEND_NETWORK_URL }}" >> .env
 
+          echo "WHATSAPP_ENABLED=${{ secrets.ENV_WHATSAPP_ENABLED }}" >> .env
+          echo "WHATSAPP_TOKEN=${{ secrets.ENV_WHATSAPP_TOKEN }}" >> .env
+          echo "WHATSAPP_PHONE_NUMBER_ID=${{ secrets.ENV_WHATSAPP_PHONE_NUMBER_ID }}" >> .env
+          echo "WHATSAPP_TEMPLATE_EXPENSE_PROOF=${{ secrets.ENV_WHATSAPP_TEMPLATE_EXPENSE_PROOF }}" >> .env
+          echo "WHATSAPP_TEMPLATE_SETTLEMENT_PROOF=${{ secrets.ENV_WHATSAPP_TEMPLATE_SETTLEMENT_PROOF }}" >> .env
+
       - name: 🔑 Gerar chave do aplicativo
         working-directory: backend
         run: php artisan key:generate
