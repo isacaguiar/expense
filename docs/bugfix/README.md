@@ -36,7 +36,7 @@ Mais simples que o `ADR-003` (que vale só para features com múltiplas tasks):
 1. `git checkout dev && git pull origin dev`
 2. `git checkout -b fix/<AAAAMMDD>-<slug>` — branch única, sem sub-branches.
 3. Corrigir só o escopo do bug. Achado extra não-bloqueante vira arquivo em `docs/backlog/`; achado que é outro bug vira outro `/novo-bug`.
-4. Checklist pré-PR (ou agent `pr-readiness-checker`): `./vendor/bin/pint --test` + `php artisan test` (se tocou `backend/`); `npx tsc --noEmit` + `vite build` + testes (se tocou `frontend/`); bug não reproduz mais, verificado; §3 do arquivo preenchida com comando + resultado; Triagem sem nenhuma caixa marcada.
+4. Checklist pré-PR (ou agent `pr-readiness-checker`): os comandos de `docs/sdd/04-implementation.md` §1 (item 3) para a frente tocada, mais — bug não reproduz mais (verificado); §3 do arquivo preenchida com comando + resultado; Triagem sem nenhuma caixa marcada.
 5. Um único PR `fix/...` → `dev`, referenciando `docs/bugfix/<arquivo>.md`. Abrir o PR é autônomo.
 6. **Merge em `dev` é gate humano** (revisão do PR — Constitution §5.2). Promoção `dev` → `main` inalterada (`docs/sdd/04-implementation.md` §1.8).
 
@@ -58,8 +58,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Criado em | Branch | Status |
 |---|---|---|---|---|
-| [20260829-cors-nao-le-frontend-url.md](20260829-cors-nao-le-frontend-url.md) | CORS não permite o frontend de produção (config não lê FRONTEND_URL) | 2026-08-29 | `fix/20260829-cors-nao-le-frontend-url` | Aberto |
-| [20260829-deploy-backend-ftp-texto-puro.md](20260829-deploy-backend-ftp-texto-puro.md) | Deploy do backend transmite credencial FTP em texto puro | 2026-08-29 | `fix/20260829-deploy-backend-ftp-texto-puro` | Aberto |
+| _(nenhum)_ | | | | |
 
 ## Concluídos
 
@@ -67,3 +66,5 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 |---|---|---|---|
 | [concluidos/20260828-login-sem-mensagem-erro.md](concluidos/20260828-login-sem-mensagem-erro.md) | Tela de login não exibe mensagem de erro com credenciais inválidas | 2026-08-28 | #81 |
 | [concluidos/20260829-deploy-site-secrets-quebrado.md](concluidos/20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | #89 |
+| [concluidos/20260829-cors-nao-le-frontend-url.md](concluidos/20260829-cors-nao-le-frontend-url.md) | CORS não permite o frontend de produção (config não lê FRONTEND_URL) | 2026-08-29 | #94 |
+| [concluidos/20260829-deploy-backend-ftp-texto-puro.md](concluidos/20260829-deploy-backend-ftp-texto-puro.md) | Deploy do backend transmite credencial FTP em texto puro | 2026-08-29 | — (direto em `dev`) |

@@ -2,14 +2,11 @@
 
 > Como uma task de `03-tasks.md` vira código. Aplica-se a trabalho humano e a trabalho de IA da mesma forma.
 
-Versão: 1.1 · Última atualização: 2026-08-18
+Versão: 1.2 · Última atualização: 2026-08-30
 
 ## 1. Fluxo de execução de uma task
 
-> Histórico do fluxo de branch/PR (não misturar modelos numa mesma feature em andamento — ver Constitution §5.1):
-> - Antes de 2026-08-17 (`docs/feature/20260817-config-url-api-frontend/` e anteriores): branch/PR por task direto pra `main`.
-> - De 2026-08-17 até `docs/feature/20260818-fluxo-despesas-grupo/` (última a segui-lo por completo): branch de task nascia de `dev`, PR de cada task direto contra `dev`.
-> - **A partir de 2026-08-18** (`docs/sdd/decisions/ADR-003-fluxo-branch-por-feature.md`): fluxo por feature descrito abaixo. Branch/PR num padrão antigo não precisa migrar retroativamente.
+> Fluxo de branch/PR vigente (`docs/sdd/decisions/ADR-003-fluxo-branch-por-feature.md`, 2026-08-18) descrito abaixo. Histórico dos 3 modelos e a regra de não misturá-los numa mesma feature em andamento: `00-constitution.md` §5.1.1. Branch/PR num padrão antigo não precisa migrar retroativamente.
 
 1. **Branch**:
    - **Primeira task da feature**: `git checkout -b <tipo>/<AAAAMMDD>-<slug-da-feature>` a partir de `dev` atualizada (`git pull origin dev` antes de criar a branch) — `<AAAAMMDD>-<slug-da-feature>` é exatamente o nome da pasta em `docs/feature/`. Essa é a **branch da feature**; a primeira task é implementada direto nela, sem sub-branch própria.
@@ -30,8 +27,8 @@ Versão: 1.1 · Última atualização: 2026-08-18
 
 ## 2. O que muda quando quem executa é uma IA
 
-- Tudo acima vale igual. A diferença é só **onde param os gates**: a IA pode ir do branch até o PR aberto sozinha; humano decide merge, migration em ambiente compartilhado, deploy e rotação de segredo (ver tabela completa em `00-constitution.md` §5.2).
-- Se uma task pedir uma dessas ações com gate humano, a execução da IA para no ponto do gate e relata o que falta aprovar — não assume aprovação implícita de pedidos anteriores.
+- Tudo acima vale igual. A diferença é só **onde param os gates**: a IA pode ir do branch até o PR aberto sozinha; o que exige aprovação humana está em `00-constitution.md` §5.2.
+- Se uma task pedir uma ação com gate humano, a execução da IA para no ponto do gate e relata o que falta aprovar — não assume aprovação implícita de pedidos anteriores. Pontos de parada do loop consolidados em `agent-architecture.md` §3.
 
 ## 3. Log de implementação
 

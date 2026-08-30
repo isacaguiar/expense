@@ -7,11 +7,12 @@ Versão: 1.0 · Criado em: <AAAAMMDD> · Branch: `fix/<AAAAMMDD>-<slug>`
 ## Triagem
 
 Marque todas que se aplicam. **Qualquer marca = vai para o fluxo SDD completo, não BFF.**
+Critério completo de cada caixa: `docs/bugfix/README.md`, "Quando usar o BFF".
 
-- [ ] **Auth / autorização / dado sensível** — rotas/controllers/middleware de auth, Pix, grupos, despesas, usuários.
-- [ ] **Migration ou contrato de API** — altera schema do banco (mesmo aditivo) ou muda resposta/rota/status/payload que `frontend`/`app` consomem.
-- [ ] **Causa raiz obscura / correção ampla** — causa não clara após timebox, ou > ~3 arquivos / vários módulos.
-- [ ] **Decisão de produto/arquitetura** — depende de comportamento novo, ou contradiz a Constitution.
+- [ ] **Auth / autorização / dado sensível**
+- [ ] **Migration ou contrato de API**
+- [ ] **Causa raiz obscura / correção ampla**
+- [ ] **Decisão de produto/arquitetura**
 
 Nenhuma marcada → segue no BFF.
 

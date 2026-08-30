@@ -269,7 +269,22 @@ const ExpenseManager: React.FC = () => {
         justifyContent="flex-end"
         alignItems="center"
         mb={3}
+        gap={2}
       >
+        {/* Fechar/reabrir — só faz sentido na competência vigente (cyclesAgo=0):
+            close()/reopen() sempre operam sobre "agora", nunca sobre a
+            competência navegada via as setas do seletor abaixo. */}
+        {summary && cyclesAgo === 0 && (summary.cycle.status === 'open' || summary.cycle.status === 'closed_manually') && (
+          summary.cycle.status === 'open' ? (
+            <Button variant="outlined" onClick={handleCloseMonth} disabled={closingMonth}>
+              Fechar mês
+            </Button>
+          ) : (
+            <Button variant="outlined" onClick={handleReopenMonth} disabled={reopeningMonth}>
+              Reabrir mês
+            </Button>
+          )
+        )}
         <Button
           variant="contained"
           color="primary"
@@ -299,25 +314,13 @@ const ExpenseManager: React.FC = () => {
         </IconButton>
       </Box>
 
-      {/* Fechar/reabrir — só faz sentido na competência vigente (cyclesAgo=0):
-          close()/reopen() sempre operam sobre "agora", nunca sobre a
-          competência navegada via as setas acima. */}
-      {summary && cyclesAgo === 0 && (summary.cycle.status === 'open' || summary.cycle.status === 'closed_manually') && (
-        <Box display="flex" flexDirection="column" alignItems="center" mb={3} gap={1}>
-          {summary.cycle.status === 'open' ? (
-            <Button variant="outlined" onClick={handleCloseMonth} disabled={closingMonth}>
-              Fechar mês
-            </Button>
-          ) : (
-            <Button variant="outlined" onClick={handleReopenMonth} disabled={reopeningMonth}>
-              Reabrir mês
-            </Button>
-          )}
-          {closeReopenError && (
-            <Alert severity="error" sx={{ maxWidth: 480 }}>
-              {closeReopenError}
-            </Alert>
-          )}
+      {/* Erro de fechar/reabrir mês — o botão em si vive no cabeçalho; aqui fica
+          só o feedback de erro, no mesmo lugar central de antes. */}
+      {closeReopenError && (
+        <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+          <Alert severity="error" sx={{ maxWidth: 480 }}>
+            {closeReopenError}
+          </Alert>
         </Box>
       )}
 

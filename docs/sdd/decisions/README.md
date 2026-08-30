@@ -43,3 +43,5 @@ Data: <AAAA-MM-DD>
 | [ADR-003](ADR-003-fluxo-branch-por-feature.md) | Fluxo de branch por feature (branch principal + tasks mergeadas nela) | Aceita |
 | [ADR-004](ADR-004-fluxo-bugfix.md) | Fluxo de correção de bug (BFF) paralelo ao SDD-por-feature | Aceita |
 | [ADR-005](ADR-005-download-arquivo-signed-url.md) | Download de arquivo servido por URL assinada, fora do `jwt.auth` | Aceita |
+| [ADR-006](ADR-006-whatsapp-meta-cloud-api.md) | WhatsApp via Meta Cloud API como canal de mensageria | Aceita |
+| [ADR-007](ADR-007-fonte-unica-e-arquitetura-do-agente.md) | Fonte única por fato + documento de arquitetura do agente | Aceita |

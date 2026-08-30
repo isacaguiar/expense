@@ -7,29 +7,6 @@ $config = require __DIR__ . '/../src/config.php';
 
 $pageTitle = $config['brand_name'] . ' — ' . $config['tagline'];
 
-// Dados ilustrativos do preview do dashboard (não vêm da API — é um mock visual da landing).
-$dashExpenses = [
-    ['icon' => 'building', 'name' => 'Aluguel', 'meta' => 'Fixa · Todo dia 05', 'value' => 'R$ 1.600,00', 'payer' => 'CA', 'payerName' => 'Carla', 'split' => '4 pessoas', 'status' => 'Paga'],
-    ['icon' => 'wifi', 'name' => 'Internet', 'meta' => 'Fixa · Todo dia 15', 'value' => 'R$ 120,00', 'payer' => 'IA', 'payerName' => 'Isac', 'split' => '4 pessoas', 'status' => 'Paga'],
-    ['icon' => 'shopping-cart', 'name' => 'Mercado', 'meta' => 'Variável · 10/05/2024', 'value' => 'R$ 320,50', 'payer' => 'MA', 'payerName' => 'Marcos', 'split' => '4 pessoas', 'status' => 'Pendente'],
-];
-
-$dashBalances = [
-    ['initials' => 'IA', 'name' => 'Isac', 'value' => 'R$ 230,00', 'direction' => 'receive'],
-    ['initials' => 'CA', 'name' => 'Carla', 'value' => 'R$ 150,00', 'direction' => 'receive'],
-    ['initials' => 'MA', 'name' => 'Marcos', 'value' => 'R$ 80,00', 'direction' => 'receive'],
-    ['initials' => 'JU', 'name' => 'Juliana', 'value' => 'R$ 460,00', 'direction' => 'pay'],
-];
-
-$sidebarItems = [
-    ['icon' => 'home', 'label' => 'Resumo', 'active' => true],
-    ['icon' => 'list', 'label' => 'Despesas', 'active' => false],
-    ['icon' => 'users', 'label' => 'Participantes', 'active' => false],
-    ['icon' => 'credit-card', 'label' => 'Pagamentos', 'active' => false],
-    ['icon' => 'bar-chart', 'label' => 'Relatórios', 'active' => false],
-    ['icon' => 'settings', 'label' => 'Configurações', 'active' => false],
-];
-
 $featureCards = [
     ['icon' => 'users', 'title' => 'Grupos ilimitados', 'text' => 'Crie quantos grupos quiser e organize diferentes despesas facilmente.'],
     ['icon' => 'layers', 'title' => 'Despesas fixas e variáveis', 'text' => 'Cadastre contas mensais ou despesas eventuais em poucos segundos.'],
@@ -93,89 +70,16 @@ require __DIR__ . '/../src/templates/nav.php';
         </p>
       </div>
 
-      <div class="dash-card" aria-hidden="true">
-        <aside class="dash-sidebar">
-          <span class="logo">
-            <?php include __DIR__ . '/../src/templates/logo.php'; ?>
-          </span>
-          <ul>
-            <?php foreach ($sidebarItems as $item) : ?>
-              <li class="<?= $item['active'] ? 'active' : '' ?>">
-                <?= icon($item['icon']) ?> <?= e($item['label']) ?>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-        </aside>
-
-        <div class="dash-main">
-          <div class="dash-topbar">
-            <h2>Resumo do grupo <span class="dash-group-select">Casa dos Amigos <?= icon('chevron-down') ?></span></h2>
-            <div class="dash-topbar-right">
-              <?= icon('bell') ?>
-              <span class="dash-avatar">IA</span>
-              Isac Aguiar <?= icon('chevron-down') ?>
-            </div>
-          </div>
-
-          <div class="dash-stats">
-            <div class="dash-stat">
-              <div class="label">Total de despesas</div>
-              <div class="value">R$ 3.240,00</div>
-              <div class="sub">Este mês</div>
-            </div>
-            <div class="dash-stat">
-              <div class="label">Pago</div>
-              <div class="value">R$ 1.920,00</div>
-              <div class="sub">59% do total</div>
-            </div>
-            <div class="dash-stat">
-              <div class="label">A pagar</div>
-              <div class="value pay">R$ 1.320,00</div>
-              <div class="sub">41% do total</div>
-            </div>
-          </div>
-
-          <div class="dash-panels">
-            <div class="dash-panel">
-              <h3>Despesas do mês</h3>
-              <?php foreach ($dashExpenses as $expense) : ?>
-                <div class="dash-expense-row">
-                  <span class="dash-expense-icon"><?= icon($expense['icon']) ?></span>
-                  <div>
-                    <div class="dash-expense-name"><?= e($expense['name']) ?></div>
-                    <div class="dash-expense-meta"><?= e($expense['meta']) ?></div>
-                  </div>
-                  <div class="dash-expense-paidby">
-                    <span class="dash-avatar"><?= e($expense['payer']) ?></span>
-                    Pago por <?= e($expense['payerName']) ?>
-                  </div>
-                  <div class="dash-expense-value">
-                    <?= e($expense['value']) ?><br />
-                    <span class="badge <?= $expense['status'] === 'Paga' ? 'badge-paid' : 'badge-pending' ?>">
-                      <?= e($expense['status']) ?>
-                    </span>
-                  </div>
-                </div>
-              <?php endforeach; ?>
-              <a class="dash-see-all" href="#">Ver todas as despesas</a>
-            </div>
-
-            <div class="dash-panel">
-              <h3>Saldos por pessoa</h3>
-              <?php foreach ($dashBalances as $balance) : ?>
-                <div class="dash-balance-row">
-                  <span class="dash-avatar"><?= e($balance['initials']) ?></span>
-                  <span class="dash-balance-name"><?= e($balance['name']) ?></span>
-                  <div class="dash-balance-value <?= $balance['direction'] ?>">
-                    <?= e($balance['value']) ?>
-                    <div class="dash-balance-sub"><?= $balance['direction'] === 'receive' ? 'A receber' : 'A pagar' ?></div>
-                  </div>
-                </div>
-              <?php endforeach; ?>
-            </div>
-          </div>
-        </div>
-      </div>
+      <figure class="hero-preview">
+        <img
+          src="assets/app-home.png"
+          width="1349"
+          height="592"
+          loading="lazy"
+          decoding="async"
+          alt="Tela inicial do Shared Expense: resumo do grupo com total de despesas, valores pagos e a pagar, a lista de despesas do ciclo e os saldos por pessoa."
+        />
+      </figure>
     </div>
   </section>
 

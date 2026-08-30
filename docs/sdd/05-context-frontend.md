@@ -1,8 +1,8 @@
 # Contexto de execução — Frontend
 
-> Documento **portátil**, sem nada específico de ferramenta: é o conteúdo que qualquer assistente de IA (ou desenvolvedor) deve carregar antes de mexer na UI do projeto. Hoje é referenciado pela skill `expense-frontend` do Claude Code (`expense/.claude/skills/expense-frontend/SKILL.md`), mas não depende dela — se o projeto trocar de ferramenta de IA, este arquivo continua valendo, só muda o adaptador que aponta pra ele.
+> Documento **portátil** (markdown puro, sem nada específico de ferramenta): o que qualquer assistente de IA (ou dev) deve carregar antes de mexer na UI. Contrato de portabilidade e relação com as skills: `README.md`, "Skills e portabilidade".
 
-Versão: 1.2 · Última atualização: 2026-08-20
+Versão: 1.3 · Última atualização: 2026-08-30
 
 ---
 
@@ -37,7 +37,6 @@ Esses mockups são **referência de layout e fluxo**, não a implementação atu
 - Os dois frontends devem consumir o mesmo contrato de API sem divergir — se uma tela precisar de um campo novo, isso é mudança de API (backend), não workaround no cliente.
 - `expense/frontend` não é alterado nem descontinuado por causa da migração — ele continua em produção normalmente até o corte.
 
-## Gates human-in-the-loop (de `00-constitution.md` §5.2)
+## Gates human-in-the-loop
 
-- Livre para codar, testar e abrir PR em branch.
-- **Exige aprovação humana**: merge em `main`, deploy/publish (inclusive build EAS do Expo), e o corte de produção de `expense/app` substituindo `expense/frontend` (`TASK-010`). Nunca assuma essa aprovação como implícita.
+Fronteira de autonomia: `00-constitution.md` §5.2 (tabela normativa) e `agent-architecture.md` §5 (desenho). Nunca assuma aprovação de merge/deploy/corte de produção como implícita.

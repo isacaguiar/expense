@@ -49,6 +49,6 @@ Regra de atomicidade: uma task deve ser completável, revisável e testável **i
 
 ## Convenção a partir de 2026-08-17
 
-Este arquivo deixou de crescer: trabalho novo (feature ou épico técnico) ganha uma pasta própria em `docs/feature/<AAAAMMDD>-<slug>/` (data de criação + nome curto) com `specify.md`, `plan.md`, `tasks.md` e `implementation.md` (mesmo formato de `01-specify.md`..`04-implementation.md`, escopado à feature). `00-constitution.md` continua valendo para tudo; `01-specify.md` continua sendo o baseline do sistema como um todo. Os épicos abaixo que ainda não têm pasta em `docs/feature/` continuam valendo como estão até alguém começar a trabalhar neles — nesse momento, migram para lá (como feito com o Épico B → `docs/feature/20260817-seguranca-api/`).
+Este arquivo deixou de crescer: trabalho novo (feature ou épico técnico) ganha uma pasta própria em `docs/feature/<AAAAMMDD>-<slug>/`. Decisão, motivo e alternativas: `decisions/ADR-002-sdd-por-feature.md`. Os épicos abaixo que ainda não têm pasta em `docs/feature/` continuam valendo como estão até alguém começar a trabalhar neles — nesse momento, migram para lá (como feito com o Épico B → `docs/feature/20260817-seguranca-api/`).
 
 Novas tasks dentro de um épico ainda não migrado seguem o mesmo formato e entram no épico correspondente (ou em um novo épico, se abrirem uma frente nova do Plan) — até serem migradas.

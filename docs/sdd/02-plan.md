@@ -1,6 +1,8 @@
 # Plan — Engenharia
 
 > Traduz o `01-specify.md` em decisões técnicas. Toda task em `03-tasks.md` deve apontar para uma seção daqui.
+>
+> **Documento congelado em 2026-08-17** (`decisions/ADR-002-sdd-por-feature.md`). Os achados de segurança/infra citados abaixo (Pix público, path do deploy, credenciais OAuth órfãs) podem já ter sido corrigidos — status atual e canônico em `00-constitution.md` §5.3 e nas pastas de `docs/feature/`.
 
 Versão: 1.0 · Última atualização: 2026-08-17
 
