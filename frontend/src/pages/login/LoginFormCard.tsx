@@ -16,7 +16,6 @@ import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
 import Divider from '@mui/material/Divider';
 import googleLogo from '../../assets/illustrations/google-logo.svg';
-import microsoftLogo from '../../assets/illustrations/microsoft-logo.svg';
 import { brandColors } from '../../theme/brandColors';
 
 interface LoginFormCardProps {
@@ -183,15 +182,6 @@ export default function LoginFormCard({
             startIcon={<img src={googleLogo} alt="" width={18} height={18} />}
           >
             Google
-          </Button>
-          <Button
-            href="#"
-            variant="outlined"
-            fullWidth
-            sx={{ fontSize: '0.8rem' }}
-            startIcon={<img src={microsoftLogo} alt="" width={18} height={18} />}
-          >
-            Microsoft
           </Button>
         </Box>
       </Box>

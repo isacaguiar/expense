@@ -45,3 +45,4 @@ Data: <AAAA-MM-DD>
 | [ADR-005](ADR-005-download-arquivo-signed-url.md) | Download de arquivo servido por URL assinada, fora do `jwt.auth` | Aceita |
 | [ADR-006](ADR-006-whatsapp-meta-cloud-api.md) | WhatsApp via Meta Cloud API como canal de mensageria | Aceita |
 | [ADR-007](ADR-007-fonte-unica-e-arquitetura-do-agente.md) | Fonte única por fato + documento de arquitetura do agente | Aceita |
+| [ADR-008](ADR-008-deploy-backend-ssh-rsync.md) | Deploy do backend via SSH/rsync em vez de FTP | Aceita |
