@@ -2,7 +2,7 @@
 
 > Este documento define as regras que **todo** trabalho no projeto (humano ou IA) deve seguir. Ele é o topo da hierarquia do SDD: Specify, Plan, Tasks e Implementation não podem contradizê-lo. Mudar a Constitution é sempre um **gate humano** (ver bloco Governança).
 
-Versão: 1.4 · Última atualização: 2026-08-30
+Versão: 1.5 · Última atualização: 2026-09-01
 
 ---
 
@@ -34,7 +34,7 @@ Trava as versões/peças abaixo. Trocar qualquer uma é decisão de **Governanç
 | Frontend web | React 18 + TypeScript + Vite + MUI (`@mui/material`) + `react-router-dom` + `axios` |
 | Frontend mobile/web unificado *(em migração)* | Expo + `react-native-web` + Expo Router + `react-native-paper` — ver `02-plan.md` |
 | Infra local | Docker Compose (MySQL + Adminer) |
-| Deploy backend | GitHub Actions → FTP (`scd.novemax.com.br`) |
+| Deploy backend | GitHub Actions → SSH/rsync porta 2222 (`easingthemes/ssh-deploy`) → `expense-api.novemax.com.br` — ver `decisions/ADR-008` |
 
 > Decisão já tomada e registrada em `02-plan.md`/`03-tasks.md`: migração do frontend para **Expo + React Native Paper**, em projeto novo (`expense/app`), com `expense/frontend` (React web atual) continuando em paralelo até o corte.
 
