@@ -24,26 +24,37 @@ No `.github/workflows/deploy-backend.yml`, **remover** o passo "🚀 Deploy via 
           log-level: minimal
 ```
 
-e **colocar** no lugar:
+e **colocar** no lugar (forma final, depois das correções — ver `implementation.md` §2):
 
 ```yaml
       - name: 🚀 Deploy via SSH (rsync)
-        uses: easingthemes/ssh-deploy@v5
+        uses: easingthemes/ssh-deploy@v6.0.1
         with:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          REMOTE_HOST:     ${{ secrets.SSH_HOST }}
-          REMOTE_USER:     ${{ secrets.SSH_USER }}
-          REMOTE_PORT:     ${{ secrets.SSH_PORT }}
-          SOURCE:          "build-laravel/"
-          TARGET:          ${{ secrets.SSH_TARGET }}
-          ARGS:            "-rltgoDzvO --delete"
-          EXCLUDE:         "/.git*, /tests, /storage/logs, /storage/app, /node_modules, /*.yml, /.env.example"
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          SSH_CMD_ARGS: "-o StrictHostKeyChecking=no -o IdentitiesOnly=yes -o PreferredAuthentications=publickey -o GSSAPIAuthentication=no"
+          SOURCE: "build-laravel/"
+          TARGET: ${{ secrets.SSH_TARGET }}
+          ARGS: "-rltgoDzvO --delete"
+          EXCLUDE: "/.git*, /tests, /storage/logs, /storage/app, /node_modules, /*.yml, /.env.example"
+          SCRIPT_AFTER: |
+            cd ${{ secrets.SSH_TARGET }}
+            mkdir -p storage/logs storage/framework/cache/data storage/framework/sessions storage/framework/views bootstrap/cache
+            chmod -R ug+rwX storage bootstrap/cache
+            php artisan optimize:clear
+            php artisan config:cache
+            php artisan route:cache
 ```
 
-- **Pin**: `easingthemes/ssh-deploy@v6.0.1` (pin de patch, como `FTP-Deploy-Action@v4.3.5`). A tentativa inicial com a tag major flutuante `@v5` quebrou o deploy — `Error: Unable to resolve action easingthemes/ssh-deploy@v5, unable to find version v5` (a action já está na major `v6`; não há `v5` flutuante resolvível no runner). Lição: pin de patch para actions de terceiro. Endurecer para SHA fica como hardening futuro.
-- **`SOURCE: "build-laravel/"`** com barra final = envia o **conteúdo** da pasta, não a pasta. Espelha o `local-dir: build-laravel/` de hoje.
-- **`ARGS: "-rltgoDzvO --delete"`**: `r` recursivo, `l` links, `t` times, `g`/`o`/`D` grupo/owner/devices, `z` compressão, `O` (`--omit-dir-times`) evita erro de permissão ao setar mtime de diretório em shared host. `--delete` espelha remoções (ver §4). É o default da action menos o `p` (perms) — manter sem `p` porque o host controla permissão via umask do usuário.
-- **Nada acima do passo muda** (`specify.md` §2.5): `checkout`, `setup-php`, `composer install --no-dev`, "🔐 Gerar arquivo .env", `key:generate`, `config/route/view:cache`, "📦 Preparar diretório de build" (o `rsync` local que monta `build-laravel/`) ficam idênticos.
+- **Pin**: `easingthemes/ssh-deploy@v6.0.1` (pin de patch, como `FTP-Deploy-Action@v4.3.5`). A tentativa inicial com a tag major flutuante `@v5` quebrou o deploy — `Error: Unable to resolve action easingthemes/ssh-deploy@v5, unable to find version v5` (a action já está na major `v6`; não há `v5` flutuante resolvível no runner). Lição: pin de patch para actions de terceiro.
+- **`SSH_CMD_ARGS`**: `IdentitiesOnly=yes` (só a chave do `-i`) + `PreferredAuthentications=publickey` + `GSSAPIAuthentication=no` — sem isso o OpenSSH do runner Ubuntu tenta GSSAPI/agent/defaults antes da chave e estoura o `MaxAuthTries` baixo do HostGator (`Too many authentication failures`). Detalhe em §2.
+- **`SOURCE: "build-laravel/"`** com barra final = envia o **conteúdo** da pasta, não a pasta.
+- **`ARGS: "-rltgoDzvO --delete"`**: `r`/`l`/`t`/`g`/`o`/`D`/`z` + `O` (`--omit-dir-times`, evita erro de mtime de diretório em shared host). `--delete` espelha remoções (ver §4). Sem `p` — o host controla permissão via umask.
+- **`SCRIPT_AFTER`** (roda no host após o rsync): cria `storage/logs` e as pastas de `storage/framework/*` (o build **e** o `EXCLUDE` tiram `storage/logs`, então ela nunca existiria no host → Laravel sem onde logar → HTTP 500), ajusta permissão, e refaz `config`/`route` cache **no destino** — o cache tem que ser gerado onde roda, com os paths reais.
+- **Passo runner "🧠 Gerar caches Laravel" removido**: cacheava `config`/`route`/`view` com caminhos do runner (`/home/runner/...`), inválidos no host. O caching passou para o `SCRIPT_AFTER`.
+- **O resto acima do passo não muda**: `checkout`, `setup-php`, `composer install --no-dev`, "🔐 Gerar arquivo .env", `key:generate`, "📦 Preparar diretório de build".
 - **Por que a action empacotada e não `rsync` na mão**: troca de menor superfície (mesmos campos `SOURCE`/`TARGET`/`EXCLUDE`/`ARGS` da action de FTP), e `ssh-agent` + `known_hosts` já resolvidos internamente. `rsync` na mão + `shimataro/ssh-key-action` é o fallback imediato se a action falhar — mesmo `ARGS`, mesmo `EXCLUDE`, só que `run: rsync ... -e "ssh -p ${{ secrets.SSH_PORT }} -o StrictHostKeyChecking=accept-new"`.
 
 ## 2. Autenticação por chave (`specify.md` §2.2)
