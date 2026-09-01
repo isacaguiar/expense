@@ -4,7 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use Tests\TestCase;
@@ -13,18 +14,30 @@ class GoogleAuthControllerTest extends TestCase
 {
     use DatabaseTransactions;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Cache::flush();
+    }
+
     private function tokenFor(User $user): string
     {
         return auth('api')->login($user);
     }
 
-    private function signedLinkState(int $userId, int $expiresInMinutes = 5): string
+    /**
+     * Grava o contexto de vínculo no cache como o redirectUrl faz e devolve o token opaco.
+     */
+    private function linkState(int $userId): string
     {
-        return Crypt::encryptString(json_encode([
+        $token = Str::random(40);
+
+        Cache::put("google_oauth_state:{$token}", [
             'intent' => 'link',
             'user_id' => $userId,
-            'exp' => now()->addMinutes($expiresInMinutes)->timestamp,
-        ]));
+        ], now()->addMinutes(5));
+
+        return $token;
     }
 
     private function fakeGoogleUser(string $googleId = 'google-123'): SocialiteUser
@@ -45,7 +58,7 @@ class GoogleAuthControllerTest extends TestCase
         $response->assertStatus(401);
     }
 
-    public function test_redirect_url_returns_a_google_authorize_url_with_signed_state(): void
+    public function test_redirect_url_returns_a_google_authorize_url_with_opaque_state(): void
     {
         config(['services.google.client_id' => 'test-client-id']);
         config(['services.google.client_secret' => 'test-client-secret']);
@@ -64,9 +77,11 @@ class GoogleAuthControllerTest extends TestCase
         parse_str(parse_url($url, PHP_URL_QUERY), $query);
         $this->assertSame('test-client-id', $query['client_id']);
 
-        $state = json_decode(Crypt::decryptString($query['state']), true);
-        $this->assertSame('link', $state['intent']);
-        $this->assertSame($user->id, $state['user_id']);
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9]{40}$/', $query['state']);
+
+        $context = Cache::get("google_oauth_state:{$query['state']}");
+        $this->assertSame('link', $context['intent']);
+        $this->assertSame($user->id, $context['user_id']);
     }
 
     public function test_callback_links_google_account_to_user_from_valid_state(): void
@@ -75,7 +90,7 @@ class GoogleAuthControllerTest extends TestCase
         Socialite::fake('google', $this->fakeGoogleUser('google-123'));
 
         $user = User::factory()->create();
-        $state = $this->signedLinkState($user->id);
+        $state = $this->linkState($user->id);
 
         $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
 
@@ -87,13 +102,28 @@ class GoogleAuthControllerTest extends TestCase
         ]);
     }
 
-    public function test_callback_redirects_with_error_on_expired_state(): void
+    public function test_callback_state_is_single_use(): void
+    {
+        config(['services.frontend_url' => 'http://localhost:3000']);
+        Socialite::fake('google', $this->fakeGoogleUser('google-123'));
+
+        $user = User::factory()->create();
+        $state = $this->linkState($user->id);
+
+        $first = $this->get('/api/auth/google/callback?state='.urlencode($state));
+        $first->assertRedirect('http://localhost:3000/profile?linked=success');
+
+        $second = $this->get('/api/auth/google/callback?state='.urlencode($state));
+        $second->assertRedirect('http://localhost:3000/profile?linked=error');
+    }
+
+    public function test_callback_redirects_with_error_on_unknown_state(): void
     {
         config(['services.frontend_url' => 'http://localhost:3000']);
         Socialite::fake('google', $this->fakeGoogleUser());
 
         $user = User::factory()->create();
-        $state = $this->signedLinkState($user->id, expiresInMinutes: -1);
+        $state = Str::random(40); // token nunca gravado no cache (cobre expirado / ausente também)
 
         $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
 
@@ -101,11 +131,11 @@ class GoogleAuthControllerTest extends TestCase
         $this->assertDatabaseHas('ex_users', ['id' => $user->id, 'google_id' => null]);
     }
 
-    public function test_callback_redirects_with_error_on_tampered_state(): void
+    public function test_callback_redirects_with_error_on_garbage_state(): void
     {
         config(['services.frontend_url' => 'http://localhost:3000']);
 
-        $response = $this->get('/api/auth/google/callback?state=not-a-valid-encrypted-payload');
+        $response = $this->get('/api/auth/google/callback?state=not-a-valid-state-token');
 
         $response->assertRedirect('http://localhost:3000/profile?linked=error');
     }
@@ -117,7 +147,7 @@ class GoogleAuthControllerTest extends TestCase
         Socialite::fake('google', $this->fakeGoogleUser('google-123'));
 
         $user = User::factory()->create();
-        $state = $this->signedLinkState($user->id);
+        $state = $this->linkState($user->id);
 
         $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
 
@@ -127,12 +157,10 @@ class GoogleAuthControllerTest extends TestCase
 
     public function test_callback_returns_501_when_intent_is_not_link(): void
     {
-        $state = Crypt::encryptString(json_encode([
-            'intent' => 'login',
-            'exp' => now()->addMinutes(5)->timestamp,
-        ]));
+        $token = Str::random(40);
+        Cache::put("google_oauth_state:{$token}", ['intent' => 'login'], now()->addMinutes(5));
 
-        $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
+        $response = $this->get('/api/auth/google/callback?state='.urlencode($token));
 
         $response->assertStatus(501);
     }
