@@ -52,6 +52,7 @@ e **colocar** no lugar:
 - **Pública** (`expense_deploy.pub`): cadastrar no cPanel → *SSH Access* → *Manage SSH Keys* → *Import Key* (colar o conteúdo), depois *Manage* → *Authorize*. Alternativa equivalente: `cat expense_deploy.pub >> ~/.ssh/authorized_keys` no host via SSH.
 - **Privada** (`expense_deploy`, arquivo inteiro, incluindo as linhas `-----BEGIN OPENSSH PRIVATE KEY-----` / `-----END …-----` e a quebra final): vai para o secret `SSH_PRIVATE_KEY` (§3).
 - **`known_hosts`**: `easingthemes/ssh-deploy` roda `ssh-keyscan` do host internamente — não é preciso secret de host key para a v1. Se depois quisermos travar o fingerprint, dá para pré-computar e injetar; fica fora do escopo.
+- **`SSH_CMD_ARGS: "-o StrictHostKeyChecking=no -o IdentitiesOnly=yes"`**: o `-i <keyfile>` que a action passa não impede o `ssh` de oferecer antes as chaves do ssh-agent / defaults. O HostGator tem `MaxAuthTries` baixo (anti-brute-force) e derruba com `Too many authentication failures` antes de chegar na chave de deploy. `IdentitiesOnly=yes` limita o `ssh` à chave do `-i`. Mantém o `StrictHostKeyChecking=no` (default do input) porque o `known_hosts` não é pré-semeado.
 - **Chave dedicada** (não reusar uma chave pessoal do dono): escopo de blast radius menor e revogação sem afetar o acesso humano.
 
 ## 3. Secrets no environment `PROD` (`specify.md` §2.3)
