@@ -4,6 +4,8 @@
 
 Versão: 1.0 · Criado em: 20260831
 
+PR: [#106](https://github.com/isacaguiar/expense/pull/106) — `infra/20260831-deploy-backend-ssh` → `dev` (aberto 2026-08-31). Merge em `dev` e promoção `dev` → `main` = gate humano; o push em `main` dispara o deploy.
+
 ---
 
 ## 1. Desvios do fluxo padrão / pendências
