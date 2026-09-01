@@ -21,3 +21,12 @@ yarn-error.log
 /.idea
 /.vscode
 backend/storage/logs/laravel.log
+
+# Chaves SSH / privadas geradas localmente (secret SSH_PRIVATE_KEY do deploy) — nunca versionar
+expense_deploy
+expense_deploy.pub
+id_ed25519
+id_ed25519.pub
+id_rsa
+id_rsa.pub
+*.ppk
