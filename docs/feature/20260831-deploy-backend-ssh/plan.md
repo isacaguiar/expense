@@ -40,7 +40,7 @@ e **colocar** no lugar:
           EXCLUDE:         "/.git*, /tests, /storage/logs, /storage/app, /node_modules, /*.yml, /.env.example"
 ```
 
-- **Pin**: `easingthemes/ssh-deploy@v5` (tag major), alinhado com as demais actions do repo (`actions/checkout@v4`, `shivammathur/setup-php@v2`, `actions/setup-node@v4` — só a `FTP-Deploy-Action@v4.3.5` é pin de patch). Endurecer para SHA fica como opção de hardening futura, não obrigatória nesta feature.
+- **Pin**: `easingthemes/ssh-deploy@v6.0.1` (pin de patch, como `FTP-Deploy-Action@v4.3.5`). A tentativa inicial com a tag major flutuante `@v5` quebrou o deploy — `Error: Unable to resolve action easingthemes/ssh-deploy@v5, unable to find version v5` (a action já está na major `v6`; não há `v5` flutuante resolvível no runner). Lição: pin de patch para actions de terceiro. Endurecer para SHA fica como hardening futuro.
 - **`SOURCE: "build-laravel/"`** com barra final = envia o **conteúdo** da pasta, não a pasta. Espelha o `local-dir: build-laravel/` de hoje.
 - **`ARGS: "-rltgoDzvO --delete"`**: `r` recursivo, `l` links, `t` times, `g`/`o`/`D` grupo/owner/devices, `z` compressão, `O` (`--omit-dir-times`) evita erro de permissão ao setar mtime de diretório em shared host. `--delete` espelha remoções (ver §4). É o default da action menos o `p` (perms) — manter sem `p` porque o host controla permissão via umask do usuário.
 - **Nada acima do passo muda** (`specify.md` §2.5): `checkout`, `setup-php`, `composer install --no-dev`, "🔐 Gerar arquivo .env", `key:generate`, `config/route/view:cache`, "📦 Preparar diretório de build" (o `rsync` local que monta `build-laravel/`) ficam idênticos.

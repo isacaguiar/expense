@@ -16,7 +16,7 @@ Versão: 1.0 · Criado em: 20260831
 
 - **TASK-233**: em `.github/workflows/deploy-backend.yml` —
   - o passo `- name: 🚀 Deploy via FTP` (com `SamKirkland/FTP-Deploy-Action@v4.3.5`) **não existe mais**;
-  - existe um passo `- name: 🚀 Deploy via SSH (rsync)` com `uses: easingthemes/ssh-deploy@v5` (tag major, como `checkout@v4`/`setup-php@v2` no mesmo repo), `SOURCE: "build-laravel/"`, `TARGET: ${{ secrets.SSH_TARGET }}`, `REMOTE_HOST/USER/PORT` vindos de `secrets.SSH_HOST/SSH_USER/SSH_PORT`, `SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}`, `ARGS: "-rltgoDzvO --delete"`;
+  - existe um passo `- name: 🚀 Deploy via SSH (rsync)` com `uses: easingthemes/ssh-deploy@v6.0.1` (pin de patch — a major flutuante `@v5` não resolve no runner), `SOURCE: "build-laravel/"`, `TARGET: ${{ secrets.SSH_TARGET }}`, `REMOTE_HOST/USER/PORT` vindos de `secrets.SSH_HOST/SSH_USER/SSH_PORT`, `SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}`, `ARGS: "-rltgoDzvO --delete"`;
   - o `EXCLUDE` contém `/storage/app`, `/storage/logs` e `/.env.example`, e **não** contém `/.env` nem padrão que case com `.env` na raiz;
   - o arquivo não referencia mais `SFTP_HOST`/`SFTP_USER`/`SFTP_PASS`/`protocol:`/`server-dir:`/`port: 21`;
   - `git diff` mostra alteração **só** no bloco do passo de deploy — os passos de build (checkout → "📦 Preparar diretório de build") ficam byte a byte iguais;
