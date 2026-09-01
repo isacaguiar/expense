@@ -5,12 +5,31 @@ namespace Tests\Feature;
 use App\Models\Expense;
 use App\Models\Group;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class ExpenseControllerShowUpdateDestroyTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // Fixa o relógio na mesma competência das fixtures (date_payment
+        // '2026-08-15'). Sem isso, update()/destroy() passam a receber 422
+        // "competência já fechada" assim que o relógio real vira de mês —
+        // ver docs/bugfix/20260901-expense-store-update-422.md.
+        Carbon::setTestNow('2026-08-15 12:00:00');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     private function tokenFor(User $user): string
     {
