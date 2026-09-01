@@ -5,12 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Throwable;
 
 class GoogleAuthController extends Controller
 {
+    private const STATE_CACHE_PREFIX = 'google_oauth_state:';
+
+    private const STATE_TTL_MINUTES = 5;
+
     /**
      * Devolve a URL de consentimento do Google para o usuário autenticado vincular a própria conta.
      */
@@ -18,15 +23,16 @@ class GoogleAuthController extends Controller
     {
         $user = $request->user();
 
-        $state = Crypt::encryptString(json_encode([
+        $token = Str::random(40);
+
+        Cache::put(self::STATE_CACHE_PREFIX.$token, [
             'intent' => 'link',
             'user_id' => $user->id,
-            'exp' => now()->addMinutes(5)->timestamp,
-        ]));
+        ], now()->addMinutes(self::STATE_TTL_MINUTES));
 
         $url = Socialite::driver('google')
             ->stateless()
-            ->with(['state' => $state])
+            ->with(['state' => $token])
             ->redirect()
             ->getTargetUrl();
 
@@ -41,7 +47,7 @@ class GoogleAuthController extends Controller
     {
         $frontendUrl = config('services.frontend_url');
 
-        $state = $this->decodeState($request->query('state'));
+        $state = $this->pullState($request->query('state'));
 
         if ($state === null) {
             return redirect()->away("{$frontendUrl}/profile?linked=error");
@@ -75,22 +81,17 @@ class GoogleAuthController extends Controller
         return redirect()->away("{$frontendUrl}/profile?linked=success");
     }
 
-    private function decodeState(?string $rawState): ?array
+    /**
+     * Recupera e consome (uso único) o contexto de vínculo guardado pelo redirectUrl.
+     */
+    private function pullState(?string $token): ?array
     {
-        if (! $rawState) {
+        if (! $token) {
             return null;
         }
 
-        try {
-            $state = json_decode(Crypt::decryptString($rawState), true);
-        } catch (Throwable $e) {
-            return null;
-        }
+        $state = Cache::pull(self::STATE_CACHE_PREFIX.$token);
 
-        if (! is_array($state) || ($state['exp'] ?? 0) < now()->timestamp) {
-            return null;
-        }
-
-        return $state;
+        return is_array($state) ? $state : null;
     }
 }
