@@ -89,15 +89,15 @@ jobs:
                     --exclude='.env.example' \
                     backend/ build-laravel/
 
-      - name: 🚀 Deploy via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+      - name: 🚀 Deploy via SSH (rsync)
+        uses: easingthemes/ssh-deploy@v5
         with:
-          server: ${{ secrets.SFTP_HOST }}
-          username: ${{ secrets.SFTP_USER }}
-          password: ${{ secrets.SFTP_PASS }}
-          protocol: ftps
-          port: 21
-          server-dir: /api/
-          local-dir: build-laravel/
-          log-level: minimal
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          REMOTE_HOST: ${{ secrets.SSH_HOST }}
+          REMOTE_USER: ${{ secrets.SSH_USER }}
+          REMOTE_PORT: ${{ secrets.SSH_PORT }}
+          SOURCE: "build-laravel/"
+          TARGET: ${{ secrets.SSH_TARGET }}
+          ARGS: "-rltgoDzvO --delete"
+          EXCLUDE: "/.git*, /tests, /storage/logs, /storage/app, /node_modules, /*.yml, /.env.example"
 
