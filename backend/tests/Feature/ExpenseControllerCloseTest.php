@@ -153,8 +153,12 @@ class ExpenseControllerCloseTest extends TestCase
         );
     }
 
-    public function test_summary_reports_closed_manually_and_reflects_the_snapshot_not_live_edits(): void
+    public function test_summary_of_a_manually_closed_cycle_reflects_live_state(): void
     {
+        // TASK-247 (feature 20260902): um ciclo fechado (manual) ainda não
+        // quitado passa a ser recalculado AO VIVO no summary — é o que faz
+        // "pagar depois de fechar" aparecer na tela. (A edição de valor via
+        // API continua bloqueada; aqui a mudança é simulada direto no modelo.)
         Carbon::setTestNow('2026-08-19');
 
         $payer = User::factory()->create();
@@ -169,8 +173,6 @@ class ExpenseControllerCloseTest extends TestCase
             ->postJson("/api/groups/{$group->id}/expenses/close")
             ->assertStatus(200);
 
-        // Edição ao vivo depois do fechamento manual — o resumo deve continuar
-        // refletindo a foto (100), não o valor novo.
         $expense->update(['total_value' => 999]);
         $expense->quotas()->first()->update(['value_quota' => 999]);
 
@@ -178,7 +180,8 @@ class ExpenseControllerCloseTest extends TestCase
             ->getJson("/api/groups/{$group->id}/expenses/summary")
             ->assertStatus(200)
             ->assertJsonPath('cycle.status', 'closed_manually')
-            ->assertJsonPath('totals.total', 100);
+            ->assertJsonPath('cycle.settled', false)
+            ->assertJsonPath('totals.total', 999);
     }
 
     public function test_summary_reflects_live_edits_again_after_manual_reopening(): void
