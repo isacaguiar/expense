@@ -8,14 +8,14 @@ Versão: 1.0 · Criado em: 20260901
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-236 | Fazer o cluster de controles do `GroupHeader` caber em 375px (wrap + esconder nome em `xs` + `Select` elástico) | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-237 | Tornar o `mt`/`mb` do `<Container>` responsivo nos dois shells | frontend | plan.md §5 | nenhum | Pendente |
-| TASK-238 | Deixar a barra de ações do `ExpenseManager` quebrar linha (`flexWrap`) | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-239 | Deixar o rótulo do seletor de competência ceder espaço em `ExpenseManager` e `Payments` | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-240 | Adicionar polyfill de `window.matchMedia` em `setupTests.ts` | infra | plan.md §0.3 | nenhum | Pendente |
-| TASK-241 | `Dashboard`: renderizar lista de grupos como cartões abaixo de `sm` | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-242 | `ExpenseManager`: renderizar lista de despesas como cartões abaixo de `sm` | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-243 | Verificar `ExpenseView`/`ExpenseForm`/`GroupMembersForm`/diálogos em 375px com sessão real | doc | plan.md §6 | nenhum | Pendente |
+| TASK-236 | Fazer o cluster de controles do `GroupHeader` caber em 375px (wrap + esconder nome em `xs` + `Select` elástico) | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-237 | Tornar o `mt`/`mb` do `<Container>` responsivo nos dois shells | frontend | plan.md §5 | nenhum | Concluída |
+| TASK-238 | Deixar a barra de ações do `ExpenseManager` quebrar linha (`flexWrap`) | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-239 | Deixar o rótulo do seletor de competência ceder espaço em `ExpenseManager` e `Payments` | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-240 | Adicionar polyfill de `window.matchMedia` em `setupTests.ts` | infra | plan.md §0.3 | nenhum | Concluída |
+| TASK-241 | `Dashboard`: renderizar lista de grupos como cartões abaixo de `sm` | frontend | plan.md §1 | nenhum | Concluída |
+| TASK-242 | `ExpenseManager`: renderizar lista de despesas como cartões abaixo de `sm` | frontend | plan.md §1 | nenhum | Concluída |
+| TASK-243 | Verificar `ExpenseView`/`ExpenseForm`/`GroupMembersForm`/diálogos em 375px com sessão real | doc | plan.md §6 | nenhum | Pendente — aguarda sessão autenticada (backend + login); ver implementation.md §2 |
 
 Ordem de execução (plan.md §7): 236 → 237 → 238 → 239 → 240 → 241 → 242 → 243. Sem dependência técnica, exceto **TASK-240 antes de TASK-241/242**. A 1ª task (236) nasce na branch da feature; as demais em sub-branches `frontend/20260901-usabilidade-mobile-TASK-0xx` com merge local `--no-ff` (ADR-003).
 
