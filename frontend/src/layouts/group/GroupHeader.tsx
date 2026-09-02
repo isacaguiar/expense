@@ -52,9 +52,23 @@ export default function GroupHeader({ title, groups, groupId, onGroupChange, use
         </Typography>
       </Box>
 
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'flex-end',
+          flexWrap: 'wrap',
+          gap: 2,
+          rowGap: 1,
+        }}
+      >
         {groups.length > 0 && groupId && (
-          <Select value={Number(groupId)} onChange={onGroupChange} size="small" sx={{ minWidth: 180 }}>
+          <Select
+            value={Number(groupId)}
+            onChange={onGroupChange}
+            size="small"
+            sx={{ minWidth: { xs: 132, sm: 180 }, maxWidth: { xs: 200, sm: 'none' } }}
+          >
             {groups.map((group) => (
               <MenuItem key={group.id} value={group.id}>
                 {group.name}
@@ -81,7 +95,7 @@ export default function GroupHeader({ title, groups, groupId, onGroupChange, use
             >
               {getInitials(userName)}
             </Avatar>
-            <Typography sx={{ fontSize: '0.85rem' }}>{userName}</Typography>
+            <Typography sx={{ fontSize: '0.85rem', display: { xs: 'none', sm: 'block' } }}>{userName}</Typography>
           </Box>
         )}
       </Box>
