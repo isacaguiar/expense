@@ -712,11 +712,17 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Marca como paga a ocorrência desta despesa na competência vigente.
-     * Só o credor (`user_payer_id`) pode confirmar o pagamento, e só enquanto
-     * a competência ainda está aberta (nem automática nem manualmente
-     * fechada). Despesa nova nasce sem Quota na competência vigente quando é
-     * `FIXED` — materializa antes de marcar.
+     * Marca como paga a ocorrência desta despesa numa competência. Só o credor
+     * (`user_payer_id`) pode confirmar o pagamento, e — desde a feature
+     * `20260902-pagamento-ciclo-fechado` — pode fazê-lo a qualquer momento,
+     * inclusive numa competência já fechada (por data ou manualmente). O
+     * parâmetro opcional `cycles_ago` (>= 0, default 0) escolhe a competência
+     * alvo; `cycles_ago >= 0` nunca resolve para uma competência futura, então
+     * não há guard de "futuro" aqui. Despesa `FIXED` nasce sem Quota na
+     * competência — materializa antes de marcar.
+     *
+     * Ao quitar a última pendência da competência, sela o ciclo
+     * (`sealCycleIfSettled`): a partir daí ele vira histórico imutável.
      *
      * Comprovante (`comprovante`) é opcional no contrato da API: o fluxo
      * antigo de `ExpenseManager` chama este endpoint sem corpo e precisa
@@ -733,19 +739,16 @@ class ExpenseController extends Controller
 
         $data = $request->validate([
             'comprovante' => 'nullable|image|max:5120',
+            'cycles_ago' => 'nullable|integer|min:0',
         ]);
 
         $group = $expense->group;
-        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
 
-        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
-            return $response;
-        }
-
-        $quota = $this->resolveQuotaForCurrentCompetence($expense, $cycle['start'], $cycle['end']);
+        $quota = $this->resolveQuotaForCycle($expense, $cycle['start'], $cycle['end']);
 
         if (! $quota) {
-            return response()->json(['error' => 'Esta despesa não tem ocorrência na competência vigente.'], 422);
+            return response()->json(['error' => 'Esta despesa não tem ocorrência nessa competência.'], 422);
         }
 
         $update = [
@@ -759,6 +762,8 @@ class ExpenseController extends Controller
         }
 
         $quota->update($update);
+
+        $this->sealCycleIfSettled($group, $group->id, $cycle['start'], $cycle['end']);
 
         // Comprovante anexado pelo credor → avisa os pagadores por WhatsApp,
         // depois da resposta (não segura o request, não quebra o pagamento se
@@ -779,17 +784,21 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Desfaz o pagamento da ocorrência desta despesa na competência vigente.
-     * Mesmas regras de `pay`: só o credor, só com a competência aberta. Ao
+     * Desfaz o pagamento da ocorrência desta despesa numa competência. Mesmas
+     * regras de `pay`: só o credor, a qualquer momento (inclusive competência
+     * fechada), com `cycles_ago` (>= 0, default 0) escolhendo o alvo. Ao
      * contrário de `pay`, não materializa `Quota` de `FIXED` sob demanda —
      * uma ocorrência ainda virtual nunca está paga (`collectCycleEntries`
      * projeta `paid: false` até existir uma Quota real), então não há o que
      * desfazer nesse caso.
      *
+     * Se o `unpay` quebra a quitação total de um ciclo já selado, dessela
+     * (`unsealIfBroken`): o ciclo volta a ser recalculado ao vivo.
+     *
      * Se a quota tinha comprovante, apaga o arquivo do disco — um pagamento
      * desfeito não deve manter "prova" de um estado que não vale mais.
      */
-    public function unpay($expenseId)
+    public function unpay($expenseId, Request $request)
     {
         $expense = $this->findExpenseForMember($expenseId);
 
@@ -797,19 +806,19 @@ class ExpenseController extends Controller
             abort(403, 'Só o credor pode desfazer o pagamento desta despesa.');
         }
 
-        $group = $expense->group;
-        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+        $data = $request->validate([
+            'cycles_ago' => 'nullable|integer|min:0',
+        ]);
 
-        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
-            return $response;
-        }
+        $group = $expense->group;
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
 
         $quota = $expense->quotas()
             ->whereBetween('date_expected', [$cycle['start']->toDateString(), $cycle['end']->toDateString()])
             ->first();
 
         if (! $quota || ! $quota->paid) {
-            return response()->json(['error' => 'Esta despesa não está paga na competência vigente.'], 422);
+            return response()->json(['error' => 'Esta despesa não está paga nessa competência.'], 422);
         }
 
         ProofStorage::delete($quota->payment_proof_path);
@@ -820,6 +829,8 @@ class ExpenseController extends Controller
             'paid_by' => null,
             'payment_proof_path' => null,
         ]);
+
+        $this->unsealIfBroken($group, $group->id, $cycle['start'], $cycle['end']);
 
         return response()->json($quota->fresh());
     }
@@ -1324,9 +1335,10 @@ class ExpenseController extends Controller
      * `FIXED`, materializa a ocorrência se ainda não existir; para as demais,
      * a Quota já existe desde a criação (uma por competência, por design).
      * `null` se a despesa não tiver ocorrência nessa competência (ex.: FIXED
-     * cuja recorrência já foi cortada antes dela).
+     * cuja recorrência já foi cortada antes dela). A competência pode ser
+     * passada (`cycles_ago > 0` em `pay()`), não só a vigente.
      */
-    private function resolveQuotaForCurrentCompetence(Expense $expense, Carbon $start, Carbon $end): ?Quota
+    private function resolveQuotaForCycle(Expense $expense, Carbon $start, Carbon $end): ?Quota
     {
         if ($expense->expense_type === 'FIXED') {
             $entry = $this->collectCycleEntries($expense->group_id, $start, $end)
