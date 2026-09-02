@@ -18,6 +18,14 @@ use Illuminate\Validation\Rule;
 
 class ExpenseController extends Controller
 {
+    /**
+     * Quantos ciclos para trás o `focusCycle()` varre à procura de um ciclo
+     * fechado ainda não quitado. Um ciclo pendente há mais de um ano é caso
+     * de exceção — não vale pagar o custo de varrer o histórico inteiro a
+     * cada abertura de grupo.
+     */
+    private const FOCUS_LOOKBACK = 12;
+
     public function indexByGroup($groupId, Request $request)
     {
         $group = Group::findOrFail($groupId);
@@ -525,6 +533,45 @@ class ExpenseController extends Controller
             'balances' => $summary['balances'],
             'settlements' => $this->attachSettlementConfirmations($groupId, $start, $summary['settlements']),
         ]);
+    }
+
+    /**
+     * Diz em qual competência o app deve abrir o grupo: o ciclo **fechado mais
+     * recente que ainda não está totalmente quitado** (`cycleIsFullySettled`),
+     * varrendo até `FOCUS_LOOKBACK` ciclos para trás. Se nenhum ciclo fechado
+     * recente tem pendência, devolve `0` — o app abre na competência vigente
+     * (comportamento pré-`20260902`). Ciclo `open`/`future` não conta; ciclo
+     * selado é pulado. Ver docs/feature/20260902-pagamento-ciclo-fechado/plan.md §4.
+     */
+    public function focusCycle($groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        for ($ago = 0; $ago <= self::FOCUS_LOOKBACK; $ago++) {
+            $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $ago);
+
+            $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
+                ->where('cycle_start', $cycle['start']->toDateString())
+                ->first();
+
+            if ($snapshot && $snapshot->isSealed()) {
+                continue;
+            }
+
+            $cycleIsClosed = $cycle['status'] === 'closed'
+                || ($cycle['status'] === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive());
+
+            if (! $cycleIsClosed) {
+                continue;
+            }
+
+            if (! $this->cycleIsFullySettled($group, $groupId, $cycle['start'], $cycle['end'])) {
+                return response()->json(['cycles_ago' => $ago]);
+            }
+        }
+
+        return response()->json(['cycles_ago' => 0]);
     }
 
     /**

@@ -1,0 +1,149 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Expense;
+use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Tests\TestCase;
+
+/**
+ * `GET /api/groups/{groupId}/expenses/focus-cycle` — em qual competência o app
+ * abre o grupo: o ciclo fechado mais recente ainda com pendência, ou 0.
+ * Ver docs/feature/20260902-pagamento-ciclo-fechado/plan.md §4.
+ */
+class FocusCycleTest extends TestCase
+{
+    use DatabaseTransactions;
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
+
+    private function tokenFor(User $user): string
+    {
+        return auth('api')->login($user);
+    }
+
+    private function unpaidExpense(Group $group, User $creditor, string $datePayment): Expense
+    {
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => $datePayment,
+            'description' => 'Despesa de teste',
+            'expense_type' => 'IN_CASH',
+            'installments' => 1,
+            'total_value' => 100,
+            'group_id' => $group->id,
+            'user_creator_id' => $creditor->id,
+            'user_payer_id' => $creditor->id,
+            'deleted' => false,
+        ]);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => $datePayment, 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        return $expense;
+    }
+
+    public function test_returns_the_most_recent_unsettled_closed_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15'); // outubro é a competência vigente
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach($creditor->id);
+
+        // Conta não paga em agosto — 2 ciclos atrás, fechado por data.
+        $this->unpaidExpense($group, $creditor, '2026-08-10');
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/focus-cycle")
+            ->assertStatus(200)
+            ->assertJsonPath('cycles_ago', 2);
+    }
+
+    public function test_returns_zero_when_no_closed_cycle_has_a_pending_item(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach($creditor->id);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/focus-cycle")
+            ->assertStatus(200)
+            ->assertJsonPath('cycles_ago', 0);
+    }
+
+    public function test_a_sealed_cycle_is_skipped_even_if_it_has_unpaid_entries(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach($creditor->id);
+
+        $this->unpaidExpense($group, $creditor, '2026-08-10');
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 100, 'paid' => 100, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'settlements' => [],
+            'settled_at' => now(),
+        ]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/focus-cycle")
+            ->assertStatus(200)
+            ->assertJsonPath('cycles_ago', 0);
+    }
+
+    public function test_a_manually_closed_current_cycle_with_a_pending_item_returns_zero(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach($creditor->id);
+
+        $this->unpaidExpense($group, $creditor, '2026-10-10');
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-10-01',
+            'cycle_end' => '2026-10-31',
+            'totals' => ['total' => 100, 'paid' => 0, 'pending' => 100],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/focus-cycle")
+            ->assertStatus(200)
+            ->assertJsonPath('cycles_ago', 0);
+    }
+
+    public function test_non_member_cannot_query_focus_cycle(): void
+    {
+        $outsider = User::factory()->create();
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach($member->id);
+
+        $this->withToken($this->tokenFor($outsider))
+            ->getJson("/api/groups/{$group->id}/expenses/focus-cycle")
+            ->assertStatus(404);
+    }
+}
