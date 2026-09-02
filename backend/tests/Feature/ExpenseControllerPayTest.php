@@ -218,8 +218,9 @@ class ExpenseControllerPayTest extends TestCase
         $response->assertStatus(422);
     }
 
-    public function test_cannot_pay_in_a_manually_closed_cycle(): void
+    public function test_can_pay_in_a_manually_closed_cycle(): void
     {
+        // TASK-245: fechar a competência deixou de travar o pagamento do credor.
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -243,8 +244,81 @@ class ExpenseControllerPayTest extends TestCase
         $response = $this->withToken($this->tokenFor($creditor))
             ->postJson("/api/expenses/{$expense->id}/pay");
 
-        $response->assertStatus(422);
-        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false]);
+        $response->assertStatus(200)->assertJsonPath('paid', true);
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => true]);
+    }
+
+    public function test_creditor_can_pay_a_past_by_date_closed_cycle_via_cycles_ago(): void
+    {
+        // "Agora" é setembro — agosto já fechou por data. cycles_ago=1 aponta pra agosto.
+        Carbon::setTestNow('2026-09-15');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['cycles_ago' => 1]);
+
+        $response->assertStatus(200)->assertJsonPath('paid', true);
+        $this->assertDatabaseHas('ex_quotas', [
+            'expense_id' => $expense->id, 'date_expected' => '2026-08-10', 'paid' => true,
+        ]);
+    }
+
+    public function test_pay_targets_the_quota_of_the_given_cycles_ago(): void
+    {
+        Carbon::setTestNow('2026-09-15');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, [
+            'date_payment' => '2026-08-10',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 2,
+            'total_value' => 200,
+        ]);
+        $expense->payers()->attach($creditor->id);
+        $aug = $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+        $sep = $expense->quotas()->create(['date_expected' => '2026-09-10', 'number' => 2, 'paid' => false, 'value_quota' => 100]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['cycles_ago' => 1])
+            ->assertStatus(200);
+
+        $this->assertTrue((bool) $aug->fresh()->paid);
+        $this->assertFalse((bool) $sep->fresh()->paid);
+    }
+
+    public function test_pay_seals_the_cycle_when_it_becomes_fully_settled(): void
+    {
+        Carbon::setTestNow('2026-09-15');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        // Pagador único → nenhum acerto devedor→credor; pagar a única despesa
+        // quita a competência inteira.
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['cycles_ago' => 1])
+            ->assertStatus(200);
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', '2026-08-01')->first();
+
+        $this->assertNotNull($snapshot);
+        $this->assertNotNull($snapshot->settled_at);
     }
 
     public function test_pay_requires_group_membership(): void
@@ -393,8 +467,9 @@ class ExpenseControllerPayTest extends TestCase
         $this->assertSame(1, Quota::where('expense_id', $expense->id)->count());
     }
 
-    public function test_cannot_unpay_in_a_manually_closed_cycle(): void
+    public function test_can_unpay_in_a_manually_closed_cycle(): void
     {
+        // TASK-245: espelha test_can_pay_in_a_manually_closed_cycle no unpay.
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -421,8 +496,43 @@ class ExpenseControllerPayTest extends TestCase
         $response = $this->withToken($this->tokenFor($creditor))
             ->postJson("/api/expenses/{$expense->id}/unpay");
 
-        $response->assertStatus(422);
-        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => true]);
+        $response->assertStatus(200)->assertJsonPath('paid', false);
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false]);
+    }
+
+    public function test_unpay_in_a_sealed_cycle_unseals_it(): void
+    {
+        Carbon::setTestNow('2026-09-15');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create([
+            'date_expected' => '2026-08-10', 'number' => 1, 'paid' => true,
+            'paid_at' => now(), 'paid_by' => $creditor->id, 'value_quota' => 100,
+        ]);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 100, 'paid' => 100, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'settlements' => [],
+            'settled_at' => now(),
+        ]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/unpay", ['cycles_ago' => 1]);
+
+        $response->assertStatus(200)->assertJsonPath('paid', false);
+        $this->assertDatabaseHas('ex_group_cycle_snapshots', [
+            'group_id' => $group->id, 'cycle_start' => '2026-08-01', 'settled_at' => null,
+        ]);
     }
 
     public function test_full_pay_unpay_update_flow_blocks_and_unblocks_value_edits(): void

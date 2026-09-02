@@ -13,6 +13,17 @@ class ExpenseControllerStoreTest extends TestCase
 {
     use DatabaseTransactions;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // As fixtures usam datas de agosto/2026 (`payloadFor` → `date_payment`
+        // 2026-08-15). Congela o relógio dentro dessa competência para os casos
+        // que não fixam data própria não baterem no guard de competência
+        // fechada quando a suíte roda depois de agosto/2026.
+        Carbon::setTestNow('2026-08-19');
+    }
+
     protected function tearDown(): void
     {
         Carbon::setTestNow();

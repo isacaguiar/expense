@@ -35,6 +35,9 @@ class ExpenseControllerCycleHistoryTest extends TestCase
             'expenses' => [],
             'balances' => [],
             'settlements' => [],
+            // cycleHistory() só lista ciclo selado (settled_at != null) — a
+            // feature 20260902 tirou os ciclos fechados ainda pendentes daqui.
+            'settled_at' => Carbon::now(),
         ], $overrides));
     }
 
@@ -89,6 +92,7 @@ class ExpenseControllerCycleHistoryTest extends TestCase
         // imutável (pode ser reaberta), então não deve aparecer na lista.
         $this->createSnapshot($group, '2026-08-01', '2026-08-31', [
             'closed_manually_at' => Carbon::now(),
+            'settled_at' => null,
         ]);
         $this->createSnapshot($group, '2026-07-01', '2026-07-31');
 

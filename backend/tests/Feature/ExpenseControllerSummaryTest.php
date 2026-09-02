@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\SettlementConfirmation;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -513,8 +514,12 @@ class ExpenseControllerSummaryTest extends TestCase
         $this->assertNetBalancesMatchSettlements($response->json('balances'), $settlements);
     }
 
-    public function test_closed_cycle_settlements_are_immutable_after_a_new_expense_is_created(): void
+    public function test_sealed_cycle_settlements_are_immutable_after_a_new_expense_is_created(): void
     {
+        // TASK-247: um ciclo fechado só congela quando SELADO (tudo pago e todo
+        // acerto confirmado). Aqui junho fecha por data, é pago e tem o acerto
+        // confirmado → sela na 1ª leitura → despesa nova depois disso não muda
+        // mais o `settlements`.
         Carbon::setTestNow('2026-08-19');
 
         $payer = User::factory()->create();
@@ -526,13 +531,25 @@ class ExpenseControllerSummaryTest extends TestCase
         $expense->payers()->sync([$payer->id, $participant->id]);
         $expense->quotas()->create(['date_expected' => '2026-06-10', 'number' => 1, 'paid' => true, 'value_quota' => 200]);
 
+        // Acerto participant → payer (200/2 = 100) confirmado → junho fica quitado.
+        SettlementConfirmation::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-06-01',
+            'cycle_end' => '2026-06-30',
+            'from_user_id' => $participant->id,
+            'to_user_id' => $payer->id,
+            'amount' => 100,
+            'proof_path' => 'comprovantes/'.$group->id.'/x.jpg',
+            'confirmed_at' => Carbon::now(),
+        ]);
+
         $before = $this->withToken($this->tokenFor($payer))
             ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=2");
-        $before->assertStatus(200);
+        $before->assertStatus(200)->assertJsonPath('cycle.settled', true);
         $settlementsBefore = $before->json('settlements');
 
-        // Despesa nova criada depois do ciclo já fotografado — não deve
-        // alterar o `settlements` já persistido no snapshot.
+        // Despesa nova criada depois do ciclo já selado — não deve alterar o
+        // `settlements` já persistido no snapshot.
         $newExpense = $this->createExpense($group, $participant, ['date_payment' => '2026-06-15', 'total_value' => 1000]);
         $newExpense->payers()->sync([$payer->id, $participant->id]);
         $newExpense->quotas()->create(['date_expected' => '2026-06-15', 'number' => 1, 'paid' => true, 'value_quota' => 1000]);
@@ -546,6 +563,81 @@ class ExpenseControllerSummaryTest extends TestCase
         // canonicaliza a ordem das chaves do objeto) — o conteúdo é que
         // precisa ser idêntico, não a ordem de serialização.
         $this->assertEquals($settlementsBefore, $after->json('settlements'));
+    }
+
+    public function test_expenses_list_puts_unpaid_before_paid_then_chronological(): void
+    {
+        // TASK-249: o que falta pagar fica no topo.
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        // Paga, mas com a data mais antiga — deve ir para a base mesmo assim.
+        $paid = $this->createExpense($group, $payer, ['date_payment' => '2026-08-02', 'description' => 'Paga antiga']);
+        $paid->payers()->sync([$payer->id]);
+        $paid->quotas()->create(['date_expected' => '2026-08-02', 'number' => 1, 'paid' => true, 'value_quota' => 100]);
+
+        $lateUnpaid = $this->createExpense($group, $payer, ['date_payment' => '2026-08-15', 'description' => 'Aberta recente']);
+        $lateUnpaid->payers()->sync([$payer->id]);
+        $lateUnpaid->quotas()->create(['date_expected' => '2026-08-15', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $earlyUnpaid = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'description' => 'Aberta antiga']);
+        $earlyUnpaid->payers()->sync([$payer->id]);
+        $earlyUnpaid->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $expenses = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->json('expenses');
+
+        $this->assertSame(['Aberta antiga', 'Aberta recente', 'Paga antiga'], array_column($expenses, 'description'));
+        $this->assertSame([false, false, true], array_column($expenses, 'paid'));
+    }
+
+    public function test_settlements_list_puts_unconfirmed_before_confirmed(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $debtorA = User::factory()->create();
+        $debtorB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $debtorA->id, $debtorB->id]);
+
+        // debtorA deve 100 (despesa de 200 dividida com o payer).
+        $expA = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 200]);
+        $expA->payers()->sync([$payer->id, $debtorA->id]);
+        $expA->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => true, 'value_quota' => 200]);
+
+        // debtorB deve 300 (despesa de 600 dividida com o payer).
+        $expB = $this->createExpense($group, $payer, ['date_payment' => '2026-08-06', 'total_value' => 600]);
+        $expB->payers()->sync([$payer->id, $debtorB->id]);
+        $expB->quotas()->create(['date_expected' => '2026-08-06', 'number' => 1, 'paid' => true, 'value_quota' => 600]);
+
+        // debtorB (o de maior valor) já confirmou → deve ir para a base.
+        SettlementConfirmation::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'from_user_id' => $debtorB->id,
+            'to_user_id' => $payer->id,
+            'amount' => 300,
+            'proof_path' => 'comprovantes/'.$group->id.'/x.jpg',
+            'confirmed_at' => Carbon::now(),
+        ]);
+
+        $settlements = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->json('settlements');
+
+        $this->assertCount(2, $settlements);
+        $this->assertSame($debtorA->id, $settlements[0]['from_user_id']);
+        $this->assertNull($settlements[0]['confirmedAt']);
+        $this->assertSame($debtorB->id, $settlements[1]['from_user_id']);
+        $this->assertNotNull($settlements[1]['confirmedAt']);
     }
 
     /**

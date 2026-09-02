@@ -5,12 +5,30 @@ namespace Tests\Feature;
 use App\Models\Expense;
 use App\Models\Group;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
 class ExpenseControllerShowUpdateDestroyTest extends TestCase
 {
     use DatabaseTransactions;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        // `createExpense()` usa `date_payment` 2026-08-15. Congela o relógio
+        // nessa competência para `update()`/`destroy()` não baterem no guard de
+        // competência fechada quando a suíte roda depois de agosto/2026.
+        Carbon::setTestNow('2026-08-19');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
+    }
 
     private function tokenFor(User $user): string
     {
