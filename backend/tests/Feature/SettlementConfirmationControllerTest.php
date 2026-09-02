@@ -40,8 +40,13 @@ class SettlementConfirmationControllerTest extends TestCase
     /**
      * Cria uma despesa que gera um settlement de $devedor pra $credor: o
      * credor paga, o devedor participa — settlement líquido = valor / 2.
+     *
+     * Fecha manualmente a competência de agosto/2026 junto: desde a feature
+     * 20260902 o acerto do devedor só é aceito com a competência fechada, então
+     * todo caminho feliz de `confirmSettlement` precisa disso. Passe
+     * `closeCycle: false` para os casos que testam a recusa com o ciclo aberto.
      */
-    private function createSettlementBetween(Group $group, User $creditor, User $debtor, float $totalValue): Expense
+    private function createSettlementBetween(Group $group, User $creditor, User $debtor, float $totalValue, bool $closeCycle = true): Expense
     {
         $expense = Expense::create([
             'create_date' => now(),
@@ -57,6 +62,18 @@ class SettlementConfirmationControllerTest extends TestCase
         ]);
         $expense->payers()->sync([$creditor->id, $debtor->id]);
         $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => $totalValue]);
+
+        if ($closeCycle) {
+            GroupCycleSnapshot::create([
+                'group_id' => $group->id,
+                'cycle_start' => '2026-08-01',
+                'cycle_end' => '2026-08-31',
+                'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+                'expenses' => [],
+                'balances' => [],
+                'closed_manually_at' => now(),
+            ]);
+        }
 
         return $expense;
     }
@@ -191,9 +208,10 @@ class SettlementConfirmationControllerTest extends TestCase
         Storage::disk('local')->assertMissing($firstPath);
     }
 
-    public function test_cannot_confirm_in_a_manually_closed_cycle(): void
+    public function test_can_confirm_in_a_manually_closed_cycle(): void
     {
-        Storage::fake('public');
+        // TASK-246: fechamento manual É a pré-condição do acerto do devedor.
+        Storage::fake('local');
         Carbon::setTestNow('2026-08-19');
 
         $creditor = User::factory()->create();
@@ -203,15 +221,32 @@ class SettlementConfirmationControllerTest extends TestCase
 
         $this->createSettlementBetween($group, $creditor, $debtor, 200);
 
-        GroupCycleSnapshot::create([
+        $response = $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ]);
+
+        $response->assertStatus(200)->assertJsonPath('amount', 100);
+        $this->assertDatabaseHas('ex_settlement_confirmations', [
             'group_id' => $group->id,
-            'cycle_start' => '2026-08-01',
-            'cycle_end' => '2026-08-31',
-            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
-            'expenses' => [],
-            'balances' => [],
-            'closed_manually_at' => now(),
+            'from_user_id' => $debtor->id,
+            'to_user_id' => $creditor->id,
         ]);
+    }
+
+    public function test_confirm_is_rejected_while_the_cycle_is_still_open(): void
+    {
+        Storage::fake('local');
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        // closeCycle: false — o acerto existe, mas a competência segue aberta.
+        $this->createSettlementBetween($group, $creditor, $debtor, 200, closeCycle: false);
 
         $response = $this->withToken($this->tokenFor($debtor))
             ->post("/api/groups/{$group->id}/settlements/confirm", [
@@ -219,7 +254,70 @@ class SettlementConfirmationControllerTest extends TestCase
                 'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
             ]);
 
-        $response->assertStatus(422);
+        $response->assertStatus(422)
+            ->assertJsonPath('error', 'O acerto só pode ser confirmado depois que a competência é fechada.');
+        $this->assertDatabaseMissing('ex_settlement_confirmations', [
+            'group_id' => $group->id,
+            'from_user_id' => $debtor->id,
+            'to_user_id' => $creditor->id,
+        ]);
+    }
+
+    public function test_debtor_can_confirm_a_by_date_closed_cycle_via_cycles_ago(): void
+    {
+        Storage::fake('local');
+        Carbon::setTestNow('2026-09-15'); // agosto já fechou por data
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $this->createSettlementBetween($group, $creditor, $debtor, 200, closeCycle: false);
+
+        $response = $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'cycles_ago' => 1,
+            ]);
+
+        $response->assertStatus(200)->assertJsonPath('amount', 100);
+        $this->assertDatabaseHas('ex_settlement_confirmations', [
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'from_user_id' => $debtor->id,
+            'to_user_id' => $creditor->id,
+        ]);
+    }
+
+    public function test_confirming_the_last_pending_item_seals_the_cycle(): void
+    {
+        Storage::fake('local');
+        Carbon::setTestNow('2026-09-15');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        // Despesa de agosto já paga → a única pendência da competência é o
+        // acerto; confirmá-lo quita tudo e sela o ciclo.
+        $expense = $this->createSettlementBetween($group, $creditor, $debtor, 200, closeCycle: false);
+        $expense->quotas()->update(['paid' => true]);
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'cycles_ago' => 1,
+            ])->assertStatus(200);
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', '2026-08-01')->first();
+
+        $this->assertNotNull($snapshot);
+        $this->assertNotNull($snapshot->settled_at);
     }
 
     public function test_confirm_requires_group_membership(): void

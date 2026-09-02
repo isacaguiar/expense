@@ -480,29 +480,46 @@ class ExpenseController extends Controller
         $end = $cycle['end'];
         $status = $cycle['status'];
 
-        // Fechamento manual só existe para uma competência ainda `open` por
-        // data (`close()` só opera sobre "agora") — `closed`/`future` nunca
-        // têm um a considerar.
-        $manualSnapshot = $status === 'open'
-            ? GroupCycleSnapshot::where('group_id', $groupId)->where('cycle_start', $start->toDateString())->first()
-            : null;
+        $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->first();
+        $sealed = $snapshot && $snapshot->isSealed();
 
-        if ($status === 'closed') {
-            $summary = $this->cycleSnapshotFor($group, $groupId, $start, $end);
-        } elseif ($manualSnapshot && $manualSnapshot->isManuallyClosedAndActive()) {
-            $status = 'closed_manually';
+        if ($sealed) {
+            // Ciclo totalmente quitado → foto imutável.
+            $status = 'closed';
             $summary = [
-                'totals' => $manualSnapshot->totals,
-                'expenses' => $manualSnapshot->expenses,
-                'balances' => $manualSnapshot->balances,
-                'settlements' => $manualSnapshot->settlements,
+                'totals' => $snapshot->totals,
+                'expenses' => $snapshot->expenses,
+                'balances' => $snapshot->balances,
+                'settlements' => $snapshot->settlements,
             ];
+        } elseif ($status === 'closed' || ($status === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive())) {
+            // Ciclo fechado (por data ou manualmente) mas ainda não quitado:
+            // recalcula AO VIVO para refletir pagamentos/confirmações feitos
+            // depois do fechamento (feature 20260902-pagamento-ciclo-fechado).
+            // Se com isso a competência ficou toda quitada, sela agora.
+            if ($status === 'open') {
+                $status = 'closed_manually';
+            }
+
+            $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+            if ($this->sealCycleIfSettled($group, $groupId, $start, $end)) {
+                $sealed = true;
+                $status = 'closed';
+            }
         } else {
             $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
         }
 
         return response()->json([
-            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => $status],
+            'cycle' => [
+                'start' => $start->toDateString(),
+                'end' => $end->toDateString(),
+                'status' => $status,
+                'settled' => $sealed,
+            ],
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
@@ -552,8 +569,21 @@ class ExpenseController extends Controller
             ]
         );
 
+        // Fechar um mês que já está todo pago e com todos os acertos
+        // confirmados sela o ciclo direto (sem passar por `closed_manually`).
+        $sealed = $this->sealCycleIfSettled($group, $groupId, $start, $end);
+
+        if ($sealed) {
+            $snapshot->refresh();
+        }
+
         return response()->json([
-            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => 'closed_manually'],
+            'cycle' => [
+                'start' => $start->toDateString(),
+                'end' => $end->toDateString(),
+                'status' => $sealed ? 'closed' : 'closed_manually',
+                'settled' => $sealed,
+            ],
             'totals' => $snapshot->totals,
             'expenses' => $snapshot->expenses,
             'balances' => $snapshot->balances,
@@ -583,6 +613,10 @@ class ExpenseController extends Controller
             ->where('cycle_start', $start->toDateString())
             ->first();
 
+        if ($snapshot && $snapshot->isSealed()) {
+            return response()->json(['error' => 'Esta competência já foi encerrada.'], 422);
+        }
+
         if (! $snapshot || ! $snapshot->isManuallyClosedAndActive()) {
             return response()->json(['error' => 'Não há fechamento manual ativo para reabrir nesta competência.'], 422);
         }
@@ -592,7 +626,7 @@ class ExpenseController extends Controller
         $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
 
         return response()->json([
-            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => 'open'],
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => 'open', 'settled' => false],
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
@@ -616,8 +650,12 @@ class ExpenseController extends Controller
 
         $currentStart = BillingCycle::cycleFor($group->closing_day, Carbon::now())['start'];
 
+        // Só ciclo selado (totalmente quitado) é "histórico" imutável de
+        // Relatórios; um ciclo fechado ainda com pendência fica na navegação
+        // principal (`focus-cycle`), não aqui.
         $paginator = GroupCycleSnapshot::where('group_id', $groupId)
             ->where('cycle_start', '<', $currentStart->toDateString())
+            ->whereNotNull('settled_at')
             ->orderByDesc('cycle_start')
             ->paginate(10);
 
@@ -656,6 +694,11 @@ class ExpenseController extends Controller
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
         $start = $cycle['start'];
         $end = $cycle['end'];
+
+        $sealed = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->whereNotNull('settled_at')
+            ->exists();
 
         $entries = $this->collectCycleEntries($groupId, $start, $end);
 
@@ -706,7 +749,12 @@ class ExpenseController extends Controller
         })->all();
 
         return response()->json([
-            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => $cycle['status']],
+            'cycle' => [
+                'start' => $start->toDateString(),
+                'end' => $end->toDateString(),
+                'status' => $cycle['status'],
+                'settled' => $sealed,
+            ],
             'creditors' => $tree,
         ]);
     }
@@ -837,15 +885,20 @@ class ExpenseController extends Controller
 
     /**
      * Confirma que o usuário autenticado (devedor) pagou via Pix o valor
-     * líquido que deve a `to_user_id` neste ciclo — conceito distinto de
+     * líquido que deve a `to_user_id` num ciclo — conceito distinto de
      * `pay()`/`unpay()`, que confirmam uma despesa específica do lado do
      * credor. O comprovante aqui é obrigatório (é o conteúdo da ação, não
-     * um anexo opcional como em `pay()`). Só aceita se existir de fato um
-     * settlement `from_user_id === auth()->id()` pra esse `to_user_id` na
-     * competência vigente — evita confirmar um valor que não corresponde a
-     * nada real. Reenviar substitui o comprovante anterior (`updateOrCreate`
-     * — sem endpoint de "desfazer", ver
-     * docs/feature/20260825-pagamentos-grid-pix/specify.md §4).
+     * um anexo opcional como em `pay()`).
+     *
+     * Desde a feature `20260902-pagamento-ciclo-fechado`, o acerto do devedor
+     * só é aceito quando a competência-alvo está **fechada** (`closed` por data
+     * ou fechamento manual ativo) — enquanto aberta, os valores ainda podem
+     * mudar. `cycles_ago` (>= 0, default 0) escolhe a competência. Só aceita se
+     * existir de fato um settlement `from_user_id === auth()->id()` pra esse
+     * `to_user_id` naquela competência. Reenviar substitui o comprovante
+     * anterior (`updateOrCreate` — sem endpoint de "desfazer", ver
+     * docs/feature/20260825-pagamentos-grid-pix/specify.md §4). Ao confirmar o
+     * último acerto pendente de um ciclo já todo pago, sela o ciclo.
      */
     public function confirmSettlement(Request $request, $groupId)
     {
@@ -855,12 +908,24 @@ class ExpenseController extends Controller
         $data = $request->validate([
             'to_user_id' => 'required|integer|exists:ex_users,id',
             'comprovante' => 'required|image|max:5120',
+            'cycles_ago' => 'nullable|integer|min:0',
         ]);
 
-        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now());
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
 
-        if ($response = $this->rejectIfCompetenceClosed($group, $cycle['start'])) {
-            return $response;
+        $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $cycle['start']->toDateString())
+            ->first();
+
+        $cycleIsClosed = $cycle['status'] === 'closed'
+            || ($cycle['status'] === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive());
+
+        if (! $cycleIsClosed) {
+            return response()->json(['error' => 'O acerto só pode ser confirmado depois que a competência é fechada.'], 422);
+        }
+
+        if ($snapshot && $snapshot->isSealed()) {
+            return response()->json(['error' => 'Esta competência já foi encerrada.'], 422);
         }
 
         $summary = $this->computeCycleSummary($group, $groupId, $cycle['start'], $cycle['end']);
@@ -895,6 +960,8 @@ class ExpenseController extends Controller
             ProofStorage::delete($previousProofPath);
         }
 
+        $this->sealCycleIfSettled($group, $groupId, $cycle['start'], $cycle['end']);
+
         // Devedor confirmou o acerto com comprovante → avisa o credor por
         // WhatsApp, depois da resposta. No-op se a feature está desligada.
         $confirmationId = $confirmation->id;
@@ -908,60 +975,6 @@ class ExpenseController extends Controller
         })->afterResponse();
 
         return response()->json($confirmation->fresh());
-    }
-
-    /**
-     * Foto imutável de um ciclo já fechado: devolve a foto já persistida, ou
-     * computa ao vivo (uma única vez) e persiste antes de devolver. A partir
-     * daí, este ciclo nunca mais é recalculado — edições/exclusões de
-     * despesa depois de fotografado não mudam mais o resultado.
-     *
-     * @return array{totals: array, expenses: array, balances: array, settlements: array}
-     */
-    private function cycleSnapshotFor(Group $group, $groupId, Carbon $start, Carbon $end): array
-    {
-        $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
-            ->where('cycle_start', $start->toDateString())
-            ->first();
-
-        if ($snapshot) {
-            return [
-                'totals' => $snapshot->totals,
-                'expenses' => $snapshot->expenses,
-                'balances' => $snapshot->balances,
-                'settlements' => $snapshot->settlements,
-            ];
-        }
-
-        $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
-
-        try {
-            GroupCycleSnapshot::create([
-                'group_id' => $groupId,
-                'cycle_start' => $start->toDateString(),
-                'cycle_end' => $end->toDateString(),
-                'totals' => $summary['totals'],
-                'expenses' => $summary['expenses'],
-                'balances' => $summary['balances'],
-                'settlements' => $summary['settlements'],
-            ]);
-        } catch (\Illuminate\Database\QueryException $e) {
-            // Violação de unique(group_id, cycle_start): outra requisição já
-            // fotografou este ciclo entre a consulta acima e este insert.
-            // Usa a foto que a outra requisição já persistiu.
-            $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
-                ->where('cycle_start', $start->toDateString())
-                ->firstOrFail();
-
-            return [
-                'totals' => $snapshot->totals,
-                'expenses' => $snapshot->expenses,
-                'balances' => $snapshot->balances,
-                'settlements' => $snapshot->settlements,
-            ];
-        }
-
-        return $summary;
     }
 
     /**
@@ -1161,15 +1174,24 @@ class ExpenseController extends Controller
      * `GroupCycleSnapshot` com `settled_at` — a partir daí `summary()` serve
      * essa cópia e o ciclo vira histórico. `updateOrCreate` não passa
      * `closed_manually_at`/`reopened_at`, então preserva o registro de
-     * fechamento manual, se houver. No-op se ainda há pendência.
+     * fechamento manual, se houver. Devolve `true` se selou, `false` se ainda
+     * há pendência.
      */
-    private function sealCycleIfSettled(Group $group, $groupId, Carbon $start, Carbon $end): void
+    private function sealCycleIfSettled(Group $group, $groupId, Carbon $start, Carbon $end): bool
     {
         if (! $this->cycleIsFullySettled($group, $groupId, $start, $end)) {
-            return;
+            return false;
         }
 
         $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+        // Ciclo sem nenhuma despesa nem acerto não vira "histórico selado": não
+        // há foto a congelar e um `settled_at` aqui só travaria o `reopen()` à
+        // toa. `cycleIsFullySettled` ainda devolve `true` (nada pendente) para
+        // o `focus-cycle` pular esse ciclo.
+        if (empty($summary['expenses']) && empty($summary['settlements'])) {
+            return false;
+        }
 
         GroupCycleSnapshot::updateOrCreate(
             ['group_id' => $groupId, 'cycle_start' => $start->toDateString()],
@@ -1182,6 +1204,8 @@ class ExpenseController extends Controller
                 'settled_at' => Carbon::now(),
             ]
         );
+
+        return true;
     }
 
     /**

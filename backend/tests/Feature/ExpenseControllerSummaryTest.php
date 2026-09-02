@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\SettlementConfirmation;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -513,8 +514,12 @@ class ExpenseControllerSummaryTest extends TestCase
         $this->assertNetBalancesMatchSettlements($response->json('balances'), $settlements);
     }
 
-    public function test_closed_cycle_settlements_are_immutable_after_a_new_expense_is_created(): void
+    public function test_sealed_cycle_settlements_are_immutable_after_a_new_expense_is_created(): void
     {
+        // TASK-247: um ciclo fechado só congela quando SELADO (tudo pago e todo
+        // acerto confirmado). Aqui junho fecha por data, é pago e tem o acerto
+        // confirmado → sela na 1ª leitura → despesa nova depois disso não muda
+        // mais o `settlements`.
         Carbon::setTestNow('2026-08-19');
 
         $payer = User::factory()->create();
@@ -526,13 +531,25 @@ class ExpenseControllerSummaryTest extends TestCase
         $expense->payers()->sync([$payer->id, $participant->id]);
         $expense->quotas()->create(['date_expected' => '2026-06-10', 'number' => 1, 'paid' => true, 'value_quota' => 200]);
 
+        // Acerto participant → payer (200/2 = 100) confirmado → junho fica quitado.
+        SettlementConfirmation::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-06-01',
+            'cycle_end' => '2026-06-30',
+            'from_user_id' => $participant->id,
+            'to_user_id' => $payer->id,
+            'amount' => 100,
+            'proof_path' => 'comprovantes/'.$group->id.'/x.jpg',
+            'confirmed_at' => Carbon::now(),
+        ]);
+
         $before = $this->withToken($this->tokenFor($payer))
             ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=2");
-        $before->assertStatus(200);
+        $before->assertStatus(200)->assertJsonPath('cycle.settled', true);
         $settlementsBefore = $before->json('settlements');
 
-        // Despesa nova criada depois do ciclo já fotografado — não deve
-        // alterar o `settlements` já persistido no snapshot.
+        // Despesa nova criada depois do ciclo já selado — não deve alterar o
+        // `settlements` já persistido no snapshot.
         $newExpense = $this->createExpense($group, $participant, ['date_payment' => '2026-06-15', 'total_value' => 1000]);
         $newExpense->payers()->sync([$payer->id, $participant->id]);
         $newExpense->quotas()->create(['date_expected' => '2026-06-15', 'number' => 1, 'paid' => true, 'value_quota' => 1000]);
