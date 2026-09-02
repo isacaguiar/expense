@@ -33,7 +33,7 @@ export default function SimpleShellLayout() {
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar items={simpleNavItems(navigate)} />
       <MobileNavDrawer items={simpleNavItems(navigate)} open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} />
-      <Container component="main" sx={{ flex: 1, mt: 4, mb: 4 }}>
+      <Container component="main" sx={{ flex: 1, mt: { xs: 2, md: 4 }, mb: { xs: 2, md: 4 } }}>
         <GroupHeader
           title={title}
           groups={[]}
