@@ -1108,6 +1108,90 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Um ciclo [start, end] está "totalmente quitado" quando toda entrada da
+     * competência está paga (`totals.pending == 0`) E todo par de `settlements`
+     * tem uma `SettlementConfirmation` correspondente. Ciclo sem entradas conta
+     * como quitado. Base da selagem (`sealCycleIfSettled`) e do endpoint
+     * focus-cycle — ver docs/feature/20260902-pagamento-ciclo-fechado/plan.md §0.3.
+     */
+    private function cycleIsFullySettled(Group $group, $groupId, Carbon $start, Carbon $end): bool
+    {
+        $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+        if (round((float) $summary['totals']['pending'], 2) > 0) {
+            return false;
+        }
+
+        $settlements = $summary['settlements'];
+
+        if (empty($settlements)) {
+            return true;
+        }
+
+        $confirmedPairs = SettlementConfirmation::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->get()
+            ->map(fn ($confirmation) => "{$confirmation->from_user_id}-{$confirmation->to_user_id}")
+            ->all();
+
+        foreach ($settlements as $settlement) {
+            $pair = "{$settlement['from_user_id']}-{$settlement['to_user_id']}";
+
+            if (! in_array($pair, $confirmedPairs, true)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Se o ciclo [start, end] está totalmente quitado, congela a foto num
+     * `GroupCycleSnapshot` com `settled_at` — a partir daí `summary()` serve
+     * essa cópia e o ciclo vira histórico. `updateOrCreate` não passa
+     * `closed_manually_at`/`reopened_at`, então preserva o registro de
+     * fechamento manual, se houver. No-op se ainda há pendência.
+     */
+    private function sealCycleIfSettled(Group $group, $groupId, Carbon $start, Carbon $end): void
+    {
+        if (! $this->cycleIsFullySettled($group, $groupId, $start, $end)) {
+            return;
+        }
+
+        $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
+
+        GroupCycleSnapshot::updateOrCreate(
+            ['group_id' => $groupId, 'cycle_start' => $start->toDateString()],
+            [
+                'cycle_end' => $end->toDateString(),
+                'totals' => $summary['totals'],
+                'expenses' => $summary['expenses'],
+                'balances' => $summary['balances'],
+                'settlements' => $summary['settlements'],
+                'settled_at' => Carbon::now(),
+            ]
+        );
+    }
+
+    /**
+     * Se o ciclo [start, end] tinha um snapshot selado mas deixou de estar
+     * totalmente quitado (ex.: o credor desfez um pagamento), limpa
+     * `settled_at` — o ciclo volta a ser recalculado ao vivo em `summary()` e
+     * reentra na rotação do focus-cycle. No-op se não há snapshot, se não está
+     * selado, ou se continua quitado.
+     */
+    private function unsealIfBroken(Group $group, $groupId, Carbon $start, Carbon $end): void
+    {
+        $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->first();
+
+        if ($snapshot && $snapshot->isSealed() && ! $this->cycleIsFullySettled($group, $groupId, $start, $end)) {
+            $snapshot->update(['settled_at' => null]);
+        }
+    }
+
+    /**
      * Despesas cujo valor conta para um ciclo [start, end]: diretas (date_payment
      * dentro do intervalo) + Fixa projetada mês a mês dentro do intervalo (mesma
      * regra de corte de recorrência de indexByGroup, adaptada de mês único para

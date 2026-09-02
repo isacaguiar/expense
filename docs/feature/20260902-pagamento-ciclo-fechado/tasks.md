@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20260902
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-244 | Criar migration `settled_at` em `ex_group_cycle_snapshots` (aditiva + backfill), `GroupCycleSnapshot::isSealed()` e os helpers `cycleIsFullySettled` / `sealCycleIfSettled` / `unsealIfBroken` em `ExpenseController` | backend | plan.md §0 | antes do deploy/migration em produção | Pendente |
+| TASK-244 | Criar migration `settled_at` em `ex_group_cycle_snapshots` (aditiva + backfill), `GroupCycleSnapshot::isSealed()` e os helpers `cycleIsFullySettled` / `sealCycleIfSettled` / `unsealIfBroken` em `ExpenseController` | backend | plan.md §0 | antes do deploy/migration em produção | Concluída (2026-09-02) |
 | TASK-245 | `pay()` / `unpay()`: aceitar `cycles_ago`, remover a trava `rejectIfCompetenceClosed`, recusar só competência `future`, chamar `sealCycleIfSettled`/`unsealIfBroken`; renomear `resolveQuotaForCurrentCompetence` → `resolveQuotaForCycle` | backend | plan.md §1 | nenhum |
 | TASK-246 | `confirmSettlement()`: aceitar `cycles_ago` e inverter a guarda — só aceita comprovante do devedor em competência fechada (`closed`/`closed_manually`), recusa `open`/`future`/selada; chamar `sealCycleIfSettled` | backend | plan.md §2 | nenhum |
 | TASK-247 | `summary()`: nova precedência de fonte de dados (selado→congelado, `closed`/`closed_manually` não selado→ao vivo com selagem preguiçosa), campo `cycle.settled`; `cycleHistory()` só ciclos com `settled_at`; `reopen()` recusa ciclo selado; `close()`/`grossDebts()` devolvem `settled`; remover `cycleSnapshotFor()` | backend | plan.md §3 | nenhum |
