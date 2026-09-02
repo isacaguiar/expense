@@ -299,6 +299,11 @@ const Payments: React.FC = () => {
                 settlements={summary.settlements}
                 balances={summary.balances}
                 currentUserId={currentUserId}
+                canConfirm={
+                  (summary.cycle.status === 'closed' || summary.cycle.status === 'closed_manually') &&
+                  !summary.cycle.settled
+                }
+                cycleSettled={summary.cycle.settled}
                 onPayWithPix={handleSelectSettlement}
                 onSendProof={openConfirmSettlementDialog}
               />
