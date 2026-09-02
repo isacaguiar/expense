@@ -1058,7 +1058,9 @@ class ExpenseController extends Controller
                     'userCreatorId' => $entry['expense']->user_creator_id,
                 ];
             })
-            ->sortBy('date')
+            // Não pago primeiro (o que falta quitar fica em alerta no topo),
+            // cronológico dentro de cada bloco. `paid` é bool → `false` < `true`.
+            ->sortBy([['paid', 'asc'], ['date', 'asc']])
             ->values()
             ->all();
 
@@ -1174,6 +1176,9 @@ class ExpenseController extends Controller
 
                 return $settlement;
             })
+            // Acerto ainda não confirmado primeiro (pagamento em aberto fica em
+            // alerta no topo), depois por valor decrescente.
+            ->sortBy(fn (array $s) => [$s['confirmedAt'] === null ? 0 : 1, -$s['amount']])
             ->values()
             ->all();
     }

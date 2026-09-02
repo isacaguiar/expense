@@ -565,6 +565,81 @@ class ExpenseControllerSummaryTest extends TestCase
         $this->assertEquals($settlementsBefore, $after->json('settlements'));
     }
 
+    public function test_expenses_list_puts_unpaid_before_paid_then_chronological(): void
+    {
+        // TASK-249: o que falta pagar fica no topo.
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        // Paga, mas com a data mais antiga — deve ir para a base mesmo assim.
+        $paid = $this->createExpense($group, $payer, ['date_payment' => '2026-08-02', 'description' => 'Paga antiga']);
+        $paid->payers()->sync([$payer->id]);
+        $paid->quotas()->create(['date_expected' => '2026-08-02', 'number' => 1, 'paid' => true, 'value_quota' => 100]);
+
+        $lateUnpaid = $this->createExpense($group, $payer, ['date_payment' => '2026-08-15', 'description' => 'Aberta recente']);
+        $lateUnpaid->payers()->sync([$payer->id]);
+        $lateUnpaid->quotas()->create(['date_expected' => '2026-08-15', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $earlyUnpaid = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'description' => 'Aberta antiga']);
+        $earlyUnpaid->payers()->sync([$payer->id]);
+        $earlyUnpaid->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $expenses = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->json('expenses');
+
+        $this->assertSame(['Aberta antiga', 'Aberta recente', 'Paga antiga'], array_column($expenses, 'description'));
+        $this->assertSame([false, false, true], array_column($expenses, 'paid'));
+    }
+
+    public function test_settlements_list_puts_unconfirmed_before_confirmed(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $debtorA = User::factory()->create();
+        $debtorB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $debtorA->id, $debtorB->id]);
+
+        // debtorA deve 100 (despesa de 200 dividida com o payer).
+        $expA = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 200]);
+        $expA->payers()->sync([$payer->id, $debtorA->id]);
+        $expA->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => true, 'value_quota' => 200]);
+
+        // debtorB deve 300 (despesa de 600 dividida com o payer).
+        $expB = $this->createExpense($group, $payer, ['date_payment' => '2026-08-06', 'total_value' => 600]);
+        $expB->payers()->sync([$payer->id, $debtorB->id]);
+        $expB->quotas()->create(['date_expected' => '2026-08-06', 'number' => 1, 'paid' => true, 'value_quota' => 600]);
+
+        // debtorB (o de maior valor) já confirmou → deve ir para a base.
+        SettlementConfirmation::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'from_user_id' => $debtorB->id,
+            'to_user_id' => $payer->id,
+            'amount' => 300,
+            'proof_path' => 'comprovantes/'.$group->id.'/x.jpg',
+            'confirmed_at' => Carbon::now(),
+        ]);
+
+        $settlements = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->json('settlements');
+
+        $this->assertCount(2, $settlements);
+        $this->assertSame($debtorA->id, $settlements[0]['from_user_id']);
+        $this->assertNull($settlements[0]['confirmedAt']);
+        $this->assertSame($debtorB->id, $settlements[1]['from_user_id']);
+        $this->assertNotNull($settlements[1]['confirmedAt']);
+    }
+
     /**
      * Para todo user_id presente em $balances, a soma de `amount` recebido
      * (settlement.to_user_id) menos o pago (settlement.from_user_id) deve
