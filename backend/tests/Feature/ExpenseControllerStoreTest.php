@@ -17,11 +17,12 @@ class ExpenseControllerStoreTest extends TestCase
     {
         parent::setUp();
 
-        // As fixtures usam datas de agosto/2026 (`payloadFor` → `date_payment`
-        // 2026-08-15). Congela o relógio dentro dessa competência para os casos
-        // que não fixam data própria não baterem no guard de competência
-        // fechada quando a suíte roda depois de agosto/2026.
-        Carbon::setTestNow('2026-08-19');
+        // Fixa o relógio na mesma competência das fixtures (date_payment
+        // '2026-08-15'). Sem isso, os testes de caminho feliz passam a receber
+        // 422 "competência já fechada" assim que o relógio real vira de mês —
+        // ver docs/bugfix/20260901-expense-store-update-422.md. Testes que
+        // definem o próprio Carbon::setTestNow() continuam mandando.
+        Carbon::setTestNow('2026-08-15 12:00:00');
     }
 
     protected function tearDown(): void

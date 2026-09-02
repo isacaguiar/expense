@@ -17,10 +17,11 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
     {
         parent::setUp();
 
-        // `createExpense()` usa `date_payment` 2026-08-15. Congela o relógio
-        // nessa competência para `update()`/`destroy()` não baterem no guard de
-        // competência fechada quando a suíte roda depois de agosto/2026.
-        Carbon::setTestNow('2026-08-19');
+        // Fixa o relógio na mesma competência das fixtures (date_payment
+        // '2026-08-15'). Sem isso, update()/destroy() passam a receber 422
+        // "competência já fechada" assim que o relógio real vira de mês —
+        // ver docs/bugfix/20260901-expense-store-update-422.md.
+        Carbon::setTestNow('2026-08-15 12:00:00');
     }
 
     protected function tearDown(): void
