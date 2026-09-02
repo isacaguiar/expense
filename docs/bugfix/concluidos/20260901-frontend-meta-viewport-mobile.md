@@ -82,3 +82,9 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-09-01 | `cd frontend && npm run build` | `✓ built in 11.66s` (aviso pré-existente de chunk > 500 kB, não relacionado) |
 | 2026-09-01 | Browser em viewport 375×812 (`/app/`) | `meta[name=viewport]` presente; `documentElement.clientWidth` = 375 (era ~980); `visualViewport.scale` = 1 (sem shrink-to-fit); sem overflow horizontal (`scrollWidth` = 375); painel de branding oculto (`xs`); sem erro no console |
 | 2026-09-01 | Browser em viewport 375×812 (`/app/meus-grupos`) | shell mobile renderiza — botão hambúrguer + `MobileNavDrawer` no lugar do `Sidebar` fixo |
+
+## Resolução
+
+Concluído em: 2026-09-01
+Branch: fix/20260901-frontend-meta-viewport-mobile
+PR: https://github.com/isacaguiar/expense/pull/126
