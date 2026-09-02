@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import Dashboard from './Dashboard';
 
 const navigateMock = vi.fn();
@@ -390,5 +390,94 @@ describe('Dashboard', () => {
       expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
     });
     expect(screen.getByText('Beto Souza')).toBeInTheDocument();
+  });
+});
+
+// Viewport < sm: a tabela dá lugar a uma lista de cartões (F1).
+function stubNarrowViewport() {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn().mockReturnValue({
+      matches: true,
+      media: '',
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })
+  );
+}
+
+describe('Dashboard (mobile / compact)', () => {
+  beforeEach(() => {
+    navigateMock.mockClear();
+    vi.mocked(axios.get).mockReset();
+    stubNarrowViewport();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('renders groups as cards instead of a table below the sm breakpoint', async () => {
+    mockGroupsAndMe(groups);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Viagem SP')).toBeInTheDocument();
+    expect(screen.getByText('Casa')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Nome' })).not.toBeInTheDocument();
+    expect(screen.getByText('Responsável: dono@example.com')).toBeInTheDocument();
+  });
+
+  it('keeps the row actions working from the card footer', async () => {
+    mockGroupsAndMe(groups);
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+
+    expect(screen.getByRole('link', { name: 'Viagem SP' })).toHaveAttribute('href', '/groups/1/summary');
+
+    await user.click(screen.getAllByLabelText('Editar grupo')[0]);
+    expect(navigateMock).toHaveBeenCalledWith('/groups/1/edit');
+
+    await user.click(screen.getAllByLabelText('Excluir grupo')[0]);
+    expect(await screen.findByText('Tem certeza que deseja excluir o grupo "Viagem SP"?')).toBeInTheDocument();
+  });
+
+  it('expands a card to show the gross debts panel', async () => {
+    mockGroupsAndMe(groups, 10, {
+      1: {
+        cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open' },
+        creditors: [{ creditor: { id: 10, name: 'Dono', email: 'dono@example.com', pix: null }, debtors: [{ id: 11, name: 'Ana Silva', amount: 50 }] }],
+      },
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Viagem SP');
+    expect(screen.queryByText('Ana Silva')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Ver pendências de Viagem SP' }));
+
+    expect(await screen.findByText('Ana Silva')).toBeInTheDocument();
   });
 });

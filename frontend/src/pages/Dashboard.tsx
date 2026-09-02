@@ -7,6 +7,8 @@ import {
   AvatarGroup,
   Box,
   Button,
+  Card,
+  CardContent,
   CircularProgress,
   Collapse,
   Dialog,
@@ -16,6 +18,7 @@ import {
   IconButton,
   Paper,
   Snackbar,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -24,7 +27,9 @@ import {
   TableRow,
   TextField,
   Tooltip,
-  Typography
+  Typography,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -63,6 +68,10 @@ const Dashboard: React.FC = () => {
   const [removeSuccessMessage, setRemoveSuccessMessage] = useState<string | null>(null);
   const [expandedGroupIds, setExpandedGroupIds] = useState<Set<number>>(new Set());
   const navigate = useNavigate();
+  const theme = useTheme();
+  // Abaixo de `sm` a tabela de 5 colunas fica ilegível no celular — troca para
+  // uma lista de cartões (ver docs/feature/20260901-usabilidade-mobile).
+  const compact = useMediaQuery(theme.breakpoints.down('sm'));
 
   const toggleExpanded = (groupId: number) => {
     setExpandedGroupIds(prev => {
@@ -127,6 +136,94 @@ const Dashboard: React.FC = () => {
       });
   };
 
+  // Ações e toggle de pendências compartilhados entre a tabela (>= sm) e os
+  // cartões (< sm), para os dois layouts nunca divergirem de comportamento.
+  const renderExpandToggle = (group: Group, expanded: boolean) => (
+    <IconButton
+      size="small"
+      onClick={() => toggleExpanded(group.id)}
+      aria-label={expanded ? `Recolher pendências de ${group.name}` : `Ver pendências de ${group.name}`}
+    >
+      {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+    </IconButton>
+  );
+
+  const renderGroupActions = (group: Group) => (
+    <>
+      <IconButton onClick={() => navigate(`/groups/${group.id}/edit`)} aria-label="Editar grupo">
+        <EditOutlinedIcon fontSize="small" />
+      </IconButton>
+      <IconButton onClick={() => navigate(`/groups/${group.id}/members`)} aria-label="Participantes">
+        <PeopleOutlineOutlinedIcon fontSize="small" />
+      </IconButton>
+      <IconButton onClick={() => navigate(`/groups/${group.id}/expenses`)} aria-label="Despesas">
+        <ReceiptLongOutlinedIcon fontSize="small" />
+      </IconButton>
+      <IconButton onClick={() => setRemoveGroupId(group.id)} aria-label="Excluir grupo">
+        <DeleteOutlineIcon fontSize="small" />
+      </IconButton>
+    </>
+  );
+
+  const renderMembers = (group: Group) => (
+    <AvatarGroup max={5} sx={{ justifyContent: 'flex-end' }}>
+      {group.members.map(member => (
+        <Avatar
+          key={member.id}
+          sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.8rem', width: 32, height: 32 }}
+        >
+          {getInitials(member.email)}
+        </Avatar>
+      ))}
+    </AvatarGroup>
+  );
+
+  const groupNameLink = (group: Group) => (
+    <Typography
+      component={Link}
+      to={`/groups/${group.id}/summary`}
+      color="primary"
+      sx={{ textDecoration: 'none', fontWeight: 500 }}
+    >
+      {group.name}
+    </Typography>
+  );
+
+  const renderGroupCards = () => (
+    <Stack spacing={1.5}>
+      {filteredGroups.map(group => {
+        const expanded = expandedGroupIds.has(group.id);
+        return (
+          <Card key={group.id} variant="outlined">
+            <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+              <Box display="flex" alignItems="center" justifyContent="space-between" gap={1}>
+                {groupNameLink(group)}
+                {renderExpandToggle(group, expanded)}
+              </Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                Responsável: {group.creator?.email ?? '—'}
+              </Typography>
+              <Box display="flex" alignItems="center" gap={1} sx={{ mt: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Integrantes:
+                </Typography>
+                {renderMembers(group)}
+              </Box>
+              <Box display="flex" justifyContent="flex-end" flexWrap="wrap" sx={{ mt: 1 }}>
+                {renderGroupActions(group)}
+              </Box>
+              <Collapse in={expanded} unmountOnExit>
+                <Box sx={{ mt: 1 }}>
+                  <GroupGrossDebtsPanel groupId={String(group.id)} />
+                </Box>
+              </Collapse>
+            </CardContent>
+          </Card>
+        );
+      })}
+    </Stack>
+  );
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" mt={4}>
@@ -168,8 +265,10 @@ const Dashboard: React.FC = () => {
         <Typography color="text.secondary">Você ainda não participa de nenhum grupo.</Typography>
       ) : filteredGroups.length === 0 ? (
         <Typography color="text.secondary">Nenhum grupo encontrado.</Typography>
+      ) : compact ? (
+        renderGroupCards()
       ) : (
-        <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2 }}>
+        <TableContainer component={Paper} elevation={3} sx={{ borderRadius: 2, overflowX: 'auto' }}>
           <Table>
             <TableHead>
               <TableRow>
@@ -188,23 +287,10 @@ const Dashboard: React.FC = () => {
                   <React.Fragment key={group.id}>
                     <TableRow hover>
                       <TableCell padding="checkbox">
-                        <IconButton
-                          size="small"
-                          onClick={() => toggleExpanded(group.id)}
-                          aria-label={expanded ? `Recolher pendências de ${group.name}` : `Ver pendências de ${group.name}`}
-                        >
-                          {expanded ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-                        </IconButton>
+                        {renderExpandToggle(group, expanded)}
                       </TableCell>
                       <TableCell>
-                        <Typography
-                          component={Link}
-                          to={`/groups/${group.id}/summary`}
-                          color="primary"
-                          sx={{ textDecoration: 'none', fontWeight: 500 }}
-                        >
-                          {group.name}
-                        </Typography>
+                        {groupNameLink(group)}
                       </TableCell>
                       <TableCell>
                         <Typography variant="body2" color="text.secondary">
@@ -212,30 +298,10 @@ const Dashboard: React.FC = () => {
                         </Typography>
                       </TableCell>
                       <TableCell>
-                        <AvatarGroup max={5} sx={{ justifyContent: 'flex-end' }}>
-                          {group.members.map(member => (
-                            <Avatar
-                              key={member.id}
-                              sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.8rem', width: 32, height: 32 }}
-                            >
-                              {getInitials(member.email)}
-                            </Avatar>
-                          ))}
-                        </AvatarGroup>
+                        {renderMembers(group)}
                       </TableCell>
                       <TableCell align="right">
-                        <IconButton onClick={() => navigate(`/groups/${group.id}/edit`)} aria-label="Editar grupo">
-                          <EditOutlinedIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton onClick={() => navigate(`/groups/${group.id}/members`)} aria-label="Participantes">
-                          <PeopleOutlineOutlinedIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton onClick={() => navigate(`/groups/${group.id}/expenses`)} aria-label="Despesas">
-                          <ReceiptLongOutlinedIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton onClick={() => setRemoveGroupId(group.id)} aria-label="Excluir grupo">
-                          <DeleteOutlineIcon fontSize="small" />
-                        </IconButton>
+                        {renderGroupActions(group)}
                       </TableCell>
                     </TableRow>
                     <TableRow>

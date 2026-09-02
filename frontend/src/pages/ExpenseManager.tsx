@@ -5,6 +5,8 @@ import {
   Avatar,
   Box,
   Button,
+  Card,
+  CardContent,
   Chip,
   Typography,
   CircularProgress,
@@ -18,6 +20,7 @@ import {
   Link as MuiLink,
   Paper,
   Snackbar,
+  Stack,
   Table,
   TableBody,
   TableCell,
@@ -27,7 +30,9 @@ import {
   TextField,
   ToggleButton,
   ToggleButtonGroup,
-  Tooltip
+  Tooltip,
+  useMediaQuery,
+  useTheme
 } from '@mui/material';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
@@ -261,6 +266,146 @@ const ExpenseManager: React.FC = () => {
   const canEdit = (exp: SummaryExpense) => cycleIsOpen && isOwner(exp);
   const canDelete = (exp: SummaryExpense) => cycleIsOpen && !exp.isFixed && !exp.paid && isOwner(exp);
 
+  const theme = useTheme();
+  // Abaixo de `sm` a tabela de 6 colunas fica ilegível no celular — troca para
+  // uma lista de cartões (ver docs/feature/20260901-usabilidade-mobile).
+  const compact = useMediaQuery(theme.breakpoints.down('sm'));
+
+  const formatValue = (value: number) =>
+    value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // Ícone de tipo e ações compartilhados entre a tabela (>= sm) e os cartões
+  // (< sm), para os dois layouts nunca divergirem de comportamento.
+  const renderTypeIcon = (exp: SummaryExpense) => (
+    <Tooltip title={exp.isFixed ? 'Fixa' : 'Variável'}>
+      {exp.isFixed ? (
+        <AutorenewOutlinedIcon color="action" fontSize="small" />
+      ) : (
+        <ReceiptOutlinedIcon color="action" fontSize="small" />
+      )}
+    </Tooltip>
+  );
+
+  const renderExpenseActions = (exp: SummaryExpense) => (
+    <Box display="flex" gap={0.5} justifyContent="flex-end" flexWrap="wrap">
+      <Tooltip title="Ver detalhes">
+        <IconButton aria-label="Ver detalhes" size="small" onClick={() => setDetailExpenseId(exp.id)}>
+          <InfoOutlinedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      {exp.paid && exp.paymentProofUrl && (
+        <Tooltip title="Ver comprovante">
+          <IconButton
+            aria-label="Ver comprovante"
+            size="small"
+            component="a"
+            href={exp.paymentProofUrl}
+            target="_blank"
+            rel="noreferrer"
+          >
+            <ImageOutlinedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {exp.isFixed && cycleIsOpen && (
+        <Tooltip title="Remover despesa fixa">
+          <IconButton aria-label="Remover despesa fixa" size="small" onClick={() => setRemoveExpenseId(exp.id)}>
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {canEdit(exp) && (
+        <Tooltip title="Editar despesa">
+          <IconButton
+            aria-label="Editar despesa"
+            size="small"
+            component={Link}
+            to={`/groups/${groupId}/expenses/${exp.id}`}
+          >
+            <EditOutlinedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {canDelete(exp) && (
+        <Tooltip title="Excluir despesa">
+          <IconButton aria-label="Excluir despesa" size="small" onClick={() => setDeleteExpenseId(exp.id)}>
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {canPay(exp) && (
+        <Tooltip title="Marcar como paga">
+          <IconButton
+            aria-label="Marcar como paga"
+            size="small"
+            disabled={payingExpenseId === exp.id}
+            onClick={() => handlePay(exp.id)}
+          >
+            <CheckCircleOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {canUnpay(exp) && (
+        <Tooltip title="Desfazer pagamento">
+          <IconButton
+            aria-label="Desfazer pagamento"
+            size="small"
+            disabled={payingExpenseId === exp.id}
+            onClick={() => handleUnpay(exp.id)}
+          >
+            <UndoIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+    </Box>
+  );
+
+  const renderExpenseCards = (list: SummaryExpense[]) => (
+    <Stack spacing={1.5}>
+      {list.map(exp => (
+        <Card key={exp.id} variant="outlined">
+          <CardContent sx={{ '&:last-child': { pb: 2 } }}>
+            <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1}>
+              <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0 }}>
+                {renderTypeIcon(exp)}
+                <MuiLink
+                  component={Link}
+                  to={`/groups/${groupId}/expenses/${exp.id}`}
+                  underline="hover"
+                  sx={{ fontWeight: 500 }}
+                >
+                  {exp.description}
+                </MuiLink>
+              </Box>
+              <Chip
+                label={exp.paid ? 'Paga' : 'Pendente'}
+                color={exp.paid ? 'success' : 'warning'}
+                size="small"
+              />
+            </Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Valor: R$ {formatValue(exp.value)}
+            </Typography>
+            <Box display="flex" alignItems="center" gap={1} sx={{ mt: 0.5 }}>
+              <Typography variant="body2" color="text.secondary">
+                Credor:
+              </Typography>
+              <Avatar
+                sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, width: 24, height: 24, fontSize: '0.7rem' }}
+              >
+                {getInitials(exp.payerName || '-')}
+              </Avatar>
+              <Typography variant="body2" color="text.secondary">
+                {exp.payerName || '-'}
+              </Typography>
+            </Box>
+            <Box sx={{ mt: 1 }}>{renderExpenseActions(exp)}</Box>
+          </CardContent>
+        </Card>
+      ))}
+    </Stack>
+  );
+
   return (
     <DespesasThemeScope>
       {/* Cabeçalho */}
@@ -268,8 +413,10 @@ const ExpenseManager: React.FC = () => {
         display="flex"
         justifyContent="flex-end"
         alignItems="center"
+        flexWrap="wrap"
         mb={3}
         gap={2}
+        rowGap={1}
       >
         {/* Fechar/reabrir — só faz sentido na competência vigente (cyclesAgo=0):
             close()/reopen() sempre operam sobre "agora", nunca sobre a
@@ -306,7 +453,11 @@ const ExpenseManager: React.FC = () => {
         <IconButton onClick={goToPreviousCycle} aria-label="Competência anterior">
           <ArrowBackIosNewIcon />
         </IconButton>
-        <Typography variant="h6" textTransform="capitalize">
+        <Typography
+          variant="h6"
+          textTransform="capitalize"
+          sx={{ flexGrow: 1, minWidth: 0, textAlign: 'center', fontSize: { xs: '1rem', md: '1.25rem' } }}
+        >
           {summary ? `${formatCycleBoundary(summary.cycle.start)} – ${formatCycleBoundary(summary.cycle.end)}` : ''}
         </Typography>
         <IconButton onClick={goToNextCycle} aria-label="Próxima competência">
@@ -394,8 +545,10 @@ const ExpenseManager: React.FC = () => {
                 </Box>
                 <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
               </Box>
+            ) : compact ? (
+              renderExpenseCards(filteredExpenses)
             ) : (
-              <TableContainer component={Paper} elevation={0}>
+              <TableContainer component={Paper} elevation={0} sx={{ overflowX: 'auto' }}>
                 <Table>
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'grey.50' }}>
@@ -413,13 +566,7 @@ const ExpenseManager: React.FC = () => {
                     {filteredExpenses.map(exp => (
                       <TableRow key={exp.id} hover>
                         <TableCell>
-                          <Tooltip title={exp.isFixed ? 'Fixa' : 'Variável'}>
-                            {exp.isFixed ? (
-                              <AutorenewOutlinedIcon color="action" fontSize="small" />
-                            ) : (
-                              <ReceiptOutlinedIcon color="action" fontSize="small" />
-                            )}
-                          </Tooltip>
+                          {renderTypeIcon(exp)}
                         </TableCell>
                         <TableCell>
                           <MuiLink component={Link} to={`/groups/${groupId}/expenses/${exp.id}`} underline="hover">
@@ -427,7 +574,7 @@ const ExpenseManager: React.FC = () => {
                           </MuiLink>
                         </TableCell>
                         <TableCell>
-                          R$ {exp.value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          R$ {formatValue(exp.value)}
                         </TableCell>
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={1}>
@@ -453,89 +600,7 @@ const ExpenseManager: React.FC = () => {
                           />
                         </TableCell>
                         <TableCell align="right">
-                          <Box display="flex" gap={0.5} justifyContent="flex-end">
-                            <Tooltip title="Ver detalhes">
-                              <IconButton
-                                aria-label="Ver detalhes"
-                                size="small"
-                                onClick={() => setDetailExpenseId(exp.id)}
-                              >
-                                <InfoOutlinedIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            {exp.paid && exp.paymentProofUrl && (
-                              <Tooltip title="Ver comprovante">
-                                <IconButton
-                                  aria-label="Ver comprovante"
-                                  size="small"
-                                  component="a"
-                                  href={exp.paymentProofUrl}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                >
-                                  <ImageOutlinedIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {exp.isFixed && cycleIsOpen && (
-                              <Tooltip title="Remover despesa fixa">
-                                <IconButton
-                                  aria-label="Remover despesa fixa"
-                                  size="small"
-                                  onClick={() => setRemoveExpenseId(exp.id)}
-                                >
-                                  <DeleteOutlineIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {canEdit(exp) && (
-                              <Tooltip title="Editar despesa">
-                                <IconButton
-                                  aria-label="Editar despesa"
-                                  size="small"
-                                  component={Link}
-                                  to={`/groups/${groupId}/expenses/${exp.id}`}
-                                >
-                                  <EditOutlinedIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {canDelete(exp) && (
-                              <Tooltip title="Excluir despesa">
-                                <IconButton
-                                  aria-label="Excluir despesa"
-                                  size="small"
-                                  onClick={() => setDeleteExpenseId(exp.id)}
-                                >
-                                  <DeleteOutlineIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {canPay(exp) && (
-                              <Tooltip title="Marcar como paga">
-                                <IconButton
-                                  aria-label="Marcar como paga"
-                                  size="small"
-                                  disabled={payingExpenseId === exp.id}
-                                  onClick={() => handlePay(exp.id)}
-                                >
-                                  <CheckCircleOutlineIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                            {canUnpay(exp) && (
-                              <Tooltip title="Desfazer pagamento">
-                                <IconButton
-                                  aria-label="Desfazer pagamento"
-                                  size="small"
-                                  disabled={payingExpenseId === exp.id}
-                                  onClick={() => handleUnpay(exp.id)}
-                                >
-                                  <UndoIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            )}
-                          </Box>
+                          {renderExpenseActions(exp)}
                         </TableCell>
                       </TableRow>
                     ))}

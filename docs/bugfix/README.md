@@ -65,6 +65,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/20260901-frontend-meta-viewport-mobile.md](concluidos/20260901-frontend-meta-viewport-mobile.md) | App não responsivo no celular (meta viewport ausente) | 2026-09-01 | #126 |
 | [concluidos/20260828-login-sem-mensagem-erro.md](concluidos/20260828-login-sem-mensagem-erro.md) | Tela de login não exibe mensagem de erro com credenciais inválidas | 2026-08-28 | #81 |
 | [concluidos/20260829-deploy-site-secrets-quebrado.md](concluidos/20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | #89 |
 | [concluidos/20260829-cors-nao-le-frontend-url.md](concluidos/20260829-cors-nao-le-frontend-url.md) | CORS não permite o frontend de produção (config não lê FRONTEND_URL) | 2026-08-29 | #94 |
