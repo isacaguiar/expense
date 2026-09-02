@@ -51,6 +51,7 @@ import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import SummarySidePanel from '../components/SummarySidePanel';
+import CycleClosingAlert from '../components/CycleClosingAlert';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
@@ -465,6 +466,8 @@ const ExpenseManager: React.FC = () => {
           <ArrowForwardIosIcon />
         </IconButton>
       </Box>
+
+      {summary && <CycleClosingAlert summary={summary} />}
 
       {/* Erro de fechar/reabrir mês — o botão em si vive no cabeçalho; aqui fica
           só o feedback de erro, no mesmo lugar central de antes. */}

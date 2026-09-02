@@ -47,7 +47,7 @@ function summaryResponse(
   extra: Record<string, unknown> = {}
 ) {
   return {
-    cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open', ...cycleOverride },
+    cycle: { start: '2026-08-01', end: '2026-08-31', closes_at: '2026-09-05', status: 'open', settled: false, ...cycleOverride },
     totals: { total: 0, paid: 0, pending: 0 },
     expenses: expensesList.map(exp => ({
       paid: false,
