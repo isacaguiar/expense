@@ -18,6 +18,7 @@ class GroupCycleSnapshot extends Model
         'settlements',
         'closed_manually_at',
         'reopened_at',
+        'settled_at',
     ];
 
     protected $casts = [
@@ -29,6 +30,7 @@ class GroupCycleSnapshot extends Model
         'settlements' => 'array',
         'closed_manually_at' => 'datetime',
         'reopened_at' => 'datetime',
+        'settled_at' => 'datetime',
     ];
 
     public function group()
@@ -48,5 +50,17 @@ class GroupCycleSnapshot extends Model
         }
 
         return $this->reopened_at === null || $this->reopened_at->lt($this->closed_manually_at);
+    }
+
+    /**
+     * Ciclo "selado": totalmente quitado — toda conta paga e todo acerto
+     * confirmado (`ExpenseController::cycleIsFullySettled`) — e por isso
+     * fotografado de forma imutável. A partir daí `summary()` serve esta
+     * cópia e o ciclo vira histórico. Um `unpay` que quebre a quitação
+     * limpa `settled_at` e o ciclo volta a ser recalculado ao vivo.
+     */
+    public function isSealed(): bool
+    {
+        return $this->settled_at !== null;
     }
 }

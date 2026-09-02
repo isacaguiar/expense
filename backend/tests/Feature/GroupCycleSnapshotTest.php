@@ -70,4 +70,44 @@ class GroupCycleSnapshotTest extends TestCase
 
         $this->createSnapshot($group);
     }
+
+    public function test_is_sealed_is_false_without_settled_at(): void
+    {
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $snapshot = $this->createSnapshot($group);
+
+        $this->assertFalse($snapshot->isSealed());
+    }
+
+    public function test_is_sealed_is_true_with_settled_at(): void
+    {
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $snapshot = $this->createSnapshot($group, ['settled_at' => '2026-08-20 10:00:00']);
+
+        $this->assertTrue($snapshot->isSealed());
+    }
+
+    /**
+     * O backfill da migration copia `updated_at` para `settled_at` em toda
+     * linha pré-existente (que, no modelo antigo, já era imutável).
+     */
+    public function test_settled_at_backfill_copies_updated_at(): void
+    {
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $snapshot = $this->createSnapshot($group);
+
+        \Illuminate\Support\Facades\DB::table('ex_group_cycle_snapshots')
+            ->where('id', $snapshot->id)
+            ->update(['settled_at' => null, 'updated_at' => '2026-07-15 08:30:00']);
+
+        \Illuminate\Support\Facades\DB::table('ex_group_cycle_snapshots')
+            ->whereNull('settled_at')
+            ->update(['settled_at' => \Illuminate\Support\Facades\DB::raw('updated_at')]);
+
+        $stamped = \Illuminate\Support\Facades\DB::table('ex_group_cycle_snapshots')
+            ->where('id', $snapshot->id)
+            ->value('settled_at');
+
+        $this->assertSame('2026-07-15 08:30:00', (string) $stamped);
+    }
 }
