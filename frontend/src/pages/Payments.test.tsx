@@ -204,7 +204,7 @@ describe('Payments', () => {
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
     const [url, body] = vi.mocked(axios.post).mock.calls[0];
     expect(url).toContain('/api/expenses/13/unpay');
-    expect(body).toBeNull();
+    expect(body).toEqual({ cycles_ago: 0 });
     expect(await screen.findByText('Pagamento desfeito.')).toBeInTheDocument();
   });
 
