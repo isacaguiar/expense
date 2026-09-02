@@ -28,8 +28,8 @@ export function groupNavItems(groupId: string, navigate: NavigateFunction): Grou
   return [
     { label: 'Home', icon: HomeOutlinedIcon, to: `/groups/${groupId}/summary` },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: `/groups/${groupId}/expenses` },
-    { label: 'Participantes', icon: PeopleOutlineOutlinedIcon, to: `/groups/${groupId}/members` },
     { label: 'Pagamentos', icon: PaymentsOutlinedIcon, to: `/groups/${groupId}/payments` },
+    { label: 'Participantes', icon: PeopleOutlineOutlinedIcon, to: `/groups/${groupId}/members` },
     { label: 'Relatórios', icon: AssessmentOutlinedIcon, to: `/groups/${groupId}/reports` },
     {
       label: 'Configurações',

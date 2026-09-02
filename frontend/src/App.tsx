@@ -13,6 +13,8 @@ import GroupSummary from './pages/GroupSummary';
 import SummaryEntry from './pages/SummaryEntry';
 import Payments from './pages/Payments';
 import PaymentsEntry from './pages/PaymentsEntry';
+import MembersEntry from './pages/MembersEntry';
+import ReportsEntry from './pages/ReportsEntry';
 import GroupReports from './pages/GroupReports';
 import Profile from './pages/Profile';
 import ChangePassword from './pages/ChangePassword';
@@ -48,6 +50,8 @@ const App = () => {
           <Route path="/expenses" element={<ExpensesEntry />} />
           <Route path="/summary" element={<SummaryEntry />} />
           <Route path="/payments" element={<PaymentsEntry />} />
+          <Route path="/members" element={<MembersEntry />} />
+          <Route path="/reports" element={<ReportsEntry />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/change-password" element={<ChangePassword />} />
         </Route>

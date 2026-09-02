@@ -57,12 +57,12 @@ describe('SimpleShellLayout', () => {
     expect(screen.getByRole('navigation')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Home/ })).toHaveAttribute('href', '/summary');
     expect(screen.getByRole('link', { name: /Despesas/ })).toHaveAttribute('href', '/expenses');
-    expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '#');
     expect(screen.getByRole('link', { name: /Pagamentos/ })).toHaveAttribute('href', '/payments');
+    expect(screen.getByRole('link', { name: /Participantes/ })).toHaveAttribute('href', '/members');
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('shows "Relatórios" as a top-level placeholder item', async () => {
+  it('shows "Relatórios" as a top-level item linking to /reports', async () => {
     render(
       <MemoryRouter initialEntries={['/meus-grupos']}>
         <Routes>
@@ -75,7 +75,7 @@ describe('SimpleShellLayout', () => {
 
     await screen.findByText('Conteúdo Dashboard');
 
-    expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '/reports');
   });
 
   it('nests "Meus Grupos", "Minha Conta" and "Alterar Senha" under "Configurações", not as top-level items', async () => {
