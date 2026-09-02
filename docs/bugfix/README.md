@@ -59,6 +59,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 | Arquivo | Título | Criado em | Branch | Status |
 |---|---|---|---|---|
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
+| [20260901-frontend-meta-viewport-mobile.md](20260901-frontend-meta-viewport-mobile.md) | App não responsivo no celular (meta viewport ausente) | 2026-09-01 | `fix/20260901-frontend-meta-viewport-mobile` | Aberto |
 
 ## Concluídos
 

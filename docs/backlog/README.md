@@ -51,6 +51,8 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 033 | [eslint-setup-frontend.md](eslint-setup-frontend.md) | Configurar ESLint no frontend | ci-frontend | 2026-08-27 | BAIXA | Aberto |
 | 034 | [workflow-ci-backend.md](workflow-ci-backend.md) | Workflow de CI (verificação) para o backend | ci-frontend | 2026-08-27 | MEDIA | Aberto |
 | 035 | [google-oauth-state-pull-nao-atomico.md](google-oauth-state-pull-nao-atomico.md) | `Cache::pull` do state OAuth não é atômico (uso único não estrito) | google-oauth-state-opaco | 2026-09-01 | BAIXA | Aberto |
+| 036 | [frontend-index-html-lang-title-estaticos.md](frontend-index-html-lang-title-estaticos.md) | `frontend/index.html` com `lang="en"` e `<title>` estático | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
+| 037 | [frontend-dist-index-html-versionado.md](frontend-dist-index-html-versionado.md) | `frontend/dist/index.html` versionado apesar de `dist/` no `.gitignore` | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
 
 ## Itens concluídos
 
