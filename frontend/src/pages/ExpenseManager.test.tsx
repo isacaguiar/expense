@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import ExpenseManager from './ExpenseManager';
 
 vi.mock('axios');
@@ -1010,5 +1010,73 @@ describe('ExpenseManager - modal de detalhes', () => {
     expect(navigateMock).not.toHaveBeenCalled();
     expect(axios.post).not.toHaveBeenCalled();
     expect(axios.delete).not.toHaveBeenCalled();
+  });
+});
+
+// Viewport < sm: a tabela de 6 colunas dá lugar a uma lista de cartões (F1 /
+// docs/feature/20260901-usabilidade-mobile). Os testes acima já são
+// agnósticos de layout (consultam por texto/role acessível) e cobrem o ramo
+// tabela via o default matches:false do polyfill de setupTests.ts.
+describe('ExpenseManager - viewport estreito (cartões)', () => {
+  beforeEach(() => {
+    navigateMock.mockClear();
+    vi.mocked(axios.get).mockReset();
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: true,
+        media: '',
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('renders expense cards instead of a table', async () => {
+    mockGetResponses([
+      { id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true },
+      { id: 10, description: 'Mercado', value: 150, date: '2026-08-05', payerName: 'João', isFixed: false },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Aluguel')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Aluguel/ })).toHaveAttribute('href', '/groups/1/expenses/9');
+    expect(screen.getByText('Valor: R$ 1.200,00')).toBeInTheDocument();
+    expect(screen.getByText('João')).toBeInTheDocument();
+  });
+
+  it('keeps the row actions working from the card', async () => {
+    mockGetResponses([
+      { id: 20, description: 'Internet', value: 120, date: '2026-08-05', payerName: 'Isac', isFixed: false },
+    ]);
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Internet');
+
+    // despesa própria em ciclo aberto -> editar disponível, apontando para a rota certa
+    expect(screen.getByRole('link', { name: 'Editar despesa' })).toHaveAttribute('href', '/groups/1/expenses/20');
+
+    await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+    expect(await screen.findByText('Detalhes da despesa')).toBeInTheDocument();
   });
 });
