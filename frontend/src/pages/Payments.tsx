@@ -193,7 +193,11 @@ const Payments: React.FC = () => {
             <IconButton onClick={goToPreviousCycle} aria-label="Ciclo anterior">
               <ArrowBackIosNewIcon />
             </IconButton>
-            <Typography variant="h6" textTransform="capitalize">
+            <Typography
+              variant="h6"
+              textTransform="capitalize"
+              sx={{ flexGrow: 1, minWidth: 0, textAlign: 'center', fontSize: { xs: '1rem', md: '1.25rem' } }}
+            >
               {formatDate(summary.cycle.start)} – {formatDate(summary.cycle.end)}
             </Typography>
             <IconButton onClick={goToNextCycle} aria-label="Próximo ciclo">
