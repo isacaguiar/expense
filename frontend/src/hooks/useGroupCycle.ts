@@ -8,7 +8,16 @@ import { API_BASE_URL } from '../config';
 // diferente de 'closed' (automático, definitivo, por data).
 export type CycleStatus = 'closed' | 'open' | 'future' | 'closed_manually';
 
-export type SummaryCycle = { start: string; end: string; status: CycleStatus };
+// `closes_at` = data de corte definitivo (fronteira + carência); até lá um
+// ciclo cuja fronteira já passou continua `open`. `settled` = ciclo totalmente
+// quitado e selado (foto imutável). Ambos vêm sempre do backend.
+export type SummaryCycle = {
+  start: string;
+  end: string;
+  closes_at: string;
+  status: CycleStatus;
+  settled: boolean;
+};
 
 export type SummaryTotals = { total: number; paid: number; pending: number };
 
@@ -75,6 +84,11 @@ type UseGroupCycleResult = {
  * (`cyclesAgo`) — compartilhado entre a Home do grupo (`GroupSummary`) e a
  * tela de despesas (`ExpenseManager`), que devem navegar pela mesma noção
  * real de competência (`BillingCycle` do backend), não por mês calendário.
+ *
+ * Ao trocar de grupo, resolve primeiro em qual ciclo abrir via
+ * `GET .../expenses/focus-cycle` (o ciclo fechado/em carência mais recente
+ * ainda com pendência, ou 0) e só então busca o `summary` — `focusResolved`
+ * segura o fetch de summary para evitar o flash "abre no 0 e pula".
  */
 export function useGroupCycle(groupId: string | undefined): UseGroupCycleResult {
   const navigate = useNavigate();
@@ -83,10 +97,27 @@ export function useGroupCycle(groupId: string | undefined): UseGroupCycleResult 
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [cyclesAgo, setCyclesAgo] = useState<number>(0);
+  const [focusResolved, setFocusResolved] = useState<boolean>(false);
   const [reloadToken, setReloadToken] = useState<number>(0);
 
+  // Ao trocar de grupo: reseta e pergunta ao backend qual ciclo focar.
   useEffect(() => {
     if (!groupId) return;
+
+    setFocusResolved(false);
+
+    const token = localStorage.getItem('accessToken');
+    axios
+      .get<{ cycles_ago: number }>(`${API_BASE_URL}/api/groups/${groupId}/expenses/focus-cycle`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      })
+      .then(res => setCyclesAgo(res.data.cycles_ago ?? 0))
+      .catch(() => setCyclesAgo(0))
+      .finally(() => setFocusResolved(true));
+  }, [groupId]);
+
+  useEffect(() => {
+    if (!groupId || !focusResolved) return;
 
     setLoading(true);
     setError(null);
@@ -107,12 +138,7 @@ export function useGroupCycle(groupId: string | undefined): UseGroupCycleResult 
         setError('Falha ao carregar o resumo do grupo.');
       })
       .finally(() => setLoading(false));
-  }, [groupId, cyclesAgo, reloadToken, navigate]);
-
-  // Reseta a navegação de ciclo ao trocar de grupo.
-  useEffect(() => {
-    setCyclesAgo(0);
-  }, [groupId]);
+  }, [groupId, cyclesAgo, focusResolved, reloadToken, navigate]);
 
   const goToPreviousCycle = useCallback(() => setCyclesAgo(prev => prev + 1), []);
   const goToNextCycle = useCallback(() => setCyclesAgo(prev => prev - 1), []);
