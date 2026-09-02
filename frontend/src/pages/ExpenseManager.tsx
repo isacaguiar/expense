@@ -268,8 +268,10 @@ const ExpenseManager: React.FC = () => {
         display="flex"
         justifyContent="flex-end"
         alignItems="center"
+        flexWrap="wrap"
         mb={3}
         gap={2}
+        rowGap={1}
       >
         {/* Fechar/reabrir — só faz sentido na competência vigente (cyclesAgo=0):
             close()/reopen() sempre operam sobre "agora", nunca sobre a
@@ -306,7 +308,11 @@ const ExpenseManager: React.FC = () => {
         <IconButton onClick={goToPreviousCycle} aria-label="Competência anterior">
           <ArrowBackIosNewIcon />
         </IconButton>
-        <Typography variant="h6" textTransform="capitalize">
+        <Typography
+          variant="h6"
+          textTransform="capitalize"
+          sx={{ flexGrow: 1, minWidth: 0, textAlign: 'center', fontSize: { xs: '1rem', md: '1.25rem' } }}
+        >
           {summary ? `${formatCycleBoundary(summary.cycle.start)} – ${formatCycleBoundary(summary.cycle.end)}` : ''}
         </Typography>
         <IconButton onClick={goToNextCycle} aria-label="Próxima competência">
