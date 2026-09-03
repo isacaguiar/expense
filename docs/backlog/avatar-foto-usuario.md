@@ -4,7 +4,7 @@ ID: 021
 Origem: docs/feature/20260819-novo-layout-tela-entrada/specify.md §2.5/R3 (avatar do cabeçalho usa iniciais, mockup mostra foto)
 Criado em: 2026-08-19
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-268 (docs/feature/20260903-notificacoes-in-app/)
 
 ## Descrição
 
