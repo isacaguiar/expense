@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-260 | Concluída | 2026-09-03 | IA | `php artisan migrate --force` → `2026_09_03_000000_create_ex_notifications_table` DONE (363ms). `./vendor/bin/pint --test` nos 3 arquivos novos → PASS. `php artisan test --filter=NotificationModelTest` → 4 passed (8 assertions). `php artisan test` (suíte completa) → 289 passed (856 assertions). | Feita direto na branch `feature/20260903-notificacoes-in-app` (1ª task, sem sub-branch). `./vendor/bin/pint --test` na base inteira acusa 8 issues **pré-existentes** em `dev` (`PixPayload.php`, `Expense.php`, `User.php`, migrations de 2025) — não tocados nesta task ("não corrigir de passagem", `06-context-backend.md`). |
