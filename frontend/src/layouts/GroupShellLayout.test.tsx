@@ -59,7 +59,7 @@ describe('GroupShellLayout', () => {
     localStorage.setItem('accessToken', 'a-token');
   });
 
-  it('renders the sidebar with real links for Home/Despesas/Participantes/Pagamentos/Relatórios', async () => {
+  it('renders the sidebar with real links for Home/Despesas/Pagamentos/Participantes/Relatórios', async () => {
     renderShell('/groups/1/summary');
 
     await screen.findByText('Conteúdo Resumo');

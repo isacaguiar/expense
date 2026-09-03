@@ -47,7 +47,7 @@ function summaryResponse(
   extra: Record<string, unknown> = {}
 ) {
   return {
-    cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open', ...cycleOverride },
+    cycle: { start: '2026-08-01', end: '2026-08-31', closes_at: '2026-09-05', status: 'open', settled: false, ...cycleOverride },
     totals: { total: 0, paid: 0, pending: 0 },
     expenses: expensesList.map(exp => ({
       paid: false,
@@ -360,7 +360,7 @@ describe('ExpenseManager - campos completos e ações condicionais', () => {
     expect(screen.queryByRole('button', { name: 'Marcar como paga' })).not.toBeInTheDocument();
   });
 
-  it('hides all action icons when the cycle is not open', async () => {
+  it('hides edit/delete but keeps "marcar como paga" for the creditor when the cycle is closed', async () => {
     mockGetResponses(
       [
         {
@@ -388,7 +388,9 @@ describe('ExpenseManager - campos completos e ações condicionais', () => {
 
     expect(screen.queryByRole('link', { name: 'Editar despesa' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Excluir despesa' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Marcar como paga' })).not.toBeInTheDocument();
+    // Pagar/despagar não seguem mais o estado do ciclo (só `future`): o credor
+    // marca como paga mesmo com o ciclo fechado — ver usePaymentActions.
+    expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument();
   });
 });
 

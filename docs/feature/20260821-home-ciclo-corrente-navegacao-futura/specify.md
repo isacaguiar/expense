@@ -4,6 +4,13 @@
 
 Versão: 1.0 · Criado em: 20260821
 
+> **Supersessão parcial (2026-09-02):** a regra "a Home abre no ciclo que contém hoje"
+> (§2.1/§2.2) vale só quando **não há ciclo fechado com pendência**. A feature
+> `docs/feature/20260902-pagamento-ciclo-fechado/` (§2.4, endpoint `focus-cycle`) passou a
+> abrir a Home no **ciclo fechado — ou em carência — mais recente ainda não quitado**, caindo
+> no ciclo corrente só quando tudo está acertado. O `cycle.status` de §2.3 ganhou os valores
+> `closed_manually` e o campo `cycle.settled`/`cycle.closes_at` na mesma feature.
+
 ---
 
 ## 1. Problema

@@ -5,6 +5,7 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { useGroupCycle } from '../hooks/useGroupCycle';
 import CycleDetailPanel from '../components/CycleDetailPanel';
+import CycleClosingAlert from '../components/CycleClosingAlert';
 
 // new Date('YYYY-MM-DD') interpreta a string como UTC-meia-noite, o que desloca
 // a data em 1 dia para trás em fusos negativos (ex.: America/Sao_Paulo) —
@@ -51,6 +52,8 @@ const GroupSummary: React.FC = () => {
               <ArrowForwardIosIcon />
             </IconButton>
           </Box>
+
+          <CycleClosingAlert summary={summary} />
 
           <CycleDetailPanel summary={summary} />
         </>

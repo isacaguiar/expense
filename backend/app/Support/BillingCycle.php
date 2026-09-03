@@ -6,12 +6,22 @@ use Carbon\Carbon;
 
 /**
  * Calcula o ciclo de fechamento de um grupo (estilo fatura de cartão de
- * crédito): um ciclo fecha num dia fixo do mês (`closingDay`) e só é
- * considerado fechado a partir do dia seguinte à sua data de fechamento.
- * `closingDay` nulo reproduz o mês calendário (fecha no último dia do mês).
+ * crédito): um ciclo fecha numa fronteira fixa do mês (`closingDay`) e só é
+ * considerado `closed` a partir de `GRACE_DAYS` dias depois dela — antes
+ * disso fica numa janela de carência em que ainda está `open` (editável e
+ * pagável). `closingDay` nulo reproduz o mês calendário (fronteira no
+ * último dia do mês).
  */
 class BillingCycle
 {
+    /**
+     * Dias de carência após a fronteira do ciclo antes de ele ser
+     * considerado `closed`. Um ciclo cuja fronteira já passou continua
+     * `open` por `GRACE_DAYS` dias; no `GRACE_DAYS`-ésimo dia depois da
+     * fronteira ele vira `closed` (é a "data de corte", `closesAt()`).
+     */
+    public const GRACE_DAYS = 5;
+
     /**
      * Ciclo que contém `$reference` (`cyclesAgo=0`), deslocado `cyclesAgo`
      * ciclos para trás (positivo) ou para a frente (negativo, ciclo futuro).
@@ -64,10 +74,21 @@ class BillingCycle
         return [$start, $end];
     }
 
+    /**
+     * Data de corte definitivo de um ciclo cuja fronteira é `$boundary`:
+     * `$boundary + GRACE_DAYS` dias. É o primeiro dia em que o ciclo está
+     * `closed` — antes dele, mesmo passada a fronteira, o ciclo está na
+     * janela de carência e ainda conta como `open`.
+     */
+    public static function closesAt(Carbon $boundary): Carbon
+    {
+        return $boundary->copy()->startOfDay()->addDays(self::GRACE_DAYS);
+    }
+
     private static function statusOf(Carbon $start, Carbon $end, Carbon $referenceStart): string
     {
         return match (true) {
-            $end->lt($referenceStart) => 'closed',
+            $referenceStart->gte(self::closesAt($end)) => 'closed',
             $start->gt($referenceStart) => 'future',
             default => 'open',
         };

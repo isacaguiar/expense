@@ -26,7 +26,7 @@ const groups = [
 type CycleStatus = 'closed' | 'open' | 'future' | 'closed_manually';
 
 const summaryResponse = {
-  cycle: { start: '2026-07-16', end: '2026-08-15', status: 'closed' as CycleStatus },
+  cycle: { start: '2026-07-16', end: '2026-08-15', closes_at: '2026-08-20', status: 'closed' as CycleStatus, settled: false },
   totals: { total: 1100, paid: 300, pending: 800 },
   expenses: [
     {

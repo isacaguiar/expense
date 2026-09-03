@@ -44,7 +44,7 @@ type GroupMemberPix = { id: number; name: string; email: string; pix: string | n
 
 const Payments: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
-  const { summary, loading, error, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
+  const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
 
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
@@ -85,7 +85,7 @@ const Payments: React.FC = () => {
     canUnpay,
     handlePay,
     handleUnpay
-  } = usePaymentActions(currentUserId, summary, reload);
+  } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
 
   // Diálogo "Confirmar pagamento": a foto é obrigatória aqui (do lado do
   // cliente) mesmo com o campo sendo opcional na API — ver plan.md §2/§6.
@@ -299,6 +299,11 @@ const Payments: React.FC = () => {
                 settlements={summary.settlements}
                 balances={summary.balances}
                 currentUserId={currentUserId}
+                canConfirm={
+                  (summary.cycle.status === 'closed' || summary.cycle.status === 'closed_manually') &&
+                  !summary.cycle.settled
+                }
+                cycleSettled={summary.cycle.settled}
                 onPayWithPix={handleSelectSettlement}
                 onSendProof={openConfirmSettlementDialog}
               />
