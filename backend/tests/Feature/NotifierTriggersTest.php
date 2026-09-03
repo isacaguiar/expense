@@ -382,4 +382,62 @@ class NotifierTriggersTest extends TestCase
 
         $this->assertSame(0, Notification::where('type', 'group_member_added')->count());
     }
+
+    // --- expense_created (ExpenseController@store) -----------------------
+
+    private function storePayload(Group $group, User $creator, array $payerIds): array
+    {
+        return [
+            'date_payment' => '2026-08-15',
+            'description' => 'Conta de internet',
+            'expense_type' => 'IN_CASH',
+            'installments' => 1,
+            'total_value' => 120,
+            'group_id' => $group->id,
+            'user_creator_id' => $creator->id,
+            'user_payer_id' => $creator->id,
+            'payers' => $payerIds,
+            'quotas' => [['date_expected' => '2026-08-15', 'number' => 1, 'value_quota' => 120]],
+        ];
+    }
+
+    public function test_expense_created_notifies_payers_except_the_creator(): void
+    {
+        Carbon::setTestNow('2026-08-15 12:00:00');
+
+        $creator = User::factory()->create();
+        $payerA = User::factory()->create();
+        $payerB = User::factory()->create();
+        $group = Group::create(['name' => 'República']);
+        $group->members()->attach([$creator->id, $payerA->id, $payerB->id]);
+
+        $this->withToken($this->tokenFor($creator))
+            ->postJson('/api/expenses', $this->storePayload($group, $creator, [$creator->id, $payerA->id, $payerB->id]))
+            ->assertStatus(201);
+
+        $rows = Notification::where('type', 'expense_created')->get();
+        $this->assertEqualsCanonicalizing([$payerA->id, $payerB->id], $rows->pluck('user_id')->all());
+
+        $data = $rows->first()->data;
+        $this->assertSame($creator->name, $data['actorName']);
+        $this->assertSame('Conta de internet', $data['expenseDescription']);
+        $this->assertSame('120.00', $data['amount']);
+        $this->assertSame('República', $data['groupName']);
+        $this->assertSame('agosto/2026', $data['cycleLabel']);
+    }
+
+    public function test_expense_created_notifies_nobody_when_creator_is_sole_payer(): void
+    {
+        Carbon::setTestNow('2026-08-15 12:00:00');
+
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Sozinho']);
+        $group->members()->attach($creator->id);
+
+        $this->withToken($this->tokenFor($creator))
+            ->postJson('/api/expenses', $this->storePayload($group, $creator, [$creator->id]))
+            ->assertStatus(201);
+
+        $this->assertSame(0, Notification::where('type', 'expense_created')->count());
+    }
 }

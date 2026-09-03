@@ -31,6 +31,35 @@ class Notifier
     ];
 
     /**
+     * Uma despesa foi criada (`ExpenseController@store`) → avisa os pagadores
+     * dela, menos quem a criou.
+     */
+    public static function expenseCreated(Expense $expense): void
+    {
+        self::guard('expense_created', function () use ($expense) {
+            $expense->loadMissing('payers', 'creator', 'group');
+
+            $recipients = $expense->payers
+                ->reject(fn ($u) => $u->id === $expense->user_creator_id)
+                ->pluck('id');
+
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            self::fanOut($recipients, 'expense_created', $expense->group_id, [
+                'actorName' => $expense->creator?->name,
+                'groupId' => $expense->group_id,
+                'groupName' => $expense->group?->name,
+                'expenseId' => $expense->id,
+                'expenseDescription' => $expense->description,
+                'amount' => self::amount($expense->total_value),
+                'cycleLabel' => self::cycleLabel($expense->date_payment),
+            ]);
+        });
+    }
+
+    /**
      * O credor marcou a ocorrência de uma despesa como paga
      * (`ExpenseController@pay`) → avisa os pagadores dela, menos o próprio
      * credor.
