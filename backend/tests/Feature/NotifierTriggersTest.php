@@ -195,4 +195,155 @@ class NotifierTriggersTest extends TestCase
         $this->assertSame(0, Notification::count());
         Log::shouldHaveReceived('warning')->atLeast()->once();
     }
+
+    // --- cycle_settled (ExpenseController@sealCycleIfSettled) -------------
+
+    /**
+     * Ciclo de agosto/2026 já fechado manualmente (snapshot criado direto, sem
+     * passar pela rota `close()` — não dispara `cycle_closed`), com uma única
+     * despesa do credor como único pagador (sem settlements). Pagar a última
+     * quota sela o ciclo.
+     */
+    private function sealableScenario(): array
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $memberB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $memberB->id]);
+
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => '2026-08-10',
+            'description' => 'Conta de luz',
+            'expense_type' => 'IN_CASH',
+            'installments' => 1,
+            'total_value' => 60,
+            'group_id' => $group->id,
+            'user_creator_id' => $creditor->id,
+            'user_payer_id' => $creditor->id,
+            'deleted' => false,
+        ]);
+        $expense->payers()->sync([$creditor->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 60]);
+
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 60, 'paid' => 0, 'pending' => 60],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        return [$group, $creditor, $memberB, $expense];
+    }
+
+    public function test_cycle_settled_notifies_all_members_once(): void
+    {
+        [$group, $creditor, $memberB, $expense] = $this->sealableScenario();
+        $token = $this->tokenFor($creditor);
+
+        $this->withToken($token)->postJson("/api/expenses/{$expense->id}/pay")->assertStatus(200);
+
+        $rows = Notification::where('type', 'cycle_settled')->get();
+        $this->assertEqualsCanonicalizing([$creditor->id, $memberB->id], $rows->pluck('user_id')->all());
+        $this->assertSame('agosto/2026', $rows->first()->data['cycleLabel']);
+        $this->assertSame($group->id, $rows->first()->data['groupId']);
+
+        // Releitura preguiçosa do summary chama sealCycleIfSettled de novo — não repete.
+        $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/summary")->assertStatus(200);
+        $this->assertSame(2, Notification::where('type', 'cycle_settled')->count());
+    }
+
+    // --- cycle_closed (ExpenseController@close) --------------------------
+
+    private function manualCloseScenario(): array
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $closer = User::factory()->create();
+        $memberB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$closer->id, $memberB->id]);
+
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => '2026-08-10',
+            'description' => 'Despesa de teste',
+            'expense_type' => 'IN_CASH',
+            'installments' => 1,
+            'total_value' => 100,
+            'group_id' => $group->id,
+            'user_creator_id' => $closer->id,
+            'user_payer_id' => $closer->id,
+            'deleted' => false,
+        ]);
+        $expense->payers()->sync([$closer->id, $memberB->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        return [$group, $closer, $memberB];
+    }
+
+    public function test_cycle_closed_notifies_members_except_the_actor(): void
+    {
+        [$group, $closer, $memberB] = $this->manualCloseScenario();
+
+        $this->withToken($this->tokenFor($closer))
+            ->postJson("/api/groups/{$group->id}/expenses/close")
+            ->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'closed_manually');
+
+        $rows = Notification::where('type', 'cycle_closed')->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame($memberB->id, $rows->first()->user_id);
+        $this->assertSame($closer->name, $rows->first()->data['actorName']);
+        $this->assertSame('agosto/2026', $rows->first()->data['cycleLabel']);
+    }
+
+    public function test_cycle_closed_is_not_duplicated_on_reclose(): void
+    {
+        [$group, $closer] = $this->manualCloseScenario();
+        $token = $this->tokenFor($closer);
+
+        $this->withToken($token)->postJson("/api/groups/{$group->id}/expenses/close")->assertStatus(200);
+        $this->withToken($token)->postJson("/api/groups/{$group->id}/expenses/close")->assertStatus(200);
+
+        $this->assertSame(1, Notification::where('type', 'cycle_closed')->count());
+    }
+
+    public function test_closing_a_fully_settled_cycle_emits_only_cycle_settled(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $closer = User::factory()->create();
+        $memberB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$closer->id, $memberB->id]);
+
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => '2026-08-10',
+            'description' => 'Despesa de teste',
+            'expense_type' => 'IN_CASH',
+            'installments' => 1,
+            'total_value' => 40,
+            'group_id' => $group->id,
+            'user_creator_id' => $closer->id,
+            'user_payer_id' => $closer->id,
+            'deleted' => false,
+        ]);
+        $expense->payers()->sync([$closer->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => true, 'value_quota' => 40]);
+
+        $this->withToken($this->tokenFor($closer))
+            ->postJson("/api/groups/{$group->id}/expenses/close")
+            ->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'closed');
+
+        $this->assertSame(2, Notification::where('type', 'cycle_settled')->count());
+        $this->assertSame(0, Notification::where('type', 'cycle_closed')->count());
+    }
 }

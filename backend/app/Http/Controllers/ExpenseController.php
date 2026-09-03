@@ -606,6 +606,11 @@ class ExpenseController extends Controller
         $start = $cycle['start'];
         $end = $cycle['end'];
 
+        $wasManuallyClosed = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->whereNotNull('closed_manually_at')
+            ->exists();
+
         foreach ($this->collectCycleEntries($groupId, $start, $end) as $entry) {
             if ($entry['expense']->expense_type === 'FIXED') {
                 $this->materializeFixedOccurrenceQuota($entry['expense'], $entry['date']);
@@ -633,6 +638,12 @@ class ExpenseController extends Controller
 
         if ($sealed) {
             $snapshot->refresh();
+        }
+
+        // Fechamento manual "de verdade" (não selou direto — isso já dispara
+        // `cycle_settled` no `sealCycleIfSettled`) e não é um re-fechamento.
+        if (! $sealed && ! $wasManuallyClosed) {
+            Notifier::cycleClosed($group, $start, auth()->id(), auth()->user()->name);
         }
 
         return response()->json([
@@ -1278,6 +1289,10 @@ class ExpenseController extends Controller
             return false;
         }
 
+        $wasSealed = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->first()?->isSealed() ?? false;
+
         GroupCycleSnapshot::updateOrCreate(
             ['group_id' => $groupId, 'cycle_start' => $start->toDateString()],
             [
@@ -1289,6 +1304,13 @@ class ExpenseController extends Controller
                 'settled_at' => Carbon::now(),
             ]
         );
+
+        // Só na transição não-selado → selado: chamadas repetidas de
+        // `sealCycleIfSettled` num ciclo já selado (inclusive as preguiçosas
+        // de `summary()`) não geram notificação nova.
+        if (! $wasSealed) {
+            Notifier::cycleSettled($group, $start);
+        }
 
         return true;
     }

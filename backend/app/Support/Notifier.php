@@ -61,6 +61,50 @@ class Notifier
     }
 
     /**
+     * O ciclo transitou para "selado" (todas as pendências pagas e acertos
+     * confirmados — `ExpenseController@sealCycleIfSettled`) → avisa todos os
+     * membros do grupo.
+     */
+    public static function cycleSettled(Group $group, mixed $cycleStart): void
+    {
+        self::guard('cycle_settled', function () use ($group, $cycleStart) {
+            $group->loadMissing('members');
+
+            self::fanOut($group->members->pluck('id'), 'cycle_settled', $group->id, [
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+                'cycleLabel' => self::cycleLabel($cycleStart),
+            ]);
+        });
+    }
+
+    /**
+     * Fechamento manual da competência (`ExpenseController@close`, quando não
+     * selou direto) → avisa todos os membros do grupo, menos quem fechou.
+     */
+    public static function cycleClosed(Group $group, mixed $cycleStart, int $actorId, ?string $actorName): void
+    {
+        self::guard('cycle_closed', function () use ($group, $cycleStart, $actorId, $actorName) {
+            $group->loadMissing('members');
+
+            $recipients = $group->members
+                ->reject(fn ($u) => $u->id === $actorId)
+                ->pluck('id');
+
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            self::fanOut($recipients, 'cycle_closed', $group->id, [
+                'actorName' => $actorName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+                'cycleLabel' => self::cycleLabel($cycleStart),
+            ]);
+        });
+    }
+
+    /**
      * O devedor confirmou o acerto do ciclo via Pix, com comprovante
      * (`ExpenseController@confirmSettlement`) → avisa o credor.
      */
