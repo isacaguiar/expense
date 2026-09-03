@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20260903
 |---|---|---|---|---|---|
 | TASK-260 | Criar migration `create_ex_notifications_table` e model `App\Models\Notification` | backend | plan.md §1 | nenhum | Concluída (2026-09-03) |
 | TASK-261 | Criar `NotificationController` e rotas `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/read` | backend | plan.md §2 | nenhum | Concluída (2026-09-03) |
-| TASK-262 | Criar serviço `App\Support\Notifier` e os gatilhos `expense_paid` (em `pay()`) e `settlement_confirmed` (em `confirmSettlement()`) | backend | plan.md §3 | nenhum | Pendente |
+| TASK-262 | Criar serviço `App\Support\Notifier` e os gatilhos `expense_paid` (em `pay()`) e `settlement_confirmed` (em `confirmSettlement()`) | backend | plan.md §3 | nenhum | Concluída (2026-09-03) |
 | TASK-263 | Gatilhos `cycle_settled` (em `sealCycleIfSettled()`) e `cycle_closed` (em `close()`) | backend | plan.md §3 | nenhum | Pendente |
 | TASK-264 | Gatilho `group_member_added` (em `GroupMemberController::store()`) | backend | plan.md §3 | nenhum | Pendente |
 | TASK-265 | Gatilho `expense_created` (em `ExpenseController::store()`) | backend | plan.md §3 | nenhum | Pendente |
