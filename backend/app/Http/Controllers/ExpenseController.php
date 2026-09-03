@@ -410,6 +410,9 @@ class ExpenseController extends Controller
 
             DB::commit();
 
+            // Fora da transação: uma falha aqui não desfaz a despesa criada.
+            Notifier::expenseCreated($expense);
+
             return response()->json(['message' => 'Despesa criada com sucesso', 'expense_id' => $expense->id], 201);
 
         } catch (\Throwable $e) {
