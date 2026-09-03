@@ -10,7 +10,7 @@ Versão: 1.0 · Criado em: 20260903
 | TASK-261 | Criar `NotificationController` e rotas `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/read` | backend | plan.md §2 | nenhum | Concluída (2026-09-03) |
 | TASK-262 | Criar serviço `App\Support\Notifier` e os gatilhos `expense_paid` (em `pay()`) e `settlement_confirmed` (em `confirmSettlement()`) | backend | plan.md §3 | nenhum | Concluída (2026-09-03) |
 | TASK-263 | Gatilhos `cycle_settled` (em `sealCycleIfSettled()`) e `cycle_closed` (em `close()`) | backend | plan.md §3 | nenhum | Concluída (2026-09-03) |
-| TASK-264 | Gatilho `group_member_added` (em `GroupMemberController::store()`) | backend | plan.md §3 | nenhum | Pendente |
+| TASK-264 | Gatilho `group_member_added` (em `GroupMemberController::store()`) | backend | plan.md §3 | nenhum | Concluída (2026-09-03) |
 | TASK-265 | Gatilho `expense_created` (em `ExpenseController::store()`) | backend | plan.md §3 | nenhum | Pendente |
 | TASK-266 | Criar hook `useUnreadNotificationsCount` (polling) e o `Badge` no sino via `GroupShellLayout`→`GroupHeader` | frontend | plan.md §4 | nenhum | Pendente |
 | TASK-267 | Criar `NotificationsMenu` e helper `notificationText` (lista, marcar como lida, navegar) | frontend | plan.md §4 | nenhum | Pendente |
