@@ -25,7 +25,8 @@ $description = $pageDescription ?? $config['description'];
   <meta property="og:description" content="<?= e($description) ?>" />
   <meta property="og:site_name" content="<?= e($config['brand_name']) ?>" />
 
-  <link rel="icon" href="<?= e(asset('favicon.png')) ?>" type="image/png" />
+  <link rel="icon" href="/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" href="<?= e(asset('favicon.png')) ?>" />
   <link rel="stylesheet" href="<?= e(asset('style.css')) ?>" />
 </head>
 <body class="<?= e($bodyClass ?? '') ?>">
