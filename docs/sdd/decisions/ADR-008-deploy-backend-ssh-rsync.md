@@ -2,6 +2,7 @@
 
 Status: Aceita
 Data: 2026-08-31
+Emenda: 2026-09-03 — o `SCRIPT_AFTER` passa a rodar `php artisan migrate --force` (feature `docs/feature/20260903-deploy-backend-migracao-automatica/`). Blocos marcados **[Emenda 2026-09-03]** abaixo.
 
 ## Contexto
 
@@ -55,8 +56,17 @@ fixada por tag de patch (estilo `FTP-Deploy-Action@v4.3.5`).
 - **Só o passo final de transferência muda.** Setup PHP, `composer install`,
   geração do `.env`, `key:generate`, caches e o `rsync` local para `build-laravel/`
   ficam idênticos.
-
-## Consequências
+- **[Emenda 2026-09-03] O `SCRIPT_AFTER` aplica migrations.** Entre
+  `php artisan optimize:clear` e `php artisan config:cache`/`route:cache`, roda
+  `php artisan migrate --force --no-interaction || exit 1`. O `|| exit 1` encerra
+  o script — e o deploy — se a migration falhar, sem gerar cache em cima de um
+  schema meio-aplicado. `--force` é obrigatório: com `APP_ENV=production` o
+  `migrate` aborta pedindo confirmação interativa, que não existe no shell do
+  `SCRIPT_AFTER`. Antes desta emenda, aplicar migration em produção era passo
+  manual por SSH e **gate humano** (`00-constitution.md` §5.2) — o que abriu a
+  janela do incidente de 2026-09-03 (código lendo `ex_group_cycle_snapshots.settled_at`
+  no ar sem a migration `2026_09_02_000000_add_settled_at…` ter rodado → HTTP 500
+  em `cycleHistory`/`grossDebts`). Ver Consequências e Alternativas.
 
 - Elimina o modo passivo → resolve o `ECONNREFUSED`; o deploy do backend volta a
   completar. Canal único (uma conexão TCP na 2222), autenticado por chave.
@@ -92,6 +102,32 @@ fixada por tag de patch (estilo `FTP-Deploy-Action@v4.3.5`).
   `queue:work` disparado por cron do cPanel — evolução citada no ADR-006) sem novo
   ADR, desde que continue sendo "deploy/infra pela mesma conta via SSH".
 
+**[Emenda 2026-09-03] — `migrate --force` no `SCRIPT_AFTER`:**
+
+- **Código e schema de produção passam a subir juntos** no mesmo deploy. Fecha a
+  janela em que um merge em `main` publicava código que referencia schema ainda
+  não migrado (causa do incidente de 2026-09-03).
+- **Perde-se o ponto de inspeção humana** antes de cada `migrate` em produção —
+  era o gate de `00-constitution.md` §5.2. A contrapartida é a migration falhar
+  cedo e ruidosamente (job vermelho) em vez de o código quebrar em runtime.
+- **Nova janela de risco**: o `rsync` roda antes do `SCRIPT_AFTER`, então se o
+  `migrate` falhar o host fica com código novo + schema velho até intervenção
+  manual. Sem rollback automático (fora de escopo). Mitigação: `|| exit 1` +
+  alerta de job vermelho.
+- **Migration destrutiva** (`drop`/`rename`/alterar tipo) continua exigindo aval
+  humano — por **convenção**, não por trava técnica: o reviewer do PR de promoção
+  `dev` → `main` é responsável por barrar (registrado em `00-constitution.md`
+  §5.2/§4.2 e no checklist de `docs/sdd/04-implementation.md` §1). Descartado um
+  check automático no pipeline — ver Alternativas.
+- **Depende de o usuário do banco de produção ter privilégio de DDL** (`ALTER
+  TABLE` etc.). O `migrate` manual de 2026-09-01 rodou com esse usuário, então na
+  prática já é o caso; confirmado como pendência de gate humano na feature.
+- **`00-constitution.md` §5.2** (linha "Rodar migration em banco compartilhado/
+  produção") e **§3** (linha "Deploy backend") ficam desatualizadas. **Editar a
+  Constitution é gate humano** (§5.2): esta emenda registra a decisão; as linhas
+  do §5.2/§3 são atualizadas num passo humano à parte (bump de versão + data),
+  como já foi feito para o §3 quando este ADR foi criado.
+
 ## Alternativas consideradas
 
 - **Continuar no FTP com faixa de portas passivas fixa / `lftp` + retry inline**:
@@ -124,6 +160,24 @@ fixada por tag de patch (estilo `FTP-Deploy-Action@v4.3.5`).
   Sobrepor semântica confunde e atrapalha a remoção limpa depois. Secrets novos
   `SSH_*`.
 
+**[Emenda 2026-09-03] — sobre automatizar migration:**
+
+- **Guarda fail-fast** (o CI roda só `php artisan migrate:status` e **aborta** o
+  deploy se houver migration pendente, mantendo o `migrate` manual e o gate
+  humano): resolveria o incidente sem tirar a inspeção humana, mas mantém um passo
+  manual obrigatório a cada migration e trava o deploy até alguém rodar à mão.
+  Rejeitada — a automação total é mais simples e o risco (shared host, app
+  pequeno) é aceitável.
+- **Manter 100% manual** (status quo): rejeitada — é a causa do incidente de
+  2026-09-03.
+- **Check automático de migration destrutiva no pipeline** (grep por `->drop`,
+  `->dropColumn`, `->renameColumn`, `->change`, `Schema::drop*`, DDL em
+  `DB::statement` nas migrations pendentes, falhando o deploy se achar): rejeitada
+  em favor de convenção humana (reviewer do PR de promoção). Peça a mais no
+  pipeline, detecção heurística com falso positivo/negativo, e o volume/ritmo
+  atual de migrations não justifica. Reavaliável (candidato a `docs/backlog/`) se
+  algum dia passar batido.
+
 ## Referências
 
 - `docs/feature/20260831-deploy-backend-ssh/` — `specify.md`, `plan.md`, `tasks.md`.
@@ -138,3 +192,7 @@ fixada por tag de patch (estilo `FTP-Deploy-Action@v4.3.5`).
 - `docs/sdd/decisions/ADR-006-whatsapp-meta-cloud-api.md` — restrição "sem SSH"
   agora superada; evolução fila+cron destravada.
 - `.github/workflows/deploy-backend.yml` — passo "🚀 Deploy via FTP".
+- **[Emenda 2026-09-03]** `docs/feature/20260903-deploy-backend-migracao-automatica/`
+  — `specify.md`, `plan.md`, `tasks.md` (TASK-271 a TASK-275). Incidente de
+  origem: 500 em `GET /api/groups/{id}/expenses/cycles` e `.../gross-debts` por
+  `settled_at` ausente em produção.

@@ -4,7 +4,7 @@ ID: 020
 Origem: docs/feature/20260819-novo-layout-tela-entrada/specify.md §2.4/R3 (sino no cabeçalho da tela de Resumo, hoje decorativo)
 Criado em: 2026-08-19
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-260 (docs/feature/20260903-notificacoes-in-app/)
 
 ## Descrição
 
