@@ -8,6 +8,7 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
+use App\Support\Notifier;
 use App\Support\ProofStorage;
 use App\Support\WhatsApp\WhatsAppNotifier;
 use Carbon\Carbon;
@@ -868,9 +869,17 @@ class ExpenseController extends Controller
             $update['payment_proof_path'] = ProofStorage::store($request->file('comprovante'), $expense->group_id);
         }
 
+        $wasPaid = (bool) $quota->paid;
+
         $quota->update($update);
 
         $this->sealCycleIfSettled($group, $group->id, $cycle['start'], $cycle['end']);
+
+        // Só na transição não-paga → paga: re-`pay()` do mesmo quota (ex.:
+        // trocar o comprovante) não gera notificação nova.
+        if (! $wasPaid) {
+            Notifier::expensePaid($expense, $quota);
+        }
 
         // Comprovante anexado pelo credor → avisa os pagadores por WhatsApp,
         // depois da resposta (não segura o request, não quebra o pagamento se
@@ -1020,6 +1029,18 @@ class ExpenseController extends Controller
         }
 
         $this->sealCycleIfSettled($group, $groupId, $cycle['start'], $cycle['end']);
+
+        // Só na 1ª confirmação desse par no ciclo — reenviar o comprovante
+        // (`updateOrCreate` que atualiza) não gera notificação nova.
+        if ($confirmation->wasRecentlyCreated) {
+            Notifier::settlementConfirmed(
+                $group,
+                (int) $data['to_user_id'],
+                auth()->user()->name,
+                $settlement['amount'],
+                $cycle['start'],
+            );
+        }
 
         // Devedor confirmou o acerto com comprovante → avisa o credor por
         // WhatsApp, depois da resposta. No-op se a feature está desligada.
