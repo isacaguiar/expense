@@ -346,4 +346,40 @@ class NotifierTriggersTest extends TestCase
         $this->assertSame(2, Notification::where('type', 'cycle_settled')->count());
         $this->assertSame(0, Notification::where('type', 'cycle_closed')->count());
     }
+
+    // --- group_member_added (GroupMemberController@store) ----------------
+
+    public function test_group_member_added_notifies_the_new_member_only(): void
+    {
+        $adder = User::factory()->create();
+        $group = Group::create(['name' => 'Casa']);
+        $group->members()->attach($adder->id);
+
+        $newMember = User::factory()->create();
+
+        $this->withToken($this->tokenFor($adder))
+            ->postJson("/api/groups/{$group->id}/members", ['email' => $newMember->email])
+            ->assertStatus(201);
+
+        $rows = Notification::where('type', 'group_member_added')->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame($newMember->id, $rows->first()->user_id);
+        $this->assertSame($adder->name, $rows->first()->data['actorName']);
+        $this->assertSame('Casa', $rows->first()->data['groupName']);
+        $this->assertSame($group->id, $rows->first()->data['groupId']);
+    }
+
+    public function test_group_member_added_does_not_notify_when_already_a_member(): void
+    {
+        $adder = User::factory()->create();
+        $existing = User::factory()->create();
+        $group = Group::create(['name' => 'Casa']);
+        $group->members()->attach([$adder->id, $existing->id]);
+
+        $this->withToken($this->tokenFor($adder))
+            ->postJson("/api/groups/{$group->id}/members", ['email' => $existing->email])
+            ->assertStatus(409);
+
+        $this->assertSame(0, Notification::where('type', 'group_member_added')->count());
+    }
 }
