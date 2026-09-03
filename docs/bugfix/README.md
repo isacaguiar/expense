@@ -60,12 +60,12 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 |---|---|---|---|---|
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 | [20260901-expense-store-update-422.md](20260901-expense-store-update-422.md) | Testes de despesa (store/update/destroy) falham com 422 após virada de mês | 2026-09-01 | `fix/20260901-expense-store-update-422` | Aberto |
-| [20260902-favicon-ausente.md](20260902-favicon-ausente.md) | Favicon ausente no site e no app (`/favicon.ico` 404, `index.html` sem `<link rel=icon>`) | 2026-09-02 | `fix/20260902-favicon-ausente` | Aberto |
 
 ## Concluídos
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/20260902-favicon-ausente.md](concluidos/20260902-favicon-ausente.md) | Favicon ausente no site e no app (`/favicon.ico` 404, `index.html` sem `<link rel=icon>`) | 2026-09-02 | #137 |
 | [concluidos/20260901-frontend-meta-viewport-mobile.md](concluidos/20260901-frontend-meta-viewport-mobile.md) | App não responsivo no celular (meta viewport ausente) | 2026-09-01 | #126 |
 | [concluidos/20260828-login-sem-mensagem-erro.md](concluidos/20260828-login-sem-mensagem-erro.md) | Tela de login não exibe mensagem de erro com credenciais inválidas | 2026-08-28 | #81 |
 | [concluidos/20260829-deploy-site-secrets-quebrado.md](concluidos/20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | #89 |

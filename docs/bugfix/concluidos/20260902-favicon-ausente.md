@@ -55,3 +55,8 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-09-02 | Browser — `GET http://localhost:3000/app/favicon.ico` (Vite dev) | 200, `image/x-icon`, 107424 bytes, header ICO `00 00 01 00`; `<link rel=icon>` presente no DOM apontando p/ `/app/favicon.ico` |
 | 2026-09-02 | Browser — `GET http://localhost:8080/favicon.ico` (site, `php -S`) | 200, `image/vnd.microsoft.icon`, 107424 bytes (antes: **404**) |
 | 2026-09-02 | Browser — `header.php` em `/` e `/privacidade.php` | ambas com `<link rel="icon" href="/favicon.ico" sizes="any" />` + `<link rel="icon" type="image/png" ...>` |
+
+## Resolução
+Concluído em: 2026-09-02
+Branch: fix/20260902-favicon-ausente
+PR: https://github.com/isacaguiar/expense/pull/137
