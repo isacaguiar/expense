@@ -7,6 +7,7 @@ use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupExpenseReportController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PixController;
 use App\Http\Controllers\ProofDownloadController;
 use App\Http\Controllers\UserController;
@@ -27,6 +28,10 @@ Route::middleware('jwt.auth')->group(function () {
     Route::put('/user/password', [UserController::class, 'changePassword']);
     Route::get('/user/google/redirect-url', [GoogleAuthController::class, 'redirectUrl']);
     Route::get('/pix/generate', [PixController::class, 'gerarPix']);
+
+    Route::get('/notifications', [NotificationController::class, 'index']);
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount']);
+    Route::post('/notifications/read', [NotificationController::class, 'markRead']);
 
     Route::apiResource('groups', GroupController::class);
 
