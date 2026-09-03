@@ -525,6 +525,7 @@ class ExpenseController extends Controller
             'cycle' => [
                 'start' => $start->toDateString(),
                 'end' => $end->toDateString(),
+                'closes_at' => BillingCycle::closesAt($end)->toDateString(),
                 'status' => $status,
                 'settled' => $sealed,
             ],
@@ -536,12 +537,15 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Diz em qual competência o app deve abrir o grupo: o ciclo **fechado mais
-     * recente que ainda não está totalmente quitado** (`cycleIsFullySettled`),
-     * varrendo até `FOCUS_LOOKBACK` ciclos para trás. Se nenhum ciclo fechado
-     * recente tem pendência, devolve `0` — o app abre na competência vigente
-     * (comportamento pré-`20260902`). Ciclo `open`/`future` não conta; ciclo
-     * selado é pulado. Ver docs/feature/20260902-pagamento-ciclo-fechado/plan.md §4.
+     * Diz em qual competência o app deve abrir o grupo: o ciclo **fechado (ou na
+     * janela de carência) mais recente que ainda não está totalmente quitado**
+     * (`cycleIsFullySettled`), varrendo até `FOCUS_LOOKBACK` ciclos para trás.
+     * Se nenhum tem pendência, devolve `0` — o app abre na competência vigente
+     * (comportamento pré-`20260902`). Ciclo `future` (ou `open` cuja fronteira
+     * ainda não passou) não conta; ciclo selado é pulado. Um ciclo em carência
+     * (`open` mas com `end` no passado) conta: a Home fica nele durante os dias
+     * de carência e não pula quando ele vira `closed` em `closesAt`. Ver
+     * docs/feature/20260902-pagamento-ciclo-fechado/plan.md §4 e §10.
      */
     public function focusCycle($groupId)
     {
@@ -562,7 +566,13 @@ class ExpenseController extends Controller
             $cycleIsClosed = $cycle['status'] === 'closed'
                 || ($cycle['status'] === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive());
 
-            if (! $cycleIsClosed) {
+            // Ciclo na carência: fronteira já passou, mas ainda `open` (fecha só
+            // em `closesAt`). Nunca acontece para `$ago = 0` (o ciclo vigente
+            // nunca tem `end` no passado).
+            $inGrace = $cycle['status'] === 'open'
+                && Carbon::now()->startOfDay()->gt($cycle['end']);
+
+            if (! $cycleIsClosed && ! $inGrace) {
                 continue;
             }
 
@@ -628,6 +638,7 @@ class ExpenseController extends Controller
             'cycle' => [
                 'start' => $start->toDateString(),
                 'end' => $end->toDateString(),
+                'closes_at' => BillingCycle::closesAt($end)->toDateString(),
                 'status' => $sealed ? 'closed' : 'closed_manually',
                 'settled' => $sealed,
             ],
@@ -673,7 +684,7 @@ class ExpenseController extends Controller
         $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
 
         return response()->json([
-            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'status' => 'open', 'settled' => false],
+            'cycle' => ['start' => $start->toDateString(), 'end' => $end->toDateString(), 'closes_at' => BillingCycle::closesAt($end)->toDateString(), 'status' => 'open', 'settled' => false],
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
@@ -799,6 +810,7 @@ class ExpenseController extends Controller
             'cycle' => [
                 'start' => $start->toDateString(),
                 'end' => $end->toDateString(),
+                'closes_at' => BillingCycle::closesAt($end)->toDateString(),
                 'status' => $cycle['status'],
                 'settled' => $sealed,
             ],

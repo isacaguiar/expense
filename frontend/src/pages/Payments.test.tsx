@@ -43,7 +43,7 @@ type SummaryOverrides = {
 
 function summaryResponse(expensesList: SummaryExpenseFixture[] = [], overrides: SummaryOverrides = {}) {
   return {
-    cycle: { start: '2026-08-01', end: '2026-08-31', status: 'open', ...overrides.cycle },
+    cycle: { start: '2026-08-01', end: '2026-08-31', closes_at: '2026-09-05', status: 'open', settled: false, ...overrides.cycle },
     totals: { total: 0, paid: 0, pending: 0 },
     expenses: expensesList.map(exp => ({
       paid: false,
@@ -204,7 +204,7 @@ describe('Payments', () => {
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
     const [url, body] = vi.mocked(axios.post).mock.calls[0];
     expect(url).toContain('/api/expenses/13/unpay');
-    expect(body).toBeNull();
+    expect(body).toEqual({ cycles_ago: 0 });
     expect(await screen.findByText('Pagamento desfeito.')).toBeInTheDocument();
   });
 
@@ -223,6 +223,7 @@ describe('Payments', () => {
               { user_id: 999, name: 'Maria', balance: 50 },
             ],
             settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+            cycle: { status: 'closed' },
           })
         });
       }
@@ -264,6 +265,7 @@ describe('Payments', () => {
           { user_id: 999, name: 'Maria', balance: 50 },
         ],
         settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+        cycle: { status: 'closed' },
       },
       [{ id: 999, name: 'Maria', email: 'maria@example.com', pix: null }]
     );
@@ -292,6 +294,7 @@ describe('Payments', () => {
           { user_id: 999, name: 'Maria', balance: 50 },
         ],
         settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+        cycle: { status: 'closed' },
       },
       [{ id: 999, name: 'Maria', email: 'maria@example.com', pix: 'maria@pix.com' }]
     );

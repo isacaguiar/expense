@@ -11,7 +11,6 @@ type UsePaymentActionsResult = {
   dismissPayError: () => void;
   dismissPaySuccess: () => void;
   dismissUnpaySuccess: () => void;
-  cycleIsOpen: boolean;
   isCreditor: (exp: SummaryExpense) => boolean;
   canPay: (exp: SummaryExpense) => boolean;
   canUnpay: (exp: SummaryExpense) => boolean;
@@ -27,10 +26,16 @@ type UsePaymentActionsResult = {
  * de habilitação e mesmos endpoints nos dois lugares, só a UX em torno de
  * `handlePay` muda por tela (comprovante é opcional no parâmetro `proof`
  * porque a API também trata a foto como opcional, ver `plan.md` §2).
+ *
+ * O credor marca/desmarca pagamento em qualquer estado de ciclo exceto
+ * `future` (a `Quota` ainda não existe) — inclusive em ciclo `closed` ou já
+ * selado (`unpay` de um ciclo selado o dessela no backend). `cyclesAgo` diz
+ * ao backend sobre qual competência agir.
  */
 export function usePaymentActions(
   currentUserId: number | null,
   summary: Summary | null,
+  cyclesAgo: number,
   reload: () => void
 ): UsePaymentActionsResult {
   const [payingExpenseId, setPayingExpenseId] = useState<number | null>(null);
@@ -38,7 +43,7 @@ export function usePaymentActions(
   const [paySuccess, setPaySuccess] = useState<boolean>(false);
   const [unpaySuccess, setUnpaySuccess] = useState<boolean>(false);
 
-  const cycleIsOpen = summary?.cycle.status === 'open';
+  const cycleIsFuture = summary?.cycle.status === 'future';
 
   const isCreditor = useCallback(
     (exp: SummaryExpense) => currentUserId !== null && currentUserId === exp.userPayerId,
@@ -46,13 +51,13 @@ export function usePaymentActions(
   );
 
   const canPay = useCallback(
-    (exp: SummaryExpense) => cycleIsOpen && !exp.paid && isCreditor(exp),
-    [cycleIsOpen, isCreditor]
+    (exp: SummaryExpense) => !cycleIsFuture && !exp.paid && isCreditor(exp),
+    [cycleIsFuture, isCreditor]
   );
 
   const canUnpay = useCallback(
-    (exp: SummaryExpense) => cycleIsOpen && exp.paid && isCreditor(exp),
-    [cycleIsOpen, isCreditor]
+    (exp: SummaryExpense) => !cycleIsFuture && exp.paid && isCreditor(exp),
+    [cycleIsFuture, isCreditor]
   );
 
   const handlePay = useCallback(
@@ -61,11 +66,14 @@ export function usePaymentActions(
       setPayError(null);
 
       const token = localStorage.getItem('accessToken');
-      const body = proof ? (() => {
-        const form = new FormData();
-        form.append('comprovante', proof);
-        return form;
-      })() : null;
+      const body = proof
+        ? (() => {
+            const form = new FormData();
+            form.append('comprovante', proof);
+            form.append('cycles_ago', String(cyclesAgo));
+            return form;
+          })()
+        : { cycles_ago: cyclesAgo };
 
       axios
         .post(`${API_BASE_URL}/api/expenses/${expenseId}/pay`, body, {
@@ -81,7 +89,7 @@ export function usePaymentActions(
         })
         .finally(() => setPayingExpenseId(null));
     },
-    [reload]
+    [cyclesAgo, reload]
   );
 
   const handleUnpay = useCallback(
@@ -92,7 +100,7 @@ export function usePaymentActions(
       const token = localStorage.getItem('accessToken');
 
       axios
-        .post(`${API_BASE_URL}/api/expenses/${expenseId}/unpay`, null, {
+        .post(`${API_BASE_URL}/api/expenses/${expenseId}/unpay`, { cycles_ago: cyclesAgo }, {
           headers: { Authorization: token ? `Bearer ${token}` : '' }
         })
         .then(() => {
@@ -105,7 +113,7 @@ export function usePaymentActions(
         })
         .finally(() => setPayingExpenseId(null));
     },
-    [reload]
+    [cyclesAgo, reload]
   );
 
   return {
@@ -116,7 +124,6 @@ export function usePaymentActions(
     dismissPayError: () => setPayError(null),
     dismissPaySuccess: () => setPaySuccess(false),
     dismissUnpaySuccess: () => setUnpaySuccess(false),
-    cycleIsOpen,
     isCreditor,
     canPay,
     canUnpay,

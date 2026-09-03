@@ -51,6 +51,7 @@ import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import SummarySidePanel from '../components/SummarySidePanel';
+import CycleClosingAlert from '../components/CycleClosingAlert';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
@@ -117,7 +118,7 @@ const ExpenseManager: React.FC = () => {
     canUnpay,
     handlePay,
     handleUnpay
-  } = usePaymentActions(currentUserId, summary, reload);
+  } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
 
   // Fechar/reabrir a competência vigente
   const [closingMonth, setClosingMonth] = useState<boolean>(false);
@@ -253,18 +254,19 @@ const ExpenseManager: React.FC = () => {
       return true;
     });
 
-  // Ações de edição/exclusão/pagamento só existem enquanto a competência
-  // selecionada está aberta — competências fechadas (automática ou
-  // manualmente) e futuras são refletidas aqui, não decididas à parte: a API
-  // recusaria a ação de qualquer forma, isto só evita mostrar um botão que
-  // levaria a um erro.
-  const cycleIsOpen = summary?.cycle.status === 'open';
+  // Ações de EDIÇÃO/exclusão de despesa só existem enquanto a competência
+  // selecionada está aberta — inclui a janela de carência, em que o ciclo
+  // ainda é `open` (só trava em `closes_at`). Competência fechada (por data ou
+  // manualmente), selada ou futura não edita: a API recusaria de qualquer
+  // forma, isto só evita mostrar um botão que levaria a um erro. Pagamento
+  // (`canPay`/`canUnpay`) NÃO segue esta regra — ver `usePaymentActions`.
+  const cycleIsEditable = summary?.cycle.status === 'open';
 
   const isOwner = (exp: SummaryExpense) =>
     currentUserId !== null && (currentUserId === exp.userCreatorId || currentUserId === exp.userPayerId);
 
-  const canEdit = (exp: SummaryExpense) => cycleIsOpen && isOwner(exp);
-  const canDelete = (exp: SummaryExpense) => cycleIsOpen && !exp.isFixed && !exp.paid && isOwner(exp);
+  const canEdit = (exp: SummaryExpense) => cycleIsEditable && isOwner(exp);
+  const canDelete = (exp: SummaryExpense) => cycleIsEditable && !exp.isFixed && !exp.paid && isOwner(exp);
 
   const theme = useTheme();
   // Abaixo de `sm` a tabela de 6 colunas fica ilegível no celular — troca para
@@ -307,7 +309,7 @@ const ExpenseManager: React.FC = () => {
           </IconButton>
         </Tooltip>
       )}
-      {exp.isFixed && cycleIsOpen && (
+      {exp.isFixed && cycleIsEditable && (
         <Tooltip title="Remover despesa fixa">
           <IconButton aria-label="Remover despesa fixa" size="small" onClick={() => setRemoveExpenseId(exp.id)}>
             <DeleteOutlineIcon fontSize="small" />
@@ -464,6 +466,8 @@ const ExpenseManager: React.FC = () => {
           <ArrowForwardIosIcon />
         </IconButton>
       </Box>
+
+      {summary && <CycleClosingAlert summary={summary} />}
 
       {/* Erro de fechar/reabrir mês — o botão em si vive no cabeçalho; aqui fica
           só o feedback de erro, no mesmo lugar central de antes. */}

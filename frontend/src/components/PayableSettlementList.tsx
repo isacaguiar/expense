@@ -15,6 +15,8 @@ type PayableSettlementListProps = {
   settlements: SummarySettlement[];
   balances: SummaryBalance[];
   currentUserId: number | null;
+  canConfirm: boolean;
+  cycleSettled: boolean;
   onPayWithPix: (settlement: SummarySettlement) => void;
   onSendProof: (settlement: SummarySettlement) => void;
 };
@@ -28,11 +30,17 @@ type PayableSettlementListProps = {
  * continua 100% com o credor, em Despesas/Payments, inalterado). Só o
  * devedor daquele par (`currentUserId === from_user_id`) vê os botões de
  * ação; qualquer membro vê o status de confirmação.
+ *
+ * `canConfirm` = o backend aceita o comprovante do devedor agora (competência
+ * fechada e não selada — ver docs/feature/20260902-pagamento-ciclo-fechado
+ * §2.2). Enquanto `false`, o devedor vê só um aviso no lugar dos botões.
  */
 const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   settlements,
   balances,
   currentUserId,
+  canConfirm,
+  cycleSettled,
   onPayWithPix,
   onSendProof
 }) => {
@@ -93,7 +101,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                 />
               )}
 
-              {isDebtor && (
+              {isDebtor && canConfirm && (
                 <>
                   <Button
                     size="small"
@@ -112,6 +120,12 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                     {confirmed ? 'Reenviar comprovante' : 'Enviar comprovante'}
                   </Button>
                 </>
+              )}
+
+              {isDebtor && !canConfirm && !confirmed && (
+                <Typography variant="caption" color="text.secondary">
+                  {cycleSettled ? 'Ciclo encerrado.' : 'Disponível após o fechamento do ciclo.'}
+                </Typography>
               )}
             </Box>
           </Card>

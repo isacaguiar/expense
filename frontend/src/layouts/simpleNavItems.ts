@@ -14,9 +14,9 @@ export function simpleNavItems(navigate: NavigateFunction): GroupNavItem[] {
   return [
     { label: 'Home', icon: HomeOutlinedIcon, to: '/summary' },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: '/expenses' },
-    { label: 'Participantes', icon: PeopleOutlineOutlinedIcon },
     { label: 'Pagamentos', icon: PaymentsOutlinedIcon, to: '/payments' },
-    { label: 'Relatórios', icon: AssessmentOutlinedIcon },
+    { label: 'Participantes', icon: PeopleOutlineOutlinedIcon, to: '/members' },
+    { label: 'Relatórios', icon: AssessmentOutlinedIcon, to: '/reports' },
     {
       label: 'Configurações',
       icon: SettingsOutlinedIcon,

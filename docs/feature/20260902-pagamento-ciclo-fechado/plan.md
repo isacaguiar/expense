@@ -226,6 +226,96 @@ método. O congelamento passa a ser responsabilidade única de `sealCycleIfSettl
 - Testes: `backend/tests/Feature/ExpenseControllerSummaryTest.php` e
   `ExpenseControllerCloseTest.php` — atualizar assertivas de ordem.
 
+## 9. specify §2.8 — Janela de carência de 5 dias
+
+- `backend/app/Support/BillingCycle.php`:
+  - `public const GRACE_DAYS = 5;`
+  - novo `public static function closesAt(Carbon $boundary): Carbon` → `$boundary->copy()->addDays(self::GRACE_DAYS)`. Público porque `ExpenseController` usa para montar `cycle.closes_at`.
+  - `statusOf(Carbon $start, Carbon $end, Carbon $referenceStart)` (`:67`): o ramo `closed`
+    passa de `$end->lt($referenceStart)` para `$referenceStart->gte(self::closesAt($end))`.
+    `future` (`$start->gt($referenceStart)`) e `open` (default) inalterados.
+  - **`boundariesFor()` NÃO muda.** O rollover (`$referenceStart->gt($currentBoundary)`,
+    `:54`) continua no fim do ciclo — `cycleFor(..., 0)` segue sendo o ciclo do
+    mês-calendário e sempre `open` relativo a `now` (invariante que `close()`/`reopen()`
+    assumem, `:582`). A carência só amplia a janela `open` dos ciclos `cycles_ago >= 1`.
+- `cycle.closes_at` (aditivo): `summary()` (`:516`), `close()` (`:627`), `grossDebts()`
+  incluem `'closes_at' => BillingCycle::closesAt($end)->toDateString()` no objeto `cycle`,
+  ao lado de `settled` (§0.4). `reopen()` também, por uniformidade.
+  - Alternativa descartada: devolver `grace_days: 5` e o front somar. Espalha regra de data
+    pro cliente; `closes_at` pronto é o menor acoplamento.
+- Consumidores que passam a ver o novo timing **sem mudança de código**:
+  `rejectIfCompetenceClosed()` (`:300`, via `store`/`update`/`destroy`), `stopRecurrence()`
+  (`:443`), e o ramo `open` de `summary()` (já serve o ciclo em carência ao vivo). É o "R3"
+  do pedido — edição total na carência, trava em F.
+- **Testes** — `backend/tests/Unit/BillingCycleTest.php`:
+  - reescrever `test_cycle_closed_the_day_after_closing_day` (`:56`): o rollover de fronteira
+    **não muda** (`cycleFor(10, '2026-01-14', 0)` continua `[Jan 11, Feb 10]`, `open`), mas o
+    ciclo anterior `[Dec 11, Jan 10]` — `cycleFor(10, ref, 1)` — fica `open` consultado em
+    `2026-01-14` (carência) e `closed` em `2026-01-16`. Renomear para a nova regra.
+  - novos casos: `closing_day=null` → o ciclo de janeiro (`cycleFor(null, ref, 1)`) é `open`
+    consultado em `2026-02-04`, `closed` em `2026-02-05`; `closing_day=20` → ciclo anterior
+    `closed` só a partir do `dia 25`; um caso afirmando
+    `BillingCycle::closesAt(Carbon::parse('2026-01-31'))->toDateString() === '2026-02-05'`.
+  - conferir e, se ficarem em cima da linha, mover a data de: `test_null_closing_day_previous_month_is_closed`
+    (ref `2026-01-15`, F = `2026-01-05` — ok), `test_closing_day_clamps_*`
+    (F = `2026-03-05`/`2028-03-05` — ok), `test_status_for_computes_status_of_the_cycle_containing_an_arbitrary_date`
+    (ref `2026-08-21`; `2026-08-05` → F `2026-09-05`, ainda `open`; `2026-07-05` → F
+    `2026-08-05`, `now` `2026-08-21` ≥ F → `closed`; ambos ok).
+- **Ripple** nos Feature tests que congelam o relógio perto da virada — TASK-258, separada,
+  logo após TASK-256 (senão a suíte fica vermelha e trava o resto — `00-constitution.md` §2.4).
+- **Gate:** antes do deploy — muda, para todo grupo em produção, a data em que o ciclo
+  vigente trava (dia 1 → dia 5 do mês seguinte, no caso padrão). O banner de §2.10 é o
+  aviso ao usuário; ainda assim, deploy consciente.
+
+## 10. specify §2.9 — Home no ciclo em carência
+
+- `focusCycle($groupId)` (`:546`): no loop, depois de `$cycleIsClosed` (`:562`):
+  ```php
+  $inGrace = $cycle['status'] === 'open'
+          && Carbon::now()->startOfDay()->gt($cycle['end']);
+  if (! $cycleIsClosed && ! $inGrace) {
+      continue;
+  }
+  ```
+  `$inGrace` é sempre `false` para `$ago = 0` (o ciclo corrente nunca tem `end < now`).
+- Efeito: durante a carência, o 1º ciclo do loop com `end` já passado e ainda não quitado é
+  o que estava fechando → `focus-cycle` devolve o `cycles_ago` dele. Em F ele vira `closed`,
+  o ramo `$cycleIsClosed` assume, **mesmo `cycles_ago`** — sem salto na Home. Quitado → loop
+  segue e cai em `0`.
+- Custo: +1 `computeCycleSummary` por abertura de grupo durante a janela de carência (o
+  ciclo em carência entra no `cycleIsFullySettled`). Pontual, aceitável.
+- `close()` / `reopen()` — **sem mudança** (§2.9 do specify).
+- **Testes** — `backend/tests/Feature/FocusCycleTest.php` (criada na TASK-248): caso novo —
+  `Carbon::setTestNow('2026-02-02')` (carência do ciclo de janeiro, `closing_day=null`),
+  ciclo de janeiro com uma quota não paga → `GET .../focus-cycle` → `{"cycles_ago":1}`;
+  mesma data, janeiro quitado → `{"cycles_ago":0}`.
+
+## 11. specify §2.10 — Banners de fechamento
+
+- **Componente** `frontend/src/components/CycleClosingAlert.tsx`:
+  - props `{ summary: Summary }` (o objeto de `useGroupCycle`).
+  - `const today = startOfToday()`, `end = parseISO(summary.cycle.end)`,
+    `closesAt = parseISO(summary.cycle.closes_at)`.
+  - **pré** (`<Alert severity="info">`): `summary.cycle.status === 'open' && today >= end && today < closesAt`.
+    Texto: `Este ciclo fecha em ${format(closesAt, 'dd/MM')}. Registre e acerte as despesas até lá.`
+  - **pós** (`<Alert severity="warning">`): `!summary.cycle.settled
+    && (summary.cycle.status === 'closed' || summary.cycle.status === 'closed_manually')
+    && debtors.length > 0`, onde `debtors = summary.balances.filter(b => b.balance < 0).map(b => b.name)`.
+    Texto: `O ciclo fechou e ainda falta acertar: ${debtors.join(', ')}.`
+  - fora dessas condições: `return null`. As duas são disjuntas por `status` — nunca as duas.
+- **Uso**: importado em `frontend/src/pages/GroupSummary.tsx` e
+  `frontend/src/pages/ExpenseManager.tsx`, logo abaixo do cabeçalho de ciclo, antes da
+  lista. Recebe o `summary` que a página já tem via `useGroupCycle`.
+- **Tipo**: `SummaryCycle` (`frontend/src/hooks/useGroupCycle.ts:11`) ganha `closes_at: string`
+  (junto de `settled: boolean` que a TASK-250 já adiciona ali).
+- Sem chamada de API nova — tudo do `summary`.
+- **Por que um componente e não dois**: a decisão pré/pós é função pura do `summary`; um só
+  ponto de render evita divergência e os dois nunca coexistem.
+- **Testes** — `frontend/src/components/CycleClosingAlert.test.tsx` (Vitest): (1)
+  `status:'open'`, `end` = ontem, `closes_at` = +3 dias → renderiza "fecha em"; (2)
+  `status:'closed'`, `settled:false`, `balances` com dois saldos negativos → renderiza os
+  dois nomes; (3) `settled:true` → `null`; (4) `status:'open'`, `end` no futuro → `null`.
+
 ## 8. Ordem de execução
 
 Dependência real:
@@ -243,3 +333,18 @@ Dependência real:
 
 Critério de ordenação em `tasks.md`: §0 primeiro; backend antes do frontend que o
 consome; menu (§5/§6) encaixado no começo por não ter dependência e destravar valor cedo.
+
+**Carência + banners (§9/§10/§11 — TASK-256..259):**
+
+1. **§9** (TASK-256) entra no bloco backend depois de §0. Edita `BillingCycle` +
+   `ExpenseController` (`cycle.closes_at`) — serializa com §1–§4/§7.
+2. **TASK-258** (ripple dos Feature tests) imediatamente após TASK-256 — mantém
+   `php artisan test` verde antes de seguir.
+3. **§10** (TASK-257) depois de §9 (usa `statusOf`/`closesAt` novos) e de §4-backend
+   (o `focusCycle` já existe).
+4. **§11** (TASK-259, frontend) depois de §9 (campo `closes_at`) **e** de TASK-250 (que
+   liga o `focus-cycle` no hook e adiciona `settled`/`closes_at` ao tipo — o banner precisa
+   aparecer no ciclo certo).
+5. `security-reviewer` cobre também TASK-256/257 (tocam `summary`/`grossDebts`/`focusCycle`
+   em `ExpenseController`). O ponteiro em
+   `docs/feature/20260902-fechamento-ciclo-carencia-dia-5/` já foi criado nesta rodada.

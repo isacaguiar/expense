@@ -135,6 +135,42 @@ class FocusCycleTest extends TestCase
             ->assertJsonPath('cycles_ago', 0);
     }
 
+    public function test_returns_a_cycle_in_its_grace_window_that_still_has_a_pending_item(): void
+    {
+        // closing_day null: o ciclo de janeiro tem fronteira em 31/01 e só fecha
+        // em 05/02. Em 02/02 ele está na carência (ainda `open`) — mas com conta
+        // em aberto a Home deve abrir nele.
+        Carbon::setTestNow('2026-02-02');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach($creditor->id);
+
+        $this->unpaidExpense($group, $creditor, '2026-01-10');
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/focus-cycle")
+            ->assertStatus(200)
+            ->assertJsonPath('cycles_ago', 1);
+    }
+
+    public function test_ignores_a_grace_window_cycle_once_it_is_settled(): void
+    {
+        Carbon::setTestNow('2026-02-02');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->unpaidExpense($group, $creditor, '2026-01-10');
+        $expense->quotas()->update(['paid' => true]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/focus-cycle")
+            ->assertStatus(200)
+            ->assertJsonPath('cycles_ago', 0);
+    }
+
     public function test_non_member_cannot_query_focus_cycle(): void
     {
         $outsider = User::factory()->create();
