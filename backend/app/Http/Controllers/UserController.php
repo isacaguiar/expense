@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AvatarStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
@@ -66,6 +67,45 @@ class UserController extends Controller
             'whatsapp' => $user->whatsapp,
             'notify_whatsapp' => $user->notify_whatsapp,
         ]);
+    }
+
+    /**
+     * Envia (ou substitui) a foto de perfil do usuário autenticado. Grava no
+     * disco privado via `AvatarStorage` e responde com `avatar_url` já
+     * resolvido (foto enviada > Google > null).
+     */
+    public function uploadPhoto(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'foto' => 'required|image|max:5120',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $user = $request->user();
+
+        AvatarStorage::delete($user->photo_path);
+        $user->photo_path = AvatarStorage::store($request->file('foto'), $user->id);
+        $user->save();
+
+        return response()->json(['avatar_url' => $user->avatar_url]);
+    }
+
+    /**
+     * Remove a foto de perfil enviada pelo usuário autenticado. `avatar_url`
+     * volta a apontar para a foto do Google, se houver, ou `null`.
+     */
+    public function deletePhoto(Request $request)
+    {
+        $user = $request->user();
+
+        AvatarStorage::delete($user->photo_path);
+        $user->photo_path = null;
+        $user->save();
+
+        return response()->json(['avatar_url' => $user->avatar_url]);
     }
 
     /**
