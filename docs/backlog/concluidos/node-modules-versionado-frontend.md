@@ -1,7 +1,7 @@
 # node_modules do frontend versionado no repositório
 
 ID: 005
-Origem: docs/feature/20260817-config-url-api-frontend/implementation.md §1
+Origem: docs/feature/concluidas/202608/20260817-config-url-api-frontend/implementation.md §1
 Criado em: 2026-08-17
 Prioridade: BAIXA
 Status: Resolvido (fora do fluxo SDD)

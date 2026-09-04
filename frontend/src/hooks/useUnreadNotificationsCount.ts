@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 
-/** Único polling do app — ver docs/feature/20260903-notificacoes-in-app/plan.md §4. */
+/** Único polling do app — ver docs/feature/concluidas/202609/20260903-notificacoes-in-app/plan.md §4. */
 const POLL_INTERVAL_MS = 60_000;
 
 type UseUnreadNotificationsCountResult = {

@@ -16,7 +16,7 @@ return [
     'updated_at' => '24 de agosto de 2026',
 
     // O app React é servido em /app pelo mesmo domínio (ver
-    // docs/feature/20260829-deploy-topologia-unificada/). Não há tela de
+    // docs/feature/concluidas/202608/20260829-deploy-topologia-unificada/). Não há tela de
     // cadastro ainda — "Cadastre-se" aponta para o login até existir registro.
     'app_login_url' => '/app/',
     'app_signup_url' => '/app/',

@@ -9,7 +9,7 @@ Comprovantes de pagamento (do credor via `pay()`, do devedor via `confirmSettlem
 
 A Constitution §6.5 exige que "toda rota que expõe dado financeiro ou pessoal esteja dentro do grupo `jwt.auth`". Uma rota de download de arquivo consumível por `<a href>` não consegue satisfazer isso ao pé da letra: se estivesse sob `jwt.auth`, o link simplesmente responderia 401.
 
-O comportamento anterior (servir via disco `public` + `Storage::url()`) contornava o problema deixando o comprovante **acessível por URL pública sem nenhuma autenticação** — pior ainda sob a ótica do §6.5 — e além disso dependia do symlink `public/storage`, que não existe em produção (deploy FTP), causando 404 (ver `docs/feature/20260828-comprovante-storage-download/specify.md` §1).
+O comportamento anterior (servir via disco `public` + `Storage::url()`) contornava o problema deixando o comprovante **acessível por URL pública sem nenhuma autenticação** — pior ainda sob a ótica do §6.5 — e além disso dependia do symlink `public/storage`, que não existe em produção (deploy FTP), causando 404 (ver `docs/feature/concluidas/202608/20260828-comprovante-storage-download/specify.md` §1).
 
 ## Decisão
 
@@ -23,7 +23,7 @@ Uma rota cujo **único propósito é entregar um arquivo** a uma aba do browser 
 
 Este é o mesmo mecanismo que o Laravel usa para `signed`/`temporarySignedRoute` em verificação de e-mail e para links de download assinados — padrão consolidado do framework, não invenção deste projeto.
 
-Aplicação concreta: rota `proofs.show` (`GET /api/groups/{groupId}/proofs/{type}/{id}`), `ProofDownloadController@show`, disco privado `local` com `comprovantes/<groupId>/<uuid>.<ext>` (`docs/feature/20260828-comprovante-storage-download/plan.md` §2).
+Aplicação concreta: rota `proofs.show` (`GET /api/groups/{groupId}/proofs/{type}/{id}`), `ProofDownloadController@show`, disco privado `local` com `comprovantes/<groupId>/<uuid>.<ext>` (`docs/feature/concluidas/202608/20260828-comprovante-storage-download/plan.md` §2).
 
 ## Consequências
 
@@ -42,5 +42,5 @@ Aplicação concreta: rota `proofs.show` (`GET /api/groups/{groupId}/proofs/{typ
 ## Referências
 
 - `docs/sdd/00-constitution.md` §6.5 (parágrafo da exceção) e linha de versão (1.3).
-- `docs/feature/20260828-comprovante-storage-download/` — `specify.md` §2.2, `plan.md` §2 e §5, `tasks.md` TASK-219/TASK-224.
+- `docs/feature/concluidas/202608/20260828-comprovante-storage-download/` — `specify.md` §2.2, `plan.md` §2 e §5, `tasks.md` TASK-219/TASK-224.
 - `docs/sdd/decisions/ADR-004-fluxo-bugfix.md` — precedente de exceção estrita registrada com ADR + ajuste de texto da Constitution.

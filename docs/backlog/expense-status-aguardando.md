@@ -1,7 +1,7 @@
 # Definir e implementar status "Aguardando" para despesas
 
 ID: 025
-Origem: docs/feature/20260820-atualizacao-layout-paginas/specify.md (achado ao avaliar o mockup de Despesas)
+Origem: docs/feature/concluidas/202608/20260820-atualizacao-layout-paginas/specify.md (achado ao avaliar o mockup de Despesas)
 Criado em: 2026-08-20
 Prioridade: BAIXA
 Status: Aberto

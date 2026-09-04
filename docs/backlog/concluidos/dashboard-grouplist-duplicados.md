@@ -1,7 +1,7 @@
 # Consolidar Dashboard.tsx e GroupList.tsx (páginas quase duplicadas)
 
 ID: 027
-Origem: docs/feature/20260820-atualizacao-layout-paginas/specify.md (achado ao mapear páginas a atualizar)
+Origem: docs/feature/concluidas/202608/20260820-atualizacao-layout-paginas/specify.md (achado ao mapear páginas a atualizar)
 Criado em: 2026-08-20
 Prioridade: BAIXA
 Status: Aberto
@@ -19,6 +19,6 @@ Tipo sugerido: frontend
 ## Resolução
 
 Concluído em: 2026-08-20
-Feature: docs/feature/20260820-atualizacao-layout-paginas/
+Feature: docs/feature/concluidas/202608/20260820-atualizacao-layout-paginas/
 Tasks: TASK-092 (`Dashboard.tsx` vira a página única "Meus Grupos"; `GroupList.tsx`/`GroupList.test.tsx` e a rota `/groups` removidos; busca e botão "Novo grupo" portados; guard de 401 adicionado; resíduo de debug "Meus Grupos XXX" eliminado). Rota canônica passou a `/meus-grupos` (com `/dashboard` → redirect) na feature posterior `20260821-melhoria-menu-tela-grupos-perfil`.
 PRs: feature `atualizacao-layout-paginas` mergeada em `dev`.

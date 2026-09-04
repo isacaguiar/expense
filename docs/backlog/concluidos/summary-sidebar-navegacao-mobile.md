@@ -1,7 +1,7 @@
 # Navegação alternativa para a sidebar da tela de Resumo em mobile
 
 ID: 022
-Origem: docs/feature/20260819-novo-layout-tela-entrada/specify.md (responsividade, decisão adiada do specify para o plan.md)
+Origem: docs/feature/concluidas/202608/20260819-novo-layout-tela-entrada/specify.md (responsividade, decisão adiada do specify para o plan.md)
 Criado em: 2026-08-19
 Prioridade: MEDIA
 Status: Promovido para TASK-204
@@ -19,7 +19,7 @@ Tipo sugerido: frontend
 ## Resolução
 
 Concluído em: 2026-08-27
-Feature: docs/feature/20260826-navegacao-mobile-group-shell/
+Feature: docs/feature/concluidas/202608/20260826-navegacao-mobile-group-shell/
 Tasks: TASK-204, TASK-205, TASK-206, TASK-207
 PRs: https://github.com/isacaguiar/expense/pull/66, https://github.com/isacaguiar/expense/pull/67
 

@@ -2,7 +2,7 @@ import { createTheme, Theme } from '@mui/material/styles';
 import { brandColors } from './brandColors';
 
 // Tema com escopo restrito às telas de Despesas (ExpenseManager, ExpenseView,
-// ExpenseForm, ExpensesEntry) — ver docs/feature/20260825-redesign-visual-despesas/plan.md §1.
+// ExpenseForm, ExpensesEntry) — ver docs/feature/concluidas/202608/20260825-redesign-visual-despesas/plan.md §1.
 //
 // `createTheme(baseTheme, overrides)` (assinatura de dois argumentos do MUI)
 // faz merge com o tema recebido em vez de substituí-lo — herda tipografia,

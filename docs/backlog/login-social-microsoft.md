@@ -1,7 +1,7 @@
 # Implementar login social via Microsoft (OAuth)
 
 ID: 015
-Origem: docs/feature/20260819-novo-layout-tela-login/specify.md §2.3/§3 (botão "Microsoft" como placeholder `href="#"`)
+Origem: docs/feature/concluidas/202608/20260819-novo-layout-tela-login/specify.md §2.3/§3 (botão "Microsoft" como placeholder `href="#"`)
 Criado em: 2026-08-19
 Prioridade: BAIXA
 Status: Aberto

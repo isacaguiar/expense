@@ -1,7 +1,7 @@
 # Convite por e-mail quebra por colisão entre a chave 'message' e a variável $message do Mail::send legado
 
 ID: 028
-Origem: docs/feature/20260821-recuperacao-senha-login/plan.md §7 (achado ao testar TASK-125)
+Origem: docs/feature/concluidas/202608/20260821-recuperacao-senha-login/plan.md §7 (achado ao testar TASK-125)
 Criado em: 2026-08-21
 Prioridade: MEDIA
 Status: Promovido para TASK-129
@@ -23,6 +23,6 @@ Tipo sugerido: backend
 ## Resolução
 
 Concluído em: 2026-08-21
-Feature: docs/feature/20260821-invitation-message-colisao-mail/
+Feature: docs/feature/concluidas/202608/20260821-invitation-message-colisao-mail/
 Tasks: TASK-129
 PRs: https://github.com/isacaguiar/expense/pull/40 (mergeado em `dev`)

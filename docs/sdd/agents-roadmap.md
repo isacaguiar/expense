@@ -8,7 +8,7 @@ Este "construir só quando o gatilho é concreto" é a alternativa descartada do
 
 | Agent | Arquivo | Domínio | Gatilho que justificou construir agora |
 |---|---|---|---|
-| `security-reviewer` | [`.claude/agents/security-reviewer.md`](../../.claude/agents/security-reviewer.md) | Backend — auth/autorização | Padrões de vulnerabilidade já confirmados e corrigidos no repo — ver `00-constitution.md` §5.3 e `docs/feature/20260817-seguranca-api/`. |
+| `security-reviewer` | [`.claude/agents/security-reviewer.md`](../../.claude/agents/security-reviewer.md) | Backend — auth/autorização | Padrões de vulnerabilidade já confirmados e corrigidos no repo — ver `00-constitution.md` §5.3 e `docs/feature/concluidas/202608/20260817-seguranca-api/`. |
 | `pr-readiness-checker` | [`.claude/agents/pr-readiness-checker.md`](../../.claude/agents/pr-readiness-checker.md) | Backend + frontend — checklist pré-PR | O checklist pré-PR de `04-implementation.md` já existe e é real, mas hoje depende de o executor lembrar de rodar cada comando manualmente — mesmo problema que a Constitution já reconhece para o Pint ("não há hook/CI que o obrigue"). |
 
 ## Candidatos futuros (não construir ainda)

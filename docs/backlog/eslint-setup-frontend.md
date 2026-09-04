@@ -1,7 +1,7 @@
 # Configurar ESLint no frontend
 
 ID: 033
-Origem: docs/feature/20260827-ci-frontend/specify.md §2.2 (achado ao promover o item de backlog 008 — CI do frontend)
+Origem: docs/feature/concluidas/202608/20260827-ci-frontend/specify.md §2.2 (achado ao promover o item de backlog 008 — CI do frontend)
 Criado em: 2026-08-27
 Prioridade: BAIXA
 Status: Aberto

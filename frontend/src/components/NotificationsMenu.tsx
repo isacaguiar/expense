@@ -38,7 +38,7 @@ interface NotificationsMenuProps {
  * Lista de notificações aberta pelo sino do cabeçalho. Busca a 1ª página de
  * `GET /api/notifications` só quando abre; permite marcar todas como lidas e,
  * ao clicar num item, navega para o grupo dele e marca aquele item como lido.
- * Ver docs/feature/20260903-notificacoes-in-app/plan.md §4.
+ * Ver docs/feature/concluidas/202609/20260903-notificacoes-in-app/plan.md §4.
  */
 const NotificationsMenu: React.FC<NotificationsMenuProps> = ({ anchorEl, open, onClose, onRead }) => {
   const navigate = useNavigate();

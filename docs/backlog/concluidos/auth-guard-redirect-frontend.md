@@ -18,6 +18,6 @@ Tipo sugerido: frontend
 
 ## Resolução
 Concluído em: 2026-08-17
-Feature: docs/feature/20260817-config-url-api-frontend/
+Feature: docs/feature/concluidas/202608/20260817-config-url-api-frontend/
 Tasks: TASK-028, TASK-029
 PRs: #6, #5

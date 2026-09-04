@@ -1,7 +1,7 @@
 # Implementar internacionalização (i18n) real do frontend
 
 ID: 016
-Origem: docs/feature/20260819-novo-layout-tela-login/specify.md §3 (seletor de idioma na tela de login é só visual)
+Origem: docs/feature/concluidas/202608/20260819-novo-layout-tela-login/specify.md §3 (seletor de idioma na tela de login é só visual)
 Criado em: 2026-08-19
 Prioridade: BAIXA
 Status: Aberto

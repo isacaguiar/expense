@@ -68,7 +68,7 @@ build do React); `site/src/` fica fora do docroot.
 backend/    API Laravel (controllers, models, migrations, mails, jobs)
 frontend/   SPA React + Vite (pages, components, layouts, hooks)
 site/       Site institucional em PHP puro (raiz pública + /app)
-docs/       SDD (docs/sdd), features, bugfix, backlog e ADRs
+docs/       SDD (docs/sdd), features (concluídas em feature/concluidas/<AAAAMM>/), bugfix, backlog e ADRs
 assets/     Bootstrap do banco e imagens
 .claude/    Skills e agents específicos do projeto
 docker-compose.yml   MySQL + Adminer + Mailpit para desenvolvimento
@@ -136,7 +136,7 @@ cd frontend && npm test              # Vitest (npm run test:watch para modo watc
 `expense-api.novemax.com.br` (docroot `.../api/public/`), build do Vite publicado
 em `expense.novemax.com.br/app`, e o site na raiz do mesmo domínio. Segredos de
 ambiente ficam em GitHub Environments (`PROD`). Detalhes em
-[`docs/feature/20260829-deploy-topologia-unificada/`](docs/feature/20260829-deploy-topologia-unificada).
+[`docs/feature/concluidas/202608/20260829-deploy-topologia-unificada/`](docs/feature/concluidas/202608/20260829-deploy-topologia-unificada).
 
 ---
 

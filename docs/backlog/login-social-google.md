@@ -1,7 +1,7 @@
 # Implementar login social via Google (OAuth)
 
 ID: 014
-Origem: docs/feature/20260819-novo-layout-tela-login/specify.md §2.3/§3 (botão "Google" como placeholder `href="#"`)
+Origem: docs/feature/concluidas/202608/20260819-novo-layout-tela-login/specify.md §2.3/§3 (botão "Google" como placeholder `href="#"`)
 Criado em: 2026-08-19
 Prioridade: BAIXA
 Status: Aberto

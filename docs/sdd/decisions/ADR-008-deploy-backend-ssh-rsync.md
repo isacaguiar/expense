@@ -2,12 +2,12 @@
 
 Status: Aceita
 Data: 2026-08-31
-Emenda: 2026-09-03 — o `SCRIPT_AFTER` passa a rodar `php artisan migrate --force` (feature `docs/feature/20260903-deploy-backend-migracao-automatica/`). Blocos marcados **[Emenda 2026-09-03]** abaixo.
+Emenda: 2026-09-03 — o `SCRIPT_AFTER` passa a rodar `php artisan migrate --force` (feature `docs/feature/concluidas/202609/20260903-deploy-backend-migracao-automatica/`). Blocos marcados **[Emenda 2026-09-03]** abaixo.
 
 ## Contexto
 
 O `deploy-backend.yml` publica o Laravel com `SamKirkland/FTP-Deploy-Action`. O
-BFF `docs/bugfix/concluidos/20260829-deploy-backend-ftp-texto-puro.md` já tirou o
+BFF `docs/bugfix/concluidos/202608/20260829-deploy-backend-ftp-texto-puro.md` já tirou o
 texto puro (`protocol: ftp` → `ftps`), mas a transferência **não completa**:
 
 ```
@@ -180,19 +180,19 @@ fixada por tag de patch (estilo `FTP-Deploy-Action@v4.3.5`).
 
 ## Referências
 
-- `docs/feature/20260831-deploy-backend-ssh/` — `specify.md`, `plan.md`, `tasks.md`.
-- `docs/bugfix/concluidos/20260829-deploy-backend-ftp-texto-puro.md` — §2
+- `docs/feature/concluidas/202608/20260831-deploy-backend-ssh/` — `specify.md`, `plan.md`, `tasks.md`.
+- `docs/bugfix/concluidos/202608/20260829-deploy-backend-ftp-texto-puro.md` — §2
   "Riscos", "Resolução" (encaminhamento condicional para SSH).
 - `00-constitution.md` §3 (Stack — linha "Deploy backend"), §5.1 (decisão de
   stack vira ADR), §5.2 (gates: editar Constitution; rotacionar/expor/remover
   segredo; deploy; merge em `main`), §6.1.
 - `docs/sdd/decisions/ADR-005-download-arquivo-signed-url.md` e
-  `docs/feature/20260828-comprovante-storage-download/plan.md` §1 — comprovantes
+  `docs/feature/concluidas/202608/20260828-comprovante-storage-download/plan.md` §1 — comprovantes
   no disco `local` (`storage/app/comprovantes/…`).
 - `docs/sdd/decisions/ADR-006-whatsapp-meta-cloud-api.md` — restrição "sem SSH"
   agora superada; evolução fila+cron destravada.
 - `.github/workflows/deploy-backend.yml` — passo "🚀 Deploy via FTP".
-- **[Emenda 2026-09-03]** `docs/feature/20260903-deploy-backend-migracao-automatica/`
+- **[Emenda 2026-09-03]** `docs/feature/concluidas/202609/20260903-deploy-backend-migracao-automatica/`
   — `specify.md`, `plan.md`, `tasks.md` (TASK-271 a TASK-275). Incidente de
   origem: 500 em `GET /api/groups/{id}/expenses/cycles` e `.../gross-debts` por
   `settled_at` ausente em produção.

@@ -1,10 +1,10 @@
 # Implementar sistema de notificações
 
 ID: 020
-Origem: docs/feature/20260819-novo-layout-tela-entrada/specify.md §2.4/R3 (sino no cabeçalho da tela de Resumo, hoje decorativo)
+Origem: docs/feature/concluidas/202608/20260819-novo-layout-tela-entrada/specify.md §2.4/R3 (sino no cabeçalho da tela de Resumo, hoje decorativo)
 Criado em: 2026-08-19
 Prioridade: BAIXA
-Status: Promovido para TASK-260 (docs/feature/20260903-notificacoes-in-app/)
+Status: Promovido para TASK-260 (docs/feature/concluidas/202609/20260903-notificacoes-in-app/)
 
 ## Descrição
 
@@ -19,7 +19,7 @@ Tipo sugerido: backend
 ## Resolução
 
 Concluído em: 2026-09-03
-Feature: docs/feature/20260903-notificacoes-in-app/
+Feature: docs/feature/concluidas/202609/20260903-notificacoes-in-app/
 Tasks: TASK-260, TASK-261, TASK-262, TASK-263, TASK-264, TASK-265, TASK-266, TASK-267
 PRs: https://github.com/isacaguiar/expense/pull/141
 

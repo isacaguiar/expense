@@ -25,7 +25,7 @@ type GroupGrossDebtsPanelProps = {
 /**
  * Árvore Credor→devedores (valores brutos) de um grupo, com navegação de
  * competência própria — usada pela linha expansível do Dashboard
- * (`docs/feature/20260827-dashboard-resumo-credor-devedores/`). "Informar
+ * (`docs/feature/concluidas/202608/20260827-dashboard-resumo-credor-devedores/`). "Informar
  * pagamento" é só um estado visual local: nunca chama a API, marcar como
  * pago de fato continua exclusivo do credor dentro do grupo.
  */

@@ -16,7 +16,7 @@ use Tests\TestCase;
  * cycleIsFullySettled(): "totalmente quitado" = toda entrada da competência
  * paga E todo par de settlements com SettlementConfirmation. Base da selagem
  * (settled_at) e do endpoint focus-cycle — ver
- * docs/feature/20260902-pagamento-ciclo-fechado/plan.md §0.3.
+ * docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §0.3.
  */
 class ExpenseControllerCycleIsFullySettledTest extends TestCase
 {

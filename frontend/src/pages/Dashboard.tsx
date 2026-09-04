@@ -70,7 +70,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   // Abaixo de `sm` a tabela de 5 colunas fica ilegível no celular — troca para
-  // uma lista de cartões (ver docs/feature/20260901-usabilidade-mobile).
+  // uma lista de cartões (ver docs/feature/concluidas/202609/20260901-usabilidade-mobile).
   const compact = useMediaQuery(theme.breakpoints.down('sm'));
 
   const toggleExpanded = (groupId: number) => {

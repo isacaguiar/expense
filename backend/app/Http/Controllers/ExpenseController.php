@@ -153,7 +153,7 @@ class ExpenseController extends Controller
             'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
             // expense_type/installments/quotas: edição de tipo (só À Vista <->
             // Parcelada — Fixa fica de fora dos dois lados, ver abaixo).
-            // docs/feature/20260826-editar-tipo-despesa/plan.md §1.
+            // docs/feature/concluidas/202608/20260826-editar-tipo-despesa/plan.md §1.
             'expense_type' => 'sometimes|required|in:IN_CASH,IN_INSTALLMENTS',
             'installments' => 'sometimes|required|integer|min:2',
             'quotas' => 'sometimes|required|array|min:1',
@@ -549,7 +549,7 @@ class ExpenseController extends Controller
      * ainda não passou) não conta; ciclo selado é pulado. Um ciclo em carência
      * (`open` mas com `end` no passado) conta: a Home fica nele durante os dias
      * de carência e não pula quando ele vira `closed` em `closesAt`. Ver
-     * docs/feature/20260902-pagamento-ciclo-fechado/plan.md §4 e §10.
+     * docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §4 e §10.
      */
     public function focusCycle($groupId)
     {
@@ -979,7 +979,7 @@ class ExpenseController extends Controller
      * existir de fato um settlement `from_user_id === auth()->id()` pra esse
      * `to_user_id` naquela competência. Reenviar substitui o comprovante
      * anterior (`updateOrCreate` — sem endpoint de "desfazer", ver
-     * docs/feature/20260825-pagamentos-grid-pix/specify.md §4). Ao confirmar o
+     * docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/specify.md §4). Ao confirmar o
      * último acerto pendente de um ciclo já todo pago, sela o ciclo.
      */
     public function confirmSettlement(Request $request, $groupId)
@@ -1235,7 +1235,7 @@ class ExpenseController extends Controller
      * competência está paga (`totals.pending == 0`) E todo par de `settlements`
      * tem uma `SettlementConfirmation` correspondente. Ciclo sem entradas conta
      * como quitado. Base da selagem (`sealCycleIfSettled`) e do endpoint
-     * focus-cycle — ver docs/feature/20260902-pagamento-ciclo-fechado/plan.md §0.3.
+     * focus-cycle — ver docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §0.3.
      */
     private function cycleIsFullySettled(Group $group, $groupId, Carbon $start, Carbon $end): bool
     {

@@ -160,7 +160,7 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
     {
         // 'FIXED' nunca é um valor aceito pra expense_type em update() — a
         // regra de validação `in:IN_CASH,IN_INSTALLMENTS` já recusa sozinha.
-        // Ver docs/feature/20260826-editar-tipo-despesa/specify.md §R2.
+        // Ver docs/feature/concluidas/202608/20260826-editar-tipo-despesa/specify.md §R2.
         $creator = User::factory()->create();
         $group = Group::create(['name' => 'Grupo de teste']);
         $group->members()->attach($creator->id);

@@ -13,7 +13,7 @@ const nodeMajorVersion = Number(process.versions.node.split('.')[0]);
 
 export default defineConfig({
   // O app é servido sob /app pelo domínio de produção (site fica na raiz) —
-  // ver docs/feature/20260829-deploy-topologia-unificada/. Assets e o
+  // ver docs/feature/concluidas/202608/20260829-deploy-topologia-unificada/. Assets e o
   // basename do router precisam bater com esse prefixo.
   base: '/app/',
   plugins: [

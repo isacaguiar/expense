@@ -58,7 +58,7 @@ const Payments: React.FC = () => {
 
   // Membros do grupo com email/chave Pix — usado só pra resolver, ao clicar
   // num valor a pagar, se o credor tem Pix cadastrado e qual o e-mail pra
-  // chamar /pix/generate (docs/feature/20260825-pagamentos-grid-pix/plan.md §1).
+  // chamar /pix/generate (docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/plan.md §1).
   const [members, setMembers] = useState<GroupMemberPix[]>([]);
 
   useEffect(() => {
@@ -110,7 +110,7 @@ const Payments: React.FC = () => {
   };
 
   // Valor a pagar por pessoa: ao clicar num settlement, abre o Pix do credor
-  // se ele tiver chave cadastrada, senão avisa (docs/feature/20260825-pagamentos-grid-pix/plan.md §2).
+  // se ele tiver chave cadastrada, senão avisa (docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/plan.md §2).
   const [pixTarget, setPixTarget] = useState<{ settlement: SummarySettlement; member: GroupMemberPix } | null>(null);
   const [noPixWarning, setNoPixWarning] = useState<string | null>(null);
 
@@ -132,7 +132,7 @@ const Payments: React.FC = () => {
 
   // Enviar comprovante do pagamento do settlement (devedor) — conceito
   // distinto de confirmar uma despesa (isso continua com o credor, acima).
-  // Ver docs/feature/20260825-pagamentos-grid-pix/plan.md §6.
+  // Ver docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/plan.md §6.
   const [confirmSettlementTarget, setConfirmSettlementTarget] = useState<SummarySettlement | null>(null);
   const [selectedSettlementFile, setSelectedSettlementFile] = useState<File | null>(null);
   const [confirmingSettlement, setConfirmingSettlement] = useState<boolean>(false);

@@ -25,7 +25,7 @@ Tipo sugerido: backend
 ## Resolução
 
 Concluído em: 2026-08-21
-Feature: docs/feature/20260821-recuperacao-senha-login/
+Feature: docs/feature/concluidas/202608/20260821-recuperacao-senha-login/
 Tasks: TASK-122, TASK-123, TASK-124, TASK-125
 PRs: https://github.com/isacaguiar/expense/pull/35
 
