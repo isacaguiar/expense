@@ -16,7 +16,7 @@ Versão: 1.0 · Criado em: 20260903
 | TASK-267 | Criar `NotificationsMenu` e helper `notificationText` (lista, marcar como lida, navegar) | frontend | plan.md §4 | nenhum | Concluída (2026-09-03) |
 | TASK-268 | 021 — migration `add_photo_path_to_ex_users`, helper `AvatarStorage`, `POST`/`DELETE /api/user/photo`, `UserPhotoController` (rota assinada) e accessor `getAvatarUrlAttribute` | backend | plan.md §5 | nenhum | Concluída (2026-09-03) |
 | TASK-269 | 021 — controle de upload e remoção de foto em `Profile.tsx` | frontend | plan.md §6 | nenhum | Concluída (2026-09-03) |
-| TASK-270 | 021 — usar `avatar_url` no `Avatar` do `GroupHeader` via `GroupShellLayout` | frontend | plan.md §6 | nenhum | Pendente |
+| TASK-270 | 021 — usar `avatar_url` no `Avatar` do `GroupHeader` via `GroupShellLayout` | frontend | plan.md §6 | nenhum | Concluída (2026-09-03) |
 
 ## Critérios de aceite
 

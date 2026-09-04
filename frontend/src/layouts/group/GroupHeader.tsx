@@ -24,6 +24,8 @@ interface GroupHeaderProps {
   groupId: string;
   onGroupChange: (event: SelectChangeEvent<number>) => void;
   userName: string | null;
+  /** Foto de perfil do usuário logado; cai nas iniciais quando ausente. */
+  avatarUrl?: string | null;
   onMenuClick: () => void;
   /** Notificações não-lidas do usuário logado (badge do sino). */
   unreadCount?: number;
@@ -37,6 +39,7 @@ export default function GroupHeader({
   groupId,
   onGroupChange,
   userName,
+  avatarUrl = null,
   onMenuClick,
   unreadCount = 0,
   onNotificationsRead = () => {},
@@ -113,6 +116,7 @@ export default function GroupHeader({
         {userName && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Avatar
+              src={avatarUrl ?? undefined}
               sx={{
                 width: 32,
                 height: 32,
