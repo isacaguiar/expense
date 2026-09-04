@@ -75,6 +75,14 @@ describe('GroupHeader', () => {
     expect(screen.getByText('AP')).toBeInTheDocument();
   });
 
+  it('renders the avatar photo when avatarUrl is provided', () => {
+    const { container } = render(
+      <GroupHeader {...baseProps} userName="Ana Paula" avatarUrl="https://signed.example/pic.jpg" />
+    );
+
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://signed.example/pic.jpg');
+  });
+
   it('shows the unread notifications count as a badge on the bell', () => {
     render(<GroupHeader {...baseProps} unreadCount={7} />);
 

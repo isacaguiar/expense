@@ -22,6 +22,7 @@ export default function GroupShellLayout() {
 
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const { count: unreadCount, refetch: refetchUnread } = useUnreadNotificationsCount();
 
@@ -38,10 +39,13 @@ export default function GroupShellLayout() {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     axios
-      .get<{ name: string; email: string }>(`${API_BASE_URL}/api/me`, {
+      .get<{ name: string; email: string; avatar_url: string | null }>(`${API_BASE_URL}/api/me`, {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
-      .then(res => setUserName(res.data.name))
+      .then(res => {
+        setUserName(res.data.name);
+        setAvatarUrl(res.data.avatar_url ?? null);
+      })
       .catch(err => console.error('Erro ao carregar usuário logado:', err));
   }, []);
 
@@ -68,6 +72,7 @@ export default function GroupShellLayout() {
           groupId={groupId ?? ''}
           onGroupChange={handleGroupChange}
           userName={userName}
+          avatarUrl={avatarUrl}
           onMenuClick={() => setMobileNavOpen(true)}
           unreadCount={unreadCount}
           onNotificationsRead={refetchUnread}
