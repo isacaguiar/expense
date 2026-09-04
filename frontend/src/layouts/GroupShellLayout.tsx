@@ -23,7 +23,7 @@ export default function GroupShellLayout() {
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
-  const { count: unreadCount } = useUnreadNotificationsCount();
+  const { count: unreadCount, refetch: refetchUnread } = useUnreadNotificationsCount();
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -70,6 +70,7 @@ export default function GroupShellLayout() {
           userName={userName}
           onMenuClick={() => setMobileNavOpen(true)}
           unreadCount={unreadCount}
+          onNotificationsRead={refetchUnread}
         />
         <Outlet />
       </Container>

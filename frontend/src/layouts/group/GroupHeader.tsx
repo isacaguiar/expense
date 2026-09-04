@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Avatar from '@mui/material/Avatar';
@@ -11,6 +11,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import { brandColors } from '../../theme/brandColors';
 import { getInitials } from './getInitials';
+import NotificationsMenu from '../../components/NotificationsMenu';
 
 type GroupOption = {
   id: number;
@@ -26,6 +27,8 @@ interface GroupHeaderProps {
   onMenuClick: () => void;
   /** Notificações não-lidas do usuário logado (badge do sino). */
   unreadCount?: number;
+  /** Chamado após o menu marcar algo como lido, para recarregar o contador. */
+  onNotificationsRead?: () => void;
 }
 
 export default function GroupHeader({
@@ -36,7 +39,9 @@ export default function GroupHeader({
   userName,
   onMenuClick,
   unreadCount = 0,
+  onNotificationsRead = () => {},
 }: GroupHeaderProps) {
+  const [notifAnchor, setNotifAnchor] = useState<null | HTMLElement>(null);
   return (
     <Box
       component="header"
@@ -88,11 +93,22 @@ export default function GroupHeader({
           </Select>
         )}
 
-        <IconButton aria-label="Notificações" size="small">
+        <IconButton
+          aria-label="Notificações"
+          size="small"
+          onClick={(event) => setNotifAnchor(event.currentTarget)}
+        >
           <Badge badgeContent={unreadCount} color="error" max={99}>
             <NotificationsNoneOutlinedIcon />
           </Badge>
         </IconButton>
+
+        <NotificationsMenu
+          anchorEl={notifAnchor}
+          open={Boolean(notifAnchor)}
+          onClose={() => setNotifAnchor(null)}
+          onRead={onNotificationsRead}
+        />
 
         {userName && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
