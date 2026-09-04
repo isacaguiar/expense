@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20260904
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-001 | Expor `payerAvatarUrl`/`participantDetails`/`balances[].avatarUrl` em `computeCycleSummary`, com testes | backend | plan.md §1 | antes do merge | Concluída |
-| TASK-002 | Criar componente `UserAvatar` (imagem + fallback iniciais + tooltip) e atualizar tipos do frontend (`SummaryExpense`, `SummaryBalance`, `GroupMember`, `GroupMemberPix`) | frontend | plan.md §2 | antes do merge | Pendente |
+| TASK-002 | Criar componente `UserAvatar` (imagem + fallback iniciais + tooltip) e atualizar tipos do frontend (`SummaryExpense`, `SummaryBalance`, `GroupMember`, `GroupMemberPix`) | frontend | plan.md §2 | antes do merge | Concluída |
 | TASK-003 | Aplicar `UserAvatar` na listagem de despesas / credor (`ExpenseManager.tsx`, `Payments.tsx`, `CycleDetailPanel.tsx`) | frontend | plan.md §3 | antes do merge | Pendente |
 | TASK-004 | Aplicar `UserAvatar` nas abas Saldo e À pagar (`BalanceCards.tsx`, `SettlementList.tsx`, `PayableSettlementList.tsx`) | frontend | plan.md §4 | antes do merge | Pendente |
 | TASK-005 | Aplicar `UserAvatar` no diálogo Pix de Pagamentos e no formulário de Entrada (`ExpenseForm.tsx`, `ExpenseView.tsx`) | frontend | plan.md §5 | antes do merge | Pendente |
