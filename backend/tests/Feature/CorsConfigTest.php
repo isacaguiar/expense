@@ -11,7 +11,7 @@ class CorsConfigTest extends TestCase
      * (`FRONTEND_URL`, gravada no `.env` pelo `deploy-backend.yml`) em
      * `allowed_origins` — senão o preflight de `expense.novemax.com.br`
      * bate na API e é bloqueado. Ver
-     * `docs/bugfix/concluidos/20260829-cors-nao-le-frontend-url.md`.
+     * `docs/bugfix/concluidos/202608/20260829-cors-nao-le-frontend-url.md`.
      */
     public function test_frontend_url_env_is_an_allowed_cors_origin(): void
     {

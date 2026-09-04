@@ -5,7 +5,7 @@ Data: 2026-08-29
 
 ## Contexto
 
-A feature `docs/feature/20260829-whatsapp-comprovante-pagamento/` precisa enviar
+A feature `docs/feature/concluidas/202608/20260829-whatsapp-comprovante-pagamento/` precisa enviar
 uma mensagem de WhatsApp para a contraparte quando alguém anexa um comprovante
 de pagamento (credor em `ExpenseController@pay`, devedor em
 `@confirmSettlement`). O projeto já tinha preparado o terreno — `ex_users.whatsapp`
@@ -53,7 +53,7 @@ como canal de mensageria do projeto, chamada por uma única requisição HTTP co
   app na Meta, número verificado, token permanente de System User com
   `whatsapp_business_messaging`, e **dois templates aprovados** (categoria
   UTILITY, `pt_BR`) — aprovação leva de horas a dias. Detalhe em
-  `docs/feature/20260829-whatsapp-comprovante-pagamento/implementation.md`.
+  `docs/feature/concluidas/202608/20260829-whatsapp-comprovante-pagamento/implementation.md`.
 - `WHATSAPP_TOKEN` entra na lista de segredos do projeto (`deploy-backend.yml` +
   secrets do repositório). Rotação/exposição = gate humano.
 - Entrega não é garantida: sem worker, uma indisponibilidade da Meta no instante
@@ -93,7 +93,7 @@ como canal de mensageria do projeto, chamada por uma única requisição HTTP co
 
 ## Referências
 
-- `docs/feature/20260829-whatsapp-comprovante-pagamento/` — `specify.md` §2,
+- `docs/feature/concluidas/202608/20260829-whatsapp-comprovante-pagamento/` — `specify.md` §2,
   `plan.md` §1/§4/§6, `implementation.md` (checklist Meta + rascunho dos templates).
 - `00-constitution.md` §3 (Stack), §5.2 (gates: expor segredo, deploy).
 - `backend/config/services.php` → `whatsapp`; `backend/app/Support/WhatsApp/`.

@@ -1,7 +1,7 @@
 # Despesas Parceladas não aparecem nos meses seguintes ao de criação, e valor exibido é o total, não a parcela
 
 ID: 012
-Origem: docs/feature/20260818-resumo-grupo-dashboard/specify.md (achado durante investigação da feature "Resumo do Grupo")
+Origem: docs/feature/concluidas/202608/20260818-resumo-grupo-dashboard/specify.md (achado durante investigação da feature "Resumo do Grupo")
 Criado em: 2026-08-18
 Prioridade: MÉDIA
 Status: Promovido para TASK-132
@@ -14,13 +14,13 @@ Além disso, mesmo no único mês em que a despesa aparece, `mapRow` (`ExpenseCo
 
 ## Por que importa
 
-Qualquer tela que resuma despesas por mês (a tela atual `ExpenseManager.tsx`, e a nova "Resumo do Grupo" em `docs/feature/20260818-resumo-grupo-dashboard/`) fica com números incorretos para grupos que usam parcelamento: o total do mês de criação vem inflado (valor cheio em vez da parcela) e os meses seguintes ficam sem registro nenhum da parcela em aberto, subestimando "quanto ainda falta pagar" no grupo.
+Qualquer tela que resuma despesas por mês (a tela atual `ExpenseManager.tsx`, e a nova "Resumo do Grupo" em `docs/feature/concluidas/202608/20260818-resumo-grupo-dashboard/`) fica com números incorretos para grupos que usam parcelamento: o total do mês de criação vem inflado (valor cheio em vez da parcela) e os meses seguintes ficam sem registro nenhum da parcela em aberto, subestimando "quanto ainda falta pagar" no grupo.
 
 Tipo sugerido: backend — estender `indexByGroup` para projetar `IN_INSTALLMENTS` mês a mês (uma linha por `Quota`, no padrão já usado para `FIXED`) e usar `value_quota` em vez de `total_value` em `mapRow`. Decidir ao promover se reaproveita o mesmo padrão de `$projectedFixed` ou se passa a montar a lista inteira a partir de `Quota` (com join em `Expense`) em vez de `Expense`.
 
 ## Resolução
 
 Concluído em: 2026-08-21
-Feature: docs/feature/20260821-expense-manager-mes-e-data-corretos/
+Feature: docs/feature/concluidas/202608/20260821-expense-manager-mes-e-data-corretos/
 Tasks: TASK-132
 PRs: https://github.com/isacaguiar/expense/pull/43 (mergeado em `dev`, agrupado com item 013)

@@ -9,7 +9,7 @@ use Illuminate\Http\Request;
  * Leitura e marcação de lida das notificações in-app do usuário autenticado.
  * O escopo de autorização é sempre o próprio destinatário (`user_id`), não um
  * grupo — por isso não há `authorizeGroupMembership` aqui.
- * Ver docs/feature/20260903-notificacoes-in-app/plan.md §2.
+ * Ver docs/feature/concluidas/202609/20260903-notificacoes-in-app/plan.md §2.
  */
 class NotificationController extends Controller
 {

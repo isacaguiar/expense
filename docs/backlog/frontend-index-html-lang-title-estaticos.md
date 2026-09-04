@@ -1,7 +1,7 @@
 # `frontend/index.html` com `lang="en"` e `<title>` estático
 
 ID: 036
-Origem: docs/bugfix/concluidos/20260901-frontend-meta-viewport-mobile.md §2 (achado ao corrigir a meta viewport ausente)
+Origem: docs/bugfix/concluidos/202609/20260901-frontend-meta-viewport-mobile.md §2 (achado ao corrigir a meta viewport ausente)
 Criado em: 2026-09-01
 Prioridade: BAIXA
 Status: Aberto

@@ -30,7 +30,7 @@ regras da Constitution**.
 01-specify.md         → o que o sistema faz hoje, de negócio (fonte: código real)
                         baseline; não se move para docs/feature/
         ↓ traduzido, por feature, em
-docs/feature/<AAAAMMDD>-<slug>/
+docs/feature/<AAAAMMDD>-<slug>/          (concluída → docs/feature/concluidas/<AAAAMM>/…)
         plan.md            → engenharia: front / back / banco / infra
         ↓
         tasks.md           → unidades atômicas + critério de aceite (cada uma aponta p/ um item do plan)
@@ -45,15 +45,17 @@ arquivos únicos crescendo para todo o sistema: cada feature nova ganha a própr
 `docs/feature/<AAAAMMDD>-<slug>/` com esses quatro documentos escopados a ela. `00-constitution.md`
 e `01-specify.md` continuam no topo, para tudo, e não migram.
 
+Ao concluir (PR único mergeado em `dev`), a pasta migra para `docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/` — `<AAAAMM>` = mês de criação (`ADR-009`); `docs/feature/` na raiz fica só com features em andamento.
+
 ## 3. As quatro trilhas de trabalho
 
 Mesmo topo normativo, quatro caminhos:
 
 | Trilha | Entrada | Onde vive | Regra |
 |---|---|---|---|
-| **Feature — SDD completo** | `/nova-feature <slug>` ou `/promover-backlog <ID>` | `docs/feature/<AAAAMMDD>-<slug>/` (specify · plan · tasks · implementation) | Roda as 5 fases inteiras; termina em 1 PR da branch da feature → `dev`. |
+| **Feature — SDD completo** | `/nova-feature <slug>` ou `/promover-backlog <ID>` | `docs/feature/<AAAAMMDD>-<slug>/` (specify · plan · tasks · implementation); concluída → `docs/feature/concluidas/<AAAAMM>/` | Roda as 5 fases inteiras; termina em 1 PR da branch da feature → `dev`. |
 | **Backlog — ideia não-bloqueante** | achado que não bloqueia nenhuma task | `docs/backlog/<arquivo>.md` (1 arquivo por ideia, índice em `README.md`, compartilhado por todo o projeto) | Só ganha `TASK-0xx` quando alguém decide executar — aí `/promover-backlog` leva até virar feature. |
-| **Bugfix — BFF** | `/novo-bug <slug>` | `docs/bugfix/<AAAAMMDD>-<slug>.md` (arquivo único, branch `fix/…`, 1 PR → `dev`) | Triagem de 4 caixas no topo: nenhuma marcada → BFF; qualquer uma (toca auth/dado sensível; exige migration ou muda contrato de API; causa raiz obscura ou correção ampla; exige decisão de produto/arquitetura) → vira feature SDD normal. `ADR-004`. |
+| **Bugfix — BFF** | `/novo-bug <slug>` | `docs/bugfix/<AAAAMMDD>-<slug>.md` (arquivo único, branch `fix/…`, 1 PR → `dev`; concluído → `docs/bugfix/concluidos/<AAAAMM>/`) | Triagem de 4 caixas no topo: nenhuma marcada → BFF; qualquer uma (toca auth/dado sensível; exige migration ou muda contrato de API; causa raiz obscura ou correção ampla; exige decisão de produto/arquitetura) → vira feature SDD normal. `ADR-004`. |
 | **ADR — decisão registrada** | muda stack, peça de arquitetura travada na Constitution §3, ou convenção do próprio SDD | `docs/sdd/decisions/ADR-0xx.md` (o porquê + alternativas descartadas) | A Constitution registra a regra vigente; o ADR guarda a história da decisão. |
 
 ## 4. Branch, PR e gates humanos
@@ -86,11 +88,11 @@ está listado em §5. O merge em `dev` é um gate **por feature**, não por task
 
 | Modelo | Vigência | Fluxo |
 |---|---|---|
-| 1 | até `docs/feature/20260817-config-url-api-frontend/` | branch/PR por task direto pra `main` |
-| 2 | 2026-08-17 até `docs/feature/20260818-fluxo-despesas-grupo/` (última a segui-lo por completo) | branch de task nasce de `dev`; PR de cada task direto contra `dev`; merge humano por task |
+| 1 | até `docs/feature/concluidas/202608/20260817-config-url-api-frontend/` | branch/PR por task direto pra `main` |
+| 2 | 2026-08-17 até `docs/feature/concluidas/202608/20260818-fluxo-despesas-grupo/` (última a segui-lo por completo) | branch de task nasce de `dev`; PR de cada task direto contra `dev`; merge humano por task |
 | 3 | a partir de 2026-08-18 (`ADR-003`) | branch da feature + tasks mergeadas nela; **um único PR** por feature → `dev` |
 
-Exceção viva: `docs/feature/20260817-config-url-api-frontend/` termina no Modelo 1, para não
+Exceção viva: `docs/feature/concluidas/202608/20260817-config-url-api-frontend/` termina no Modelo 1, para não
 trocar o processo no meio da execução.
 
 ## 5. Gates human-in-the-loop

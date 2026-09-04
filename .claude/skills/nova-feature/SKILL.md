@@ -25,6 +25,10 @@ Execute, nesta ordem:
 
 6. **Não escreva código nem migre nada.** Este skill só cria os 4 documentos vazios. Preencher `specify.md` de verdade, e só depois `plan.md`/`tasks.md`/`implementation.md`, é o próximo passo — com revisão do usuário entre cada um, como já descrito em `docs/sdd/README.md` e `CLAUDE.md`.
 
-7. **Se esta feature for a migração de um épico já existente** em `docs/sdd/03-tasks.md` (ex.: um próximo épico como o Épico A ou D quando alguém começar a trabalhar neles), depois de criar a pasta lembre o usuário de deixar só um ponteiro no `03-tasks.md` original, como já foi feito para o Épico B em `docs/feature/20260817-seguranca-api/`. Não edite o `03-tasks.md` sem confirmar com o usuário.
+7. **Se esta feature for a migração de um épico já existente** em `docs/sdd/03-tasks.md` (ex.: um próximo épico como o Épico A ou D quando alguém começar a trabalhar neles), depois de criar a pasta lembre o usuário de deixar só um ponteiro no `03-tasks.md` original, como já foi feito para o Épico B em `docs/feature/concluidas/202608/20260817-seguranca-api/`. Não edite o `03-tasks.md` sem confirmar com o usuário.
 
 8. **Finalize com um resumo curto**: caminho da pasta criada, os 4 arquivos, e o que falta (preencher `specify.md` primeiro).
+
+## Ao concluir a feature
+
+Quando o PR único da feature for mergeado em `dev`, mova a pasta para `docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/` — `<AAAAMM>` são os 6 primeiros dígitos do nome da pasta (mês de criação). `docs/feature/` na raiz fica só com o que está em andamento. Ver `docs/sdd/decisions/ADR-009-arquivar-concluidos-por-anomes.md` e `docs/sdd/04-implementation.md` §1.

@@ -1,7 +1,7 @@
 # `frontend/dist/index.html` versionado apesar de `dist/` no `.gitignore`
 
 ID: 037
-Origem: docs/bugfix/concluidos/20260901-frontend-meta-viewport-mobile.md §2 (achado ao rodar `npm run build` durante a correção)
+Origem: docs/bugfix/concluidos/202609/20260901-frontend-meta-viewport-mobile.md §2 (achado ao rodar `npm run build` durante a correção)
 Criado em: 2026-09-01
 Prioridade: BAIXA
 Status: Aberto

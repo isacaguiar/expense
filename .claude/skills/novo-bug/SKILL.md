@@ -30,3 +30,7 @@ Execute, nesta ordem:
 7. **Adicione a linha em `docs/bugfix/README.md`**, tabela "Em andamento": arquivo, título, data de criação, branch `fix/<AAAAMMDD>-<slug>`, Status `Aberto`.
 
 8. **Finalize com um resumo curto**: caminho do arquivo criado, resultado da Triagem (e, se marcou alguma caixa, que o próximo passo é `/nova-feature`, não continuar aqui), e o que falta (preencher §1 Problema, depois criar a branch `fix/...` e corrigir — usando a skill do domínio `expense-frontend`/`expense-backend`).
+
+## Ao concluir o bug
+
+Fechamento completo em `docs/bugfix/README.md` §Fechamento. Em resumo: acrescente a seção `## Resolução` ao arquivo, mova-o para `docs/bugfix/concluidos/<AAAAMM>/<AAAAMMDD>-<slug>.md` (`<AAAAMM>` = os 6 primeiros dígitos do nome do arquivo, mês de criação) e passe a linha da tabela "Em andamento" para "Concluídos" no `README.md`. Ver `ADR-009`.

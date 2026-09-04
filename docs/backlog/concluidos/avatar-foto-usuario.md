@@ -1,10 +1,10 @@
 # Suportar foto de perfil do usuário
 
 ID: 021
-Origem: docs/feature/20260819-novo-layout-tela-entrada/specify.md §2.5/R3 (avatar do cabeçalho usa iniciais, mockup mostra foto)
+Origem: docs/feature/concluidas/202608/20260819-novo-layout-tela-entrada/specify.md §2.5/R3 (avatar do cabeçalho usa iniciais, mockup mostra foto)
 Criado em: 2026-08-19
 Prioridade: BAIXA
-Status: Promovido para TASK-268 (docs/feature/20260903-notificacoes-in-app/)
+Status: Promovido para TASK-268 (docs/feature/concluidas/202609/20260903-notificacoes-in-app/)
 
 ## Descrição
 
@@ -19,7 +19,7 @@ Tipo sugerido: backend
 ## Resolução
 
 Concluído em: 2026-09-03
-Feature: docs/feature/20260903-notificacoes-in-app/ (agrupado com o item 020)
+Feature: docs/feature/concluidas/202609/20260903-notificacoes-in-app/ (agrupado com o item 020)
 Tasks: TASK-268, TASK-269, TASK-270
 PRs: https://github.com/isacaguiar/expense/pull/141
 

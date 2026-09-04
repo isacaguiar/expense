@@ -1,8 +1,8 @@
 # Templates de feature
 
-> Esqueletos em branco dos 4 documentos que toda pasta em `docs/feature/<AAAAMMDD>-<slug>/` deve ter. Copie o conteúdo, preencha os placeholders `<...>`, apague o que não se aplicar.
+> Esqueletos em branco dos 4 documentos que toda pasta em `docs/feature/<AAAAMMDD>-<slug>/` deve ter. Copie o conteúdo, preencha os placeholders `<...>`, apague o que não se aplicar. (Feature concluída migra para `docs/feature/concluidas/<AAAAMM>/` — `ADR-009`; os 4 documentos vão junto, sem mudar de nome.)
 
-Formato espelhado do primeiro caso real do projeto: `docs/feature/20260817-seguranca-api/`. Se um template e um caso real divergirem no futuro, o caso real mais recente é o que deve orientar — atualize o template junto.
+Formato espelhado do primeiro caso real do projeto: `docs/feature/concluidas/202608/20260817-seguranca-api/`. Se um template e um caso real divergirem no futuro, o caso real mais recente é o que deve orientar — atualize o template junto.
 
 | Template | Vira | Quando preencher |
 |---|---|---|

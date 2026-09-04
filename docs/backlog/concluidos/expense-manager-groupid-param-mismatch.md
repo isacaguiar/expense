@@ -1,7 +1,7 @@
 # ExpenseManager nunca carrega despesas (duas causas: param errado + rota inexistente)
 
 ID: 006
-Origem: docs/feature/20260817-config-url-api-frontend/implementation.md (achado durante validação da TASK-029)
+Origem: docs/feature/concluidas/202608/20260817-config-url-api-frontend/implementation.md (achado durante validação da TASK-029)
 Criado em: 2026-08-17
 Prioridade: ALTA
 Status: Promovido para TASK-033
@@ -22,7 +22,7 @@ Tipo sugerido: frontend (causa 1) + backend ou contrato de API (causa 2) — dec
 ## Resolução
 
 Concluído em: 2026-08-18
-Feature: docs/feature/20260818-fluxo-despesas-grupo/
+Feature: docs/feature/concluidas/202608/20260818-fluxo-despesas-grupo/
 Tasks: TASK-033 (causa 1 — leitura do parâmetro de rota), TASK-034 (causa 2 — criação da rota `GET /api/groups/{groupId}/expenses` com checagem de membership), TASK-035 (consumo do endpoint no frontend)
 PRs: #12, #14, #15 (todos mergeados em `dev`)
 Nota: a decisão de contrato foi criar a rota no backend (não redirecionar o frontend para `/expenses/monthly`).

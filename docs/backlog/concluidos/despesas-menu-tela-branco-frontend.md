@@ -19,6 +19,6 @@ Tipo sugerido: frontend
 ## Resolução
 
 Concluído em: 2026-08-18
-Feature: docs/feature/20260818-fluxo-despesas-grupo/
+Feature: docs/feature/concluidas/202608/20260818-fluxo-despesas-grupo/
 Tasks: TASK-038 (rota `/expenses` com `ExpensesEntry.tsx` — seleção de grupo quando há mais de um, redirect automático quando há exatamente um, mensagem informativa quando não há nenhum; sem tela em branco em nenhum dos três casos)
 PRs: #20 (mergeado em `dev`)

@@ -19,6 +19,6 @@ Tipo sugerido: infra
 ## Resolução
 
 Concluído em: 2026-08-21
-Feature: docs/feature/20260821-cors-origin-rede-local-configuravel/
+Feature: docs/feature/concluidas/202608/20260821-cors-origin-rede-local-configuravel/
 Tasks: TASK-130
 PRs: https://github.com/isacaguiar/expense/pull/41 (mergeado em `dev`)

@@ -53,7 +53,7 @@ Só depois do `tasks.md` aprovado. Para cada task, na ordem do arquivo:
 6. Pare após integrar a task na branch da feature e pergunte ao usuário se segue para a próxima task ou para por aqui — não execute todas as tasks em sequência sem checar. (Este checkpoint por task é um dos pontos de parada do loop — ver `docs/sdd/agent-architecture.md` §3.)
 7. Quando todas as tasks da feature estiverem integradas na branch da feature: rode o checklist de integração mais uma vez na branch da feature já completa (item 3, agora pegando problemas de integração entre tasks) e abra **um único PR** da branch da feature contra `dev`, referenciando a feature e as tasks incluídas — nunca um PR por task. O merge desse PR em `dev` é gate humano, por feature e não por task (`00-constitution.md` §5.2); **não faça merge nem deploy**. A promoção `dev` → `main` é um passo à parte (fora do loop por task acima): só depois da feature já mergeada e validada em `dev` — não abrir esse PR automaticamente ao final da última task sem antes confirmar com o usuário que a validação em `dev` foi feita.
 
-> Feature `docs/feature/20260817-config-url-api-frontend/` é a exceção: foi iniciada antes desta convenção existir e segue no fluxo antigo (branch/PR por task direto pra `main`) até o fim, para não trocar o processo no meio da execução — ver `docs/sdd/04-implementation.md` §1.
+> Feature `docs/feature/concluidas/202608/20260817-config-url-api-frontend/` é a exceção: foi iniciada antes desta convenção existir e segue no fluxo antigo (branch/PR por task direto pra `main`) até o fim, para não trocar o processo no meio da execução — ver `docs/sdd/04-implementation.md` §1.
 
 ## 6. Fechamento
 
@@ -63,11 +63,11 @@ Quando **todas** as tasks de `tasks.md` já estiverem integradas na branch da fe
    ```
    ## Resolução
    Concluído em: <AAAA-MM-DD>
-   Feature: docs/feature/<AAAAMMDD>-<slug>/
+   Feature: docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/   (<AAAAMM> = mês de criação da pasta; ela migra para lá quando o PR da feature mergeia em `dev` — `ADR-009`)
    Tasks: TASK-0xx, TASK-0yy
    PRs: <link(s)>
    ```
 2. Mova o arquivo de `docs/backlog/<arquivo>.md` para `docs/backlog/concluidos/<arquivo>.md` (mesmo nome, só muda de pasta — histórico do "porquê" preservado no próprio arquivo).
 3. Em `docs/backlog/README.md`: remova a linha do item da tabela "Índice" (itens abertos) e adicione uma linha equivalente na tabela "Concluídos" (criar essa segunda tabela se ainda não existir), apontando para `concluidos/<arquivo>.md`.
 
-Finalize com um resumo curto: pasta da feature, o que foi aprovado em cada etapa, quais tasks foram integradas na branch da feature, quais ainda faltam, se o PR único da feature contra `dev` já foi aberto, itens de backlog movidos para `concluidos/`, e quaisquer gates humanos pendentes (merge em `dev`, promoção `dev` → `main`, deploy).
+Finalize com um resumo curto: pasta da feature, o que foi aprovado em cada etapa, quais tasks foram integradas na branch da feature, quais ainda faltam, se o PR único da feature contra `dev` já foi aberto, itens de backlog movidos para `concluidos/`, e quaisquer gates humanos pendentes (merge em `dev`, promoção `dev` → `main`, deploy). Lembre que a pasta da feature vai para `docs/feature/concluidas/<AAAAMM>/` quando o PR da feature mergear em `dev` (`ADR-009`).

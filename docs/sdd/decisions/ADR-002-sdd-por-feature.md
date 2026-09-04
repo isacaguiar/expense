@@ -2,6 +2,7 @@
 
 Status: Aceita
 Data: 2026-08-17
+Emenda: 2026-09-03 — feature concluída (PR único mergeado em `dev`) passa a ser movida para `docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/`; `docs/feature/` na raiz fica só com trabalho em andamento. Ver `ADR-009-arquivar-concluidos-por-anomes.md`. Os ponteiros para os primeiros casos reais citados abaixo foram atualizados para o caminho arquivado.
 
 ## Contexto
 
@@ -13,7 +14,7 @@ A partir de 2026-08-17, `02-plan.md`, `03-tasks.md` e `04-implementation.md` par
 
 `00-constitution.md` continua no topo da hierarquia para tudo, e `01-specify.md` continua sendo o baseline de "como o sistema é hoje" (o que o sistema faz, não uma feature específica) — nenhum dos dois se move para `docs/feature/`.
 
-Épicos que já existiam em `03-tasks.md` antes desta data e ainda não foram tocados continuam lá até alguém começar a trabalhar neles; nesse momento migram para uma pasta em `docs/feature/`, deixando só um ponteiro no arquivo original (primeiro caso: Épico B → `docs/feature/20260817-seguranca-api/`).
+Épicos que já existiam em `03-tasks.md` antes desta data e ainda não foram tocados continuam lá até alguém começar a trabalhar neles; nesse momento migram para uma pasta em `docs/feature/`, deixando só um ponteiro no arquivo original (primeiro caso: Épico B → `docs/feature/concluidas/202608/20260817-seguranca-api/`).
 
 ## Consequências
 
@@ -31,4 +32,4 @@ A partir de 2026-08-17, `02-plan.md`, `03-tasks.md` e `04-implementation.md` par
 
 - `docs/sdd/README.md` — seção "Trabalho por feature (`docs/feature/`)".
 - `03-tasks.md` — seção "Convenção a partir de 2026-08-17".
-- `docs/feature/20260817-seguranca-api/` — primeiro caso real desta convenção.
+- `docs/feature/concluidas/202608/20260817-seguranca-api/` — primeiro caso real desta convenção.

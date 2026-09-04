@@ -51,8 +51,8 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
    Branch: fix/<AAAAMMDD>-<slug>
    PR: <link>
    ```
-2. Mova o arquivo para `docs/bugfix/concluidos/<arquivo>.md` (mesmo nome, só muda de pasta).
-3. Neste `README.md`: tire a linha da tabela "Em andamento" e ponha na tabela "Concluídos".
+2. Mova o arquivo para `docs/bugfix/concluidos/<AAAAMM>/<arquivo>.md` — `<AAAAMM>` são os 6 primeiros dígitos do nome do arquivo (mês de criação). Ver `docs/sdd/decisions/ADR-009-arquivar-concluidos-por-anomes.md`.
+3. Neste `README.md`: tire a linha da tabela "Em andamento" e ponha na tabela "Concluídos" (o link vira `concluidos/<AAAAMM>/<arquivo>.md`).
 
 ## Em andamento
 
@@ -65,10 +65,10 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
-| [concluidos/20260903-expense-form-feedback-erro.md](concluidos/20260903-expense-form-feedback-erro.md) | Cadastro de despesa mostra erro em `window.alert()` nativo, sem o motivo | 2026-09-03 | #143 |
-| [concluidos/20260902-favicon-ausente.md](concluidos/20260902-favicon-ausente.md) | Favicon ausente no site e no app (`/favicon.ico` 404, `index.html` sem `<link rel=icon>`) | 2026-09-02 | #137 |
-| [concluidos/20260901-frontend-meta-viewport-mobile.md](concluidos/20260901-frontend-meta-viewport-mobile.md) | App não responsivo no celular (meta viewport ausente) | 2026-09-01 | #126 |
-| [concluidos/20260828-login-sem-mensagem-erro.md](concluidos/20260828-login-sem-mensagem-erro.md) | Tela de login não exibe mensagem de erro com credenciais inválidas | 2026-08-28 | #81 |
-| [concluidos/20260829-deploy-site-secrets-quebrado.md](concluidos/20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | #89 |
-| [concluidos/20260829-cors-nao-le-frontend-url.md](concluidos/20260829-cors-nao-le-frontend-url.md) | CORS não permite o frontend de produção (config não lê FRONTEND_URL) | 2026-08-29 | #94 |
-| [concluidos/20260829-deploy-backend-ftp-texto-puro.md](concluidos/20260829-deploy-backend-ftp-texto-puro.md) | Deploy do backend transmite credencial FTP em texto puro | 2026-08-29 | — (direto em `dev`) |
+| [concluidos/202609/20260902-favicon-ausente.md](concluidos/202609/20260902-favicon-ausente.md) | Favicon ausente no site e no app (`/favicon.ico` 404, `index.html` sem `<link rel=icon>`) | 2026-09-02 | #137 |
+| [concluidos/202609/20260901-frontend-meta-viewport-mobile.md](concluidos/202609/20260901-frontend-meta-viewport-mobile.md) | App não responsivo no celular (meta viewport ausente) | 2026-09-01 | #126 |
+| [concluidos/202608/20260828-login-sem-mensagem-erro.md](concluidos/202608/20260828-login-sem-mensagem-erro.md) | Tela de login não exibe mensagem de erro com credenciais inválidas | 2026-08-28 | #81 |
+| [concluidos/202608/20260829-deploy-site-secrets-quebrado.md](concluidos/202608/20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | #89 |
+| [concluidos/202608/20260829-cors-nao-le-frontend-url.md](concluidos/202608/20260829-cors-nao-le-frontend-url.md) | CORS não permite o frontend de produção (config não lê FRONTEND_URL) | 2026-08-29 | #94 |
+| [concluidos/202608/20260829-deploy-backend-ftp-texto-puro.md](concluidos/202608/20260829-deploy-backend-ftp-texto-puro.md) | Deploy do backend transmite credencial FTP em texto puro | 2026-08-29 | — (direto em `dev`) |
+

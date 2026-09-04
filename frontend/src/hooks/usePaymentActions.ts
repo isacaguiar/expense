@@ -22,7 +22,7 @@ type UsePaymentActionsResult = {
  * Ações de "marcar como paga"/"desfazer pagamento" (`POST .../pay`,
  * `POST .../unpay`), compartilhadas entre `ExpenseManager.tsx` (um clique,
  * sem comprovante) e `Payments.tsx` (exige foto antes de confirmar, ver
- * `docs/feature/20260822-criacao-tela-pagamentos/plan.md` §6) — mesma regra
+ * `docs/feature/concluidas/202608/20260822-criacao-tela-pagamentos/plan.md` §6) — mesma regra
  * de habilitação e mesmos endpoints nos dois lugares, só a UX em torno de
  * `handlePay` muda por tela (comprovante é opcional no parâmetro `proof`
  * porque a API também trata a foto como opcional, ver `plan.md` §2).

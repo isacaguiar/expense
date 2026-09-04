@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\Log;
  * O payload `data` guarda o que o cliente precisa para montar o texto e o
  * link de destino (`groupId`); o texto em si é responsabilidade do frontend.
  *
- * Ver docs/feature/20260903-notificacoes-in-app/plan.md §3.
+ * Ver docs/feature/concluidas/202609/20260903-notificacoes-in-app/plan.md §3.
  */
 class Notifier
 {

@@ -19,7 +19,7 @@ use Tests\TestCase;
  * Confirmação de pagamento de settlement pelo devedor — conceito distinto de
  * pay()/unpay() (ExpenseControllerPayTest.php), que confirmam uma despesa
  * específica do lado do credor. Ver
- * docs/feature/20260825-pagamentos-grid-pix/specify.md §2.7.
+ * docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/specify.md §2.7.
  */
 class SettlementConfirmationControllerTest extends TestCase
 {
