@@ -19,7 +19,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
 | TASK-001 | Concluída | 2026-09-04 | Claude (IA) | Ver detalhamento abaixo | TDD (RED→GREEN); `born_paid` + filtro em `computeCycleSummary` |
-| TASK-002 | Script rascunhado, aguardando revisão do usuário | 2026-09-04 | Claude (IA) | `fix-prod-3878.sql` criado e versionado nesta pasta | Execução depende de TASK-001 estar em produção (gate); diagnóstico do passo 0 do script ainda não foi rodado contra o banco real |
+| TASK-002 | Concluída | 2026-09-04 | Isac (usuário) | Ver detalhamento abaixo | Executado em produção via phpMyAdmin/SSH, verificado no app |
 
 ### TASK-001 — detalhamento
 
@@ -56,4 +56,26 @@ Doc atualizada: `docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimen
 
 `security-reviewer`: sem achado novo (mass assignment de `born_paid` descartado — campo nunca vem do payload). `pr-readiness-checker`: verde para o diff desta branch (pint limpo nos arquivos tocados; débito de estilo pré-existente em arquivos fora do diff, não bloqueante).
 
-PR aberto: https://github.com/isacaguiar/expense/pull/147 (`feature/20260904-parcela-retroativa-contabilizacao` → `dev`). **Merge é gate humano.**
+PR aberto: https://github.com/isacaguiar/expense/pull/147 (`feature/20260904-parcela-retroativa-contabilizacao` → `dev`). **Merge é gate humano.** Mergeado em 2026-09-04.
+
+Promoção `dev` → `main`: PR #148, mergeado em 2026-09-04 — disparou `deploy-backend.yml` (run `33924553910`), `SCRIPT_AFTER` rodou `php artisan migrate --force --no-interaction` com sucesso (job concluído sem falha).
+
+### TASK-002 — detalhamento (execução em produção)
+
+Script: `fix-prod-3878.sql` (nesta pasta). Rodado pelo usuário via phpMyAdmin/SSH em `expense-api.novemax.com.br` (MySQL `ex-db`), **depois** de confirmado que a migration de TASK-001 estava aplicada (1ª tentativa, antes da promoção `dev`→`main`, deu `#1054 - Unknown column 'born_paid'`; após o PR #148 e o deploy, o `SELECT` de conferência do passo 2 já leu a coluna normalmente).
+
+Passo a passo confirmado pelo usuário:
+
+| Passo | Ação | Resultado confirmado |
+|---|---|---|
+| 2 | `UPDATE ex_quotas SET born_paid = 1 WHERE expense_id IN (8658, 8659) AND paid = 1` | 4 linhas afetadas (8658 #1/#2, 8659 #1/#2) — conferido por print do phpMyAdmin: `paid=1`, `paid_by=5573`, `born_paid=1` |
+| 3 | `UPDATE ex_group_cycle_snapshots SET settled_at = NULL WHERE group_id=3878 AND cycle_start='2026-07-01'` | `SELECT` antes tinha `settled_at` preenchido; depois, `NULL` |
+| 4 | `UPDATE ex_group_cycle_snapshots SET settled_at = NULL WHERE group_id=3878 AND cycle_start='2026-08-01'` | `settled_at` **já estava `NULL`** antes do `UPDATE` (agosto havia dessellado sozinho entre o diagnóstico original e a execução — grupo em uso real; `UPDATE` rodou como no-op) |
+
+Verificação final no app (confirmada pelo usuário, grupo 3878 "Piatã House"):
+1. Home do grupo abre no ciclo vigente (setembro) — não fica mais presa em junho.
+2. Junho: Adestrador e Construção parede aparecem "Paga", sem card "deve pagar" para ninguém.
+3. Julho: as duas parcelas passaram a aparecer (antes: "Nenhuma despesa neste ciclo").
+4. Agosto: a parcela de cada despesa aparece como pendência real, junto com os demais itens do mês.
+
+Diagnóstico do passo 0 (outras parceladas retroativas na mesma janela) não chegou a ser reportado pelo usuário — se aparecer outra despesa afetada além de 8658/8659, decidir separadamente (fora do escopo desta feature).
