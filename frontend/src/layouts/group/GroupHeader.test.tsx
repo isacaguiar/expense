@@ -89,4 +89,35 @@ describe('GroupHeader', () => {
     expect(screen.getByText('Ana Paula')).toBeInTheDocument();
     expect(screen.getByText('AP')).toBeInTheDocument();
   });
+
+  it('shows the unread notifications count as a badge on the bell', () => {
+    render(
+      <GroupHeader
+        title="Resumo"
+        groups={[]}
+        groupId=""
+        onGroupChange={vi.fn()}
+        userName={null}
+        onMenuClick={vi.fn()}
+        unreadCount={7}
+      />
+    );
+
+    expect(screen.getByText('7')).toBeInTheDocument();
+  });
+
+  it('hides the badge when there are no unread notifications', () => {
+    const { container } = render(
+      <GroupHeader
+        title="Resumo"
+        groups={[]}
+        groupId=""
+        onGroupChange={vi.fn()}
+        userName={null}
+        onMenuClick={vi.fn()}
+      />
+    );
+
+    expect(container.querySelector('.MuiBadge-badge')).toHaveClass('MuiBadge-invisible');
+  });
 });

@@ -32,6 +32,9 @@ function mockGetResponses() {
     if (url.includes('/api/me')) {
       return Promise.resolve({ data: currentUser });
     }
+    if (url.includes('/api/notifications/unread-count')) {
+      return Promise.resolve({ data: { count: 0 } });
+    }
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
 }
