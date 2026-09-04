@@ -54,4 +54,6 @@ Comandos executados / resultado:
 
 Doc atualizada: `docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimento.md` — item §2 ("ciclo `closed` não selado") marcado resolvido por esta feature; §1 (consentimento do credor) continua aberto.
 
-Pendente antes do PR: `security-reviewer` e `pr-readiness-checker`.
+`security-reviewer`: sem achado novo (mass assignment de `born_paid` descartado — campo nunca vem do payload). `pr-readiness-checker`: verde para o diff desta branch (pint limpo nos arquivos tocados; débito de estilo pré-existente em arquivos fora do diff, não bloqueante).
+
+PR aberto: https://github.com/isacaguiar/expense/pull/147 (`feature/20260904-parcela-retroativa-contabilizacao` → `dev`). **Merge é gate humano.**
