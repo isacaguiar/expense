@@ -31,6 +31,8 @@ describe('Profile', () => {
     navigateMock.mockClear();
     vi.mocked(axios.get).mockReset();
     vi.mocked(axios.put).mockReset();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.delete).mockReset();
     vi.mocked(axios.get).mockResolvedValue({ data: me });
   });
 
@@ -189,6 +191,85 @@ describe('Profile', () => {
     await screen.findByDisplayValue('Ana Silva');
     const avatarImg = container.querySelector('img');
     expect(avatarImg).toHaveAttribute('src', 'https://google.example/pic.jpg');
+  });
+
+  it('uploads a selected photo to POST /api/user/photo and shows it as the avatar', async () => {
+    vi.mocked(axios.post).mockResolvedValue({ data: { avatar_url: 'https://signed.example/photo?sig=1' } });
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, new File(['x'], 'foto.png', { type: 'image/png' }));
+
+    await waitFor(() =>
+      expect(axios.post).toHaveBeenCalledWith(
+        expect.stringContaining('/api/user/photo'),
+        expect.any(FormData),
+        expect.anything()
+      )
+    );
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://signed.example/photo?sig=1');
+    expect(await screen.findByText('Foto atualizada com sucesso.')).toBeInTheDocument();
+  });
+
+  it('removes the photo via DELETE /api/user/photo and falls back to initials', async () => {
+    vi.mocked(axios.get).mockResolvedValueOnce({ data: { ...me, avatar_url: 'https://google.example/pic.jpg' } });
+    vi.mocked(axios.delete).mockResolvedValue({ data: { avatar_url: null } });
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+    expect(container.querySelector('img')).toHaveAttribute('src', 'https://google.example/pic.jpg');
+
+    await user.click(screen.getByRole('button', { name: 'Remover foto' }));
+
+    await waitFor(() =>
+      expect(axios.delete).toHaveBeenCalledWith(expect.stringContaining('/api/user/photo'), expect.anything())
+    );
+    expect(container.querySelector('img')).not.toBeInTheDocument();
+    expect(screen.getByText('AS')).toBeInTheDocument();
+    expect(await screen.findByText('Foto removida.')).toBeInTheDocument();
+  });
+
+  it('shows an error message when the photo upload fails', async () => {
+    vi.mocked(axios.post).mockRejectedValue(new Error('boom'));
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, new File(['x'], 'foto.png', { type: 'image/png' }));
+
+    expect(await screen.findByText('Não foi possível enviar a foto. Tente novamente.')).toBeInTheDocument();
+  });
+
+  it('does not offer "Remover foto" when there is no avatar', async () => {
+    render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+    expect(screen.queryByRole('button', { name: 'Remover foto' })).not.toBeInTheDocument();
   });
 
   it('shows the backend validation error on failure', async () => {

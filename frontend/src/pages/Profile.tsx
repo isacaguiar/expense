@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
@@ -40,6 +40,9 @@ const Profile: React.FC = () => {
   const [whatsapp, setWhatsapp] = useState<string>('');
   const [notifyWhatsapp, setNotifyWhatsapp] = useState<boolean>(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [photoUploading, setPhotoUploading] = useState<boolean>(false);
+  const [photoFeedback, setPhotoFeedback] = useState<{ severity: 'success' | 'error'; text: string } | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [linking, setLinking] = useState<boolean>(false);
@@ -111,6 +114,44 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handlePhotoSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite reenviar o mesmo arquivo depois
+    if (!file) return;
+
+    setPhotoUploading(true);
+    const token = localStorage.getItem('accessToken');
+    try {
+      const form = new FormData();
+      form.append('foto', file);
+      const res = await axios.post<{ avatar_url: string | null }>(`${API_BASE_URL}/api/user/photo`, form, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      });
+      setAvatarUrl(res.data.avatar_url ?? null);
+      setPhotoFeedback({ severity: 'success', text: 'Foto atualizada com sucesso.' });
+    } catch {
+      setPhotoFeedback({ severity: 'error', text: 'Não foi possível enviar a foto. Tente novamente.' });
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
+  const handleRemovePhoto = async () => {
+    setPhotoUploading(true);
+    const token = localStorage.getItem('accessToken');
+    try {
+      const res = await axios.delete<{ avatar_url: string | null }>(`${API_BASE_URL}/api/user/photo`, {
+        headers: { Authorization: token ? `Bearer ${token}` : '' }
+      });
+      setAvatarUrl(res.data.avatar_url ?? null);
+      setPhotoFeedback({ severity: 'success', text: 'Foto removida.' });
+    } catch {
+      setPhotoFeedback({ severity: 'error', text: 'Não foi possível remover a foto. Tente novamente.' });
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
@@ -144,10 +185,32 @@ const Profile: React.FC = () => {
     <>
       <Card elevation={3} sx={{ borderRadius: 2, maxWidth: 520, mx: 'auto' }}>
         <CardContent sx={{ p: 4 }}>
-          <Box display="flex" justifyContent="center" mb={3}>
-            <Avatar src={avatarUrl ?? undefined} sx={{ width: 72, height: 72 }}>
-              {getInitials(name)}
-            </Avatar>
+          <Box display="flex" flexDirection="column" alignItems="center" gap={1} mb={3}>
+            <Box sx={{ position: 'relative', width: 72, height: 72 }}>
+              <Avatar src={avatarUrl ?? undefined} sx={{ width: 72, height: 72 }}>
+                {getInitials(name)}
+              </Avatar>
+              {photoUploading && (
+                <CircularProgress size={72} sx={{ position: 'absolute', top: 0, left: 0 }} />
+              )}
+            </Box>
+            <Box display="flex" gap={1}>
+              <Button size="small" onClick={() => fileInputRef.current?.click()} disabled={photoUploading}>
+                Alterar foto
+              </Button>
+              {avatarUrl && (
+                <Button size="small" color="error" onClick={handleRemovePhoto} disabled={photoUploading}>
+                  Remover foto
+                </Button>
+              )}
+            </Box>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={handlePhotoSelected}
+            />
           </Box>
 
           {error && <Typography color="error" sx={{ mb: 2 }}>{error}</Typography>}
@@ -225,6 +288,21 @@ const Profile: React.FC = () => {
       >
         <Alert onClose={() => setLinkedOpen(false)} severity={linkedSeverity} variant="filled">
           {linkedText}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={Boolean(photoFeedback)}
+        autoHideDuration={4000}
+        onClose={() => setPhotoFeedback(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setPhotoFeedback(null)}
+          severity={photoFeedback?.severity ?? 'success'}
+          variant="filled"
+        >
+          {photoFeedback?.text}
         </Alert>
       </Snackbar>
     </>
