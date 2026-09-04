@@ -182,7 +182,7 @@ describe('ExpenseForm', () => {
     expect(payload.payers).toEqual([1, 2]);
   });
 
-  it('blocks saving when no participant is selected', async () => {
+  it('blocks saving with an in-app alert (never window.alert) when no participant is selected', async () => {
     const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
     await renderForm();
 
@@ -195,7 +195,47 @@ describe('ExpenseForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(axios.post).not.toHaveBeenCalled();
-    expect(alertSpy).toHaveBeenCalledWith('Selecione ao menos um participante da divisão.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Selecione ao menos um participante da divisão.'
+    );
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it('surfaces the backend error message in an in-app alert (never window.alert) when the API rejects', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.mocked(axios.post).mockRejectedValueOnce({
+      response: { data: { error: 'Não é possível alterar dados de uma competência já fechada.' } },
+    });
+    await renderForm();
+
+    await userEvent.type(screen.getByLabelText('Descrição'), 'Adestrador');
+    await userEvent.type(screen.getByLabelText('Valor'), '1754,40');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Não é possível alterar dados de uma competência já fechada.'
+    );
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
+  });
+
+  it('falls back to a generic in-app message when the API error has no body', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    vi.mocked(axios.post).mockRejectedValueOnce(new Error('Network Error'));
+    await renderForm();
+
+    await userEvent.type(screen.getByLabelText('Descrição'), 'Mercado');
+    await userEvent.type(screen.getByLabelText('Valor'), '80,00');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    expect(await screen.findByRole('alert')).toHaveTextContent('Falha ao salvar despesa.');
+    expect(alertSpy).not.toHaveBeenCalled();
     alertSpy.mockRestore();
   });
 

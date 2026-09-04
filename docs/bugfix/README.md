@@ -65,6 +65,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/20260903-expense-form-feedback-erro.md](concluidos/20260903-expense-form-feedback-erro.md) | Cadastro de despesa mostra erro em `window.alert()` nativo, sem o motivo | 2026-09-03 | #143 |
 | [concluidos/20260902-favicon-ausente.md](concluidos/20260902-favicon-ausente.md) | Favicon ausente no site e no app (`/favicon.ico` 404, `index.html` sem `<link rel=icon>`) | 2026-09-02 | #137 |
 | [concluidos/20260901-frontend-meta-viewport-mobile.md](concluidos/20260901-frontend-meta-viewport-mobile.md) | App não responsivo no celular (meta viewport ausente) | 2026-09-01 | #126 |
 | [concluidos/20260828-login-sem-mensagem-erro.md](concluidos/20260828-login-sem-mensagem-erro.md) | Tela de login não exibe mensagem de erro com credenciais inválidas | 2026-08-28 | #81 |
