@@ -71,3 +71,4 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 | [concluidos/202608/20260829-deploy-site-secrets-quebrado.md](concluidos/202608/20260829-deploy-site-secrets-quebrado.md) | deploy-site.yml falha por nomes de secret inexistentes | 2026-08-29 | #89 |
 | [concluidos/202608/20260829-cors-nao-le-frontend-url.md](concluidos/202608/20260829-cors-nao-le-frontend-url.md) | CORS não permite o frontend de produção (config não lê FRONTEND_URL) | 2026-08-29 | #94 |
 | [concluidos/202608/20260829-deploy-backend-ftp-texto-puro.md](concluidos/202608/20260829-deploy-backend-ftp-texto-puro.md) | Deploy do backend transmite credencial FTP em texto puro | 2026-08-29 | — (direto em `dev`) |
+

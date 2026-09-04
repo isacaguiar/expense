@@ -51,6 +51,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 035 | [google-oauth-state-pull-nao-atomico.md](google-oauth-state-pull-nao-atomico.md) | `Cache::pull` do state OAuth não é atômico (uso único não estrito) | google-oauth-state-opaco | 2026-09-01 | BAIXA | Aberto |
 | 036 | [frontend-index-html-lang-title-estaticos.md](frontend-index-html-lang-title-estaticos.md) | `frontend/index.html` com `lang="en"` e `<title>` estático | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
 | 037 | [frontend-dist-index-html-versionado.md](frontend-dist-index-html-versionado.md) | `frontend/dist/index.html` versionado apesar de `dist/` no `.gitignore` | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
+| 038 | [expense-parcela-retroativa-paid-by-sem-consentimento.md](expense-parcela-retroativa-paid-by-sem-consentimento.md) | Parcela retroativa nasce `paid`/`paid_by` em nome do credor, sem consentimento nem aviso | despesa-parcelada-retroativa | 2026-09-04 | MEDIA | Aberto |
 
 ## Itens concluídos
 
