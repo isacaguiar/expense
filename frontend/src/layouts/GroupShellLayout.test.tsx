@@ -22,7 +22,7 @@ const groups = [
   { id: 2, name: 'Grupo B' },
 ];
 
-const currentUser = { name: 'QA Shell Usuario', email: 'qa-shell@example.com' };
+const currentUser = { name: 'QA Shell Usuario', email: 'qa-shell@example.com', avatar_url: null as string | null };
 
 function mockGetResponses() {
   vi.mocked(axios.get).mockImplementation((url: string) => {
@@ -31,6 +31,9 @@ function mockGetResponses() {
     }
     if (url.includes('/api/me')) {
       return Promise.resolve({ data: currentUser });
+    }
+    if (url.includes('/api/notifications/unread-count')) {
+      return Promise.resolve({ data: { count: 0 } });
     }
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
@@ -92,6 +95,28 @@ describe('GroupShellLayout', () => {
 
     expect(await screen.findByText('QA Shell Usuario')).toBeInTheDocument();
     expect(screen.getByText('QS')).toBeInTheDocument();
+  });
+
+  it('shows the profile photo in the header when GET /api/me returns an avatar_url', async () => {
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/api/groups')) {
+        return Promise.resolve({ data: groups });
+      }
+      if (url.includes('/api/me')) {
+        return Promise.resolve({ data: { ...currentUser, avatar_url: 'https://signed.example/me.jpg' } });
+      }
+      if (url.includes('/api/notifications/unread-count')) {
+        return Promise.resolve({ data: { count: 0 } });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+
+    const { container } = renderShell('/groups/1/summary');
+
+    await screen.findByText('Conteúdo Resumo');
+    await waitFor(() => {
+      expect(container.querySelector('header img')).toHaveAttribute('src', 'https://signed.example/me.jpg');
+    });
   });
 
   it('derives the header title from the active sidebar item', async () => {

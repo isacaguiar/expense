@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Mail\UserInvitedMail;
 use App\Models\Group;
 use App\Models\User;
+use App\Support\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Mail;
@@ -75,6 +76,10 @@ class GroupMemberController extends Controller
 
         // 5) Associa ao grupo
         $group->members()->attach($user->id);
+
+        // Chegar aqui é attach real — o passo 4 já devolveu 409 se o usuário
+        // já era membro.
+        Notifier::groupMemberAdded($group, $user->id, auth()->user()->name);
 
         return response()->json([
             'message' => $isNewUser

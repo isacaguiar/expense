@@ -6,17 +6,17 @@ Versão: 1.0 · Criado em: 20260903
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-260 | Criar migration `create_ex_notifications_table` e model `App\Models\Notification` | backend | plan.md §1 | nenhum | Pendente |
-| TASK-261 | Criar `NotificationController` e rotas `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/read` | backend | plan.md §2 | nenhum | Pendente |
-| TASK-262 | Criar serviço `App\Support\Notifier` e os gatilhos `expense_paid` (em `pay()`) e `settlement_confirmed` (em `confirmSettlement()`) | backend | plan.md §3 | nenhum | Pendente |
-| TASK-263 | Gatilhos `cycle_settled` (em `sealCycleIfSettled()`) e `cycle_closed` (em `close()`) | backend | plan.md §3 | nenhum | Pendente |
-| TASK-264 | Gatilho `group_member_added` (em `GroupMemberController::store()`) | backend | plan.md §3 | nenhum | Pendente |
-| TASK-265 | Gatilho `expense_created` (em `ExpenseController::store()`) | backend | plan.md §3 | nenhum | Pendente |
-| TASK-266 | Criar hook `useUnreadNotificationsCount` (polling) e o `Badge` no sino via `GroupShellLayout`→`GroupHeader` | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-267 | Criar `NotificationsMenu` e helper `notificationText` (lista, marcar como lida, navegar) | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-268 | 021 — migration `add_photo_path_to_ex_users`, helper `AvatarStorage`, `POST`/`DELETE /api/user/photo`, `UserPhotoController` (rota assinada) e accessor `getAvatarUrlAttribute` | backend | plan.md §5 | nenhum | Pendente |
-| TASK-269 | 021 — controle de upload e remoção de foto em `Profile.tsx` | frontend | plan.md §6 | nenhum | Pendente |
-| TASK-270 | 021 — usar `avatar_url` no `Avatar` do `GroupHeader` via `GroupShellLayout` | frontend | plan.md §6 | nenhum | Pendente |
+| TASK-260 | Criar migration `create_ex_notifications_table` e model `App\Models\Notification` | backend | plan.md §1 | nenhum | Concluída (2026-09-03) |
+| TASK-261 | Criar `NotificationController` e rotas `GET /notifications`, `GET /notifications/unread-count`, `POST /notifications/read` | backend | plan.md §2 | nenhum | Concluída (2026-09-03) |
+| TASK-262 | Criar serviço `App\Support\Notifier` e os gatilhos `expense_paid` (em `pay()`) e `settlement_confirmed` (em `confirmSettlement()`) | backend | plan.md §3 | nenhum | Concluída (2026-09-03) |
+| TASK-263 | Gatilhos `cycle_settled` (em `sealCycleIfSettled()`) e `cycle_closed` (em `close()`) | backend | plan.md §3 | nenhum | Concluída (2026-09-03) |
+| TASK-264 | Gatilho `group_member_added` (em `GroupMemberController::store()`) | backend | plan.md §3 | nenhum | Concluída (2026-09-03) |
+| TASK-265 | Gatilho `expense_created` (em `ExpenseController::store()`) | backend | plan.md §3 | nenhum | Concluída (2026-09-03) |
+| TASK-266 | Criar hook `useUnreadNotificationsCount` (polling) e o `Badge` no sino via `GroupShellLayout`→`GroupHeader` | frontend | plan.md §4 | nenhum | Concluída (2026-09-03) |
+| TASK-267 | Criar `NotificationsMenu` e helper `notificationText` (lista, marcar como lida, navegar) | frontend | plan.md §4 | nenhum | Concluída (2026-09-03) |
+| TASK-268 | 021 — migration `add_photo_path_to_ex_users`, helper `AvatarStorage`, `POST`/`DELETE /api/user/photo`, `UserPhotoController` (rota assinada) e accessor `getAvatarUrlAttribute` | backend | plan.md §5 | nenhum | Concluída (2026-09-03) |
+| TASK-269 | 021 — controle de upload e remoção de foto em `Profile.tsx` | frontend | plan.md §6 | nenhum | Concluída (2026-09-03) |
+| TASK-270 | 021 — usar `avatar_url` no `Avatar` do `GroupHeader` via `GroupShellLayout` | frontend | plan.md §6 | nenhum | Concluída (2026-09-03) |
 
 ## Critérios de aceite
 
