@@ -43,8 +43,6 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
-| 020 | [sistema-notificacoes-frontend.md](sistema-notificacoes-frontend.md) | Implementar sistema de notificações | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Promovido para TASK-260 |
-| 021 | [avatar-foto-usuario.md](avatar-foto-usuario.md) | Suportar foto de perfil do usuário | novo-layout-tela-entrada | 2026-08-19 | BAIXA | Promovido para TASK-268 |
 | 024 | [expense-campo-categoria.md](expense-campo-categoria.md) | Adicionar campo "categoria" em despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
@@ -83,3 +81,5 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 031 | [dashboard-visao-financeira-credor-devedores.md](concluidos/dashboard-visao-financeira-credor-devedores.md) | Dashboard sem dado financeiro (resumo Credor→devedores + Pix por grupo) | 2026-08-27 | dashboard-resumo-credor-devedores | TASK-212, TASK-213, TASK-214 |
 | 018 | [summary-tela-relatorios.md](concluidos/summary-tela-relatorios.md) | Criar tela de Relatórios do grupo | 2026-08-27 | relatorios-historico-ciclos | TASK-209, TASK-210, TASK-211 |
 | 008 | [workflow-cicd-frontend.md](concluidos/workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | 2026-08-28 | ci-frontend | TASK-215, TASK-216, TASK-217 |
+| 020 | [sistema-notificacoes-frontend.md](concluidos/sistema-notificacoes-frontend.md) | Implementar sistema de notificações | 2026-09-03 | notificacoes-in-app | TASK-260 … TASK-267 |
+| 021 | [avatar-foto-usuario.md](concluidos/avatar-foto-usuario.md) | Suportar foto de perfil do usuário | 2026-09-03 | notificacoes-in-app (agrupado com 020) | TASK-268, TASK-269, TASK-270 |

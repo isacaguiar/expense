@@ -8,6 +8,7 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
+use App\Support\Notifier;
 use App\Support\ProofStorage;
 use App\Support\WhatsApp\WhatsAppNotifier;
 use Carbon\Carbon;
@@ -409,6 +410,9 @@ class ExpenseController extends Controller
 
             DB::commit();
 
+            // Fora da transação: uma falha aqui não desfaz a despesa criada.
+            Notifier::expenseCreated($expense);
+
             return response()->json(['message' => 'Despesa criada com sucesso', 'expense_id' => $expense->id], 201);
 
         } catch (\Throwable $e) {
@@ -605,6 +609,11 @@ class ExpenseController extends Controller
         $start = $cycle['start'];
         $end = $cycle['end'];
 
+        $wasManuallyClosed = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->whereNotNull('closed_manually_at')
+            ->exists();
+
         foreach ($this->collectCycleEntries($groupId, $start, $end) as $entry) {
             if ($entry['expense']->expense_type === 'FIXED') {
                 $this->materializeFixedOccurrenceQuota($entry['expense'], $entry['date']);
@@ -632,6 +641,12 @@ class ExpenseController extends Controller
 
         if ($sealed) {
             $snapshot->refresh();
+        }
+
+        // Fechamento manual "de verdade" (não selou direto — isso já dispara
+        // `cycle_settled` no `sealCycleIfSettled`) e não é um re-fechamento.
+        if (! $sealed && ! $wasManuallyClosed) {
+            Notifier::cycleClosed($group, $start, auth()->id(), auth()->user()->name);
         }
 
         return response()->json([
@@ -868,9 +883,17 @@ class ExpenseController extends Controller
             $update['payment_proof_path'] = ProofStorage::store($request->file('comprovante'), $expense->group_id);
         }
 
+        $wasPaid = (bool) $quota->paid;
+
         $quota->update($update);
 
         $this->sealCycleIfSettled($group, $group->id, $cycle['start'], $cycle['end']);
+
+        // Só na transição não-paga → paga: re-`pay()` do mesmo quota (ex.:
+        // trocar o comprovante) não gera notificação nova.
+        if (! $wasPaid) {
+            Notifier::expensePaid($expense, $quota);
+        }
 
         // Comprovante anexado pelo credor → avisa os pagadores por WhatsApp,
         // depois da resposta (não segura o request, não quebra o pagamento se
@@ -1020,6 +1043,18 @@ class ExpenseController extends Controller
         }
 
         $this->sealCycleIfSettled($group, $groupId, $cycle['start'], $cycle['end']);
+
+        // Só na 1ª confirmação desse par no ciclo — reenviar o comprovante
+        // (`updateOrCreate` que atualiza) não gera notificação nova.
+        if ($confirmation->wasRecentlyCreated) {
+            Notifier::settlementConfirmed(
+                $group,
+                (int) $data['to_user_id'],
+                auth()->user()->name,
+                $settlement['amount'],
+                $cycle['start'],
+            );
+        }
 
         // Devedor confirmou o acerto com comprovante → avisa o credor por
         // WhatsApp, depois da resposta. No-op se a feature está desligada.
@@ -1257,6 +1292,10 @@ class ExpenseController extends Controller
             return false;
         }
 
+        $wasSealed = GroupCycleSnapshot::where('group_id', $groupId)
+            ->where('cycle_start', $start->toDateString())
+            ->first()?->isSealed() ?? false;
+
         GroupCycleSnapshot::updateOrCreate(
             ['group_id' => $groupId, 'cycle_start' => $start->toDateString()],
             [
@@ -1268,6 +1307,13 @@ class ExpenseController extends Controller
                 'settled_at' => Carbon::now(),
             ]
         );
+
+        // Só na transição não-selado → selado: chamadas repetidas de
+        // `sealCycleIfSettled` num ciclo já selado (inclusive as preguiçosas
+        // de `summary()`) não geram notificação nova.
+        if (! $wasSealed) {
+            Notifier::cycleSettled($group, $start);
+        }
 
         return true;
     }

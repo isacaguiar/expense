@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Avatar from '@mui/material/Avatar';
+import Badge from '@mui/material/Badge';
 import IconButton from '@mui/material/IconButton';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -10,6 +11,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNoneOutlined';
 import { brandColors } from '../../theme/brandColors';
 import { getInitials } from './getInitials';
+import NotificationsMenu from '../../components/NotificationsMenu';
 
 type GroupOption = {
   id: number;
@@ -22,10 +24,27 @@ interface GroupHeaderProps {
   groupId: string;
   onGroupChange: (event: SelectChangeEvent<number>) => void;
   userName: string | null;
+  /** Foto de perfil do usuário logado; cai nas iniciais quando ausente. */
+  avatarUrl?: string | null;
   onMenuClick: () => void;
+  /** Notificações não-lidas do usuário logado (badge do sino). */
+  unreadCount?: number;
+  /** Chamado após o menu marcar algo como lido, para recarregar o contador. */
+  onNotificationsRead?: () => void;
 }
 
-export default function GroupHeader({ title, groups, groupId, onGroupChange, userName, onMenuClick }: GroupHeaderProps) {
+export default function GroupHeader({
+  title,
+  groups,
+  groupId,
+  onGroupChange,
+  userName,
+  avatarUrl = null,
+  onMenuClick,
+  unreadCount = 0,
+  onNotificationsRead = () => {},
+}: GroupHeaderProps) {
+  const [notifAnchor, setNotifAnchor] = useState<null | HTMLElement>(null);
   return (
     <Box
       component="header"
@@ -77,13 +96,27 @@ export default function GroupHeader({ title, groups, groupId, onGroupChange, use
           </Select>
         )}
 
-        <IconButton aria-label="Notificações" size="small">
-          <NotificationsNoneOutlinedIcon />
+        <IconButton
+          aria-label="Notificações"
+          size="small"
+          onClick={(event) => setNotifAnchor(event.currentTarget)}
+        >
+          <Badge badgeContent={unreadCount} color="error" max={99}>
+            <NotificationsNoneOutlinedIcon />
+          </Badge>
         </IconButton>
+
+        <NotificationsMenu
+          anchorEl={notifAnchor}
+          open={Boolean(notifAnchor)}
+          onClose={() => setNotifAnchor(null)}
+          onRead={onNotificationsRead}
+        />
 
         {userName && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Avatar
+              src={avatarUrl ?? undefined}
               sx={{
                 width: 32,
                 height: 32,
