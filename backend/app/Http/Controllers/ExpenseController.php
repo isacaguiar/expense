@@ -437,6 +437,7 @@ class ExpenseController extends Controller
                     'paid' => $bornPaid,
                     'paid_at' => $bornPaid ? now() : null,
                     'paid_by' => $bornPaid ? $request->user_payer_id : null,
+                    'born_paid' => $bornPaid,
                     'value_quota' => $quotaData['value_quota'],
                 ]);
             }
@@ -1126,6 +1127,7 @@ class ExpenseController extends Controller
                     'value' => $entry['value'],
                     'valuePerPerson' => round($entry['value'] / $participantsCount, 2),
                     'paid' => $entry['paid'],
+                    'bornPaid' => $entry['bornPaid'],
                     'paymentProofUrl' => $entry['paymentProofUrl'],
                     'payerName' => $entry['expense']->payer->name ?? null,
                     'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
@@ -1162,6 +1164,17 @@ class ExpenseController extends Controller
         $owed = [];
 
         foreach ($entries as $entry) {
+            // Parcela retroativa nascida quitada (born_paid, ver
+            // ExpenseController::store()) é registro histórico, não dívida — não
+            // entra em balances/settlements. NÃO filtrar por $entry['paid']: uma
+            // quota que o credor pagou depois via pay() continua gerando
+            // settlement até o devedor confirmar (feature
+            // 20260902-pagamento-ciclo-fechado). Ver
+            // docs/feature/20260904-parcela-retroativa-contabilizacao/specify.md §2.1.
+            if ($entry['bornPaid']) {
+                continue;
+            }
+
             $expense = $entry['expense'];
             $participants = $expense->payers;
             $participantsCount = max($participants->count(), 1);
@@ -1317,11 +1330,17 @@ class ExpenseController extends Controller
 
         $summary = $this->computeCycleSummary($group, $groupId, $start, $end);
 
-        // Ciclo sem nenhuma despesa nem acerto não vira "histórico selado": não
-        // há foto a congelar e um `settled_at` aqui só travaria o `reopen()` à
-        // toa. `cycleIsFullySettled` ainda devolve `true` (nada pendente) para
-        // o `focus-cycle` pular esse ciclo.
-        if (empty($summary['expenses']) && empty($summary['settlements'])) {
+        // Ciclo sem despesa REAL nem acerto não vira "histórico selado": não há
+        // foto a congelar e um `settled_at` aqui só travaria o `reopen()` à toa.
+        // "Real" exclui entry `bornPaid` (parcela retroativa nascida quitada,
+        // specify.md §2.3 de 20260904-parcela-retroativa-contabilizacao) — ela
+        // fica em `expenses` como linha "Paga" (histórico), mas sozinha não é
+        // motivo pra selar o mês nem disparar Notifier::cycleSettled.
+        // `cycleIsFullySettled` já devolve `true` pra esse caso (nada pendente),
+        // então o `focus-cycle` pula o ciclo mesmo sem selar.
+        $hasRealExpense = collect($summary['expenses'])->contains(fn ($expense) => empty($expense['bornPaid']));
+
+        if (! $hasRealExpense && empty($summary['settlements'])) {
             return false;
         }
 
@@ -1375,7 +1394,7 @@ class ExpenseController extends Controller
      * regra de corte de recorrência de indexByGroup, adaptada de mês único para
      * intervalo de datas, que pode atravessar dois meses calendário).
      *
-     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool, paymentProofUrl: ?string}>
+     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool, bornPaid: bool, paymentProofUrl: ?string}>
      */
     private function collectCycleEntries($groupId, Carbon $start, Carbon $end)
     {
@@ -1402,6 +1421,7 @@ class ExpenseController extends Controller
                 'date' => $expense->date_payment->copy(),
                 'value' => (float) ($quota->value_quota ?? $expense->total_value),
                 'paid' => (bool) ($quota->paid ?? false),
+                'bornPaid' => (bool) ($quota->born_paid ?? false),
                 'paymentProofUrl' => $quota->payment_proof_url ?? null,
             ]);
         }
@@ -1424,6 +1444,7 @@ class ExpenseController extends Controller
                 'date' => $quota->date_expected->copy(),
                 'value' => (float) $quota->value_quota,
                 'paid' => (bool) $quota->paid,
+                'bornPaid' => (bool) $quota->born_paid,
                 'paymentProofUrl' => $quota->payment_proof_url,
             ]);
         }
@@ -1461,6 +1482,9 @@ class ExpenseController extends Controller
                         'date' => $occurrence,
                         'value' => (float) ($quota->value_quota ?? $expense->total_value),
                         'paid' => (bool) ($quota->paid ?? false),
+                        // FIXED nunca nasce born_paid (store()/materializeFixedOccurrenceQuota
+                        // não gravam o flag) — sempre false aqui.
+                        'bornPaid' => (bool) ($quota->born_paid ?? false),
                         'paymentProofUrl' => $quota->payment_proof_url ?? null,
                     ]);
                 }

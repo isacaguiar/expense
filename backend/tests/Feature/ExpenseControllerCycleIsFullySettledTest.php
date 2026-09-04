@@ -121,6 +121,26 @@ class ExpenseControllerCycleIsFullySettledTest extends TestCase
         $this->assertTrue($this->isFullySettled($group));
     }
 
+    /**
+     * TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/: uma
+     * parcela born_paid (nasceu quitada em ciclo já fechado) não gera settlement
+     * — não precisa de SettlementConfirmation pra o ciclo ficar "quitado".
+     * Contraste com test_false_when_a_settlement_pair_has_no_confirmation, que
+     * usa a mesma paidExpenseBetween() sem born_paid e espera `false`.
+     */
+    public function test_true_when_only_born_paid_entries_no_confirmation_needed(): void
+    {
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $expense = $this->paidExpenseBetween($group, $creditor, $debtor, 200);
+        $expense->quotas()->update(['born_paid' => true]);
+
+        $this->assertTrue($this->isFullySettled($group));
+    }
+
     public function test_true_for_a_cycle_with_no_entries(): void
     {
         $group = Group::create(['name' => 'Grupo']);

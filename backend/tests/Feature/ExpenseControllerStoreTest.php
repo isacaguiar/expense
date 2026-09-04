@@ -279,7 +279,7 @@ class ExpenseControllerStoreTest extends TestCase
 
         $response->assertStatus(201);
         $expenseId = $response->json('expense_id');
-        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expenseId, 'paid' => false]);
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expenseId, 'paid' => false, 'born_paid' => false]);
         $this->assertDatabaseMissing('ex_quotas', ['expense_id' => $expenseId, 'paid' => true]);
     }
 
@@ -452,7 +452,9 @@ class ExpenseControllerStoreTest extends TestCase
         $response->assertStatus(201);
         $expenseId = $response->json('expense_id');
 
-        // jun/jul/ago (ciclos fechados) → quitadas pelo credor.
+        // jun/jul/ago (ciclos fechados) → quitadas pelo credor, marcadas born_paid
+        // (TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/):
+        // é esse flag, não `paid`, que tira a parcela do acerto em computeCycleSummary().
         $paid = \App\Models\Quota::where('expense_id', $expenseId)->where('paid', true)->get();
         $this->assertCount(3, $paid);
         $this->assertEqualsCanonicalizing(
@@ -462,9 +464,10 @@ class ExpenseControllerStoreTest extends TestCase
         foreach ($paid as $quota) {
             $this->assertSame($member->id, $quota->paid_by);
             $this->assertNotNull($quota->paid_at);
+            $this->assertTrue($quota->born_paid);
         }
 
-        // set (menor ciclo aberto) + out/nov (futuros) → pendentes.
+        // set (menor ciclo aberto) + out/nov (futuros) → pendentes, born_paid=false.
         $pending = \App\Models\Quota::where('expense_id', $expenseId)->where('paid', false)->get();
         $this->assertCount(3, $pending);
         $this->assertEqualsCanonicalizing(
@@ -474,7 +477,51 @@ class ExpenseControllerStoreTest extends TestCase
         foreach ($pending as $quota) {
             $this->assertNull($quota->paid_by);
             $this->assertNull($quota->paid_at);
+            $this->assertFalse($quota->born_paid);
         }
+    }
+
+    public function test_installments_expense_shared_with_a_debtor_marks_past_quotas_born_paid(): void
+    {
+        // Mesmo cenário da despesa retroativa acima, mas com um devedor além do
+        // credor — é essa combinação (participantsCount > 1) que expõe o bug de
+        // computeCycleSummary() gerar settlement fantasma para parcela já paga
+        // (docs/feature/20260904-parcela-retroativa-contabilizacao/specify.md §1).
+        Carbon::setTestNow('2026-09-20');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->postJson('/api/expenses', $this->payloadFor($group, $creditor, [
+                'date_payment' => '2026-06-05',
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 6,
+                'total_value' => 600,
+                'payers' => [$creditor->id, $debtor->id],
+                'quotas' => [
+                    ['date_expected' => '2026-06-05', 'number' => 1, 'value_quota' => 100],
+                    ['date_expected' => '2026-07-05', 'number' => 2, 'value_quota' => 100],
+                    ['date_expected' => '2026-08-05', 'number' => 3, 'value_quota' => 100],
+                    ['date_expected' => '2026-09-05', 'number' => 4, 'value_quota' => 100],
+                    ['date_expected' => '2026-10-05', 'number' => 5, 'value_quota' => 100],
+                    ['date_expected' => '2026-11-05', 'number' => 6, 'value_quota' => 100],
+                ],
+            ]));
+
+        $response->assertStatus(201);
+        $expenseId = $response->json('expense_id');
+
+        $this->assertSame(
+            3,
+            \App\Models\Quota::where('expense_id', $expenseId)->where('born_paid', true)->count()
+        );
+        $this->assertSame(
+            3,
+            \App\Models\Quota::where('expense_id', $expenseId)->where('born_paid', false)->count()
+        );
     }
 
     public function test_installments_expense_entirely_in_closed_cycles_is_rejected(): void
