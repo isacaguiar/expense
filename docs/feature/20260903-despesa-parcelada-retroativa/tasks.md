@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20260903
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-001 | Aceitar Parcelada retroativa em `store()`, com parcelas de ciclo fechado quitadas + testes PHPUnit | backend | plan.md §0, §1, §2, §3, §4 | antes do merge | Pendente |
+| TASK-001 | Aceitar Parcelada retroativa em `store()`, com parcelas de ciclo fechado quitadas + testes PHPUnit | backend | plan.md §0, §1, §2, §3, §4 | antes do merge | Concluída |
 
 Task única: o ramo de guarda por `expense_type` (§1) e o `paid` inicial por
 parcela (§2) são o mesmo método (`ExpenseController::store()`), o mesmo diff — não
