@@ -18,19 +18,24 @@ despesa. Hoje, marcar quota como paga só acontece em `pay()`, que exige
 credor não é `auth()->id()` e não consente.
 
 Duas lacunas de defesa em profundidade que o `security-reviewer` pediu para
-registrar (não bloqueiam o PR #144 — são decisão explícita do `specify.md`):
+registrar (não bloqueavam o PR #144 — eram decisão explícita do `specify.md`):
 
 1. **Credor não é avisado.** `specify.md` §2.5 suprime `Notifier::expensePaid` de
    propósito. Se o credor não estiver entre `payers`, ele não recebe **nenhuma**
    notificação (`Notifier::expenseCreated` só faz fan-out para `payers` menos o
    criador, [Notifier.php:42-44](../../backend/app/Support/Notifier.php#L42)) —
    pode existir despesa com ele como `user_payer_id` e parcelas passadas
-   `paid_by = <ele>` sem aviso nenhum.
-2. **Ciclo `closed` não selado.** `computeCycleSummary()` não filtra por `paid` ao
-   montar `balances`/`settlements`
-   ([:1164-1186](../../backend/app/Http/Controllers/ExpenseController.php#L1164)) —
-   a parcela retroativa injeta um par de `settlement` novo (não confirmado) num
-   mês passado já reconciliado.
+   `paid_by = <ele>` sem aviso nenhum. **Continua aberto.**
+2. ~~**Ciclo `closed` não selado.** `computeCycleSummary()` não filtra por `paid` ao
+   montar `balances`/`settlements` — a parcela retroativa injeta um par de
+   `settlement` novo (não confirmado) num mês passado já reconciliado.~~
+   **Resolvido** por `docs/feature/20260904-parcela-retroativa-contabilizacao/`
+   (TASK-001): a parcela nascida quitada passou a gravar `ex_quotas.born_paid`, e
+   `computeCycleSummary()` (`ExpenseController.php:1164-1186`) exclui entry
+   `bornPaid` de `balances`/`settlements` — a distinção é `born_paid`, nunca
+   `paid`, então uma quota paga de verdade via `pay()` em ciclo fechado continua
+   gerando `settlement` normalmente (feature `20260902-pagamento-ciclo-fechado`
+   intacta).
 
 ## Por que importa
 

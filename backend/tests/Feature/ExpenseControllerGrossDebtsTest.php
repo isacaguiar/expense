@@ -131,6 +131,50 @@ class ExpenseControllerGrossDebtsTest extends TestCase
         $this->assertSame(30, $debtors[$debtor->id]['amount']);
     }
 
+    /**
+     * TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/:
+     * antes do filtro por born_paid em computeCycleSummary(), gross-debts()
+     * (que já filtra `paid`) e settlements de summary() discordavam pra uma
+     * parcela retroativa quitada no mesmo ciclo — aqui as duas telas devem
+     * bater, ambas vazias.
+     */
+    public function test_retroactive_paid_installment_absent_and_matches_settlements(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $expense = $this->createExpense($group, $creditor, [
+            'date_payment' => '2026-06-10',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 1,
+            'total_value' => 200,
+        ]);
+        $expense->payers()->sync([$creditor->id, $debtor->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-06-10',
+            'number' => 1,
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'born_paid' => true,
+            'value_quota' => 200,
+        ]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/gross-debts?cycles_ago=3")
+            ->assertStatus(200)
+            ->assertJsonPath('creditors', []);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=3")
+            ->assertStatus(200)
+            ->assertJsonPath('settlements', []);
+    }
+
     public function test_non_member_cannot_view_gross_debts(): void
     {
         $outsider = User::factory()->create();

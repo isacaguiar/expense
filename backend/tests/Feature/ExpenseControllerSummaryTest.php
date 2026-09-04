@@ -565,6 +565,136 @@ class ExpenseControllerSummaryTest extends TestCase
         $this->assertEquals($settlementsBefore, $after->json('settlements'));
     }
 
+    /**
+     * TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/: uma
+     * parcela nascida quitada (born_paid, ver ExpenseController::store()) fica
+     * visível como linha "Paga" no ciclo passado, mas não entra em
+     * balances/settlements — nem o credor espera receber, nem o devedor deve.
+     */
+    public function test_born_paid_installment_is_paid_line_without_settlement_in_past_closed_cycle(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $expense = $this->createExpense($group, $creditor, [
+            'date_payment' => '2026-06-10',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 1,
+            'total_value' => 200,
+        ]);
+        $expense->payers()->sync([$creditor->id, $debtor->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-06-10',
+            'number' => 1,
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'born_paid' => true,
+            'value_quota' => 200,
+        ]);
+
+        // cycles_ago=3 a partir de set/2026 = jun/2026, closed e não selado.
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=3");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'closed')
+            ->assertJsonPath('cycle.settled', false)
+            ->assertJsonPath('totals.pending', 0)
+            ->assertJsonPath('totals.paid', 200)
+            ->assertJsonPath('settlements', [])
+            ->assertJsonFragment(['id' => $expense->id, 'paid' => true, 'value' => 200]);
+
+        foreach ($response->json('balances') as $balance) {
+            $this->assertEquals(0, $balance['balance'], "user_id {$balance['user_id']}");
+        }
+    }
+
+    /**
+     * Regressão da feature 20260902-pagamento-ciclo-fechado: uma quota que o
+     * credor pagou de verdade (via pay(), born_paid continua false) numa
+     * competência já fechada CONTINUA gerando settlement até o devedor
+     * confirmar — só a parcela retroativa (born_paid=true) fica de fora.
+     */
+    public function test_closed_cycle_expense_paid_via_pay_still_generates_settlement(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-07-10', 'total_value' => 200]);
+        $expense->payers()->sync([$creditor->id, $debtor->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-07-10',
+            'number' => 1,
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'value_quota' => 200,
+        ]);
+
+        // cycles_ago=2 a partir de set/2026 = jul/2026, closed.
+        $response = $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=2");
+
+        $response->assertStatus(200)
+            ->assertJsonPath('cycle.status', 'closed')
+            ->assertJsonFragment(['from_user_id' => $debtor->id, 'to_user_id' => $creditor->id, 'amount' => 100]);
+    }
+
+    /**
+     * Um ciclo passado cujo único conteúdo é parcela born_paid não tem acerto
+     * real a congelar — sealCycleIfSettled() não deve selar nem disparar
+     * Notifier::cycleSettled (guard de "sem despesa real" em computeCycleSummary).
+     */
+    public function test_retroactive_only_cycle_does_not_auto_seal_or_notify(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $expense = $this->createExpense($group, $creditor, [
+            'date_payment' => '2026-06-10',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 1,
+            'total_value' => 200,
+        ]);
+        $expense->payers()->sync([$creditor->id, $debtor->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-06-10',
+            'number' => 1,
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'born_paid' => true,
+            'value_quota' => 200,
+        ]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=3")
+            ->assertStatus(200)
+            ->assertJsonPath('cycle.settled', false);
+
+        $this->assertDatabaseMissing('ex_group_cycle_snapshots', [
+            'group_id' => $group->id,
+            'cycle_start' => '2026-06-01',
+        ]);
+        $this->assertDatabaseMissing('ex_notifications', [
+            'group_id' => $group->id,
+            'type' => 'cycle_settled',
+        ]);
+    }
+
     public function test_expenses_list_puts_unpaid_before_paid_then_chronological(): void
     {
         // TASK-249: o que falta pagar fica no topo.
