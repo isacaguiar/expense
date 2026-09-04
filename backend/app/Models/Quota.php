@@ -18,6 +18,7 @@ class Quota extends Model
         'paid',
         'paid_at',
         'paid_by',
+        'born_paid',
         'payment_proof_path',
         'value_quota',
         'expense_id',
@@ -27,6 +28,7 @@ class Quota extends Model
         'date_expected' => 'date',
         'paid' => 'boolean',
         'paid_at' => 'datetime',
+        'born_paid' => 'boolean',
         'value_quota' => 'decimal:2',
     ];
 

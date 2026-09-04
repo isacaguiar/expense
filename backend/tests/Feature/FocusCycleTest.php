@@ -171,6 +171,50 @@ class FocusCycleTest extends TestCase
             ->assertJsonPath('cycles_ago', 0);
     }
 
+    /**
+     * TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/: sem
+     * o filtro por born_paid em computeCycleSummary(), uma parcela retroativa
+     * compartilhada gerava um settlement fantasma em junho (closed, não selado)
+     * e o focus-cycle ficava preso lá — mesmo a parcela sendo `paid = true`.
+     */
+    public function test_retroactive_shared_installment_does_not_drag_home_back(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => '2026-06-10',
+            'description' => 'Despesa de teste',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 1,
+            'total_value' => 200,
+            'group_id' => $group->id,
+            'user_creator_id' => $creditor->id,
+            'user_payer_id' => $creditor->id,
+            'deleted' => false,
+        ]);
+        $expense->payers()->sync([$creditor->id, $debtor->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-06-10',
+            'number' => 1,
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'born_paid' => true,
+            'value_quota' => 200,
+        ]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/focus-cycle")
+            ->assertStatus(200)
+            ->assertJsonPath('cycles_ago', 0);
+    }
+
     public function test_non_member_cannot_query_focus_cycle(): void
     {
         $outsider = User::factory()->create();
