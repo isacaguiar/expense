@@ -87,3 +87,9 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-09-03 | `cd frontend && npx vitest run src/pages/ExpenseForm.test.tsx` | 9 passed (1 arquivo) — inclui os 3 casos novos (erro do backend, validação client, fallback genérico), todos com `window.alert` **não** chamado |
 | 2026-09-03 | `cd frontend && npx vitest run` (suíte completa) | 36 arquivos, 232 passed — sem regressão |
 | 2026-09-03 | Browser (`/app/groups/1/expenses/new` no dev server em :3000) | rota protegida por auth → redireciona pro Login sem token; caminho vivo não exercitado (exige backend + credenciais). Comportamento coberto pelos testes de componente, que renderizam o `<Alert>` MUI real. |
+
+## Resolução
+
+Concluído em: 2026-09-03
+Branch: fix/20260903-expense-form-feedback-erro
+PR: https://github.com/isacaguiar/expense/pull/143
