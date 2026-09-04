@@ -40,7 +40,7 @@ const formatDate = (dateStr: string): string => {
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-type GroupMemberPix = { id: number; name: string; email: string; pix: string | null };
+type GroupMemberPix = { id: number; name: string; email: string; pix: string | null; avatar_url: string | null };
 
 const Payments: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();

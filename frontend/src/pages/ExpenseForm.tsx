@@ -24,6 +24,7 @@ type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
 type GroupMember = {
   id: number;
   name: string;
+  avatar_url: string | null;
 };
 
 type Quota = InstallmentQuota;
