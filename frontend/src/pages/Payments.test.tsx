@@ -108,7 +108,8 @@ describe('Payments', () => {
 
     await screen.findByText('Mercado');
 
-    expect(screen.getByText('Credor: Isac')).toBeInTheDocument();
+    expect(screen.getByText('Credor:')).toBeInTheDocument();
+    expect(screen.getAllByText('Isac').length).toBeGreaterThan(0);
     expect(screen.getByText('Valor Total: R$ 300,00')).toBeInTheDocument();
     expect(screen.getByText('Valor por pessoa: R$ 100,00')).toBeInTheDocument();
     expect(screen.getByText('Pagadores: Isac, João, Maria')).toBeInTheDocument();

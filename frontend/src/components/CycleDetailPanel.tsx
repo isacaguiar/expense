@@ -4,6 +4,7 @@ import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { cycleStatusChip, Summary } from '../hooks/useGroupCycle';
 import SummarySidePanel from './SummarySidePanel';
+import UserAvatar from './UserAvatar';
 
 // new Date('YYYY-MM-DD') interpreta a string como UTC-meia-noite, o que desloca
 // a data em 1 dia para trás em fusos negativos (ex.: America/Sao_Paulo) —
@@ -101,7 +102,7 @@ const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary }) => (
           <Paper elevation={3} sx={{ mb: 3 }}>
             <List disablePadding>
               {summary.expenses.map(expense => (
-                <ListItem key={expense.id} divider>
+                <ListItem key={expense.id} divider sx={{ gap: 1 }}>
                   <ListItemIcon sx={{ minWidth: 40 }}>
                     {expense.isFixed ? (
                       <AutorenewOutlinedIcon color="action" fontSize="small" />
@@ -115,6 +116,11 @@ const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary }) => (
                       `${formatDate(expense.date)} · Pago por ${expense.payerName ?? '-'} · ` +
                       `Dividido entre ${expense.participants.length} pessoa${expense.participants.length === 1 ? '' : 's'}`
                     }
+                  />
+                  <UserAvatar
+                    name={expense.payerName ?? '-'}
+                    avatarUrl={expense.payerAvatarUrl}
+                    sx={{ width: 28, height: 28, fontSize: '0.75rem' }}
                   />
                   <Chip
                     label={expense.paid ? 'Paga' : 'Pendente'}
