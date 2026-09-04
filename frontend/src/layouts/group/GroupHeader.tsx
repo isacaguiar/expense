@@ -2,6 +2,7 @@ import React from 'react';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import Avatar from '@mui/material/Avatar';
+import Badge from '@mui/material/Badge';
 import IconButton from '@mui/material/IconButton';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
@@ -23,9 +24,19 @@ interface GroupHeaderProps {
   onGroupChange: (event: SelectChangeEvent<number>) => void;
   userName: string | null;
   onMenuClick: () => void;
+  /** Notificações não-lidas do usuário logado (badge do sino). */
+  unreadCount?: number;
 }
 
-export default function GroupHeader({ title, groups, groupId, onGroupChange, userName, onMenuClick }: GroupHeaderProps) {
+export default function GroupHeader({
+  title,
+  groups,
+  groupId,
+  onGroupChange,
+  userName,
+  onMenuClick,
+  unreadCount = 0,
+}: GroupHeaderProps) {
   return (
     <Box
       component="header"
@@ -78,7 +89,9 @@ export default function GroupHeader({ title, groups, groupId, onGroupChange, use
         )}
 
         <IconButton aria-label="Notificações" size="small">
-          <NotificationsNoneOutlinedIcon />
+          <Badge badgeContent={unreadCount} color="error" max={99}>
+            <NotificationsNoneOutlinedIcon />
+          </Badge>
         </IconButton>
 
         {userName && (

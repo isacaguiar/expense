@@ -8,6 +8,7 @@ import { API_BASE_URL } from '../config';
 import GroupSidebar, { groupNavItems } from './group/GroupSidebar';
 import GroupHeader from './group/GroupHeader';
 import MobileNavDrawer from './MobileNavDrawer';
+import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
 
 type GroupOption = {
   id: number;
@@ -22,6 +23,7 @@ export default function GroupShellLayout() {
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [userName, setUserName] = useState<string | null>(null);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const { count: unreadCount } = useUnreadNotificationsCount();
 
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
@@ -67,6 +69,7 @@ export default function GroupShellLayout() {
           onGroupChange={handleGroupChange}
           userName={userName}
           onMenuClick={() => setMobileNavOpen(true)}
+          unreadCount={unreadCount}
         />
         <Outlet />
       </Container>
