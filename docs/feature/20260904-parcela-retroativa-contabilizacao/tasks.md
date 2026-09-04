@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20260904
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-001 | Excluir parcela retroativa nascida quitada (`born_paid`) do acerto em `computeCycleSummary`, com marcador em `ex_quotas` e testes | backend | plan.md §0, §1, §2, §4 | antes do merge | Concluída |
-| TASK-002 | Script SQL + runbook para ajustar os dados já afetados do grupo 3878 em produção | infra | plan.md §3 | antes do deploy/execução em produção | Pendente |
+| TASK-002 | Script SQL + runbook para ajustar os dados já afetados do grupo 3878 em produção | infra | plan.md §3 | antes do deploy/execução em produção | Concluída |
 
 TASK-001 é um diff único e coeso: a coluna `born_paid`, quem a escreve (`store()`), quem a propaga (`collectCycleEntries`) e quem a consome (`computeCycleSummary`/`sealCycleIfSettled`) são o mesmo mecanismo — não são entregas separáveis. Os testes (Constitution §2.2) entram no mesmo diff. TASK-002 depende de a TASK-001 estar **em produção** (a coluna e o filtro precisam existir antes do `UPDATE`, senão o Bug 2 não se resolve e a desselagem de julho dispara notificação espúria).
 
