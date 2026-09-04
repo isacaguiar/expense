@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
-  Avatar,
   Box,
   Button,
   Card,
@@ -52,9 +51,9 @@ import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import SummarySidePanel from '../components/SummarySidePanel';
 import CycleClosingAlert from '../components/CycleClosingAlert';
-import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
+import UserAvatar from '../components/UserAvatar';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -392,11 +391,11 @@ const ExpenseManager: React.FC = () => {
               <Typography variant="body2" color="text.secondary">
                 Credor:
               </Typography>
-              <Avatar
-                sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, width: 24, height: 24, fontSize: '0.7rem' }}
-              >
-                {getInitials(exp.payerName || '-')}
-              </Avatar>
+              <UserAvatar
+                name={exp.payerName || '-'}
+                avatarUrl={exp.payerAvatarUrl}
+                sx={{ width: 24, height: 24, fontSize: '0.7rem' }}
+              />
               <Typography variant="body2" color="text.secondary">
                 {exp.payerName || '-'}
               </Typography>
@@ -582,17 +581,11 @@ const ExpenseManager: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <Box display="flex" alignItems="center" gap={1}>
-                            <Avatar
-                              sx={{
-                                bgcolor: brandColors.primaryLight,
-                                color: brandColors.primary,
-                                width: 28,
-                                height: 28,
-                                fontSize: '0.75rem'
-                              }}
-                            >
-                              {getInitials(exp.payerName || '-')}
-                            </Avatar>
+                            <UserAvatar
+                              name={exp.payerName || '-'}
+                              avatarUrl={exp.payerAvatarUrl}
+                              sx={{ width: 28, height: 28, fontSize: '0.75rem' }}
+                            />
                             {exp.payerName || '-'}
                           </Box>
                         </TableCell>
@@ -663,17 +656,11 @@ const ExpenseManager: React.FC = () => {
               </Typography>
 
               <Box display="flex" alignItems="center" gap={1}>
-                <Avatar
-                  sx={{
-                    bgcolor: brandColors.primaryLight,
-                    color: brandColors.primary,
-                    width: 32,
-                    height: 32,
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  {getInitials(detailExpense.payerName || '-')}
-                </Avatar>
+                <UserAvatar
+                  name={detailExpense.payerName || '-'}
+                  avatarUrl={detailExpense.payerAvatarUrl}
+                  sx={{ width: 32, height: 32, fontSize: '0.8rem' }}
+                />
                 <Typography variant="body2">Credor: {detailExpense.payerName || '-'}</Typography>
               </Box>
 

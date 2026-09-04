@@ -30,6 +30,7 @@ import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } fro
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import PayableSettlementList from '../components/PayableSettlementList';
 import PixPaymentDialog from '../components/PixPaymentDialog';
+import UserAvatar from '../components/UserAvatar';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 
 const formatDate = (dateStr: string): string => {
@@ -238,9 +239,19 @@ const Payments: React.FC = () => {
                           />
                         </Box>
 
-                        <Typography variant="body2" color="text.secondary">
-                          Credor: {exp.payerName ?? '-'}
-                        </Typography>
+                        <Box display="flex" alignItems="center" gap={1} sx={{ my: 0.5 }}>
+                          <Typography variant="body2" color="text.secondary">
+                            Credor:
+                          </Typography>
+                          <UserAvatar
+                            name={exp.payerName ?? '-'}
+                            avatarUrl={exp.payerAvatarUrl}
+                            sx={{ width: 24, height: 24, fontSize: '0.7rem' }}
+                          />
+                          <Typography variant="body2" color="text.secondary">
+                            {exp.payerName ?? '-'}
+                          </Typography>
+                        </Box>
                         <Typography variant="body2" color="text.secondary">
                           Valor Total: R$ {formatMoney(exp.value)}
                         </Typography>
