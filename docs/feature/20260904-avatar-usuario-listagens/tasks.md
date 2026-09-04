@@ -9,7 +9,7 @@ Versão: 1.0 · Criado em: 20260904
 | TASK-001 | Expor `payerAvatarUrl`/`participantDetails`/`balances[].avatarUrl` em `computeCycleSummary`, com testes | backend | plan.md §1 | antes do merge | Concluída |
 | TASK-002 | Criar componente `UserAvatar` (imagem + fallback iniciais + tooltip) e atualizar tipos do frontend (`SummaryExpense`, `SummaryBalance`, `GroupMember`, `GroupMemberPix`) | frontend | plan.md §2 | antes do merge | Concluída |
 | TASK-003 | Aplicar `UserAvatar` na listagem de despesas / credor (`ExpenseManager.tsx`, `Payments.tsx`, `CycleDetailPanel.tsx`) | frontend | plan.md §3 | antes do merge | Concluída |
-| TASK-004 | Aplicar `UserAvatar` nas abas Saldo e À pagar (`BalanceCards.tsx`, `SettlementList.tsx`, `PayableSettlementList.tsx`) | frontend | plan.md §4 | antes do merge | Pendente |
+| TASK-004 | Aplicar `UserAvatar` nas abas Saldo e À pagar (`BalanceCards.tsx`, `SettlementList.tsx`, `PayableSettlementList.tsx`) | frontend | plan.md §4 | antes do merge | Concluída |
 | TASK-005 | Aplicar `UserAvatar` no diálogo Pix de Pagamentos e no formulário de Entrada (`ExpenseForm.tsx`, `ExpenseView.tsx`) | frontend | plan.md §5 | antes do merge | Pendente |
 
 TASK-001 e TASK-002 não dependem uma da outra. TASK-003 e TASK-004 dependem de TASK-001 **e** TASK-002 (precisam do campo novo do backend e do componente/tipo novos). TASK-005 depende só de TASK-002 (o dado de avatar da Entrada já vem hoje de `/members`, sem mudança de backend — ver `plan.md` §5).

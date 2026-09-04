@@ -1,11 +1,10 @@
 import React from 'react';
-import { Avatar, Box, Button, Card, Chip, Stack, Typography } from '@mui/material';
+import { Box, Button, Card, Chip, Stack, Typography } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import { getInitials } from '../layouts/group/getInitials';
-import { brandColors } from '../theme/brandColors';
+import UserAvatar from './UserAvatar';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 
 const formatMoney = (value: number): string =>
@@ -46,6 +45,8 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
 }) => {
   const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
   const nameFor = (userId: number): string => nameById.get(userId) ?? 'Desconhecido';
+  const avatarById = new Map(balances.map(balance => [balance.user_id, balance.avatarUrl]));
+  const avatarFor = (userId: number): string | null | undefined => avatarById.get(userId);
 
   if (settlements.length === 0) {
     return (
@@ -64,9 +65,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
         return (
           <Card key={`${settlement.from_user_id}-${settlement.to_user_id}-${index}`} variant="outlined" sx={{ p: 2 }}>
             <Box display="flex" alignItems="center" gap={1.5}>
-              <Avatar sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.85rem' }}>
-                {getInitials(nameFor(settlement.from_user_id))}
-              </Avatar>
+              <UserAvatar name={nameFor(settlement.from_user_id)} avatarUrl={avatarFor(settlement.from_user_id)} />
 
               <Box flexGrow={1} minWidth={0}>
                 <Typography variant="body2">
@@ -80,9 +79,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
 
               <ArrowForwardIcon color="action" fontSize="small" sx={{ flexShrink: 0 }} />
 
-              <Avatar sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.85rem' }}>
-                {getInitials(nameFor(settlement.to_user_id))}
-              </Avatar>
+              <UserAvatar name={nameFor(settlement.to_user_id)} avatarUrl={avatarFor(settlement.to_user_id)} />
             </Box>
 
             <Box display="flex" alignItems="center" justifyContent="flex-end" flexWrap="wrap" gap={1} mt={1.5}>
