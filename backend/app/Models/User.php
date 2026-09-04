@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\URL;
 use Laravel\Sanctum\HasApiTokens;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
@@ -37,6 +38,7 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'remember_token',
         'google_id',
+        'photo_path',
     ];
 
     /**
@@ -53,6 +55,22 @@ class User extends Authenticatable implements JWTSubject
     protected $attributes = [
         'role' => 'user',
     ];
+
+    /**
+     * URL da foto de perfil, resolvida por precedência: foto enviada pelo
+     * próprio usuário (`photo_path`, servida pela rota assinada `user.photo` —
+     * ADR-005) > foto vinda do login Google (coluna `avatar_url`) > `null`.
+     * Como sobrescreve a leitura da coluna `avatar_url`, `GET /api/me` já
+     * devolve o valor resolvido sem o frontend precisar mudar.
+     */
+    public function getAvatarUrlAttribute(?string $value): ?string
+    {
+        if ($this->photo_path) {
+            return URL::temporarySignedRoute('user.photo', now()->addMinutes(30), ['userId' => $this->id]);
+        }
+
+        return $value;
+    }
 
     public function getJWTIdentifier()
     {

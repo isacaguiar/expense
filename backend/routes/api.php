@@ -11,6 +11,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PixController;
 use App\Http\Controllers\ProofDownloadController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\UserPhotoController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/register', [AuthController::class, 'register']);
@@ -26,6 +27,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
     Route::put('/user/profile', [UserController::class, 'updateProfile']);
     Route::put('/user/password', [UserController::class, 'changePassword']);
+    Route::post('/user/photo', [UserController::class, 'uploadPhoto']);
+    Route::delete('/user/photo', [UserController::class, 'deletePhoto']);
     Route::get('/user/google/redirect-url', [GoogleAuthController::class, 'redirectUrl']);
     Route::get('/pix/generate', [PixController::class, 'gerarPix']);
 
@@ -68,3 +71,10 @@ Route::middleware('jwt.auth')->group(function () {
 Route::get('/groups/{groupId}/proofs/{type}/{id}', [ProofDownloadController::class, 'show'])
     ->middleware('signed')
     ->name('proofs.show');
+
+// Foto de perfil do usuário: mesma justificativa do ADR-005 — a tag `<img>` não
+// manda `Authorization: Bearer`. Autorizada pela URL assinada de curta duração
+// emitida no accessor `User::avatar_url`.
+Route::get('/user/{userId}/photo', [UserPhotoController::class, 'show'])
+    ->middleware('signed')
+    ->name('user.photo');
