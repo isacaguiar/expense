@@ -52,11 +52,13 @@ Trava as versões/peças abaixo. Trocar qualquer uma é decisão de **Governanç
 1.1. **Fluxo de branch/PR**: `main` é a branch de produção (dispara `deploy-backend.yml` a cada push) — equivalente ao "master" de um Gitflow clássico, sem renomear a branch. `dev` é a branch de integração, criada a partir de `main`.
 
 Histórico do fluxo (não misturar os três modelos numa mesma feature em andamento):
-- Até `docs/feature/20260817-config-url-api-frontend/`: branch/PR por task direto pra `main`.
-- De 2026-08-17 até `docs/feature/20260818-fluxo-despesas-grupo/` (última a segui-lo por completo): branch de task nasce de `dev` atualizada, PR de cada task direto contra `dev`, merge humano por task.
+- Até `docs/feature/concluidas/202608/20260817-config-url-api-frontend/`: branch/PR por task direto pra `main`.
+- De 2026-08-17 até `docs/feature/concluidas/202608/20260818-fluxo-despesas-grupo/` (última a segui-lo por completo): branch de task nasce de `dev` atualizada, PR de cada task direto contra `dev`, merge humano por task.
 - **A partir de 2026-08-18** (`ADR-003-fluxo-branch-por-feature.md`): fluxo por feature, em duas camadas. Uma **branch da feature** (`<tipo>/<AAAAMMDD>-<slug-da-feature>`, nome igual à pasta em `docs/feature/`) nasce de `dev` atualizada quando a primeira task começa — a primeira task é implementada direto nela, sem sub-branch própria. Cada task seguinte nasce numa branch própria (`<tipo>/<AAAAMMDD>-<slug-da-feature>-TASK-0xx`) a partir da branch da feature, e faz merge local (`--no-ff`, sem PR, sem gate humano) de volta nela. Só quando a feature estiver pronta abre-se **um único PR** da branch da feature contra `dev` — ver `04-implementation.md` §1 para o passo a passo completo, incluindo quando abrir o PR de promoção `dev` → `main`.
 
-1.2. **Fluxo de correção de bug (BFF)**: correção de defeito em comportamento já existente pode seguir o **Bug-Fix Flow** — artefato único em `docs/bugfix/<AAAAMMDD>-<slug>.md`, branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` — em vez das 5 fases e da pasta `docs/feature/`, **desde que** a Triagem de `docs/bugfix/README.md` não marque nenhum gatilho de escalação. Marcou qualquer um → segue o fluxo SDD completo (`docs/feature/`). Gatilhos e critério: `docs/bugfix/README.md`; o porquê do fluxo: `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`.
+1.1.1. **Arquivamento de feature concluída** (`ADR-009-arquivar-concluidos-por-anomes.md`): quando o PR único da feature é mergeado em `dev`, a pasta `docs/feature/<AAAAMMDD>-<slug>/` é movida para `docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/`, onde `<AAAAMM>` são os 6 primeiros dígitos do nome da pasta (mês de criação). `docs/feature/` na raiz passa a conter só features em andamento; o estado "concluída" é posicional, sem índice. A branch não muda de nome (derivada do nome na criação; o move é pós-merge).
+
+1.2. **Fluxo de correção de bug (BFF)**: correção de defeito em comportamento já existente pode seguir o **Bug-Fix Flow** — artefato único em `docs/bugfix/<AAAAMMDD>-<slug>.md`, branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` — em vez das 5 fases e da pasta `docs/feature/`, **desde que** a Triagem de `docs/bugfix/README.md` não marque nenhum gatilho de escalação. Marcou qualquer um → segue o fluxo SDD completo (`docs/feature/`). Gatilhos e critério: `docs/bugfix/README.md`; o porquê do fluxo: `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`. Ao concluir, o arquivo vai para `docs/bugfix/concluidos/<AAAAMM>/<AAAAMMDD>-<slug>.md` (`<AAAAMM>` = mês de criação — `ADR-009`, `docs/bugfix/README.md` §Fechamento).
 
 1.3. **Condição de parada do loop de execução**: consolidada, com o desenho do loop, em `agent-architecture.md` §3.
 
@@ -82,7 +84,7 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 | Apagar dado definitivamente (hard delete) | ❌ | ✅ |
 | Corte de produção do frontend novo (`expense/app`) substituindo `expense/frontend` | ❌ | ✅ |
 
-3. Achados que **já exigem decisão humana** (não corrigir silenciosamente; estado de remediação em `docs/feature/20260817-seguranca-api/tasks.md`):
+3. Achados que **já exigem decisão humana** (não corrigir silenciosamente; estado de remediação em `docs/feature/concluidas/202608/20260817-seguranca-api/tasks.md`):
    - Segredos versionados em texto puro (`README.md` raiz: senha do jasypt; client-id/secret do Google OAuth; arquivo `client_secret_*.json` na raiz do repositório) → precisa rotacionar credenciais e remover do histórico/arquivo.
    - `.github/workflows/deploy-backend.yml` referencia `working-directory: backend-php`, mas a pasta real é `backend/` → deploy de produção provavelmente aponta para caminho errado.
    - `GET /pix/generate` está **fora** do grupo de middleware `jwt.auth` em `routes/api.php` → qualquer pessoa não autenticada pode gerar o QR Code Pix de um usuário informando só o e-mail dele (ver Segurança, item 5).

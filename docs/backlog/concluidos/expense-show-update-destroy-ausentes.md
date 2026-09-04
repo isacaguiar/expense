@@ -1,7 +1,7 @@
 # Implementar ExpenseController::show/update/destroy (rotas já registradas sem método)
 
 ID: 023
-Origem: docs/feature/20260820-atualizacao-layout-paginas/specify.md (achado ao avaliar o mockup de Despesas — telas "Visualizar"/"Editar"/"Excluir")
+Origem: docs/feature/concluidas/202608/20260820-atualizacao-layout-paginas/specify.md (achado ao avaliar o mockup de Despesas — telas "Visualizar"/"Editar"/"Excluir")
 Criado em: 2026-08-20
 Prioridade: ALTA
 Status: Promovido para TASK-126
@@ -19,6 +19,6 @@ Tipo sugerido: backend
 ## Resolução
 
 Concluído em: 2026-08-21
-Feature: docs/feature/20260821-expense-show-update-destroy/
+Feature: docs/feature/concluidas/202608/20260821-expense-show-update-destroy/
 Tasks: TASK-126, TASK-127, TASK-128
 PRs: https://github.com/isacaguiar/expense/pull/38 (mergeado em `dev`)

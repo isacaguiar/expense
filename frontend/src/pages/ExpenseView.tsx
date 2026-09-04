@@ -53,7 +53,7 @@ type ExpenseDetail = {
  * — sem seletor de competência nesta tela, mostramos o comprovante da quota
  * paga mais recente (a mais relevante pra conferir "já paguei isso?"), não
  * necessariamente a do ciclo vigente. Ver
- * docs/feature/20260825-pagamentos-grid-pix/specify.md §2.8.
+ * docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/specify.md §2.8.
  */
 const latestPaidProof = (quotas: ExpenseQuota[] | undefined): string | null => {
   const paidWithProof = (quotas ?? [])
@@ -67,7 +67,7 @@ const latestPaidProof = (quotas: ExpenseQuota[] | undefined): string | null => {
  * Regra pedida pelo usuário: despesa parcelada com qualquer parcela paga
  * trava a edição inteira ("só permite alteração no mês de cadastro") — mesmo
  * gatilho que o backend usa em ExpenseController::update() (specify.md §R3
- * de docs/feature/20260826-editar-tipo-despesa/).
+ * de docs/feature/concluidas/202608/20260826-editar-tipo-despesa/).
  */
 const isInstallmentsLocked = (expense: ExpenseDetail): boolean =>
   expense.expense_type === 'IN_INSTALLMENTS' && expense.quotas.some(q => q.paid);
@@ -237,7 +237,7 @@ const ExpenseView: React.FC = () => {
   // Um único DespesasThemeScope embrulha qualquer que seja o conteúdo abaixo
   // (nunca um por branch) — evita recriar o ThemeProvider a cada transição de
   // estado (loading/notFound/editing/visualização), que causava reconciliação
-  // instável dos botões da Card (ver docs/feature/20260825-redesign-visual-despesas/implementation.md).
+  // instável dos botões da Card (ver docs/feature/concluidas/202608/20260825-redesign-visual-despesas/implementation.md).
   let content: React.ReactNode;
 
   if (loading) {
@@ -293,7 +293,7 @@ const ExpenseView: React.FC = () => {
             />
 
             {/* Fixa fica de fora — converter de/pra ela não é suportado
-                (docs/feature/20260826-editar-tipo-despesa/specify.md §R2) */}
+                (docs/feature/concluidas/202608/20260826-editar-tipo-despesa/specify.md §R2) */}
             {expense.expense_type !== 'FIXED' && (
               <TextField
                 label="Tipo de despesa"

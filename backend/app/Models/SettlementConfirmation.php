@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\URL;
  * Confirmação de pagamento de um settlement (liquidação par-a-par de um
  * ciclo) pelo DEVEDOR — conceito distinto de `Quota.paid` (confirmado pelo
  * credor de uma despesa específica). Ver
- * docs/feature/20260825-pagamentos-grid-pix/specify.md §2.7.
+ * docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/specify.md §2.7.
  */
 class SettlementConfirmation extends Model
 {

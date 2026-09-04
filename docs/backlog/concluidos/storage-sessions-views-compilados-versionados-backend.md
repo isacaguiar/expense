@@ -23,6 +23,6 @@ Tipo sugerido: infra
 ## Resolução
 
 Concluído em: 2026-08-21
-Feature: docs/feature/20260821-storage-sessions-views-versionados/
+Feature: docs/feature/concluidas/202608/20260821-storage-sessions-views-versionados/
 Tasks: TASK-131
 PRs: https://github.com/isacaguiar/expense/pull/42 (mergeado em `dev`)

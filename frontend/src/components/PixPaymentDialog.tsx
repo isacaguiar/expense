@@ -32,7 +32,7 @@ const formatMoney = (value: number): string =>
 
 /**
  * QR Code + copia-e-cola pra pagar `targetName` via Pix — chama a API já
- * existente `GET /pix/generate` (docs/feature/20260825-pagamentos-grid-pix/plan.md §3).
+ * existente `GET /pix/generate` (docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/plan.md §3).
  * Não confirma pagamento nem altera `Quota.paid` — é só um jeito de o
  * usuário efetuar o Pix fora do app; marcar como pago continua manual.
  */

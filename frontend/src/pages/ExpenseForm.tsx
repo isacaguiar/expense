@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -41,6 +42,8 @@ const ExpenseForm: React.FC = () => {
   const [expenseType, setExpenseType] = useState<ExpenseType>('IN_CASH');
   const [installmentsCount, setInstallmentsCount] = useState<string>('');
   const [participantIds, setParticipantIds] = useState<number[]>([]);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState<boolean>(false);
 
   useEffect(() => {
     if (!groupId) return;
@@ -74,15 +77,17 @@ const ExpenseForm: React.FC = () => {
   const handleSave = () => {
     if (!groupId) return;
 
+    setSaveError(null);
+
     const valueNumber = parseFloat(value.replace('.', '').replace(',', '.'));
 
     if (!description || isNaN(valueNumber) || !payerId) {
-      alert('Preencha descrição, valor e pagador corretamente.');
+      setSaveError('Preencha descrição, valor e pagador corretamente.');
       return;
     }
 
     if (participantIds.length === 0) {
-      alert('Selecione ao menos um participante da divisão.');
+      setSaveError('Selecione ao menos um participante da divisão.');
       return;
     }
 
@@ -92,7 +97,7 @@ const ExpenseForm: React.FC = () => {
     if (expenseType === 'IN_INSTALLMENTS') {
       const count = parseInt(installmentsCount, 10);
       if (!Number.isInteger(count) || count < 2) {
-        alert('Informe uma quantidade de parcelas válida (mínimo 2 — para 1 parcela use À Vista).');
+        setSaveError('Informe uma quantidade de parcelas válida (mínimo 2 — para 1 parcela use À Vista).');
         return;
       }
       installments = count;
@@ -118,6 +123,8 @@ const ExpenseForm: React.FC = () => {
       quotas
     };
 
+    setSaving(true);
+
     axios
       .post(`${API_BASE_URL}/api/expenses`, payload, {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
@@ -127,8 +134,12 @@ const ExpenseForm: React.FC = () => {
       })
       .catch(err => {
         console.error('Erro ao salvar despesa:', err);
-        alert('Falha ao salvar despesa.');
-      });
+        // O backend valida as regras de domínio (competência fechada, soma das
+        // quotas, pagador não-membro) — o cliente só exibe o motivo que a API
+        // devolveu, no mesmo padrão de ExpenseView.tsx.
+        setSaveError(err.response?.data?.error ?? 'Falha ao salvar despesa.');
+      })
+      .finally(() => setSaving(false));
   };
 
   const dateFieldLabel =
@@ -145,6 +156,12 @@ const ExpenseForm: React.FC = () => {
           <Typography variant="h6" fontWeight={700} gutterBottom>
             Cadastrar nova despesa
           </Typography>
+
+          {saveError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {saveError}
+            </Alert>
+          )}
 
           <Box display="flex" flexDirection="column" gap={2} mt={2}>
             <TextField
@@ -227,10 +244,14 @@ const ExpenseForm: React.FC = () => {
             </Box>
 
             <Box display="flex" gap={2} mt={1}>
-              <Button variant="contained" onClick={handleSave}>
+              <Button variant="contained" onClick={handleSave} disabled={saving}>
                 Salvar
               </Button>
-              <Button variant="outlined" onClick={() => navigate(`/groups/${groupId}/expenses`)}>
+              <Button
+                variant="outlined"
+                onClick={() => navigate(`/groups/${groupId}/expenses`)}
+                disabled={saving}
+              >
                 Cancelar
               </Button>
             </Box>

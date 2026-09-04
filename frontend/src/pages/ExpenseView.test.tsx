@@ -288,7 +288,7 @@ describe('ExpenseView', () => {
 
     // Retypa o Valor no formato pt-BR que o parser espera — o pré-preenchimento
     // vem cru da API ("100.00") e só é reformatado por
-    // docs/feature/20260826-fix-edicao-despesa-valor-corrompido/ (branch
+    // docs/feature/concluidas/202608/20260826-fix-edicao-despesa-valor-corrompido/ (branch
     // separada, ainda não integrada aqui); o teste não deve depender de qual
     // das duas branches mergeia primeiro.
     await user.clear(screen.getByLabelText('Valor'));

@@ -19,6 +19,6 @@ Tipo sugerido: frontend
 ## Resolução
 
 Concluído em: 2026-08-27
-Feature: docs/feature/20260827-dashboard-resumo-credor-devedores/
+Feature: docs/feature/concluidas/202608/20260827-dashboard-resumo-credor-devedores/
 Tasks: TASK-212, TASK-213, TASK-214
 PRs: https://github.com/isacaguiar/expense/pull/71

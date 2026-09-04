@@ -18,7 +18,7 @@ type PanelTab = 'balance' | 'settlement';
  * Painel lateral da tela de Resumo do grupo (`GroupSummary`): concentra
  * "Saldos por pessoa" e "Quem paga a quem" em duas abas de um único card,
  * no lugar dos dois blocos empilhados que existiam antes desta feature
- * (`docs/feature/20260822-reestruturacao-resumo/`).
+ * (`docs/feature/concluidas/202608/20260822-reestruturacao-resumo/`).
  */
 const SummarySidePanel: React.FC<SummarySidePanelProps> = ({ balances, settlements, cycleStatus }) => {
   const [tab, setTab] = useState<PanelTab>('balance');

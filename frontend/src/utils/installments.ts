@@ -1,5 +1,5 @@
 // Rateio de parcelas compartilhado entre ExpenseForm.tsx (criação) e
-// ExpenseView.tsx (edição — docs/feature/20260826-editar-tipo-despesa/plan.md
+// ExpenseView.tsx (edição — docs/feature/concluidas/202608/20260826-editar-tipo-despesa/plan.md
 // §3) — o backend só valida quantidade/soma (ExpenseController::store()/
 // update()), quem monta as quotas é sempre o client.
 

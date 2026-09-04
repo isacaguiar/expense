@@ -6,7 +6,7 @@ interface DespesasThemeScopeProps {
   children: React.ReactNode;
 }
 
-// Aplica o tema visual de Despesas (docs/feature/20260825-redesign-visual-despesas)
+// Aplica o tema visual de Despesas (docs/feature/concluidas/202608/20260825-redesign-visual-despesas)
 // só à árvore de componentes que está dentro dele — usado no retorno de cada
 // página de Despesas, nunca no shell (Sidebar/GroupHeader ficam fora, com o
 // tema global inalterado).

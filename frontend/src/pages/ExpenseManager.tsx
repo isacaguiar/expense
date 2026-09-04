@@ -270,7 +270,7 @@ const ExpenseManager: React.FC = () => {
 
   const theme = useTheme();
   // Abaixo de `sm` a tabela de 6 colunas fica ilegível no celular — troca para
-  // uma lista de cartões (ver docs/feature/20260901-usabilidade-mobile).
+  // uma lista de cartões (ver docs/feature/concluidas/202609/20260901-usabilidade-mobile).
   const compact = useMediaQuery(theme.breakpoints.down('sm'));
 
   const formatValue = (value: number) =>

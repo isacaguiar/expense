@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20260821
 
 ## 1. Problema
 
-A tela de login (feature `docs/feature/20260819-novo-layout-tela-login/`) já tem um botão "Google" no card de login (`frontend/src/pages/login/LoginFormCard.tsx:170-178`), mas ele é só um link visual (`href="#"`) sem nenhuma integração — o usuário clica e nada acontece. Isso é uma promessa de UI não cumprida.
+A tela de login (feature `docs/feature/concluidas/202608/20260819-novo-layout-tela-login/`) já tem um botão "Google" no card de login (`frontend/src/pages/login/LoginFormCard.tsx:170-178`), mas ele é só um link visual (`href="#"`) sem nenhuma integração — o usuário clica e nada acontece. Isso é uma promessa de UI não cumprida.
 
 A `TASK-021` registrava uma decisão de produto pendente: implementar o login social de fato, ou remover as referências. Decisão tomada em 2026-08-21 (conversa com o usuário): **implementar, apenas para Google** (Microsoft segue fora de escopo, backlog item 015 continua aberto).
 
@@ -49,7 +49,7 @@ O botão "Google" (`frontend/src/pages/login/LoginFormCard.tsx:170-178`) troca `
 
 ### 2.7 Nota de sequenciamento (adicionada em 2026-08-22)
 
-A infraestrutura de OAuth Google (client `laravel/socialite`, colunas `google_id`/`avatar_url`, `password` nullable em `ex_users`, callback compartilhado) passou a ser construída primeiro por `docs/feature/20260822-atualizacao-minha-conta/` (§2.2 daquele `specify.md`), decisão tomada com o usuário para evitar duplicar client OAuth ou reabrir código já mergeado depois. Quando esta feature (`login-social-google`) ganhar seu `plan.md`, ele deve **reaproveitar** essa infraestrutura — apenas adicionar o redirect público de login (§2.6) e o ajuste em `UserController::changePassword` para o caso de senha `NULL` (usuário criado só via Google) — não recriar client, colunas ou callback já existentes.
+A infraestrutura de OAuth Google (client `laravel/socialite`, colunas `google_id`/`avatar_url`, `password` nullable em `ex_users`, callback compartilhado) passou a ser construída primeiro por `docs/feature/concluidas/202608/20260822-atualizacao-minha-conta/` (§2.2 daquele `specify.md`), decisão tomada com o usuário para evitar duplicar client OAuth ou reabrir código já mergeado depois. Quando esta feature (`login-social-google`) ganhar seu `plan.md`, ele deve **reaproveitar** essa infraestrutura — apenas adicionar o redirect público de login (§2.6) e o ajuste em `UserController::changePassword` para o caso de senha `NULL` (usuário criado só via Google) — não recriar client, colunas ou callback já existentes.
 
 ## 3. Fora de escopo desta feature
 

@@ -24,7 +24,7 @@ type PayableSettlementListProps = {
 /**
  * "Valores a pagar" — a mesma liquidação par-a-par de components/SettlementList.tsx
  * (que continua só exibindo, sem ação, nas outras 2 telas que o usa), mas com
- * ações do lado do DEVEDOR: pagar via Pix (docs/feature/20260825-pagamentos-grid-pix/plan.md §2)
+ * ações do lado do DEVEDOR: pagar via Pix (docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/plan.md §2)
  * e, separadamente, enviar comprovante do próprio pagamento pra confirmar o
  * settlement (§6) — conceito distinto de confirmar uma despesa (isso
  * continua 100% com o credor, em Despesas/Payments, inalterado). Só o
@@ -32,7 +32,7 @@ type PayableSettlementListProps = {
  * ação; qualquer membro vê o status de confirmação.
  *
  * `canConfirm` = o backend aceita o comprovante do devedor agora (competência
- * fechada e não selada — ver docs/feature/20260902-pagamento-ciclo-fechado
+ * fechada e não selada — ver docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado
  * §2.2). Enquanto `false`, o devedor vê só um aviso no lugar dos botões.
  */
 const PayableSettlementList: React.FC<PayableSettlementListProps> = ({

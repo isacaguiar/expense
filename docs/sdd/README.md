@@ -22,7 +22,7 @@ Spec-Driven Development do projeto, com **human-in-the-loop**: a IA (ou qualquer
 
 Leitura transversal (não é uma fase): `agent-architecture.md` — o SDD + `.claude/` vistos como um agente (6 peças, loop, condição de parada, fronteira de autonomia).
 
-Fluxos paralelos: `docs/feature/<AAAAMMDD>-<slug>/` (desenvolvimento novo — ver abaixo), `docs/backlog/` (ideia/débito não agendado), `docs/bugfix/` (correção de defeito — BFF, ver abaixo).
+Fluxos paralelos: `docs/feature/<AAAAMMDD>-<slug>/` (desenvolvimento novo — ver abaixo; feature concluída vai para `docs/feature/concluidas/<AAAAMM>/`), `docs/backlog/` (ideia/débito não agendado), `docs/bugfix/` (correção de defeito — BFF; concluído vai para `docs/bugfix/concluidos/<AAAAMM>/`, ver abaixo).
 
 Toda mudança relevante no sistema deve conseguir apontar: qual task → qual parte do plan → qual necessidade de negócio → dentro de quais regras (`00-constitution.md`).
 
@@ -30,9 +30,11 @@ Toda mudança relevante no sistema deve conseguir apontar: qual task → qual pa
 
 Todo trabalho novo — feature de produto ou épico técnico — ganha uma pasta própria em `docs/feature/<AAAAMMDD>-<slug>/` (data de criação da pasta + nome curto), com os quatro documentos (`specify.md`, `plan.md`, `tasks.md`, `implementation.md`) escopados à feature. `00-constitution.md` (topo da hierarquia) e `01-specify.md` (baseline de "como o sistema é hoje") não se movem para lá. Por que `02`/`03`/`04` deixaram de crescer como arquivos únicos a partir de 2026-08-17: `docs/sdd/decisions/ADR-002-sdd-por-feature.md`.
 
-Épicos que já existiam em `03-tasks.md` antes dessa data e ainda não foram tocados continuam lá até alguém começar a trabalhar neles; nesse momento migram para uma pasta em `docs/feature/` (primeiro caso: Épico B → `docs/feature/20260817-seguranca-api/`).
+Épicos que já existiam em `03-tasks.md` antes dessa data e ainda não foram tocados continuam lá até alguém começar a trabalhar neles; nesse momento migram para uma pasta em `docs/feature/` (primeiro caso: Épico B → `docs/feature/concluidas/202608/20260817-seguranca-api/`).
 
 Para criar a pasta de uma feature nova sem redigir os 4 documentos do zero, use `docs/sdd/templates/` (esqueleto em branco de cada documento) ou o slash command `/nova-feature <slug-curto>` (cria a pasta e copia os templates automaticamente). Decisões de stack/arquitetura ficam registradas separadamente em `docs/sdd/decisions/` (formato ADR) — ver `00-constitution.md` §5.1.
+
+Quando o PR único da feature é mergeado em `dev`, a pasta é movida para `docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/` (`<AAAAMM>` = os 6 primeiros dígitos do nome da pasta, mês de criação). `docs/feature/` na raiz fica só com o que está em andamento; não há índice — o estado "concluída" é a própria localização. Porquê e migração retroativa: `docs/sdd/decisions/ADR-009-arquivar-concluidos-por-anomes.md`.
 
 ## Backlog de ideias não bloqueantes (`docs/backlog/`)
 
@@ -42,7 +44,7 @@ Essa separação existe porque um achado não-bloqueante costuma sobreviver à f
 
 ## Correção de bug (`docs/bugfix/`)
 
-Correção de defeito em comportamento que já existe não precisa dos 4 documentos de `docs/feature/`. Segue o **BFF (Bug-Fix Flow)**: um arquivo `docs/bugfix/<AAAAMMDD>-<slug>.md` (Triagem + Problema + Correção + log), branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` (merge = gate humano). Uma Triagem no topo do arquivo decide se o trabalho fica no BFF ou vira feature SDD normal. Slash command `/novo-bug <slug>`. Triagem, formato e regra de escalação: `docs/bugfix/README.md`; decisão: `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`.
+Correção de defeito em comportamento que já existe não precisa dos 4 documentos de `docs/feature/`. Segue o **BFF (Bug-Fix Flow)**: um arquivo `docs/bugfix/<AAAAMMDD>-<slug>.md` (Triagem + Problema + Correção + log), branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` (merge = gate humano). Uma Triagem no topo do arquivo decide se o trabalho fica no BFF ou vira feature SDD normal. Slash command `/novo-bug <slug>`. Triagem, formato e regra de escalação: `docs/bugfix/README.md`; decisão: `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`. Ao concluir, o arquivo vai para `docs/bugfix/concluidos/<AAAAMM>/` (`ADR-009`).
 
 Quando alguém decide de fato executar um item do backlog, o slash command `/promover-backlog <ID>` conduz o processo completo — scaffold da feature, depois Specify → Tech Plan → Tasks → execução de cada task, pedindo aprovação humana explícita entre cada etapa (mesmo espírito do `/nova-feature`, só que partindo de um item já existente e indo até a execução). Ver `.claude/skills/promover-backlog/SKILL.md`.
 

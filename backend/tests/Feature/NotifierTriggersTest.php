@@ -18,7 +18,7 @@ use Tests\TestCase;
 /**
  * Gatilhos do serviço App\Support\Notifier gravando linhas em ex_notifications
  * nos pontos de evento do domínio. Ver
- * docs/feature/20260903-notificacoes-in-app/plan.md §3.
+ * docs/feature/concluidas/202609/20260903-notificacoes-in-app/plan.md §3.
  *
  * Este arquivo cresce a cada task de gatilho (TASK-262..265).
  */

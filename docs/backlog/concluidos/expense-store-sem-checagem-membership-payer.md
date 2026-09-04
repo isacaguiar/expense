@@ -1,7 +1,7 @@
 # POST /api/expenses não checa se user_payer_id/payers são membros do grupo
 
 ID: 010
-Origem: docs/feature/20260818-fluxo-despesas-grupo/plan.md §3 (achado durante execução da TASK-036, confirmado por revisão do agent security-reviewer)
+Origem: docs/feature/concluidas/202608/20260818-fluxo-despesas-grupo/plan.md §3 (achado durante execução da TASK-036, confirmado por revisão do agent security-reviewer)
 Criado em: 2026-08-18
 Prioridade: ALTA
 Status: Promovido para TASK-039
@@ -21,6 +21,6 @@ Tipo sugerido: backend
 ## Resolução
 
 Concluído em: 2026-08-18
-Feature: docs/feature/20260818-expense-payer-membership/
+Feature: docs/feature/concluidas/202608/20260818-expense-payer-membership/
 Tasks: TASK-041 (troca de `exists:ex_users,id` por `Rule::exists('ex_groups_members','user_id')->where('group_id', ...)` em `user_payer_id` e `payers.*` no `store()`); TASK-039 e TASK-040 na mesma feature fecharam a checagem de membership em `getMonthlyExpenses` e nos relatórios de grupo
 PRs: #23 (mergeado em `dev`)

@@ -1016,7 +1016,7 @@ describe('ExpenseManager - modal de detalhes', () => {
 });
 
 // Viewport < sm: a tabela de 6 colunas dá lugar a uma lista de cartões (F1 /
-// docs/feature/20260901-usabilidade-mobile). Os testes acima já são
+// docs/feature/concluidas/202609/20260901-usabilidade-mobile). Os testes acima já são
 // agnósticos de layout (consultam por texto/role acessível) e cobrem o ramo
 // tabela via o default matches:false do polyfill de setupTests.ts.
 describe('ExpenseManager - viewport estreito (cartões)', () => {

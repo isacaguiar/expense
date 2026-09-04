@@ -1,7 +1,7 @@
 # Cache e logs do Laravel versionados no repositório
 
 ID: 007
-Origem: docs/feature/20260817-config-url-api-frontend/implementation.md (achado ao rodar o backend localmente para validar a TASK-029)
+Origem: docs/feature/concluidas/202608/20260817-config-url-api-frontend/implementation.md (achado ao rodar o backend localmente para validar a TASK-029)
 Criado em: 2026-08-17
 Prioridade: BAIXA
 Status: Resolvido (fora do fluxo SDD)

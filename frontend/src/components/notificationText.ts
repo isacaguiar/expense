@@ -1,7 +1,7 @@
 /**
  * Traduz uma notificação (`type` + payload `data` do backend) no texto que
  * aparece na lista do sino. O backend só guarda os dados brutos; o texto é
- * responsabilidade do cliente. Ver docs/feature/20260903-notificacoes-in-app/plan.md §4.
+ * responsabilidade do cliente. Ver docs/feature/concluidas/202609/20260903-notificacoes-in-app/plan.md §4.
  */
 
 type NotificationData = Record<string, unknown>;

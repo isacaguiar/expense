@@ -2,6 +2,7 @@
 
 Status: Aceita
 Data: 2026-08-28
+Emenda: 2026-09-03 — no Fechamento, o arquivo do bug passa a ir para `docs/bugfix/concluidos/<AAAAMM>/<AAAAMMDD>-<slug>.md` (a subpasta `concluidos/` do item 2 da Decisão ganha um nível por mês de criação). Ver `ADR-009-arquivar-concluidos-por-anomes.md`.
 
 ## Contexto
 
@@ -56,4 +57,4 @@ Criar o **BFF (Bug-Fix Flow)**, um caminho paralelo ao SDD-por-feature, exclusiv
 - `docs/sdd/00-constitution.md` §5.1 (itens 1 e 1.2) e tabela de Governança §5.2 (linhas do PR de bugfix).
 - `docs/sdd/decisions/ADR-002-sdd-por-feature.md`, `ADR-003-fluxo-branch-por-feature.md` — fluxos que o BFF complementa sem alterar.
 - `.claude/skills/novo-bug/SKILL.md` — scaffold do artefato.
-- Primeiro caso previsto: `docs/bugfix/20260828-login-sem-mensagem-erro.md` (estreia do fluxo).
+- Primeiro caso previsto: `docs/bugfix/concluidos/202608/20260828-login-sem-mensagem-erro.md` (estreia do fluxo).

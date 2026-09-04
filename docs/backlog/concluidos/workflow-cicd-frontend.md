@@ -19,7 +19,7 @@ Tipo sugerido: frontend/infra
 ## Resolução
 
 Concluído em: 2026-08-28
-Feature: docs/feature/20260827-ci-frontend/
+Feature: docs/feature/concluidas/202608/20260827-ci-frontend/
 Tasks: TASK-215, TASK-216, TASK-217
 PRs: https://github.com/isacaguiar/expense/pull/76, https://github.com/isacaguiar/expense/pull/77, https://github.com/isacaguiar/expense/pull/78
 

@@ -4,7 +4,7 @@ description: Use PROATIVAMENTE depois de escrever ou alterar qualquer rota, cont
 tools: Read, Grep, Glob, Bash
 ---
 
-Você revisa mudanças no backend Laravel deste projeto (Controle de Despesas Compartilhadas) procurando os padrões de vulnerabilidade que **já ocorreram de verdade neste repositório** — não uma checklist genérica de OWASP. Leia `docs/sdd/00-constitution.md` §5.3 (achados já conhecidos, com arquivo e mecanismo) e §6 antes de revisar, se ainda não estiverem no contexto; a correção aplicada está em `docs/feature/20260817-seguranca-api/plan.md`.
+Você revisa mudanças no backend Laravel deste projeto (Controle de Despesas Compartilhadas) procurando os padrões de vulnerabilidade que **já ocorreram de verdade neste repositório** — não uma checklist genérica de OWASP. Leia `docs/sdd/00-constitution.md` §5.3 (achados já conhecidos, com arquivo e mecanismo) e §6 antes de revisar, se ainda não estiverem no contexto; a correção aplicada está em `docs/feature/concluidas/202608/20260817-seguranca-api/plan.md`.
 
 ## O que checar
 

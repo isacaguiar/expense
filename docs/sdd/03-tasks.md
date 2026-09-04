@@ -27,7 +27,7 @@ Regra de atomicidade: uma task deve ser completável, revisável e testável **i
 
 ## Épico B — Segurança
 
-**Migrado para `docs/feature/20260817-seguranca-api/` em 2026-08-17.** TASK-011 a TASK-015 (Pix sem autenticação, IDOR em grupos, segredos versionados, path do deploy, log de senha em texto puro) têm specify/plan/tasks/implementation próprios lá — ver `docs/feature/20260817-seguranca-api/tasks.md` para status atualizado. Este épico não recebe mais tasks novas aqui.
+**Migrado para `docs/feature/concluidas/202608/20260817-seguranca-api/` em 2026-08-17.** TASK-011 a TASK-015 (Pix sem autenticação, IDOR em grupos, segredos versionados, path do deploy, log de senha em texto puro) têm specify/plan/tasks/implementation próprios lá — ver `docs/feature/concluidas/202608/20260817-seguranca-api/tasks.md` para status atualizado. Este épico não recebe mais tasks novas aqui.
 
 ## Épico C — Consistência da API (endpoints quebrados hoje)
 
@@ -41,7 +41,7 @@ Regra de atomicidade: uma task deve ser completável, revisável e testável **i
 | ID | Título | Tipo | Gate humano |
 |---|---|---|---|
 | TASK-018 | Decidir e, se aprovado, implementar persistência real de `Participation` (status pago/pendente) | backend | decisão de produto antes de iniciar |
-| TASK-019 | ~~Unificar os dois fluxos de convite (`InvitationController::invite` e `GroupMemberController::store`)~~ — migrada para `docs/feature/20260822-atualizacao-participantes/` em 2026-08-22, ver `tasks.md` lá (TASK-189 a TASK-193) para status atualizado | backend | antes do merge |
+| TASK-019 | ~~Unificar os dois fluxos de convite (`InvitationController::invite` e `GroupMemberController::store`)~~ — migrada para `docs/feature/concluidas/202608/20260822-atualizacao-participantes/` em 2026-08-22, ver `tasks.md` lá (TASK-189 a TASK-193) para status atualizado | backend | antes do merge |
 | TASK-020 | Extrair Service de cálculo de saldo compartilhado entre `reportByGroupAndYear` e `reportByGroupAndYearMonthlySettlement` (hoje duplicado) | backend | nenhum |
 | TASK-021 | Decidir destino das credenciais Google OAuth órfãs (implementar login social ou remover referências) | doc/produto | decisão de produto |
 
@@ -49,6 +49,6 @@ Regra de atomicidade: uma task deve ser completável, revisável e testável **i
 
 ## Convenção a partir de 2026-08-17
 
-Este arquivo deixou de crescer: trabalho novo (feature ou épico técnico) ganha uma pasta própria em `docs/feature/<AAAAMMDD>-<slug>/`. Decisão, motivo e alternativas: `decisions/ADR-002-sdd-por-feature.md`. Os épicos abaixo que ainda não têm pasta em `docs/feature/` continuam valendo como estão até alguém começar a trabalhar neles — nesse momento, migram para lá (como feito com o Épico B → `docs/feature/20260817-seguranca-api/`).
+Este arquivo deixou de crescer: trabalho novo (feature ou épico técnico) ganha uma pasta própria em `docs/feature/<AAAAMMDD>-<slug>/`. Decisão, motivo e alternativas: `decisions/ADR-002-sdd-por-feature.md`. Os épicos abaixo que ainda não têm pasta em `docs/feature/` continuam valendo como estão até alguém começar a trabalhar neles — nesse momento, migram para lá (como feito com o Épico B → `docs/feature/concluidas/202608/20260817-seguranca-api/`).
 
 Novas tasks dentro de um épico ainda não migrado seguem o mesmo formato e entram no épico correspondente (ou em um novo épico, se abrirem uma frente nova do Plan) — até serem migradas.

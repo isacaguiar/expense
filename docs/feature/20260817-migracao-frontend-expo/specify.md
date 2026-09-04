@@ -1,6 +1,6 @@
 # Specify — Migração do Frontend para React Native (Expo)
 
-> Feature: unificar web e app mobile num só código de UI, migrando de `expense/frontend` (React web) para um novo projeto `expense/app` (Expo + React Native). Épico migrado de `docs/sdd/03-tasks.md` (Épico A, TASK-001 a TASK-010) para esta pasta, seguindo a convenção adotada a partir de 2026-08-17 (mesmo movimento já feito para o Épico B → `docs/feature/20260817-seguranca-api/`).
+> Feature: unificar web e app mobile num só código de UI, migrando de `expense/frontend` (React web) para um novo projeto `expense/app` (Expo + React Native). Épico migrado de `docs/sdd/03-tasks.md` (Épico A, TASK-001 a TASK-010) para esta pasta, seguindo a convenção adotada a partir de 2026-08-17 (mesmo movimento já feito para o Épico B → `docs/feature/concluidas/202608/20260817-seguranca-api/`).
 
 Versão: 1.0 · Criado em: 20260817
 

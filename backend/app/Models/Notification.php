@@ -10,7 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * entregue a um usuário destinatário — uma linha por destinatário, com fan-out
  * feito no momento da escrita pelo serviço `App\Support\Notifier`. Consumida
  * pelo `NotificationController` (sino do cabeçalho, com polling da contagem de
- * não-lidas). Ver docs/feature/20260903-notificacoes-in-app/plan.md §1.
+ * não-lidas). Ver docs/feature/concluidas/202609/20260903-notificacoes-in-app/plan.md §1.
  *
  * Namespace explícito para não colidir com `Illuminate\Notifications\Notification`
  * (a stack nativa de notificações do Laravel não é usada neste projeto).

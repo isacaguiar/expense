@@ -1,7 +1,7 @@
 # `Cache::pull` do state OAuth não é atômico (uso único não estrito)
 
 ID: 035
-Origem: docs/feature/20260901-google-oauth-state-opaco/ — observação INFO-1 da revisão do `security-reviewer` na TASK-235
+Origem: docs/feature/concluidas/202609/20260901-google-oauth-state-opaco/ — observação INFO-1 da revisão do `security-reviewer` na TASK-235
 Criado em: 2026-09-01
 Prioridade: BAIXA
 Status: Aberto

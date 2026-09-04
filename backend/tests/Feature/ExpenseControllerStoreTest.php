@@ -283,7 +283,14 @@ class ExpenseControllerStoreTest extends TestCase
         $this->assertDatabaseMissing('ex_quotas', ['expense_id' => $expenseId, 'paid' => true]);
     }
 
-    public function test_installments_expense_quotas_start_as_pending_even_if_client_sends_paid_true(): void
+    /**
+     * A regra "o cliente não decide `paid`" continua valendo para parcelas em
+     * ciclo aberto/futuro (aqui, ago e set/2026 com o relógio em 2026-08-15).
+     * O servidor só marca parcela quitada na criação quando ela cai num ciclo
+     * já FECHADO por data — coberto por
+     * test_installments_expense_starting_in_a_closed_cycle_is_created_with_past_quotas_paid.
+     */
+    public function test_installments_expense_quotas_in_open_cycles_start_as_pending_even_if_client_sends_paid_true(): void
     {
         $member = User::factory()->create();
         $group = Group::create(['name' => 'Grupo de teste']);
@@ -413,5 +420,140 @@ class ExpenseControllerStoreTest extends TestCase
 
         $response->assertStatus(422);
         $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_installments_expense_starting_in_a_closed_cycle_is_created_with_past_quotas_paid(): void
+    {
+        // 2026-09-20: com closing_day nulo (mês calendário + 5 dias de carência),
+        // os ciclos de jun, jul e ago/2026 já estão `closed`; set/2026 está
+        // `open`; out e nov/2026 são `future`.
+        Carbon::setTestNow('2026-09-20');
+
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'date_payment' => '2026-06-05',
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 6,
+                'total_value' => 600,
+                'quotas' => [
+                    ['date_expected' => '2026-06-05', 'number' => 1, 'value_quota' => 100],
+                    ['date_expected' => '2026-07-05', 'number' => 2, 'value_quota' => 100],
+                    ['date_expected' => '2026-08-05', 'number' => 3, 'value_quota' => 100],
+                    ['date_expected' => '2026-09-05', 'number' => 4, 'value_quota' => 100],
+                    ['date_expected' => '2026-10-05', 'number' => 5, 'value_quota' => 100],
+                    ['date_expected' => '2026-11-05', 'number' => 6, 'value_quota' => 100],
+                ],
+            ]));
+
+        $response->assertStatus(201);
+        $expenseId = $response->json('expense_id');
+
+        // jun/jul/ago (ciclos fechados) → quitadas pelo credor.
+        $paid = \App\Models\Quota::where('expense_id', $expenseId)->where('paid', true)->get();
+        $this->assertCount(3, $paid);
+        $this->assertEqualsCanonicalizing(
+            ['2026-06-05', '2026-07-05', '2026-08-05'],
+            $paid->map(fn ($q) => $q->date_expected->toDateString())->all()
+        );
+        foreach ($paid as $quota) {
+            $this->assertSame($member->id, $quota->paid_by);
+            $this->assertNotNull($quota->paid_at);
+        }
+
+        // set (menor ciclo aberto) + out/nov (futuros) → pendentes.
+        $pending = \App\Models\Quota::where('expense_id', $expenseId)->where('paid', false)->get();
+        $this->assertCount(3, $pending);
+        $this->assertEqualsCanonicalizing(
+            ['2026-09-05', '2026-10-05', '2026-11-05'],
+            $pending->map(fn ($q) => $q->date_expected->toDateString())->all()
+        );
+        foreach ($pending as $quota) {
+            $this->assertNull($quota->paid_by);
+            $this->assertNull($quota->paid_at);
+        }
+    }
+
+    public function test_installments_expense_entirely_in_closed_cycles_is_rejected(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'date_payment' => '2026-05-10',
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 3,
+                'total_value' => 300,
+                'quotas' => [
+                    ['date_expected' => '2026-05-10', 'number' => 1, 'value_quota' => 100],
+                    ['date_expected' => '2026-06-10', 'number' => 2, 'value_quota' => 100],
+                    ['date_expected' => '2026-07-10', 'number' => 3, 'value_quota' => 100],
+                ],
+            ]));
+
+        $response->assertStatus(422)->assertJson([
+            'error' => 'Esta despesa parcelada está inteira em competências já fechadas. Para registrá-la, ao menos a última parcela precisa cair num ciclo ainda aberto.',
+        ]);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_retroactive_installments_leave_a_sealed_past_cycle_untouched_and_pending_starts_at_the_open_cycle(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        // Junho/2026 já selado — foto congelada, nada pendente.
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-06-01',
+            'cycle_end' => '2026-06-30',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'settlements' => [],
+            'settled_at' => now(),
+        ]);
+
+        $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'date_payment' => '2026-06-05',
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 6,
+                'total_value' => 600,
+                'quotas' => [
+                    ['date_expected' => '2026-06-05', 'number' => 1, 'value_quota' => 100],
+                    ['date_expected' => '2026-07-05', 'number' => 2, 'value_quota' => 100],
+                    ['date_expected' => '2026-08-05', 'number' => 3, 'value_quota' => 100],
+                    ['date_expected' => '2026-09-05', 'number' => 4, 'value_quota' => 100],
+                    ['date_expected' => '2026-10-05', 'number' => 5, 'value_quota' => 100],
+                    ['date_expected' => '2026-11-05', 'number' => 6, 'value_quota' => 100],
+                ],
+            ]))
+            ->assertStatus(201);
+
+        // Junho continua servindo a foto selada — a parcela retroativa não entra.
+        $this->withToken($this->tokenFor($member))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=3")
+            ->assertStatus(200)
+            ->assertJsonPath('cycle.start', '2026-06-01')
+            ->assertJsonPath('cycle.settled', true)
+            ->assertJsonPath('totals.total', 0);
+
+        // Ciclo corrente (set/2026): só a parcela de setembro conta como pendência.
+        $this->withToken($this->tokenFor($member))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->assertJsonPath('cycle.start', '2026-09-01')
+            ->assertJsonPath('totals.pending', 100);
     }
 }

@@ -21,7 +21,7 @@ type CycleClosingAlertProps = { summary: Summary };
 
 /**
  * Aviso de fechamento de ciclo, exibido na Home do grupo e na tela de
- * Despesas — ver docs/feature/20260902-pagamento-ciclo-fechado §2.10.
+ * Despesas — ver docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado §2.10.
  *
  * - PRÉ-fechamento: enquanto o ciclo ainda está `open` e hoje já passou da
  *   fronteira (`cycle.end`) mas não chegou à data de corte (`cycle.closes_at`,

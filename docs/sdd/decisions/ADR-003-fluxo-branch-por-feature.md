@@ -7,7 +7,7 @@ Data: 2026-08-18
 
 Desde 2026-08-17 (`00-constitution.md` §5.1, `04-implementation.md` §1), cada task nascia de `dev` atualizada, numa branch própria (`<tipo>/<AAAAMMDD>-<slug-da-feature>-TASK-0xx`), e abria seu próprio PR contra `dev` — merge em `dev` era gate humano por task.
 
-Esse fluxo acabou de rodar por inteiro na feature `docs/feature/20260818-fluxo-despesas-grupo/`: 6 tasks (TASK-033 a TASK-038), 6 branches, 6 PRs, 6 merges em `dev` para entregar uma única feature coesa. O dono do projeto avaliou isso como fragmentado demais — "não está legal um commit por task" — e pediu um modelo de duas camadas: uma branch principal por feature que acumula as tasks, e só ela conversa com `dev`/`main`.
+Esse fluxo acabou de rodar por inteiro na feature `docs/feature/concluidas/202608/20260818-fluxo-despesas-grupo/`: 6 tasks (TASK-033 a TASK-038), 6 branches, 6 PRs, 6 merges em `dev` para entregar uma única feature coesa. O dono do projeto avaliou isso como fragmentado demais — "não está legal um commit por task" — e pediu um modelo de duas camadas: uma branch principal por feature que acumula as tasks, e só ela conversa com `dev`/`main`.
 
 ## Decisão
 
@@ -20,7 +20,7 @@ A partir desta data, o fluxo de branch passa a ter duas camadas:
 5. **PR feature → `dev`**: um único PR, referenciando a feature e as tasks incluídas. Merge continua sendo **gate humano** — só que agora é um gate por feature, não por task.
 6. **Promoção `dev` → `main`**: inalterada — PR de promoção separado, gate humano, como já era.
 
-Escopo: vale a partir de agora, para a próxima feature nova. A feature `docs/feature/20260818-fluxo-despesas-grupo/` já foi concluída sob o fluxo antigo (`origin/dev` e `origin/main` já confirmados no mesmo commit) — não é retroagida.
+Escopo: vale a partir de agora, para a próxima feature nova. A feature `docs/feature/concluidas/202608/20260818-fluxo-despesas-grupo/` já foi concluída sob o fluxo antigo (`origin/dev` e `origin/main` já confirmados no mesmo commit) — não é retroagida.
 
 ## Consequências
 
@@ -39,4 +39,4 @@ Escopo: vale a partir de agora, para a próxima feature nova. A feature `docs/fe
 
 - `docs/sdd/00-constitution.md` §5.1 e tabela de Governança (§5.2).
 - `docs/sdd/04-implementation.md` §1.
-- `docs/feature/20260818-fluxo-despesas-grupo/` — última feature a seguir o fluxo antigo (task → `dev` direto) por completo.
+- `docs/feature/concluidas/202608/20260818-fluxo-despesas-grupo/` — última feature a seguir o fluxo antigo (task → `dev` direto) por completo.

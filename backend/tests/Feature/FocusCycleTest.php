@@ -13,7 +13,7 @@ use Tests\TestCase;
 /**
  * `GET /api/groups/{groupId}/expenses/focus-cycle` — em qual competência o app
  * abre o grupo: o ciclo fechado mais recente ainda com pendência, ou 0.
- * Ver docs/feature/20260902-pagamento-ciclo-fechado/plan.md §4.
+ * Ver docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §4.
  */
 class FocusCycleTest extends TestCase
 {
