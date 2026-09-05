@@ -1,7 +1,6 @@
 import React from 'react';
-import { Avatar, Box, Card, CardContent, Stack, Typography } from '@mui/material';
-import { getInitials } from '../layouts/group/getInitials';
-import { brandColors } from '../theme/brandColors';
+import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
+import UserAvatar from './UserAvatar';
 import type { SummaryBalance } from '../hooks/useGroupCycle';
 
 const formatMoney = (value: number): string =>
@@ -22,9 +21,7 @@ const BalanceCards: React.FC<BalanceCardsProps> = ({ balances }) => (
     {balances.map(balance => (
       <Card key={balance.user_id} variant="outlined">
         <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, '&:last-child': { pb: 2 } }}>
-          <Avatar sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.85rem' }}>
-            {getInitials(balance.name)}
-          </Avatar>
+          <UserAvatar name={balance.name} avatarUrl={balance.avatarUrl} />
           <Box flexGrow={1}>
             <Typography variant="body1">{balance.name}</Typography>
             <Typography

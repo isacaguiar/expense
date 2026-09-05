@@ -1130,7 +1130,19 @@ class ExpenseController extends Controller
                     'bornPaid' => $entry['bornPaid'],
                     'paymentProofUrl' => $entry['paymentProofUrl'],
                     'payerName' => $entry['expense']->payer->name ?? null,
+                    // Aditivo (Constitution §4.1): sibling de payerName/participants,
+                    // não substitui — avatar do credor/participantes pra exibição
+                    // (docs/feature/20260904-avatar-usuario-listagens/plan.md §1).
+                    'payerAvatarUrl' => $entry['expense']->payer->avatar_url ?? null,
                     'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
+                    'participantDetails' => $entry['expense']->payers
+                        ->map(fn ($payer) => [
+                            'id' => $payer->id,
+                            'name' => $payer->name,
+                            'avatarUrl' => $payer->avatar_url,
+                        ])
+                        ->values()
+                        ->all(),
                     'isFixed' => $entry['expense']->expense_type === 'FIXED',
                     // IDs (não só nomes) — o frontend precisa deles pra decidir se o
                     // usuário logado é o credor (pode pagar) ou dono (pode editar/
@@ -1154,7 +1166,12 @@ class ExpenseController extends Controller
 
         $balances = [];
         foreach ($group->members as $member) {
-            $balances[$member->id] = ['user_id' => $member->id, 'name' => $member->name, 'balance' => 0.0];
+            $balances[$member->id] = [
+                'user_id' => $member->id,
+                'name' => $member->name,
+                'avatarUrl' => $member->avatar_url,
+                'balance' => 0.0,
+            ];
         }
 
         // $owed[$credorId][$devedorId] = quanto o devedor deve ao credor,

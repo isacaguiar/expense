@@ -24,8 +24,9 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { buildInstallmentQuotas } from '../utils/installments';
+import UserAvatar from '../components/UserAvatar';
 
-type GroupMember = { id: number; name: string };
+type GroupMember = { id: number; name: string; avatar_url: string | null };
 
 type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
 
@@ -139,7 +140,8 @@ const ExpenseView: React.FC = () => {
       .catch(err => console.error('Erro ao carregar membros do grupo:', err));
   }, [groupId]);
 
-  const creditorName = (expense && members.find(m => m.id === expense.user_payer_id)?.name) ?? '-';
+  const creditor = expense ? members.find(m => m.id === expense.user_payer_id) : undefined;
+  const creditorName = creditor?.name ?? '-';
 
   const startEditing = () => {
     if (!expense) return;
@@ -330,7 +332,10 @@ const ExpenseView: React.FC = () => {
             <TextField label="Credor" select fullWidth value={payerId} onChange={e => setPayerId(e.target.value)}>
               {members.map(member => (
                 <MenuItem key={member.id} value={String(member.id)}>
-                  {member.name}
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <UserAvatar name={member.name} avatarUrl={member.avatar_url} size={24} sx={{ fontSize: '0.7rem' }} />
+                    {member.name}
+                  </Box>
                 </MenuItem>
               ))}
             </TextField>
@@ -339,16 +344,18 @@ const ExpenseView: React.FC = () => {
               <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
               <FormGroup>
                 {members.map(member => (
-                  <FormControlLabel
-                    key={member.id}
-                    control={
-                      <Checkbox
-                        checked={participantIds.includes(member.id)}
-                        onChange={() => toggleParticipant(member.id)}
-                      />
-                    }
-                    label={member.name}
-                  />
+                  <Box key={member.id} display="flex" alignItems="center" gap={1}>
+                    <UserAvatar name={member.name} avatarUrl={member.avatar_url} size={24} sx={{ fontSize: '0.7rem' }} />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={participantIds.includes(member.id)}
+                          onChange={() => toggleParticipant(member.id)}
+                        />
+                      }
+                      label={member.name}
+                    />
+                  </Box>
                 ))}
               </FormGroup>
             </Box>
@@ -385,9 +392,11 @@ const ExpenseView: React.FC = () => {
           <Typography color="text.secondary">
             {new Date(expense.date_payment).toLocaleDateString('pt-BR')}
           </Typography>
-          <Typography color="text.secondary" sx={{ mb: proofUrl ? 1 : 3 }}>
-            Credor: {creditorName}
-          </Typography>
+          <Box display="flex" alignItems="center" gap={1} sx={{ mb: proofUrl ? 1 : 3 }}>
+            <Typography color="text.secondary">Credor:</Typography>
+            <UserAvatar name={creditorName} avatarUrl={creditor?.avatar_url} sx={{ width: 24, height: 24, fontSize: '0.7rem' }} />
+            <Typography color="text.secondary">{creditorName}</Typography>
+          </Box>
 
           {proofUrl && (
             <Typography sx={{ mb: 3 }}>

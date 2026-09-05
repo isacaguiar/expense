@@ -295,6 +295,51 @@ class ExpenseControllerSummaryTest extends TestCase
         ]);
     }
 
+    /**
+     * docs/feature/20260904-avatar-usuario-listagens/plan.md §1: payerAvatarUrl/
+     * participantDetails/balances[].avatarUrl são aditivos, resolvidos pelo
+     * mesmo accessor User::getAvatarUrlAttribute (foto própria > avatar_url do
+     * Google > null).
+     */
+    public function test_expense_and_balance_entries_expose_avatar_urls_by_precedence(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $withOwnPhoto = User::factory()->create(['photo_path' => 'avatares/x/foto.jpg', 'avatar_url' => 'https://google.example/old.png']);
+        $withGoogleAvatar = User::factory()->create(['avatar_url' => 'https://google.example/avatar.png']);
+        $withoutAvatar = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$withOwnPhoto->id, $withGoogleAvatar->id, $withoutAvatar->id]);
+
+        $expense = $this->createExpense($group, $withOwnPhoto, ['date_payment' => '2026-08-05', 'total_value' => 300]);
+        $expense->payers()->sync([$withOwnPhoto->id, $withGoogleAvatar->id, $withoutAvatar->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 300]);
+
+        $response = $this->withToken($this->tokenFor($withOwnPhoto))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200);
+
+        $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
+        $this->assertStringContainsString("/api/user/{$withOwnPhoto->id}/photo", $entry['payerAvatarUrl']);
+        $this->assertStringContainsString('signature=', $entry['payerAvatarUrl']);
+
+        $participantDetails = collect($entry['participantDetails'])->keyBy('id');
+        $this->assertStringContainsString("/api/user/{$withOwnPhoto->id}/photo", $participantDetails[$withOwnPhoto->id]['avatarUrl']);
+        $this->assertSame('https://google.example/avatar.png', $participantDetails[$withGoogleAvatar->id]['avatarUrl']);
+        $this->assertNull($participantDetails[$withoutAvatar->id]['avatarUrl']);
+        // participants (string[]) continua existindo, sem mudar de forma (Constitution §4.1).
+        $this->assertSame(
+            [$withOwnPhoto->name, $withGoogleAvatar->name, $withoutAvatar->name],
+            $entry['participants']
+        );
+
+        $balances = collect($response->json('balances'))->keyBy('user_id');
+        $this->assertStringContainsString("/api/user/{$withOwnPhoto->id}/photo", $balances[$withOwnPhoto->id]['avatarUrl']);
+        $this->assertSame('https://google.example/avatar.png', $balances[$withGoogleAvatar->id]['avatarUrl']);
+        $this->assertNull($balances[$withoutAvatar->id]['avatarUrl']);
+    }
+
     public function test_balances_include_every_member_and_sum_to_zero(): void
     {
         Carbon::setTestNow('2026-08-19');

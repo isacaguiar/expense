@@ -21,6 +21,12 @@ export type SummaryCycle = {
 
 export type SummaryTotals = { total: number; paid: number; pending: number };
 
+export type SummaryParticipantDetail = {
+  id: number;
+  name: string;
+  avatarUrl: string | null;
+};
+
 export type SummaryExpense = {
   id: number;
   description: string;
@@ -30,7 +36,11 @@ export type SummaryExpense = {
   paid: boolean;
   paymentProofUrl: string | null;
   payerName: string | null;
+  // Opcionais: aditivos (docs/feature/20260904-avatar-usuario-listagens/plan.md
+  // §1) — ausentes num ciclo selado antes dessa mudança (snapshot congelado).
+  payerAvatarUrl?: string | null;
   participants: string[];
+  participantDetails?: SummaryParticipantDetail[];
   isFixed: boolean;
   userPayerId: number;
   userCreatorId: number;
@@ -39,6 +49,7 @@ export type SummaryExpense = {
 export type SummaryBalance = {
   user_id: number;
   name: string;
+  avatarUrl?: string | null;
   balance: number;
 };
 
