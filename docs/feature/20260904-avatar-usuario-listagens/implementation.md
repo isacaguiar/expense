@@ -14,6 +14,8 @@ Versão: 1.0 · Criado em: 20260904
 
 Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. Cite o comando real executado e o resultado obtido — não basta escrever "testado"/"validado" em prosa.
 
+PR aberto: [#151](https://github.com/isacaguiar/expense/pull/151) (`feature/20260904-avatar-usuario-listagens` → `dev`). Revisões automáticas antes de abrir: `security-reviewer` (sem achados bloqueantes — mudança aditiva, sem regressão de autorização) e `pr-readiness-checker` (checklist completo aprovado). Merge em `dev` é gate humano (Constitution §5.2).
+
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
 | TASK-001 | Concluída | 2026-09-04 | Claude (IA) | `./vendor/bin/pint --test app/Http/Controllers/ExpenseController.php tests/Feature/ExpenseControllerSummaryTest.php` — PASS (2 files); `php artisan test --filter=ExpenseControllerSummaryTest` — 23 passed (149 assertions); `php artisan test` (suíte completa) — 328 passed (1037 assertions) | Mudança aditiva só em `computeCycleSummary` (Constitution §4.1); `GroupMemberController::index`/model `User` não mudaram (já expunham `avatar_url`). |
