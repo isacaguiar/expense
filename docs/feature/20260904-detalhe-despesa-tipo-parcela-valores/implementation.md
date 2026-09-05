@@ -20,7 +20,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 |---|---|---|---|---|---|
 | TASK-001 | Concluída | 2026-09-04 | IA (Claude) | Ver detalhamento abaixo | Campos aditivos; `isFixed` mantido |
 | TASK-002 | Concluída | 2026-09-05 | IA (Claude) | Ver detalhamento abaixo | Achado extra: snapshot antigo sem `valuePerPerson` |
-| TASK-003 | Aguardando execução | 2026-09-05 | Isac (usuário) | Script escrito e revisado; execução pendente | Gate de produção — Constitution §5.2 |
+| TASK-003 | Executada | 2026-09-05 | Isac (usuário) | Ver detalhamento abaixo | Executada em produção via phpMyAdmin; conferência no app pendente |
 
 ### TASK-001 — detalhamento
 
@@ -160,11 +160,14 @@ setembro. Reverte deliberadamente `20260904-parcela-retroativa-contabilizacao/sp
 | Passo | Ação | Resultado confirmado pelo usuário |
 |---|---|---|
 | 0 | Diagnóstico (quotas, despesas, snapshots mai–set) | **Confere com o esperado** — ver abaixo |
-| 1 | Backup nas 3 tabelas `_bkp_*_20260904b` | — |
-| 2 | Antecipar `date_expected` e `date_payment` em 1 mês | — |
-| 3 | Parcelas de julho e agosto → `paid=1`, `born_paid=1`, `paid_by=5573` | — |
+| 1 | Backup em `_bkp_ex_quotas_20260904b` e `_bkp_ex_expenses_20260904b` | Criadas |
+| 2 | Antecipar `date_expected` (11 quotas) e `date_payment` (2 despesas) em 1 mês | Aplicado |
+| 3 | Parcelas de julho e agosto → `paid=1`, `born_paid=1`, `paid_by=5573` | Aplicado nas 4 quotas (6773, 6774, 6779, 6780) |
 | 4 | Desselar mai–ago (só os que o passo 0 mostrar selados) | **Dispensado** — nada selado (ver abaixo) |
-| 5 | Verificação por API + conferência no app | — |
+| 5 | Conferência no app | Pendente |
+
+O backup de `ex_group_cycle_snapshots` não foi criado porque o passo 4 foi dispensado — nenhuma
+linha daquela tabela é tocada por esta execução.
 
 #### Resultado do passo 0 (executado pelo usuário em 2026-09-05, via phpMyAdmin)
 
@@ -194,6 +197,26 @@ selado; a divergência elimina trabalho em vez de criar.
 
 Quotas que o passo 3 deve marcar, depois do deslocamento: **6773 e 6774** (8658) e **6779 e 6780**
 (8659) — as que passam a cair em 2026-07-04 e 2026-08-04.
+
+#### Estado final confirmado (após os passos 1–3, 2026-09-05)
+
+`SELECT expense_id, number, date_expected, paid, born_paid, value_quota` nas 11 quotas devolveu
+exatamente o alvo de `specify.md` §3.5:
+
+| Despesa | `number` | `date_expected` | `paid` / `born_paid` |
+|---|---|---|---|
+| 8658 | 1–4 | 2026-05-04, 06-04, 07-04, 08-04 | 1 / 1 |
+| 8658 | 5, 6 | 2026-09-04, 2026-10-04 | 0 / 0 |
+| 8659 | 1–4 | 2026-05-04, 06-04, 07-04, 08-04 | 1 / 1 |
+| 8659 | 5 | 2026-09-04 | 0 / 0 |
+
+`value_quota` inalterado (292,40 e 543,00), quantidade de parcelas inalterada (6 e 5), totais
+inalterados (R$ 1.754,40 e R$ 2.715,00) — o deslocamento não mexeu em dinheiro, só em competência.
+
+Quitado retroativamente: R$ 1.169,60 (8658, 4 parcelas) + R$ 2.172,00 (8659, 4 parcelas).
+Pendência real restante: setembro com R$ 292,40 + R$ 543,00 = R$ 835,40 (R$ 139,23 por devedor) e
+outubro com R$ 292,40 só do 8658. Novembro deixou de existir para o 8658; outubro deixou de existir
+para o 8659.
 
 ## 3. PRs
 
