@@ -1,8 +1,7 @@
 import React from 'react';
-import { Avatar, Box, Card, CardContent, Stack, Typography } from '@mui/material';
+import { Box, Card, CardContent, Stack, Typography } from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import { getInitials } from '../layouts/group/getInitials';
-import { brandColors } from '../theme/brandColors';
+import UserAvatar from './UserAvatar';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 
 const formatMoney = (value: number): string =>
@@ -22,15 +21,15 @@ type SettlementListProps = {
 const SettlementList: React.FC<SettlementListProps> = ({ settlements, balances }) => {
   const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
   const nameFor = (userId: number): string => nameById.get(userId) ?? 'Desconhecido';
+  const avatarById = new Map(balances.map(balance => [balance.user_id, balance.avatarUrl]));
+  const avatarFor = (userId: number): string | null | undefined => avatarById.get(userId);
 
   return (
     <Stack spacing={1.5}>
       {settlements.map((settlement, index) => (
         <Card key={`${settlement.from_user_id}-${settlement.to_user_id}-${index}`} variant="outlined">
           <CardContent sx={{ display: 'flex', alignItems: 'center', gap: 1.5, '&:last-child': { pb: 2 } }}>
-            <Avatar sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.85rem' }}>
-              {getInitials(nameFor(settlement.from_user_id))}
-            </Avatar>
+            <UserAvatar name={nameFor(settlement.from_user_id)} avatarUrl={avatarFor(settlement.from_user_id)} />
             <Box flexGrow={1}>
               <Typography variant="body2">
                 <strong>{nameFor(settlement.from_user_id)}</strong> deve pagar{' '}
@@ -41,9 +40,7 @@ const SettlementList: React.FC<SettlementListProps> = ({ settlements, balances }
               </Typography>
             </Box>
             <ArrowForwardIcon color="action" fontSize="small" />
-            <Avatar sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.85rem' }}>
-              {getInitials(nameFor(settlement.to_user_id))}
-            </Avatar>
+            <UserAvatar name={nameFor(settlement.to_user_id)} avatarUrl={avatarFor(settlement.to_user_id)} />
           </CardContent>
         </Card>
       ))}

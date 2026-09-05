@@ -18,12 +18,14 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { buildInstallmentQuotas, InstallmentQuota } from '../utils/installments';
+import UserAvatar from '../components/UserAvatar';
 
 type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
 
 type GroupMember = {
   id: number;
   name: string;
+  avatar_url: string | null;
 };
 
 type Quota = InstallmentQuota;
@@ -220,7 +222,10 @@ const ExpenseForm: React.FC = () => {
             >
               {members.map(member => (
                 <MenuItem key={member.id} value={String(member.id)}>
-                  {member.name}
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <UserAvatar name={member.name} avatarUrl={member.avatar_url} size={24} sx={{ fontSize: '0.7rem' }} />
+                    {member.name}
+                  </Box>
                 </MenuItem>
               ))}
             </TextField>
@@ -229,16 +234,18 @@ const ExpenseForm: React.FC = () => {
               <FormLabel component="legend">Quem participa desta despesa?</FormLabel>
               <FormGroup>
                 {members.map(member => (
-                  <FormControlLabel
-                    key={member.id}
-                    control={
-                      <Checkbox
-                        checked={participantIds.includes(member.id)}
-                        onChange={() => toggleParticipant(member.id)}
-                      />
-                    }
-                    label={member.name}
-                  />
+                  <Box key={member.id} display="flex" alignItems="center" gap={1}>
+                    <UserAvatar name={member.name} avatarUrl={member.avatar_url} size={24} sx={{ fontSize: '0.7rem' }} />
+                    <FormControlLabel
+                      control={
+                        <Checkbox
+                          checked={participantIds.includes(member.id)}
+                          onChange={() => toggleParticipant(member.id)}
+                        />
+                      }
+                      label={member.name}
+                    />
+                  </Box>
                 ))}
               </FormGroup>
             </Box>
