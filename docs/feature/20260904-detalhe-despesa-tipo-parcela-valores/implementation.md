@@ -148,3 +148,9 @@ Pontos que o script trava de propósito:
 | 3 | Parcela de julho → `paid=1`, `born_paid=1`, `paid_by=5573` | — |
 | 4 | Desselar mai–jul (só os que o passo 0 mostrar selados) | — |
 | 5 | Verificação por API + conferência no app | — |
+
+## 3. PR
+
+PR aberto: https://github.com/isacaguiar/expense/pull/153 (`feature/20260904-detalhe-despesa-tipo-parcela-valores` → `dev`), cobrindo TASK-001 e TASK-002. **Merge é gate humano.**
+
+TASK-003 não entra no merge como comportamento — o `.sql` vai junto só como documento; a execução em produção é gate humano separado.
