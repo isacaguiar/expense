@@ -47,7 +47,10 @@ export type SummaryExpense = {
   // Opcionais pelo mesmo motivo (docs/feature/20260904-detalhe-despesa-tipo-
   // parcela-valores/plan.md §2): distinguem À Vista de Parcelada e permitem
   // montar "Parcelada 2/6" com o total da despesa. `installmentNumber` é o nº
-  // da parcela que vence NESTE ciclo; só tem significado em IN_INSTALLMENTS.
+  // da Quota que vence NESTE ciclo — numa IN_CASH ele vem 1 (a despesa tem uma
+  // Quota só) e numa FIXED ainda projetada vem null; em nenhum dos dois isso
+  // significa "parcela 1 de N", então só use o campo quando expenseType for
+  // IN_INSTALLMENTS.
   expenseType?: SummaryExpenseType;
   installmentNumber?: number | null;
   installmentsTotal?: number;

@@ -105,6 +105,26 @@ aplicação exige login e a IA não digita credenciais. A verificação visual d
 de o usuário autenticar a aba. A cobertura automatizada dos três cenários (parcelada, à vista,
 payload sem os campos novos) está nos testes de `ExpenseManager.test.tsx`.
 
+### Checklist de integração na branch da feature (04-implementation.md §1 item 5)
+
+| Comando | Resultado |
+|---|---|
+| `./vendor/bin/pint --test app/Http/Controllers/ExpenseController.php tests/Feature/ExpenseControllerSummaryTest.php` | PASS, 2 files |
+| `php artisan test` | 330 passed (1065 assertions) |
+| `npx tsc --noEmit` | sem erro |
+| `npx vitest run` | 37 arquivos, 239 passed |
+
+`./vendor/bin/pint --test` sem escopo continua apontando débito de estilo em migrations de
+2025 — pré-existente, fora do diff desta feature, não bloqueante (mesma situação registrada em
+`20260904-parcela-retroativa-contabilizacao`).
+
+`security-reviewer`: **nenhum achado**. Confirmou que `summary()` mantém
+`authorizeGroupMembership()` antes de qualquer leitura, que as três origens de entry são escopadas
+por `group_id` (logo nenhum campo novo vaza dado de outro grupo) e que o diff é 100% leitura (sem
+mass assignment novo). Levantou uma imprecisão de comentário — `installmentNumber` vem `1` numa
+`IN_CASH` (a despesa tem uma Quota só), não `null` —, corrigida no comentário de
+`useGroupCycle.ts` para dizer exatamente isso em vez de sugerir `null`.
+
 ### TASK-003 — detalhamento (dados de produção)
 
 Script: `fix-prod-8658-8659-antecipa-mes.sql` (nesta pasta). **Ainda não executado.**
