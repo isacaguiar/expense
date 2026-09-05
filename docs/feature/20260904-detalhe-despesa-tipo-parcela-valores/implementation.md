@@ -139,27 +139,47 @@ mass assignment novo). Levantou uma imprecisão de comentário — `installmentN
 Script: `fix-prod-8658-8659-antecipa-mes.sql` (nesta pasta). **Ainda não executado.**
 
 Sequência: diagnóstico (passo 0) → backup (1) → `date_expected -1 mês` nas 11 quotas e
-`date_payment -1 mês` nas 2 despesas (2) → marcar a parcela que passou a cair em julho como
-`paid = 1` / `born_paid = 1` / `paid_by = 5573` (3) → desselar mai–jul se o passo 0 mostrar
-selados (4) → verificação por API (5) → rollback documentado (6).
+`date_payment -1 mês` nas 2 despesas (2) → marcar as parcelas que passaram a cair em julho e
+agosto como `paid = 1` / `born_paid = 1` / `paid_by = 5573` (3) → desselar mai–ago se o passo 0
+mostrar selados (4) → verificação por API (5) → rollback documentado (6).
 
 Pontos que o script trava de propósito:
 - o `UPDATE` do passo 3 exige `paid = 0`, então reexecução acidental é no-op;
 - `born_paid = 1` (e não só `paid = 1`) é obrigatório — marcar só `paid` reintroduziria o
-  settlement fantasma corrigido em `20260904-parcela-retroativa-contabilizacao`;
+  settlement fantasma corrigido em `20260904-parcela-retroativa-contabilizacao` e, em agosto,
+  manteria a cobrança que o usuário quer justamente remover;
 - o passo 0 lista o estado esperado e manda **parar** se o que estiver no banco divergir.
+
+**Revisão de escopo em 2026-09-05** (antes de qualquer execução): a versão inicial deste script
+marcava só julho como quitado e mantinha agosto como dívida real. Perguntei explicitamente o que
+"agosto pago" significava, porque as duas leituras têm consequência financeira oposta, e o usuário
+escolheu **quitado, ninguém deve nada** (`born_paid = 1`). Efeito: R$ 696,15 (5 devedores ×
+R$ 139,23) saem do acerto de agosto, e a primeira pendência real das duas despesas passa a ser
+setembro. Reverte deliberadamente `20260904-parcela-retroativa-contabilizacao/specify.md` §2.5.
 
 | Passo | Ação | Resultado confirmado pelo usuário |
 |---|---|---|
 | 0 | Diagnóstico (quotas, despesas, snapshots mai–set) | — |
 | 1 | Backup nas 3 tabelas `_bkp_*_20260904b` | — |
 | 2 | Antecipar `date_expected` e `date_payment` em 1 mês | — |
-| 3 | Parcela de julho → `paid=1`, `born_paid=1`, `paid_by=5573` | — |
-| 4 | Desselar mai–jul (só os que o passo 0 mostrar selados) | — |
+| 3 | Parcelas de julho e agosto → `paid=1`, `born_paid=1`, `paid_by=5573` | — |
+| 4 | Desselar mai–ago (só os que o passo 0 mostrar selados) | — |
 | 5 | Verificação por API + conferência no app | — |
 
-## 3. PR
+## 3. PRs
 
-PR aberto: https://github.com/isacaguiar/expense/pull/153 (`feature/20260904-detalhe-despesa-tipo-parcela-valores` → `dev`), cobrindo TASK-001 e TASK-002. **Merge é gate humano.**
+| PR | Conteúdo | Estado |
+|---|---|---|
+| [#153](https://github.com/isacaguiar/expense/pull/153) | TASK-001 (backend) + TASK-002 (frontend) + scaffold SDD + `.sql` inicial da TASK-003 | Mergeado em `dev` em 2026-09-05 |
+| [#155](https://github.com/isacaguiar/expense/pull/155) | Só docs: revisão da TASK-003 — agosto passa a `born_paid` (specify §3.5.1) | Aberto — **merge é gate humano** |
 
-TASK-003 não entra no merge como comportamento — o `.sql` vai junto só como documento; a execução em produção é gate humano separado.
+O #155 existe porque o #153 foi mergeado (e a branch remota apagada) enquanto a decisão sobre
+agosto ainda estava sendo tomada; o push seguinte recriou a branch com o commit de docs sozinho.
+Não há código nele.
+
+TASK-003 não entra em nenhum merge como comportamento — o `.sql` vai junto só como documento; a
+execução em produção é gate humano separado e **ainda não foi feita**.
+
+Esta pasta **permanece em `docs/feature/`** (não vai para `concluidas/<AAAAMM>/` ainda, apesar do
+#153 já estar em `dev`): a feature só termina quando a TASK-003 for executada e verificada em
+produção. Mover agora esconderia um trabalho em aberto na pasta de concluídos.

@@ -67,9 +67,9 @@ Sequência:
 | 1 | Backup em `_bkp_ex_quotas_20260904b`, `_bkp_ex_expenses_20260904b`, `_bkp_ex_group_cycle_snapshots_20260904b` | Rollback sem depender de dump |
 | 2 | `date_expected = DATE_SUB(date_expected, INTERVAL 1 MONTH)` nas quotas de 8658/8659 | A antecipação em si; preserva `number` 1..N, quantidade e total |
 | 3 | `date_payment = DATE_SUB(date_payment, INTERVAL 1 MONTH)` nas duas despesas | `indexByGroup()` usa mês calendário de `date_payment`; deixar em junho descolaria da 1ª parcela |
-| 4 | Na quota que passou a cair em **julho/2026**: `paid = 1`, `born_paid = 1`, `paid_by = 5573`, `paid_at = NOW()` | Era agosto (pendente) e virou julho, mês já pago. `born_paid = 1` é o que evita o settlement fantasma (regra da feature `20260904-parcela-retroativa-contabilizacao`) |
-| 5 | `settled_at = NULL` nos ciclos de mai–jul/2026 que o passo 0 mostrar selados | Ciclo selado é servido do snapshot congelado; sem desselar, a parcela de maio não aparece |
-| 6 | Verificação **por API** (GET autenticado), não por SQL | É o comportamento observável que interessa: mai/jun/jul com linha `paid: true` e `settlements: []`; ago com pendência cobrável; `focus-cycle` apontando para agosto |
+| 4 | Nas quotas que passaram a cair em **julho e agosto/2026**: `paid = 1`, `born_paid = 1`, `paid_by = 5573`, `paid_at = NOW()` | Eram agosto e setembro (pendentes) e viraram julho e agosto, meses já pagos. `born_paid = 1` é o que evita o settlement fantasma (regra da feature `20260904-parcela-retroativa-contabilizacao`) **e** o que efetivamente tira a cobrança de agosto dos devedores — ver specify §3.5.1 |
+| 5 | `settled_at = NULL` nos ciclos de mai–ago/2026 que o passo 0 mostrar selados | Ciclo selado é servido do snapshot congelado; sem desselar, a parcela de maio não aparece e agosto continua servindo a foto antiga, em que a parcela ainda era dívida |
+| 6 | Verificação **por API** (GET autenticado), não por SQL | É o comportamento observável que interessa: mai/jun/jul/ago com linha `paid: true` e sem settlement referente a essas despesas; setembro com a primeira pendência real; `focus-cycle` apontando para setembro |
 | 7 | Rollback a partir das tabelas do passo 1 | — |
 
 **Gate humano** (Constitution §5.2 — banco compartilhado/produção): a IA escreve e revisa o script; **quem executa é o usuário**, passo a passo, reportando o resultado de cada `SELECT`/`UPDATE`. O resultado confirmado é registrado em `implementation.md`. Nenhuma credencial é digitada pela IA e o cPanel não é aberto por ela.
