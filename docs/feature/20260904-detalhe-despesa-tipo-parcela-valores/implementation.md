@@ -20,6 +20,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 |---|---|---|---|---|---|
 | TASK-001 | Concluída | 2026-09-04 | IA (Claude) | Ver detalhamento abaixo | Campos aditivos; `isFixed` mantido |
 | TASK-002 | Concluída | 2026-09-05 | IA (Claude) | Ver detalhamento abaixo | Achado extra: snapshot antigo sem `valuePerPerson` |
+| TASK-003 | Aguardando execução | 2026-09-05 | Isac (usuário) | Script escrito e revisado; execução pendente | Gate de produção — Constitution §5.2 |
 
 ### TASK-001 — detalhamento
 
@@ -92,3 +93,38 @@ antes de `valuePerPerson` existir —, a correção foi guardar o campo em `rend
 (mostra o nome sem valor em vez de quebrar), e não "consertar o fixture". O teste antigo passou a
 valer como regressão desse caso; o assert de `'Isac, Maria'` foi trocado pelos nomes em linhas
 separadas, que é o comportamento novo pedido.
+
+Achado não-bloqueante registrado no backlog em vez de virar escopo desta task:
+`docs/backlog/expense-view-tipo-e-pagadores.md` (ID 039) — a página `ExpenseView` tem os mesmos
+dois problemas (rótulo e pagadores), mas não tem noção de competência, então "qual parcela" ali
+exige uma decisão de produto que o usuário não tomou.
+
+**Verificação em browser não concluída**: `frontend-web` (3000) e `backend-api` (8000) já estavam
+no ar (servidores do próprio usuário), o Browser pane abriu em `http://localhost:3000`, mas a
+aplicação exige login e a IA não digita credenciais. A verificação visual do modal fica pendente
+de o usuário autenticar a aba. A cobertura automatizada dos três cenários (parcelada, à vista,
+payload sem os campos novos) está nos testes de `ExpenseManager.test.tsx`.
+
+### TASK-003 — detalhamento (dados de produção)
+
+Script: `fix-prod-8658-8659-antecipa-mes.sql` (nesta pasta). **Ainda não executado.**
+
+Sequência: diagnóstico (passo 0) → backup (1) → `date_expected -1 mês` nas 11 quotas e
+`date_payment -1 mês` nas 2 despesas (2) → marcar a parcela que passou a cair em julho como
+`paid = 1` / `born_paid = 1` / `paid_by = 5573` (3) → desselar mai–jul se o passo 0 mostrar
+selados (4) → verificação por API (5) → rollback documentado (6).
+
+Pontos que o script trava de propósito:
+- o `UPDATE` do passo 3 exige `paid = 0`, então reexecução acidental é no-op;
+- `born_paid = 1` (e não só `paid = 1`) é obrigatório — marcar só `paid` reintroduziria o
+  settlement fantasma corrigido em `20260904-parcela-retroativa-contabilizacao`;
+- o passo 0 lista o estado esperado e manda **parar** se o que estiver no banco divergir.
+
+| Passo | Ação | Resultado confirmado pelo usuário |
+|---|---|---|
+| 0 | Diagnóstico (quotas, despesas, snapshots mai–set) | — |
+| 1 | Backup nas 3 tabelas `_bkp_*_20260904b` | — |
+| 2 | Antecipar `date_expected` e `date_payment` em 1 mês | — |
+| 3 | Parcela de julho → `paid=1`, `born_paid=1`, `paid_by=5573` | — |
+| 4 | Desselar mai–jul (só os que o passo 0 mostrar selados) | — |
+| 5 | Verificação por API + conferência no app | — |
