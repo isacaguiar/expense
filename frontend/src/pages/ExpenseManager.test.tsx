@@ -30,11 +30,17 @@ type SummaryExpenseFixture = {
   description: string;
   date: string;
   value: number;
+  valuePerPerson?: number;
   paid?: boolean;
   paymentProofUrl?: string | null;
   payerName?: string | null;
   participants?: string[];
+  participantDetails?: { id: number; name: string; avatarUrl: string | null }[];
   isFixed?: boolean;
+  expenseType?: 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
+  installmentNumber?: number | null;
+  installmentsTotal?: number;
+  totalValue?: number;
   userPayerId?: number;
   userCreatorId?: number;
 };
@@ -214,6 +220,109 @@ describe('ExpenseManager - listagem em cards', () => {
 
     expect(screen.getByText('Aluguel')).toBeInTheDocument();
     expect(screen.queryByText('Mercado')).not.toBeInTheDocument();
+  });
+});
+
+describe('ExpenseManager - modal de detalhes: tipo, parcela e valor por pagador', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+  });
+
+  const openDetails = async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Ver detalhes' }));
+    return within(await screen.findByRole('dialog'));
+  };
+
+  it('shows "Parcelada n/N", the full expense total and each payer\'s share', async () => {
+    mockGetResponses([
+      {
+        id: 30,
+        description: 'Adestrador',
+        date: '2026-08-10',
+        value: 292.4,
+        valuePerPerson: 146.2,
+        payerName: 'Naum',
+        expenseType: 'IN_INSTALLMENTS',
+        installmentNumber: 3,
+        installmentsTotal: 6,
+        totalValue: 1754.4,
+        isFixed: false,
+        userPayerId: CURRENT_USER_ID,
+        participants: ['Naum', 'Isac'],
+        participantDetails: [
+          { id: CURRENT_USER_ID, name: 'Naum', avatarUrl: null },
+          { id: 501, name: 'Isac', avatarUrl: null },
+        ],
+      },
+    ]);
+
+    const dialog = await openDetails();
+
+    expect(dialog.getByText('Parcelada 3/6')).toBeInTheDocument();
+    expect(dialog.getByText(/Total da despesa: R\$ 1\.754,40 em 6x/)).toBeInTheDocument();
+    // Valor em destaque continua sendo o da parcela do mês, não o da compra.
+    expect(dialog.getByText('R$ 292,40')).toBeInTheDocument();
+
+    // Uma linha por pagador, cada uma com o valor individual; o credor é marcado.
+    expect(dialog.getAllByText('R$ 146,20')).toHaveLength(2);
+    expect(dialog.getByText('Naum')).toBeInTheDocument();
+    expect(dialog.getByText('Isac')).toBeInTheDocument();
+    expect(dialog.getByText('(credor)')).toBeInTheDocument();
+  });
+
+  it('labels IN_CASH as "À Vista" and hides the installment total', async () => {
+    mockGetResponses([
+      {
+        id: 31,
+        description: 'Mercado',
+        date: '2026-08-10',
+        value: 100,
+        valuePerPerson: 100,
+        payerName: 'Isac',
+        expenseType: 'IN_CASH',
+        installmentsTotal: 1,
+        totalValue: 100,
+        isFixed: false,
+        participants: ['Isac'],
+        participantDetails: [{ id: CURRENT_USER_ID, name: 'Isac', avatarUrl: null }],
+      },
+    ]);
+
+    const dialog = await openDetails();
+
+    expect(dialog.getByText('À Vista')).toBeInTheDocument();
+    expect(dialog.queryByText(/Total da despesa/)).not.toBeInTheDocument();
+  });
+
+  it('falls back to the old label and plain names when the sealed-cycle payload lacks the new fields', async () => {
+    mockGetResponses([
+      {
+        id: 32,
+        description: 'Internet',
+        date: '2026-08-10',
+        value: 80,
+        valuePerPerson: 40,
+        payerName: 'Isac',
+        isFixed: true,
+        participants: ['Isac', 'Naum'],
+      },
+    ]);
+
+    const dialog = await openDetails();
+
+    expect(dialog.getByText('Fixa')).toBeInTheDocument();
+    expect(dialog.queryByText(/Total da despesa/)).not.toBeInTheDocument();
+    // Sem participantDetails ainda dá pra listar os nomes com o valor de cada um.
+    expect(dialog.getByText('Isac')).toBeInTheDocument();
+    expect(dialog.getByText('Naum')).toBeInTheDocument();
+    expect(dialog.getAllByText('R$ 40,00')).toHaveLength(2);
+    expect(dialog.queryByText('(credor)')).not.toBeInTheDocument();
   });
 });
 
@@ -1002,7 +1111,12 @@ describe('ExpenseManager - modal de detalhes', () => {
     expect(modal.getByText('R$ 120,00')).toBeInTheDocument();
     expect(modal.getByText(/05\/08\/2026/)).toBeInTheDocument();
     expect(modal.getByText('Credor: Isac')).toBeInTheDocument();
-    expect(modal.getByText('Isac, Maria')).toBeInTheDocument();
+    // Pagadores agora saem em uma linha por pessoa (antes: nomes concatenados).
+    // Este fixture não traz valuePerPerson — como um snapshot selado antigo —,
+    // então a lista aparece só com os nomes, sem quebrar o modal.
+    expect(modal.getByText('Maria')).toBeInTheDocument();
+    expect(modal.getAllByText('Isac').length).toBeGreaterThan(0);
+    expect(modal.queryByText('Isac, Maria')).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Fechar' }));
 
