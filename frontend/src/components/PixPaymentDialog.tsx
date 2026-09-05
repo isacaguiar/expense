@@ -16,6 +16,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyOutlinedIcon from '@mui/icons-material/ContentCopyOutlined';
 import CheckIcon from '@mui/icons-material/Check';
 import { API_BASE_URL } from '../config';
+import UserAvatar from './UserAvatar';
 
 type PixResponse = { qrcode: string; copiacola: string };
 
@@ -24,6 +25,7 @@ interface PixPaymentDialogProps {
   onClose: () => void;
   targetEmail: string;
   targetName: string;
+  targetAvatarUrl?: string | null;
   amount: number;
 }
 
@@ -36,7 +38,14 @@ const formatMoney = (value: number): string =>
  * Não confirma pagamento nem altera `Quota.paid` — é só um jeito de o
  * usuário efetuar o Pix fora do app; marcar como pago continua manual.
  */
-const PixPaymentDialog: React.FC<PixPaymentDialogProps> = ({ open, onClose, targetEmail, targetName, amount }) => {
+const PixPaymentDialog: React.FC<PixPaymentDialogProps> = ({
+  open,
+  onClose,
+  targetEmail,
+  targetName,
+  targetAvatarUrl,
+  amount
+}) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [pix, setPix] = useState<PixResponse | null>(null);
@@ -76,13 +85,16 @@ const PixPaymentDialog: React.FC<PixPaymentDialogProps> = ({ open, onClose, targ
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
       <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1 }}>
-        <Box>
-          <Typography variant="h6" fontWeight={700} component="span">
-            Pagar {targetName}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            R$ {formatMoney(amount)} via Pix
-          </Typography>
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <UserAvatar name={targetName} avatarUrl={targetAvatarUrl} />
+          <Box>
+            <Typography variant="h6" fontWeight={700} component="span">
+              Pagar {targetName}
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              R$ {formatMoney(amount)} via Pix
+            </Typography>
+          </Box>
         </Box>
         <IconButton onClick={onClose} aria-label="Fechar" size="small">
           <CloseIcon fontSize="small" />
