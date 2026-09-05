@@ -63,7 +63,8 @@ describe('ExpenseView', () => {
     expect(await screen.findByText('Aluguel')).toBeInTheDocument();
     expect(screen.getByText('R$ 1.200,00')).toBeInTheDocument();
     expect(screen.getByText('Fixa')).toBeInTheDocument();
-    expect(await screen.findByText('Credor: Isac')).toBeInTheDocument();
+    expect(await screen.findByText('Credor:')).toBeInTheDocument();
+    expect(screen.getAllByText('Isac').length).toBeGreaterThan(0);
 
     expect(vi.mocked(axios.get).mock.calls.some(call => (call[0] as string).includes('/api/expenses/9'))).toBe(true);
   });

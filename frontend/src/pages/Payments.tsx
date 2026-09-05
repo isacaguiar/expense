@@ -355,6 +355,7 @@ const Payments: React.FC = () => {
           onClose={() => setPixTarget(null)}
           targetEmail={pixTarget.member.email}
           targetName={pixTarget.member.name}
+          targetAvatarUrl={pixTarget.member.avatar_url}
           amount={pixTarget.settlement.amount}
         />
       )}
