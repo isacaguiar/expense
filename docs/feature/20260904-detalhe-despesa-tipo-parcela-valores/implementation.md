@@ -159,12 +159,41 @@ setembro. Reverte deliberadamente `20260904-parcela-retroativa-contabilizacao/sp
 
 | Passo | Ação | Resultado confirmado pelo usuário |
 |---|---|---|
-| 0 | Diagnóstico (quotas, despesas, snapshots mai–set) | — |
+| 0 | Diagnóstico (quotas, despesas, snapshots mai–set) | **Confere com o esperado** — ver abaixo |
 | 1 | Backup nas 3 tabelas `_bkp_*_20260904b` | — |
 | 2 | Antecipar `date_expected` e `date_payment` em 1 mês | — |
 | 3 | Parcelas de julho e agosto → `paid=1`, `born_paid=1`, `paid_by=5573` | — |
-| 4 | Desselar mai–ago (só os que o passo 0 mostrar selados) | — |
+| 4 | Desselar mai–ago (só os que o passo 0 mostrar selados) | **Dispensado** — nada selado (ver abaixo) |
 | 5 | Verificação por API + conferência no app | — |
+
+#### Resultado do passo 0 (executado pelo usuário em 2026-09-05, via phpMyAdmin)
+
+**Quotas** — 11 linhas, exatamente o estado previsto em `specify.md` §2.5:
+
+| Despesa | ids | `number` | `date_expected` | Estado |
+|---|---|---|---|---|
+| 8658 | 6771, 6772 | 1, 2 | 2026-06-04, 2026-07-04 | `paid=1`, `born_paid=1`, `paid_by=5573`, `paid_at` 2026-09-04 11:54 |
+| 8658 | 6773–6776 | 3–6 | 2026-08-04 … 2026-11-04 | `paid=0`, `born_paid=0` |
+| 8659 | 6777, 6778 | 1, 2 | 2026-06-04, 2026-07-04 | `paid=1`, `born_paid=1`, `paid_by=5573`, `paid_at` 2026-09-04 11:56 |
+| 8659 | 6779–6781 | 3–5 | 2026-08-04 … 2026-10-04 | `paid=0`, `born_paid=0` |
+
+`value_quota` 292,40 (8658) e 543,00 (8659); `payment_proof_path` nulo em todas. **Todas as datas
+caem no dia 04** — nenhuma em 29/30/31, então `DATE_SUB(..., INTERVAL 1 MONTH)` não vai ajustar dia
+nenhum para o fim do mês anterior. Era o risco que o passo 0 existia para descartar.
+
+**Despesas** — 8658 (Adestrador) e 8659 (Construção parede escritório/demolição stiep), ambas
+`IN_INSTALLMENTS`, `installments` 6 e 5, `total_value` 1.754,40 e 2.715,00, `date_payment`
+2026-06-04, `user_payer_id` 5573, `group_id` 3878, `deleted` 0.
+
+**Snapshots** — só **dois** existem no intervalo (`2026-07-01` e `2026-08-01`), ambos com
+`settled_at`, `closed_manually_at` e `reopened_at` **nulos**. Não há snapshot de maio, junho nem
+setembro. Ou seja: **nenhuma competência está selada**, todas recalculam ao vivo, e o passo 4 do
+script não tem o que desselar — dispensado (o `UPDATE` já é no-op pelo filtro
+`settled_at IS NOT NULL`). Divergiu da previsão do `plan.md` §3, que assumia julho possivelmente
+selado; a divergência elimina trabalho em vez de criar.
+
+Quotas que o passo 3 deve marcar, depois do deslocamento: **6773 e 6774** (8658) e **6779 e 6780**
+(8659) — as que passam a cair em 2026-07-04 e 2026-08-04.
 
 ## 3. PRs
 
