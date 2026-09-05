@@ -90,12 +90,18 @@ Alvo:
 
 | | 8658 Adestrador (6×) | 8659 Construção (5×) |
 |---|---|---|
-| Pagas | #1 mai, #2 jun, #3 jul | #1 mai, #2 jun, #3 jul |
-| Pendentes | #4 ago, #5 set, #6 out | #4 ago, #5 set |
+| Pagas | #1 mai, #2 jun, #3 jul, #4 ago | #1 mai, #2 jun, #3 jul, #4 ago |
+| Pendentes | #5 set, #6 out | #5 set |
 
-Deslocar `date_expected` de todas as parcelas em **−1 mês** preserva a numeração 1..N, a quantidade de parcelas e o total — e é equivalente a "tirar o último mês e acrescentar um mês antes do primeiro". Como consequência, o mês que hoje é agosto (pendente) passa a ser julho e precisa ser marcado `paid = 1` / `born_paid = 1`.
+Deslocar `date_expected` de todas as parcelas em **−1 mês** preserva a numeração 1..N, a quantidade de parcelas e o total — e é equivalente a "tirar o último mês e acrescentar um mês antes do primeiro". Como consequência, o mês que hoje é agosto passa a ser julho e o que é setembro passa a ser agosto; as duas precisam ser marcadas `paid = 1` / `born_paid = 1`.
 
-**Agosto continua sendo dívida real** dos devedores — mantém a decisão registrada em `20260904-parcela-retroativa-contabilizacao/specify.md` §2.5.
+### 3.5.1 Agosto passa a ser quitado (revisão de 2026-09-05)
+
+Decisão do usuário em 2026-09-05, **revertendo** o que estava em `20260904-parcela-retroativa-contabilizacao/specify.md` §2.5 (onde agosto era dívida real): agosto entra como quitado, com `born_paid = 1` igual a maio/junho/julho.
+
+Consequência explícita e intencional: os 5 devedores **deixam de dever R$ 139,23 cada** referentes a essas duas despesas em agosto (R$ 48,73 do Adestrador + R$ 90,50 da Construção) — R$ 696,15 saem do acerto daquela competência. Os demais itens de agosto continuam no acerto normalmente.
+
+A distinção importa: `paid = 1` sozinho faria a linha aparecer como "Paga" **e continuar cobrando** os devedores até cada um confirmar o Pix (comportamento da feature `20260902-pagamento-ciclo-fechado`). É o `born_paid` que torna a parcela inerte para o dinheiro. A primeira pendência real das duas despesas passa a ser **setembro**.
 
 Entregável: **script SQL revisado, executado pelo usuário** (gate de produção — Constitution §5.2). Sequência detalhada em `plan.md` §3.
 
