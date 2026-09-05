@@ -166,8 +166,20 @@ setembro. Reverte deliberadamente `20260904-parcela-retroativa-contabilizacao/sp
 | 4 | Desselar mai–ago (só os que o passo 0 mostrar selados) | — |
 | 5 | Verificação por API + conferência no app | — |
 
-## 3. PR
+## 3. PRs
 
-PR aberto: https://github.com/isacaguiar/expense/pull/153 (`feature/20260904-detalhe-despesa-tipo-parcela-valores` → `dev`), cobrindo TASK-001 e TASK-002. **Merge é gate humano.**
+| PR | Conteúdo | Estado |
+|---|---|---|
+| [#153](https://github.com/isacaguiar/expense/pull/153) | TASK-001 (backend) + TASK-002 (frontend) + scaffold SDD + `.sql` inicial da TASK-003 | Mergeado em `dev` em 2026-09-05 |
+| [#155](https://github.com/isacaguiar/expense/pull/155) | Só docs: revisão da TASK-003 — agosto passa a `born_paid` (specify §3.5.1) | Aberto — **merge é gate humano** |
 
-TASK-003 não entra no merge como comportamento — o `.sql` vai junto só como documento; a execução em produção é gate humano separado.
+O #155 existe porque o #153 foi mergeado (e a branch remota apagada) enquanto a decisão sobre
+agosto ainda estava sendo tomada; o push seguinte recriou a branch com o commit de docs sozinho.
+Não há código nele.
+
+TASK-003 não entra em nenhum merge como comportamento — o `.sql` vai junto só como documento; a
+execução em produção é gate humano separado e **ainda não foi feita**.
+
+Esta pasta **permanece em `docs/feature/`** (não vai para `concluidas/<AAAAMM>/` ainda, apesar do
+#153 já estar em `dev`): a feature só termina quando a TASK-003 for executada e verificada em
+produção. Mover agora esconderia um trabalho em aberto na pasta de concluídos.
