@@ -27,6 +27,8 @@ export type SummaryParticipantDetail = {
   avatarUrl: string | null;
 };
 
+export type SummaryExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
+
 export type SummaryExpense = {
   id: number;
   description: string;
@@ -42,6 +44,17 @@ export type SummaryExpense = {
   participants: string[];
   participantDetails?: SummaryParticipantDetail[];
   isFixed: boolean;
+  // Opcionais pelo mesmo motivo (docs/feature/20260904-detalhe-despesa-tipo-
+  // parcela-valores/plan.md §2): distinguem À Vista de Parcelada e permitem
+  // montar "Parcelada 2/6" com o total da despesa. `installmentNumber` é o nº
+  // da Quota que vence NESTE ciclo — numa IN_CASH ele vem 1 (a despesa tem uma
+  // Quota só) e numa FIXED ainda projetada vem null; em nenhum dos dois isso
+  // significa "parcela 1 de N", então só use o campo quando expenseType for
+  // IN_INSTALLMENTS.
+  expenseType?: SummaryExpenseType;
+  installmentNumber?: number | null;
+  installmentsTotal?: number;
+  totalValue?: number;
   userPayerId: number;
   userCreatorId: number;
 };
