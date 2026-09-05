@@ -118,6 +118,15 @@ payload sem os campos novos) está nos testes de `ExpenseManager.test.tsx`.
 2025 — pré-existente, fora do diff desta feature, não bloqueante (mesma situação registrada em
 `20260904-parcela-retroativa-contabilizacao`).
 
+`pr-readiness-checker`: **verde**, com os números reproduzidos de forma independente (330 passed /
+1065 assertions no backend, 239 passed no vitest, `tsc` limpo, pint escopado PASS) e CI do GitHub
+verde no PR. Confirmou que não há migration no diff (`git diff origin/dev...branch --
+backend/database/migrations/` vazio), que não há segredo novo (3 hits do varredor, todos falsos
+positivos: dois `withToken($this->tokenFor(...))` de teste e um comentário do `.sql`) e que os 8
+arquivos que o `pint --test` sem escopo reprova estão todos fora do diff. Única lacuna de critério
+de aceite: a verificação visual do modal (screenshot), pendente de login — os 3 cenários já estão
+cobertos por teste automatizado, então é confirmação, não descoberta.
+
 `security-reviewer`: **nenhum achado**. Confirmou que `summary()` mantém
 `authorizeGroupMembership()` antes de qualquer leitura, que as três origens de entry são escopadas
 por `group_id` (logo nenhum campo novo vaza dado de outro grupo) e que o diff é 100% leitura (sem
