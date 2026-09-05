@@ -70,6 +70,29 @@ const formatCycleBoundary = (dateStr: string): string => {
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 };
 
+/**
+ * Rótulo de tipo do modal de detalhe. Diferente do ícone da listagem
+ * (`renderTypeIcon`, que só distingue Fixa de Variável), aqui os três tipos
+ * aparecem por extenso — e a Parcelada mostra qual parcela vence NESTE ciclo
+ * ("Parcelada 2/6"), que é o que o usuário pediu.
+ *
+ * `expenseType` é opcional: ciclo selado antes desta mudança é servido do
+ * snapshot congelado e não tem o campo — nesse caso cai no rótulo antigo.
+ * Ver docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/specify.md §3.1.
+ */
+const detailTypeLabel = (exp: SummaryExpense): string => {
+  if (exp.expenseType === 'FIXED') return 'Fixa';
+  if (exp.expenseType === 'IN_CASH') return 'À Vista';
+
+  if (exp.expenseType === 'IN_INSTALLMENTS') {
+    return exp.installmentNumber && exp.installmentsTotal
+      ? `Parcelada ${exp.installmentNumber}/${exp.installmentsTotal}`
+      : 'Parcelada';
+  }
+
+  return exp.isFixed ? 'Fixa' : 'Variável';
+};
+
 const ExpenseManager: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -286,6 +309,51 @@ const ExpenseManager: React.FC = () => {
       )}
     </Tooltip>
   );
+
+  /**
+   * Uma linha por pagador, com o valor que cabe a cada um. O rateio é sempre
+   * igualitário e já vem calculado do backend em `valuePerPerson` — o cliente
+   * não redivide nada (docs/sdd/05-context-frontend.md, "Convenções fixas").
+   *
+   * `participantDetails` (com id e avatar) é a fonte preferencial; ciclo selado
+   * antes da feature do avatar só tem `participants` (nomes), e aí a lista sai
+   * sem avatar e sem marcar quem é o credor.
+   */
+  const renderDetailPayers = (exp: SummaryExpense) => {
+    const rows =
+      exp.participantDetails?.map(p => ({ key: String(p.id), name: p.name, avatarUrl: p.avatarUrl, isCreditor: p.id === exp.userPayerId })) ??
+      exp.participants.map((name, index) => ({ key: `${name}-${index}`, name, avatarUrl: null, isCreditor: false }));
+
+    if (rows.length === 0) {
+      return <Typography variant="body2">-</Typography>;
+    }
+
+    return (
+      <Box display="flex" flexDirection="column" gap={1}>
+        {rows.map(row => (
+          <Box key={row.key} display="flex" alignItems="center" gap={1}>
+            <UserAvatar name={row.name} avatarUrl={row.avatarUrl} sx={{ width: 28, height: 28, fontSize: '0.75rem' }} />
+            <Typography variant="body2" flexGrow={1}>
+              {row.name}
+              {row.isCreditor && (
+                <Typography component="span" variant="caption" color="text.secondary">
+                  {' '}
+                  (credor)
+                </Typography>
+              )}
+            </Typography>
+            {/* Snapshot de ciclo selado antigo pode não ter valuePerPerson —
+                mostra o nome sem valor em vez de quebrar o modal. */}
+            {exp.valuePerPerson != null && (
+              <Typography variant="body2" fontWeight={600}>
+                R$ {formatValue(exp.valuePerPerson)}
+              </Typography>
+            )}
+          </Box>
+        ))}
+      </Box>
+    );
+  };
 
   const renderExpenseActions = (exp: SummaryExpense) => (
     <Box display="flex" gap={0.5} justifyContent="flex-end" flexWrap="wrap">
@@ -634,7 +702,7 @@ const ExpenseManager: React.FC = () => {
               <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
                 <Typography variant="subtitle1">{detailExpense.description}</Typography>
                 <Box display="flex" gap={0.5}>
-                  <Chip label={detailExpense.isFixed ? 'Fixa' : 'Variável'} size="small" />
+                  <Chip label={detailTypeLabel(detailExpense)} size="small" />
                   <Chip
                     label={detailExpense.paid ? 'Paga' : 'Pendente'}
                     color={detailExpense.paid ? 'success' : 'warning'}
@@ -643,13 +711,19 @@ const ExpenseManager: React.FC = () => {
                 </Box>
               </Box>
 
-              <Typography variant="h6" color="primary">
-                R${' '}
-                {detailExpense.value.toLocaleString('pt-BR', {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2
-                })}
-              </Typography>
+              <Box>
+                <Typography variant="h6" color="primary">
+                  R$ {formatValue(detailExpense.value)}
+                </Typography>
+                {/* Numa parcelada o valor acima é o da parcela do mês, não o da
+                    compra inteira — o total só aparece aqui, pra não confundir os dois. */}
+                {detailExpense.expenseType === 'IN_INSTALLMENTS' && detailExpense.totalValue != null && (
+                  <Typography variant="caption" color="text.secondary">
+                    Total da despesa: R$ {formatValue(detailExpense.totalValue)}
+                    {detailExpense.installmentsTotal ? ` em ${detailExpense.installmentsTotal}x` : ''}
+                  </Typography>
+                )}
+              </Box>
 
               <Typography variant="body2" color="text.secondary">
                 {formatDate(detailExpense.date)}
@@ -661,14 +735,19 @@ const ExpenseManager: React.FC = () => {
                   avatarUrl={detailExpense.payerAvatarUrl}
                   sx={{ width: 32, height: 32, fontSize: '0.8rem' }}
                 />
-                <Typography variant="body2">Credor: {detailExpense.payerName || '-'}</Typography>
+                <Box>
+                  <Typography variant="body2">Credor: {detailExpense.payerName || '-'}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Pagou R$ {formatValue(detailExpense.value)}
+                  </Typography>
+                </Box>
               </Box>
 
               <Box>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
                   Pagadores
                 </Typography>
-                <Typography variant="body2">{detailExpense.participants.join(', ') || '-'}</Typography>
+                {renderDetailPayers(detailExpense)}
               </Box>
 
               {detailExpense.paid && detailExpense.paymentProofUrl && (

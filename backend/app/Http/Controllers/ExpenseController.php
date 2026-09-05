@@ -1144,6 +1144,14 @@ class ExpenseController extends Controller
                         ->values()
                         ->all(),
                     'isFixed' => $entry['expense']->expense_type === 'FIXED',
+                    // Aditivos (Constitution §4.1): `isFixed` continua — filtro/ícone de
+                    // ExpenseManager, Payments e testes dependem dele. Estes 4 permitem à
+                    // UI distinguir À Vista de Parcelada e montar "Parcelada 2/6" com o
+                    // total da despesa (docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/plan.md §1).
+                    'expenseType' => $entry['expense']->expense_type,
+                    'installmentNumber' => $entry['quotaNumber'],
+                    'installmentsTotal' => $entry['expense']->installments,
+                    'totalValue' => (float) $entry['expense']->total_value,
                     // IDs (não só nomes) — o frontend precisa deles pra decidir se o
                     // usuário logado é o credor (pode pagar) ou dono (pode editar/
                     // excluir: authorizeExpenseOwner() aceita criador OU credor),
@@ -1439,6 +1447,7 @@ class ExpenseController extends Controller
                 'value' => (float) ($quota->value_quota ?? $expense->total_value),
                 'paid' => (bool) ($quota->paid ?? false),
                 'bornPaid' => (bool) ($quota->born_paid ?? false),
+                'quotaNumber' => $quota->number ?? null,
                 'paymentProofUrl' => $quota->payment_proof_url ?? null,
             ]);
         }
@@ -1462,6 +1471,9 @@ class ExpenseController extends Controller
                 'value' => (float) $quota->value_quota,
                 'paid' => (bool) $quota->paid,
                 'bornPaid' => (bool) $quota->born_paid,
+                // Nº da parcela que vence NESTE ciclo — é o que a UI usa pra
+                // montar "Parcelada 2/6". Só faz sentido em IN_INSTALLMENTS.
+                'quotaNumber' => $quota->number,
                 'paymentProofUrl' => $quota->payment_proof_url,
             ]);
         }
@@ -1502,6 +1514,9 @@ class ExpenseController extends Controller
                         // FIXED nunca nasce born_paid (store()/materializeFixedOccurrenceQuota
                         // não gravam o flag) — sempre false aqui.
                         'bornPaid' => (bool) ($quota->born_paid ?? false),
+                        // Ocorrência ainda projetada (não materializada) não tem Quota,
+                        // logo não tem número — e FIXED não tem semântica de "parcela n/N".
+                        'quotaNumber' => $quota->number ?? null,
                         'paymentProofUrl' => $quota->payment_proof_url ?? null,
                     ]);
                 }

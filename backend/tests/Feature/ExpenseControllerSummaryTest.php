@@ -816,6 +816,99 @@ class ExpenseControllerSummaryTest extends TestCase
     }
 
     /**
+     * O rótulo "Parcelada 2/3" da UI depende de saber, por ciclo, qual parcela
+     * daquela despesa vence ali — `installmentNumber` vem da Quota do ciclo, não
+     * de contar meses desde `date_payment`
+     * (docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/plan.md §1).
+     */
+    public function test_installments_expense_exposes_type_installment_number_and_total_value_per_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-10',
+            'description' => 'Adestrador',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 3,
+            'total_value' => 300,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+
+        foreach ([1 => '2026-06-10', 2 => '2026-07-10', 3 => '2026-08-10'] as $number => $dueDate) {
+            $expense->quotas()->create([
+                'date_expected' => $dueDate,
+                'number' => $number,
+                'paid' => false,
+                'value_quota' => 100,
+            ]);
+        }
+
+        // cycles_ago 2 = junho (1ª parcela), 1 = julho (2ª), 0 = agosto (3ª).
+        foreach ([2 => 1, 1 => 2, 0 => 3] as $cyclesAgo => $expectedNumber) {
+            $entry = $this->withToken($this->tokenFor($payer))
+                ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago={$cyclesAgo}")
+                ->assertStatus(200)
+                ->json('expenses.0');
+
+            $this->assertSame('IN_INSTALLMENTS', $entry['expenseType'], "ciclo {$cyclesAgo}");
+            $this->assertSame($expectedNumber, $entry['installmentNumber'], "ciclo {$cyclesAgo}");
+            $this->assertSame(3, $entry['installmentsTotal'], "ciclo {$cyclesAgo}");
+            // Valores monetários: json_encode serializa float sem casa decimal como
+            // inteiro (300.0 -> 300), então compara por valor, não por tipo.
+            $this->assertEqualsWithDelta(300, $entry['totalValue'], 0.01, "ciclo {$cyclesAgo}");
+            // O valor do ciclo continua sendo o da parcela, não o total.
+            $this->assertEqualsWithDelta(100, $entry['value'], 0.01, "ciclo {$cyclesAgo}");
+            $this->assertEqualsWithDelta(50, $entry['valuePerPerson'], 0.01, "ciclo {$cyclesAgo}");
+        }
+    }
+
+    public function test_in_cash_and_fixed_expenses_expose_their_type_without_installment_semantics(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id]);
+
+        $inCash = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-08-05',
+            'description' => 'Mercado',
+            'total_value' => 100,
+        ]);
+        $inCash->payers()->sync([$payer->id]);
+        $inCash->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $fixed = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'description' => 'Internet',
+            'expense_type' => 'FIXED',
+            'total_value' => 80,
+        ]);
+        $fixed->payers()->sync([$payer->id]);
+
+        $expenses = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->json('expenses');
+
+        $byDescription = collect($expenses)->keyBy('description');
+
+        $this->assertSame('IN_CASH', $byDescription['Mercado']['expenseType']);
+        $this->assertSame(1, $byDescription['Mercado']['installmentsTotal']);
+        $this->assertFalse($byDescription['Mercado']['isFixed']);
+
+        // Ocorrência FIXED projetada (sem Quota materializada): sem número de parcela.
+        $this->assertSame('FIXED', $byDescription['Internet']['expenseType']);
+        $this->assertNull($byDescription['Internet']['installmentNumber']);
+        $this->assertTrue($byDescription['Internet']['isFixed']);
+    }
+
+    /**
      * Para todo user_id presente em $balances, a soma de `amount` recebido
      * (settlement.to_user_id) menos o pago (settlement.from_user_id) deve
      * bater com o `balance` líquido dessa pessoa.
