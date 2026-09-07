@@ -21,6 +21,9 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-001 | Concluída | 2026-09-04 | IA (Claude) | Ver detalhamento abaixo | Campos aditivos; `isFixed` mantido |
 | TASK-002 | Concluída | 2026-09-05 | IA (Claude) | Ver detalhamento abaixo | Achado extra: snapshot antigo sem `valuePerPerson` |
 | TASK-003 | Executada | 2026-09-05 | Isac (usuário) | Ver detalhamento abaixo | Executada em produção via phpMyAdmin; conferência no app pendente |
+| TASK-004 | Executada | 2026-09-06 | Isac (usuário) executou; IA redigiu e conferiu | Ver detalhamento abaixo | Reverte o `born_paid` de agosto decidido em 2026-09-05 |
+| TASK-005 | Executada | 2026-09-06 | Isac (usuário) executou; IA redigiu e conferiu | Ver detalhamento abaixo | Agosto selado; setembro intocado |
+| TASK-006 | Executada | 2026-09-06 | Isac (usuário) executou; IA redigiu e conferiu | Ver detalhamento abaixo | 4 tabelas legadas + as de trabalho removidas |
 
 ### TASK-001 — detalhamento
 
@@ -217,6 +220,354 @@ Quitado retroativamente: R$ 1.169,60 (8658, 4 parcelas) + R$ 2.172,00 (8659, 4 p
 Pendência real restante: setembro com R$ 292,40 + R$ 543,00 = R$ 835,40 (R$ 139,23 por devedor) e
 outubro com R$ 292,40 só do 8658. Novembro deixou de existir para o 8658; outubro deixou de existir
 para o 8659.
+
+### TASK-004 — detalhamento (recolocar as parcelas no acerto de agosto)
+
+Script: `fix-prod-3878-agosto-cobrar-parcelas.sql` (nesta pasta). **Ainda não executado.**
+
+#### Por que existe: a decisão de 2026-09-05 estava errada
+
+A TASK-003 gravou `born_paid = 1` nas parcelas de agosto de 8658/8659, a pedido do usuário
+("agosto entra como quitado, ninguém deve nada"). Em 2026-09-06 o usuário reviu: *"se o
+valor entrou no mês antes do fechamento deveria ser contabilizado"*. Os R$ 696,15 que a
+TASK-003 tirou do acerto de agosto voltam.
+
+Na primeira rodada desta sessão eu tratei o relato como premissa equivocada — com
+`closing_day = NULL` a competência é o mês calendário e o "fecha em 05/09" que o app exibe é
+a carência de `BillingCycle::GRACE_DAYS`, não a fronteira. Isso está correto sobre *como o
+sistema funciona*, mas era resposta para outra pergunta: o usuário não estava reclamando de
+onde a parcela de 04/09 cai, e sim de que **a parcela de 04/08, que já está dentro de
+agosto, não cobra ninguém**. Só ficou claro ao abrir o app em produção.
+
+#### O que foi conferido em produção (2026-09-06, via browser, grupo 3878)
+
+Competência **01 de ago – 31 de ago**, "Ciclo fechado", aviso "ainda falta acertar:
+ngaguiar, mateus.davi.10, Natália, gabriel":
+
+| Despesa | Modal | Data | Valor | Por pagador | Status |
+|---|---|---|---|---|---|
+| Adestrador (8658) | `Parcelada 4/6` | 04/08/2026 | R$ 292,40 | R$ 48,73 | Paga |
+| Construção parede escritório/demolição stiep (8659) | — | 04/08/2026 | R$ 543,00 | R$ 90,50 | Paga |
+
+Pagadores idênticos nas duas, 6 pessoas: Isac, naumel67 (credor), ngaguiar, mateus.davi.10,
+Natália, gabriel. Na aba "À pagar" de agosto **não há nenhuma linha referente às duas**.
+
+#### Causa
+
+`computeCycleSummary()` pula toda entry com `bornPaid` ao montar `balances`/`$owed`/
+`settlements` (`ExpenseController.php:1199`). Não é o `paid`: a Placa Solar do mesmo mês
+também está "Paga" e continua gerando acerto. A correção é tirar `born_paid` das duas
+quotas de 04/08 — `paid = 1` e `paid_by = 5573` ficam como estão, porque naumel67 pagou
+mesmo as duas contas.
+
+#### Verificação (antes de qualquer execução em produção)
+
+Teste temporário `backend/tests/Feature/TmpAgostoCobrarParcelasTest.php` (criado, executado
+e removido — não entra no commit), reproduzindo o caso real: parcela de R$ 292,40 dividida
+entre 6, credor + 5 devedores, competência de agosto já fechada em 06/09.
+
+| Comando | Resultado |
+|---|---|
+| `php artisan test --filter=TmpAgostoCobrarParcelasTest` | 3 passed (34 assertions) |
+
+O que ficou provado, nessa ordem: (1) com `born_paid = 1` o ciclo devolve `settlements: []`
+e todos os saldos zerados, apesar de `totals.paid = 292,40` — é o estado de hoje em
+produção; (2) tirando só o `born_paid`, aparecem 5 acertos de R$ 48,73 para o credor, os
+saldos viram +243,67/−48,73 e **os totais não mudam**; (3) `paid = 1` com `born_paid = 0`
+gera acerto normalmente — o `paid` sozinho não suprime nada.
+
+#### Efeito esperado em produção
+
+Cada um dos 5 devedores passa a dever mais R$ 139,23 a naumel67 (R$ 48,73 + R$ 90,50),
+R$ 696,15 no total. Os cards do topo não mudam. `ngaguiar → naumel67 R$ 139,23` é linha
+nova — hoje esse par não tem acerto em agosto. Tabela completa de valores esperados no
+passo 4 do script.
+
+Efeito colateral conhecido, não novo: `grossDebts()` filtra por `paid`
+(`ExpenseController.php:814`), então as duas seguem fora do painel de dívidas brutas
+enquanto aparecem no acerto — divergência já registrada como pré-existente em
+`docs/feature/20260904-parcela-retroativa-contabilizacao/specify.md` §3.
+
+
+#### Resultado da execução (2026-09-06, conferido no app pela IA)
+
+Usuário rodou o script em produção. Conferência feita lendo a competência 01/08–31/08 do
+grupo 3878 no browser, aba "À pagar" — os 5 pares bateram **exatamente**, ao centavo:
+
+| Devedor → Nádia (naumel67, 5573) | Antes | Previsto | Real |
+|---|---|---|---|
+| Gabriel | R$ 2.658,66 | R$ 2.797,89 | **R$ 2.797,89** |
+| Isac | R$ 1.976,83 | R$ 2.116,06 | **R$ 2.116,06** |
+| Mateus | R$ 1.016,12 | R$ 1.155,35 | **R$ 1.155,35** |
+| Natália | R$ 16,12 | R$ 155,35 | **R$ 155,35** |
+| Norma (ngaguiar) | *(sem linha)* | R$ 139,23 | **R$ 139,23** (linha nova) |
+
+As demais 8 linhas do acerto ficaram intactas (Mateus/Gabriel → Isac R$ 727,82, Natália →
+Isac R$ 445,99, as cinco de R$ 75,00 → Ian, Norma → Isac R$ 400,00), e os cards do topo
+seguem em Total R$ 14.004,87 / Pago R$ 4.546,67 / A pagar R$ 9.458,20 — inalterados, como
+previsto, porque `paid` não foi tocado.
+
+**Correção de uma imprecisão minha**: a tabela de *saldos* que eu havia previsto errou de
+1 a 2 centavos (previ Nádia 6.288,86 e o real é 6.288,88; Isac 110,57 contra 110,56 real;
+Mateus/Natália/Gabriel um centavo abaixo cada). Motivo: eu somei R$ 139,23 já arredondado
+aos saldos exibidos, enquanto o backend acumula sem arredondar (292,40/6 = 48,7333… mais
+543,00/6 = 90,50 = 139,2333…) e arredonda uma vez só no fim — `computeCycleSummary()`
+arredonda o saldo depois do laço e o settlement só no `net`. O app está certo; a previsão
+é que era aproximada. Os *settlements*, que são o dinheiro que cada um deve, bateram sem
+divergência.
+
+Observação lateral, não relacionada a esta task: os nomes de exibição dos membros mudaram
+entre a leitura da manhã e esta (naumel67 → Nádia, ngaguiar → Norma, mateus.davi.10 →
+Mateus, ian.gaguiar → Ian, juliagaguiar → Júlia). Alteração de cadastro feita fora daqui.
+
+### TASK-005 — detalhamento (fechar agosto/2026 em produção)
+
+Script: `fix-prod-3878-fechar-agosto.sql` (nesta pasta). **Ainda não executado.**
+
+Origem: o usuário relatou em 2026-09-06 que "as despesas do dia 04/09 (Adestrador e
+Construção) não foram contabilizadas para o mês de agosto, apesar do fechamento ser dia 5",
+e pediu (a) o recálculo dos valores a pagar e (b) o fechamento de todos os pagamentos de
+agosto, dos dois lados (credores e pagadores).
+
+#### Diagnóstico da premissa
+
+Não é defeito de contabilização — são dois conceitos diferentes de `BillingCycle`:
+
+- **Fronteira do ciclo** (`closing_day`): define a QUAL competência uma data pertence.
+  `closing_day = NULL` (que é o que `20260904-parcela-retroativa-contabilizacao/specify.md`
+  §1 registrou para o grupo 3878) significa mês calendário — agosto é 01/08–31/08, e
+  04/09 é setembro por definição.
+- **Carência** (`BillingCycle::GRACE_DAYS = 5`): agosto continua `open`/editável por mais
+  5 dias depois da fronteira, virando `closed` só em 05/09 (`closesAt()`). É esse número
+  que o app mostra no `CycleClosingAlert` — "Este ciclo fecha em 05/09" — e é a origem
+  provável do "o fechamento é dia 5". A carência dá prazo para registrar e acertar; ela
+  não puxa uma despesa de setembro para agosto.
+
+O passo 0 do script confirma qual dos dois casos vale lendo `ex_groups.closing_day`: se
+vier `5` em vez de `NULL`, a janela de agosto passa a ser 06/08–05/09 e as parcelas de
+04/09 realmente pertencem a ela — por isso a janela é parâmetro (`@cycle_start`/
+`@cycle_end`) e não está chumbada no script.
+
+#### O que o script faz
+
+Parte 1 (passos 0–3, somente leitura) reescreve `computeCycleSummary()` em SQL: monta as
+entradas da competência pelas três origens de `collectCycleEntries()` (direta, parcela,
+fixa projetada), devolve `totals` e calcula os pares devedor→credor com o mesmo netting.
+É o "recalcule os valores a serem pagos" — não há valor chumbado no script.
+
+Parte 2 (passos 4–10, escrita) fecha os dois lados que `cycleIsFullySettled()` exige:
+`ex_quotas.paid = 1` com `paid_by` = credor (lado do credor) e uma linha em
+`ex_settlement_confirmations` por par em aberto (lado do pagador). O passo 5 materializa
+a Quota das despesas FIXAS projetadas, que sem linha em `ex_quotas` contam como não pagas
+e travariam a selagem. A selagem em si fica para a aplicação (passo 9): `settled_at`
+escrito à mão sem as fotos JSON serviria uma competência vazia para todos.
+
+Decisões registradas no script:
+- **não** grava `born_paid` no passo 6 — `born_paid` tiraria as despesas de
+  `balances`/`settlements` e apagaria o registro de quem devia a quem, o oposto de "fechar
+  o pagamento" (é o mecanismo da feature `20260904-parcela-retroativa-contabilizacao`,
+  usado lá para o caso oposto);
+- `proof_path = ''` nas confirmações (coluna é `NOT NULL`): o accessor `proof_url` trata
+  string vazia como "sem comprovante" e o app não mostra o chip. `INSERT IGNORE` preserva
+  as confirmações reais que já existam;
+- passo 7 (quitar as parcelas de 04/09) fica **comentado** — depende da decisão pendente.
+
+#### Verificação do script (antes de qualquer execução em produção)
+
+Teste temporário `backend/tests/Feature/TmpFecharAgostoSqlTest.php` (criado, executado e
+removido — não entra no commit), com `DatabaseTransactions` e `TEMPORARY TABLE` no lugar
+das tabelas de trabalho, sobre um cenário com as três origens de entry, uma parcela
+`born_paid`, um par com dívida nos dois sentidos (para exercitar o netting), uma quota já
+`paid` (para provar que `paid` não filtra settlement) e uma despesa de setembro (para
+provar o recorte da janela):
+
+| Comando | Resultado |
+|---|---|
+| `php artisan test --filter=TmpFecharAgostoSqlTest` (1ª execução) | 1 failed — helper do teste, não o SQL (`Cannot use object of type stdClass as array`) |
+| `php artisan test --filter=TmpFecharAgostoSqlTest` (após corrigir o helper) | 1 passed (11 assertions) — `totals` e `settlements` do SQL idênticos aos do `computeCycleSummary` |
+| `php artisan test --filter=TmpFecharAgostoSqlTest` (com o teste dos passos de escrita) | 1 failed, 1 passed — assert errado meu: eu esperava 500 de pendência em setembro e vieram 560, porque a despesa FIXA também projeta em setembro. Comportamento correto do sistema |
+| `php artisan test --filter=TmpFecharAgostoSqlTest` (assert corrigido para 560) | 2 passed (19 assertions) — depois dos passos 5/6/8, agosto fica `cycle.settled = true`, `totals.pending = 0`, `status = closed`, e setembro permanece intocado |
+
+Achado registrado durante a verificação: o MySQL não permite abrir a mesma `TEMPORARY
+TABLE` mais de uma vez na mesma query, e o `SELECT` de settlements lê `_fech_owed` três
+vezes. Em produção as tabelas de trabalho são reais (`CREATE TABLE`, não `TEMPORARY`) e a
+restrição não se aplica — o teste é que precisou de duas cópias auxiliares.
+
+#### Segunda verificação (2026-09-06), agora lendo o .sql do disco
+
+Antes de liberar a execução, refiz a verificação com um teste que **lê o arquivo
+`fix-prod-3878-fechar-agosto.sql` do disco** e executa os comandos dele, em vez de uma cópia
+colada — o arquivo tinha sido editado três vezes desde a primeira verificação e uma cópia
+podia ter divergido. Cenário no formato do grupo 3878 depois da TASK-004: parcela paga que
+ainda cobra (`born_paid = 0`), parcela retroativa `born_paid`, fixa projetada sem quota,
+despesa em aberto e uma parcela de 04/09 fora da janela.
+
+Isso encontrou **dois defeitos reais no script**, os dois corrigidos:
+
+1. **Backup do passo 4 virava no-op silencioso.** O script usava
+   `_bkp_ex_quotas_20260906`, o mesmo nome que o `fix-prod-3878-agosto-cobrar-parcelas.sql`
+   já havia criado (só com as quotas de 8658/8659). Com `CREATE TABLE IF NOT EXISTS`, o
+   backup do fechamento não seria criado, e as quotas que o passo 6 altera ficariam sem
+   cópia para rollback. Renomeado para `_bkp_ex_quotas_fechamento_20260906`.
+2. **Despesas FIXAS não eram marcadas como pagas.** O passo 6 fazia
+   `JOIN _fech_entries d ON d.quota_id = q.id`, e as quotas que o passo 5 acabara de criar
+   não têm `quota_id` em `_fech_entries` — o script dependia de um comentário mandando
+   reexecutar o passo 1 à mão entre os dois. Quem roda o arquivo de cima a baixo (o normal
+   no phpMyAdmin) deixaria a fixa em aberto e a competência nunca selaria. O `UPDATE` passa
+   a filtrar por despesa da competência + vencimento dentro da janela, sem depender de
+   `_fech_entries` ser reconstruída; o `SELECT` de conferência do passo 5 também passou a
+   ler o banco direto em vez da tabela de trabalho desatualizada.
+
+| Comando | Resultado |
+|---|---|
+| `php artisan test --filter=TmpFecharAgostoScriptTest` (1ª execução) | 1 failed — R$ 900 da fixa sobrando em `totals.pending`: o defeito 2 acima |
+| `php artisan test --filter=TmpFecharAgostoScriptTest` (após corrigir os passos 5 e 6) | 1 failed — assert meu errado: previ R$ 292,40 de pendência em setembro e vieram R$ 1.192,40, porque a fixa também projeta em setembro. Comportamento correto do sistema |
+| `php artisan test --filter=TmpFecharAgostoScriptTest` (assert corrigido) | 1 passed (22 assertions) |
+| `php artisan test` (suíte completa, após remover o teste temporário) | 330 passed (1065 assertions) |
+
+O teste verde prova, sobre o arquivo que o usuário vai rodar: os `settlements` do SQL são
+idênticos aos do `computeCycleSummary`; depois dos passos 5/6/8 agosto fica
+`cycle.settled = true` com `totals.pending = 0`, `totals.total` inalterado e todo acerto com
+`confirmedAt` preenchido; e a parcela de 04/09 continua `paid = 0`, `born_paid = 0`,
+`paid_by = NULL` — o fechamento de agosto não encosta em setembro.
+
+#### Execução interrompida na 1ª tentativa (2026-09-06) — armadilha das variáveis de sessão
+
+O usuário rodou o script e o app não mudou nada. Diagnóstico feito lendo a estrutura do
+banco no phpMyAdmin já aberto: `_fech_entries`, `_fech_owed` e `_fech_settlements` existiam,
+mas **com 0 linhas**; os três `_bkp_*_20260906` existiam com conteúdo (30 quotas, 2
+confirmações, 1 snapshot).
+
+Causa: variáveis `@` vivem na **conexão**, e o phpMyAdmin abre conexão nova a cada envio. O
+bloco do passo 1 foi enviado sem os `SET` do topo do arquivo, então `@group_id` /
+`@cycle_start` / `@cycle_end` vieram `NULL`, nenhum `WHERE` casou e `_fech_entries` nasceu
+vazia. Como todos os passos de escrita são dirigidos por essa tabela, os passos 5, 6 e 8
+viraram no-op — **nada foi gravado em dado de aplicação**, e não houve rollback a fazer. Os
+backups do passo 4 rodaram corretamente porque aquele bloco foi enviado com os `SET`.
+
+Nada disso deu erro: é falha silenciosa, o pior formato. Correções no script:
+
+1. Aviso no topo explicando que variáveis `@` são por conexão.
+2. Os três `SET` **repetidos dentro de cada passo que os usa** (1, 3, 5, 6 e 8), para que
+   qualquer bloco enviado isoladamente funcione.
+3. Guarda obrigatória logo após o passo 1 — `SELECT COUNT(*) AS entradas FROM _fech_entries;`
+   — com a instrução de parar se vier 0.
+
+Re-verificação após essas edições, com o mesmo teste que lê o `.sql` do disco, agora também
+conferindo que os 6 blocos de `SET` estão presentes: `php artisan test
+--filter=TmpFecharAgostoScriptTest` → **1 passed (21 assertions)**.
+
+O usuário pediu que eu executasse direto no phpMyAdmin dele; a ação foi **bloqueada pelo
+classificador de permissões** do Claude Code. A execução seguiu com o usuário, bloco a bloco.
+
+#### Decisões do usuário (2026-09-06)
+
+1. **`closing_day` do grupo não muda.** O usuário respondeu que "o problema só ocorreu na
+   divisão do mês de agosto, os demais meses estão ok" — descompasso pontual, não uma
+   regra de negócio nova. Configurar `closing_day = 5` re-encaixaria todo o histórico do
+   grupo e órfãria os snapshots e as `ex_settlement_confirmations` já gravados com as datas
+   antigas (as duas tabelas são chaveadas por `cycle_start`), então fica fora.
+2. **As parcelas de 04/09 continuam devidas em setembro** — R$ 835,40 no total, R$ 139,23
+   por devedor, para acertar no fechamento do próximo mês. O passo 7 do script é o registro
+   dessa decisão, sem SQL para rodar.
+
+Efeito prático: este script fecha só a janela 01/08–31/08. Depois de executado, a primeira
+pendência do grupo passa a ser setembro, com as duas parcelas em aberto.
+
+#### Resultado da execução (2026-09-06, conferido no app pela IA)
+
+2ª tentativa, com os `SET` repetidos em cada bloco. Conferência do usuário durante a
+execução, antes de qualquer escrita:
+
+| Conferência | Previsto | Obtido |
+|---|---|---|
+| `SELECT COUNT(*) FROM _fech_entries` (guarda do passo 1) | 10 | **10** |
+| Pares de acerto (passo 3) | 14 | **14** |
+| Soma dos acertos (passo 3) | R$ 9.040,51 | **R$ 9.040,51** |
+| Acertos já confirmados (passo 3) | 2 | **2** |
+
+Estado final lido no app pela IA, competência 01/08–31/08:
+
+1. **As 10 despesas do ciclo aparecem como "Paga"** — Aluguel, Água, Pão e Aluguel Mateus
+   (R$ 9.458,20) estavam "Pendente" antes.
+2. O aviso "O ciclo fechou e ainda falta acertar: Norma, Mateus, Natália, Gabriel"
+   **desapareceu**.
+3. A Home do grupo passou a abrir em **setembro** ("01 De Set. – 30 De Set., Ciclo em
+   andamento") — `focus-cycle` deixou de apontar para agosto.
+4. **Prova da selagem**: agosto aparece em Relatórios → "Histórico de ciclos fechados —
+   01 de ago. – 31 de ago., Total: R$ 14.004,87". O endpoint `history()` filtra
+   `whereNotNull('settled_at')`, então só ciclo selado entra ali.
+5. O badge de notificações saiu de 0 para 1 — `Notifier::cycleSettled` disparou, como
+   previsto.
+6. Os saldos de agosto seguem registrados (Nádia R$ 6.288,88 a receber, Gabriel R$ 3.600,71
+   a pagar etc.): a selagem congela o histórico de quem devia a quem, não zera.
+7. **Setembro intocado**: Adestrador (R$ 292,40) e Construção (R$ 543,00) aparecem como
+   "Pendente" em 04 de set., que é a decisão registrada acima.
+
+Como previsto no plano, os acertos confirmados por SQL **não** exibem o chip "Comprovante
+enviado" — `proof_path = ''` faz o accessor `proof_url` devolver `null`. Confirmado na aba
+"À pagar": nenhum chip, nenhum acerto em aberto.
+
+
+### TASK-006 — detalhamento (limpeza de tabelas em produção)
+
+Script: `cleanup-prod-tabelas-auxiliares.sql` (nesta pasta). **Executado em 2026-09-06.**
+
+Origem: ao pedir a limpeza das tabelas de trabalho, o usuário observou que "algumas tabelas
+não possuem registros e creio que podem ser apagadas".
+
+#### Duas correções na premissa
+
+1. **`TABLE_ROWS` não serve para decidir.** Em InnoDB aquele número é uma estimativa
+   amostrada — é a coluna que a tela de estrutura do phpMyAdmin mostra, e pode vir 0 para
+   tabela com linhas. O próprio inventário do usuário provou: exibiu
+   `_bkp_ex_group_cycle_snapshots_20260906` com 0, sendo que eu tinha visto 1 nela horas
+   antes. Só `COUNT(*)` decide — virou o passo 1 do script.
+2. **Tabela vazia não é tabela inútil.** Contraexemplo concreto: `ex_participations` está
+   vazia e fora do fluxo de dinheiro, mas `GroupController::destroy()` (`:118`) chama
+   `$group->participations()->delete()` — apagá-la quebraria a exclusão de grupo. O mesmo
+   vale para `ex_failed_jobs`, `ex_password_reset_tokens`, `ex_personal_access_tokens`
+   (infra do Laravel), `ex_notifications` e `migrations`. A lista do que nunca sai, com o
+   motivo de cada uma, ficou no passo 6 do script.
+
+#### O que de fato era descartável
+
+Quatro tabelas **no singular** — `ex_expense`, `ex_expense_payers`, `ex_group`, `ex_user` —
+ao lado das corretas no plural, todas criadas em `2026-08-29 08:48:35` (o instante do import
+original), nenhuma criada por migration e nenhuma referenciada em `app/`, `database/`,
+`routes/` ou `config/`. Mais as três `_fech_*` de trabalho, que o passo 9 do script de
+fechamento já mandava dropar.
+
+#### Sobre as foreign keys
+
+O usuário levantou que seria preciso apagar as FKs antes do `DROP`. Não é: `DROP TABLE` já
+remove as constraints da própria tabela. O que atrapalha é (a) a **ordem**, quando uma
+legada referencia outra — resolvido com `FOREIGN_KEY_CHECKS = 0` no escopo da sessão; e (b)
+uma tabela **viva** apontando para uma legada, caso em que a resposta certa não é remover a
+FK, é parar, porque a tabela não seria órfã. O passo 2 passou a classificar cada FK nessas
+três situações e a dizer sozinho quando parar.
+
+#### Conferência pós-execução
+
+Feita pela IA:
+
+- **Leitura íntegra**: a Home do grupo 3878 carrega a competência de setembro com despesas,
+  saldos e notificações; navegação normal.
+- **Nenhuma constraint órfã possível pelo lado do sistema**: todas as foreign keys
+  declaradas nas migrations miram só `ex_users`, `ex_groups`, `ex_expenses` e `ex_quotas` —
+  nenhuma no singular. Era o risco real de rodar com `FOREIGN_KEY_CHECKS = 0`: uma FK
+  apontando para tabela inexistente quebra `INSERT`/`UPDATE` com errno 1824 e **não aparece
+  em leitura nenhuma**.
+
+Não conferido pela IA, porque a saída não foi reportada: os passos 1, 2 e 3 e as duas
+consultas de verificação do fim do passo 4. A checagem das migrations cobre as FKs que o
+Laravel cria, não uma constraint manual vinda no import legado; a consulta de constraint
+órfã do passo 4 responde isso a qualquer momento, e é leitura pura.
+
+Estado final: **21 tabelas** — as 13 do sistema, `migrations`, os quatro `_bkp_*` de
+04–05/09 (mantidos por escolha do usuário; o passo 5 os deixa comentados) e os três
+`_bkp_*_20260906`, que são o rollback do fechamento de agosto e só devem sair depois de o
+grupo confirmar os valores do mês.
 
 ## 3. PRs
 
