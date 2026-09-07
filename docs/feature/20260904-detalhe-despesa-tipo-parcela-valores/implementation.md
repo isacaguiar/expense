@@ -23,6 +23,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-003 | Executada | 2026-09-05 | Isac (usuário) | Ver detalhamento abaixo | Executada em produção via phpMyAdmin; conferência no app pendente |
 | TASK-004 | Executada | 2026-09-06 | Isac (usuário) executou; IA redigiu e conferiu | Ver detalhamento abaixo | Reverte o `born_paid` de agosto decidido em 2026-09-05 |
 | TASK-005 | Executada | 2026-09-06 | Isac (usuário) executou; IA redigiu e conferiu | Ver detalhamento abaixo | Agosto selado; setembro intocado |
+| TASK-006 | Executada | 2026-09-06 | Isac (usuário) executou; IA redigiu e conferiu | Ver detalhamento abaixo | 4 tabelas legadas + as de trabalho removidas |
 
 ### TASK-001 — detalhamento
 
@@ -507,6 +508,66 @@ Como previsto no plano, os acertos confirmados por SQL **não** exibem o chip "C
 enviado" — `proof_path = ''` faz o accessor `proof_url` devolver `null`. Confirmado na aba
 "À pagar": nenhum chip, nenhum acerto em aberto.
 
+
+### TASK-006 — detalhamento (limpeza de tabelas em produção)
+
+Script: `cleanup-prod-tabelas-auxiliares.sql` (nesta pasta). **Executado em 2026-09-06.**
+
+Origem: ao pedir a limpeza das tabelas de trabalho, o usuário observou que "algumas tabelas
+não possuem registros e creio que podem ser apagadas".
+
+#### Duas correções na premissa
+
+1. **`TABLE_ROWS` não serve para decidir.** Em InnoDB aquele número é uma estimativa
+   amostrada — é a coluna que a tela de estrutura do phpMyAdmin mostra, e pode vir 0 para
+   tabela com linhas. O próprio inventário do usuário provou: exibiu
+   `_bkp_ex_group_cycle_snapshots_20260906` com 0, sendo que eu tinha visto 1 nela horas
+   antes. Só `COUNT(*)` decide — virou o passo 1 do script.
+2. **Tabela vazia não é tabela inútil.** Contraexemplo concreto: `ex_participations` está
+   vazia e fora do fluxo de dinheiro, mas `GroupController::destroy()` (`:118`) chama
+   `$group->participations()->delete()` — apagá-la quebraria a exclusão de grupo. O mesmo
+   vale para `ex_failed_jobs`, `ex_password_reset_tokens`, `ex_personal_access_tokens`
+   (infra do Laravel), `ex_notifications` e `migrations`. A lista do que nunca sai, com o
+   motivo de cada uma, ficou no passo 6 do script.
+
+#### O que de fato era descartável
+
+Quatro tabelas **no singular** — `ex_expense`, `ex_expense_payers`, `ex_group`, `ex_user` —
+ao lado das corretas no plural, todas criadas em `2026-08-29 08:48:35` (o instante do import
+original), nenhuma criada por migration e nenhuma referenciada em `app/`, `database/`,
+`routes/` ou `config/`. Mais as três `_fech_*` de trabalho, que o passo 9 do script de
+fechamento já mandava dropar.
+
+#### Sobre as foreign keys
+
+O usuário levantou que seria preciso apagar as FKs antes do `DROP`. Não é: `DROP TABLE` já
+remove as constraints da própria tabela. O que atrapalha é (a) a **ordem**, quando uma
+legada referencia outra — resolvido com `FOREIGN_KEY_CHECKS = 0` no escopo da sessão; e (b)
+uma tabela **viva** apontando para uma legada, caso em que a resposta certa não é remover a
+FK, é parar, porque a tabela não seria órfã. O passo 2 passou a classificar cada FK nessas
+três situações e a dizer sozinho quando parar.
+
+#### Conferência pós-execução
+
+Feita pela IA:
+
+- **Leitura íntegra**: a Home do grupo 3878 carrega a competência de setembro com despesas,
+  saldos e notificações; navegação normal.
+- **Nenhuma constraint órfã possível pelo lado do sistema**: todas as foreign keys
+  declaradas nas migrations miram só `ex_users`, `ex_groups`, `ex_expenses` e `ex_quotas` —
+  nenhuma no singular. Era o risco real de rodar com `FOREIGN_KEY_CHECKS = 0`: uma FK
+  apontando para tabela inexistente quebra `INSERT`/`UPDATE` com errno 1824 e **não aparece
+  em leitura nenhuma**.
+
+Não conferido pela IA, porque a saída não foi reportada: os passos 1, 2 e 3 e as duas
+consultas de verificação do fim do passo 4. A checagem das migrations cobre as FKs que o
+Laravel cria, não uma constraint manual vinda no import legado; a consulta de constraint
+órfã do passo 4 responde isso a qualquer momento, e é leitura pura.
+
+Estado final: **21 tabelas** — as 13 do sistema, `migrations`, os quatro `_bkp_*` de
+04–05/09 (mantidos por escolha do usuário; o passo 5 os deixa comentados) e os três
+`_bkp_*_20260906`, que são o rollback do fechamento de agosto e só devem sair depois de o
+grupo confirmar os valores do mês.
 
 ## 3. PRs
 
