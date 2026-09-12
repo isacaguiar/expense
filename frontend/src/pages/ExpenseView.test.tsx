@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -199,6 +199,54 @@ describe('ExpenseView', () => {
 
     expect(screen.getAllByText('Paga')).toHaveLength(2);
     expect(screen.getAllByText('Pendente')).toHaveLength(4);
+  });
+
+  // No modo de visualização os pagadores não apareciam em lugar nenhum — só no
+  // modo de edição, como checkboxes. Backlog 039 / specify.md §3.3.
+  it('lists each payer with their share of the total and marks only the creditor', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    // Escopado na seção: "Isac" também aparece na linha do credor, acima.
+    const section = (await screen.findByText('Pagadores')).parentElement as HTMLElement;
+
+    expect(within(section).getByText('Isac')).toBeInTheDocument();
+    expect(within(section).getByText('João')).toBeInTheDocument();
+
+    // total_value 1200,00 / 2 pagadores
+    expect(within(section).getAllByText('R$ 600,00')).toHaveLength(2);
+
+    // user_payer_id é 500 (Isac) — só a linha dele leva a marcação.
+    expect(within(section).getAllByText(/\(credor\)/)).toHaveLength(1);
+    expect(within(section).getByText('Isac').textContent).toMatch(/\(credor\)/);
+    expect(within(section).getByText('João').textContent).not.toMatch(/\(credor\)/);
+  });
+
+  it('splits the share by the number of payers, not by a fixed pair', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        total_value: '900.00',
+        payers: [
+          { id: 500, name: 'Isac' },
+          { id: 501, name: 'João' },
+          { id: 502, name: 'Ana' },
+        ],
+      },
+      members: [...members, { id: 502, name: 'Ana' }],
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    const section = (await screen.findByText('Pagadores')).parentElement as HTMLElement;
+    expect(within(section).getAllByText('R$ 300,00')).toHaveLength(3);
   });
 
   it('does not list installments for an IN_CASH expense', async () => {
