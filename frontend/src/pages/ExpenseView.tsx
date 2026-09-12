@@ -25,10 +25,8 @@ import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { buildInstallmentQuotas } from '../utils/installments';
 import UserAvatar from '../components/UserAvatar';
-
-type GroupMember = { id: number; name: string; avatar_url: string | null };
-
-type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
+import type { ExpenseType } from '../types/expense';
+import type { GroupMember } from '../types/group';
 
 type ExpenseQuota = {
   number: number;

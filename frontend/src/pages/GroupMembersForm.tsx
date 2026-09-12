@@ -19,16 +19,14 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
-
-type User = { id: number; email: string };
-type Group = { id: number; name: string; description: string; creator?: { id: number; email: string } | null };
+import type { GroupDetail, GroupMember } from '../types/group';
 
 const GroupMembersForm: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
   const navigate = useNavigate();
 
-  const [group, setGroup] = useState<Group | null>(null);
-  const [members, setMembers] = useState<User[]>([]);
+  const [group, setGroup] = useState<GroupDetail | null>(null);
+  const [members, setMembers] = useState<GroupMember[]>([]);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -45,8 +43,8 @@ const GroupMembersForm: React.FC = () => {
     const fetchData = async () => {
       try {
         const [groupRes, membersRes] = await Promise.all([
-          axios.get<Group>(`${API_BASE_URL}/api/groups/${id}`, config),
-          axios.get<User[]>(`${API_BASE_URL}/api/groups/${id}/members`, config)
+          axios.get<GroupDetail>(`${API_BASE_URL}/api/groups/${id}`, config),
+          axios.get<GroupMember[]>(`${API_BASE_URL}/api/groups/${id}/members`, config)
         ]);
         setGroup(groupRes.data);
         setMembers(membersRes.data);
@@ -72,7 +70,7 @@ const GroupMembersForm: React.FC = () => {
         config
       );
       setEmail('');
-      const membersRes = await axios.get<User[]>(`${API_BASE_URL}/api/groups/${id}/members`, config);
+      const membersRes = await axios.get<GroupMember[]>(`${API_BASE_URL}/api/groups/${id}/members`, config);
       setMembers(membersRes.data);
     } catch {
       setError('Erro ao adicionar membro.');
