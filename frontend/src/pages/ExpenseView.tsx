@@ -77,6 +77,28 @@ const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 /**
+ * `GET /api/expenses/{id}` devolve o model cru, e o cast `date` do Laravel
+ * serializa em ISO-8601 com hora e Z — verificado no model:
+ * `(new Expense(['date_payment' => '2026-08-01']))->toJson()` dá
+ * `"2026-08-01T00:00:00.000000Z"`. `new Date()` dessa string (ou de
+ * 'YYYY-MM-DD') é meia-noite **UTC** e, em fuso negativo como
+ * America/Sao_Paulo, cai no dia anterior ao formatar — é o bug do item de
+ * backlog 013, que a TASK-133 já tirou dos outros arquivos que formatam data
+ * (ExpenseManager, GroupSummary, GroupReports, CycleDetailPanel,
+ * GroupGrossDebtsPanel, Payments, CycleClosingAlert). Esta tela tinha ficado
+ * de fora.
+ *
+ * Cortar em 10 caracteres monta a data a partir das partes, no fuso local, e
+ * atende os dois formatos — não depende de qual deles a API manda.
+ * Ver docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §2.
+ */
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+
+  return new Date(year, month - 1, day);
+};
+
+/**
  * Mesmos rótulos do modal "Detalhes da despesa" do ExpenseManager
  * (`detailTypeLabel`) — as duas telas mostram a mesma despesa e não podem
  * divergir; antes, `IN_CASH` e `IN_INSTALLMENTS` caíam os dois em "Variável".
@@ -402,7 +424,7 @@ const ExpenseView: React.FC = () => {
           </Typography>
 
           <Typography color="text.secondary">
-            {new Date(expense.date_payment).toLocaleDateString('pt-BR')}
+            {parseLocalDate(expense.date_payment).toLocaleDateString('pt-BR')}
           </Typography>
           <Box display="flex" alignItems="center" gap={1} sx={{ mb: proofUrl ? 1 : 3 }}>
             <Typography color="text.secondary">Credor:</Typography>
