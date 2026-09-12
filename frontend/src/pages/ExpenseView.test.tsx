@@ -145,6 +145,109 @@ describe('ExpenseView', () => {
     expect(await screen.findByText('01/08/2026')).toBeInTheDocument();
   });
 
+  // 6 x R$ 292,40 = R$ 1.754,40 exatos; as quotas vêm fora de ordem de
+  // propósito, para provar a ordenação por `number` (as datas de uma parcelada
+  // podem ter sido deslocadas em massa em produção — ver as TASK-003/004 de
+  // docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/).
+  const installmentsExpense = {
+    ...expenseDetail,
+    expense_type: 'IN_INSTALLMENTS' as const,
+    installments: 6,
+    total_value: '1754.40',
+    quotas: [
+      { number: 3, date_expected: '2026-07-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '292.40' },
+      { number: 1, date_expected: '2026-05-01T00:00:00.000000Z', paid: true, payment_proof_url: null, value_quota: '292.40' },
+      { number: 6, date_expected: '2026-10-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '292.40' },
+      { number: 2, date_expected: '2026-06-01T00:00:00.000000Z', paid: true, payment_proof_url: null, value_quota: '292.40' },
+      { number: 5, date_expected: '2026-09-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '292.40' },
+      { number: 4, date_expected: '2026-08-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '292.40' },
+    ],
+  };
+
+  it('lists every installment in order, with month, value, per-person share and paid status', async () => {
+    mockGetResponses({ expense: installmentsExpense });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Parcelas')).toBeInTheDocument();
+    expect(screen.getByText(/Total da despesa: R\$ 1\.754,40 em 6x/)).toBeInTheDocument();
+
+    // Ordenado por `number`, não pela ordem em que o payload chegou.
+    expect(screen.getAllByText(/^[1-6]\/6$/).map(el => el.textContent)).toEqual([
+      '1/6',
+      '2/6',
+      '3/6',
+      '4/6',
+      '5/6',
+      '6/6',
+    ]);
+
+    // Meses: a parcela 1 é 2026-05-01 em ISO-8601 (meia-noite UTC). Em fuso
+    // negativo, `new Date(string)` daria 04/2026 — ver backlog 013.
+    ['05/2026', '06/2026', '07/2026', '08/2026', '09/2026', '10/2026'].forEach(month => {
+      expect(screen.getByText(month)).toBeInTheDocument();
+    });
+    expect(screen.queryByText('04/2026')).not.toBeInTheDocument();
+
+    expect(screen.getAllByText('R$ 292,40')).toHaveLength(6);
+    // 2 pagadores na fixture → 292,40 / 2.
+    expect(screen.getAllByText(/R\$ 146,20 por pessoa/)).toHaveLength(6);
+
+    expect(screen.getAllByText('Paga')).toHaveLength(2);
+    expect(screen.getAllByText('Pendente')).toHaveLength(4);
+  });
+
+  it('does not list installments for an IN_CASH expense', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_CASH',
+        installments: 1,
+        total_value: '100.00',
+        quotas: [{ number: 1, date_expected: '2026-08-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '100.00' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('À Vista');
+    expect(screen.queryByText('Parcelas')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Total da despesa/)).not.toBeInTheDocument();
+  });
+
+  // Despesa FIXED nasce sem Quota na competência (ExpenseController::pay()
+  // materializa sob demanda), então seu `quotas[]` é esparso — os meses pagos,
+  // não um cronograma. Listar aquilo como "Parcelas" seria mentira de tela.
+  it('does not list installments for a FIXED expense even when it has quotas', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        quotas: [
+          { number: 1, date_expected: '2026-07-01T00:00:00.000000Z', paid: true, payment_proof_url: null, value_quota: '1200.00' },
+          { number: 2, date_expected: '2026-08-01T00:00:00.000000Z', paid: true, payment_proof_url: null, value_quota: '1200.00' },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Fixa');
+    expect(screen.queryByText('Parcelas')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Total da despesa/)).not.toBeInTheDocument();
+  });
+
   it('shows "não encontrada" with a link back when the expense does not exist or is not accessible', async () => {
     vi.mocked(axios.get).mockImplementation((url: string) => {
       if (url.includes('/expenses/9')) {
