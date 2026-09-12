@@ -114,6 +114,37 @@ describe('ExpenseView', () => {
     expect(screen.queryByText('Variável')).not.toBeInTheDocument();
   });
 
+  // `show()` devolve o model cru, e o cast `date` do Laravel serializa em
+  // ISO-8601 com Z — verificado no próprio model: `new Expense(['date_payment'
+  // => '2026-08-01'])->toJson()` dá "2026-08-01T00:00:00.000000Z". `new Date()`
+  // dessa string é meia-noite UTC e cai no dia anterior em fuso negativo (bug
+  // do item de backlog 013). Este assert só guarda o bug porque a suíte roda
+  // fixada em America/Sao_Paulo — ver src/suiteTimezone.test.ts.
+  it('shows the payment date without shifting a day back when the API sends ISO-8601', async () => {
+    mockGetResponses({ expense: { ...expenseDetail, date_payment: '2026-08-01T00:00:00.000000Z' } });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('01/08/2026')).toBeInTheDocument();
+    expect(screen.queryByText('31/07/2026')).not.toBeInTheDocument();
+  });
+
+  it('shows the payment date when the API sends the short YYYY-MM-DD form', async () => {
+    mockGetResponses({ expense: { ...expenseDetail, date_payment: '2026-08-01' } });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('01/08/2026')).toBeInTheDocument();
+  });
+
   it('shows "não encontrada" with a link back when the expense does not exist or is not accessible', async () => {
     vi.mocked(axios.get).mockImplementation((url: string) => {
       if (url.includes('/expenses/9')) {
