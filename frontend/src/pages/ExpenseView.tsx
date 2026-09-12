@@ -452,14 +452,17 @@ const ExpenseView: React.FC = () => {
           <Typography color="text.secondary">
             {parseLocalDate(expense.date_payment).toLocaleDateString('pt-BR')}
           </Typography>
-          <Box display="flex" alignItems="center" gap={1} sx={{ mb: proofUrl && !showInstallments ? 1 : 3 }}>
+          {/* A seção de pagadores sempre vem depois daqui, então o espaçamento
+              apertado (mb: 1) que existia quando o link de comprovante vinha
+              logo a seguir migrou para a última seção antes dele. */}
+          <Box display="flex" alignItems="center" gap={1} sx={{ mb: 3 }}>
             <Typography color="text.secondary">Credor:</Typography>
             <UserAvatar name={creditorName} avatarUrl={creditor?.avatar_url} sx={{ width: 24, height: 24, fontSize: '0.7rem' }} />
             <Typography color="text.secondary">{creditorName}</Typography>
           </Box>
 
           {showInstallments && (
-            <Box sx={{ mb: proofUrl ? 1 : 3 }}>
+            <Box sx={{ mb: 3 }}>
               <Typography variant="body2" color="text.secondary">
                 Parcelas
               </Typography>
@@ -502,6 +505,38 @@ const ExpenseView: React.FC = () => {
               </Box>
             </Box>
           )}
+
+          {/* Mesmo formato da lista de pagadores do modal "Detalhes da despesa"
+              (`renderDetailPayers` em ExpenseManager.tsx): avatar + nome, o
+              credor marcado, valor à direita. O valor aqui é a cota da pessoa
+              no total da despesa — o valor por parcela já está em cada linha do
+              cronograma acima, então nenhum número aparece duas vezes com base
+              diferente. Ver specify.md §3.3. */}
+          <Box sx={{ mb: proofUrl ? 1 : 3 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Pagadores
+            </Typography>
+
+            <Box display="flex" flexDirection="column" gap={1}>
+              {expense.payers.map(payer => (
+                <Box key={payer.id} display="flex" alignItems="center" gap={1}>
+                  <UserAvatar name={payer.name} avatarUrl={payer.avatar_url} sx={{ width: 28, height: 28, fontSize: '0.75rem' }} />
+                  <Typography variant="body2" flexGrow={1}>
+                    {payer.name}
+                    {payer.id === expense.user_payer_id && (
+                      <Typography component="span" variant="caption" color="text.secondary">
+                        {' '}
+                        (credor)
+                      </Typography>
+                    )}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    R$ {formatMoney(perPersonValue(Number(expense.total_value), expense.payers.length))}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
 
           {proofUrl && (
             <Typography sx={{ mb: 3 }}>
