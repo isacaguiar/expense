@@ -10,7 +10,7 @@ Numeração a partir de `TASK-276` (maior ID já usado no projeto: `TASK-275`, e
 |---|---|---|---|---|---|
 | TASK-276 | Corrigir o rótulo de tipo do chip na página da despesa | frontend | plan.md §1 | nenhum | Integrada na branch da feature |
 | TASK-277 | Fixar o fuso `America/Sao_Paulo` na suíte de testes do frontend | frontend | plan.md §5 | nenhum | Integrada na branch da feature |
-| TASK-278 | Corrigir o parse de `date_payment` na página da despesa | frontend | plan.md §2, §6 | nenhum | Pendente |
+| TASK-278 | Corrigir o parse de `date_payment` na página da despesa | frontend | plan.md §2, §6 | nenhum | Integrada na branch da feature |
 | TASK-279 | Exibir o cronograma de parcelas na página da despesa | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-280 | Listar os pagadores com valor individual na página da despesa | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-281 | Extrair os tipos duplicados do frontend para `src/types/` | frontend | plan.md §4 | nenhum | Pendente |

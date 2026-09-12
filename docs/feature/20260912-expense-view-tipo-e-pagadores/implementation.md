@@ -20,7 +20,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 |---|---|---|---|---|---|
 | TASK-276 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `cd frontend && npx vitest run src/pages/ExpenseView.test.tsx` — **antes** da correção: `Tests 2 failed \| 13 passed (15)`; **depois**: `Tests 15 passed (15)`. `npx tsc --noEmit` — exit 0, sem saída. `npx vitest run` (suíte completa) — `Test Files 37 passed (37)`, `Tests 241 passed (241)` | Commit `a05520279f`. 1ª task da feature → direto na branch da feature, sem sub-branch (`04-implementation.md` §1.1) |
 | TASK-277 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `cd frontend && npx vitest run src/suiteTimezone.test.ts` — **antes** da config: `Tests 1 failed \| 1 passed (2)`; **depois**: `Tests 2 passed (2)`. Com a linha `env:` comentada de propósito: falha com `Expected "America/Sao_Paulo" / Received "America/Bahia"`; restaurada: verde. `npx tsc --noEmit` — exit 0. `npx vitest run` (suíte completa, estado final) — `Test Files 38 passed (38)`, `Tests 243 passed (243)` | Commit `109b6d4604`, merge `4df675e639` (`--no-ff`, branch de task descartada). Critério emendado durante a execução — ver abaixo |
-| TASK-278 | Pendente | — | — | — | — |
+| TASK-278 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `php artisan tinker --execute="…(new Expense(['date_payment' => '2026-08-01']))->toJson()…"` — devolveu `{"date_payment":"2026-08-01T00:00:00.000000Z","total_value":"1754.40"}` e `{"date_expected":"2026-05-10T00:00:00.000000Z",…,"value_quota":"292.40"}`. `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 2 failed \| 15 passed (17)`; **depois**: `Tests 17 passed (17)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 245 passed (245)` | Commit `04563730bc`, merge `214acdf1de`. Gerou o item de backlog 040 |
 | TASK-279 | Pendente | — | — | — | — |
 | TASK-280 | Pendente | — | — | — | — |
 | TASK-281 | Pendente | — | — | — | — |
@@ -46,3 +46,15 @@ Um assert de `process.env.TZ` também foi escrito e **descartado**: `tsc --noEmi
 Risco declarado em `plan.md` §5 — o fuso fixado vale para **toda** a suíte — não se materializou: 38 arquivos e 243 testes verdes, nenhum teste existente alterado. Fazia sentido: o fuso anterior da máquina tem o mesmo offset, e os testes de data do projeto já usam parse por partes, indiferente a fuso.
 
 Arquivos: `frontend/vite.config.js` (`test.env.TZ`) e `frontend/src/suiteTimezone.test.ts` (novo).
+
+### TASK-278 — detalhe
+
+Branch de task `frontend/20260912-expense-view-tipo-e-pagadores-TASK-278`, integrada por `git merge --no-ff` e descartada.
+
+**A dúvida que `plan.md` §2 deixou aberta ficou resolvida por medição, não por dedução.** O plano dizia que o formato serializado de `date_expected`/`date_payment` não estava fixado por nenhum teste do backend e que o helper seria robusto aos dois formatos. Rodando o cast do model direto (sem banco), o formato é **ISO-8601 com Z**: `"2026-08-01T00:00:00.000000Z"`. Na mesma medição confirmou-se `value_quota` como **string** (`"292.40"`), premissa que a TASK-279 vai consumir.
+
+Consequência para os testes: os **dois** casos novos falhavam antes da correção — inclusive o do formato curto `'2026-08-01'`, porque `new Date('2026-08-01')` também é meia-noite UTC. O bug não dependia do formato ISO; ele já estava lá na forma clássica do item 013.
+
+**Achado fora de escopo, registrado em vez de corrigido:** o mesmo `date_payment` cru alimenta o `<TextField type="date">` do modo de edição (`:192` → `:348`), e `input[type=date]` só aceita `YYYY-MM-DD` — o campo renderiza **vazio**. `specify.md` §4 mantém o modo de edição fora de escopo, então isso virou `docs/backlog/expense-view-edicao-campo-data-vazio.md` (item **040**, MEDIA), com a medição que comprova o formato e a análise de dano (a data é preservada por acaso ao salvar sem tocar no campo; o risco é o usuário preencher o vazio com um palpite). Não foi corrigido aqui para não expandir a task — `04-implementation.md` §1.2.
+
+Arquivos: `frontend/src/pages/ExpenseView.tsx` (`parseLocalDate()` + a chamada na data em destaque) e `frontend/src/pages/ExpenseView.test.tsx` (2 casos novos).
