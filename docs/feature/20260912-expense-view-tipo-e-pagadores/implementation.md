@@ -23,7 +23,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-278 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `php artisan tinker --execute="…(new Expense(['date_payment' => '2026-08-01']))->toJson()…"` — devolveu `{"date_payment":"2026-08-01T00:00:00.000000Z","total_value":"1754.40"}` e `{"date_expected":"2026-05-10T00:00:00.000000Z",…,"value_quota":"292.40"}`. `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 2 failed \| 15 passed (17)`; **depois**: `Tests 17 passed (17)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 245 passed (245)` | Commit `04563730bc`, merge `214acdf1de`. Gerou o item de backlog 040 |
 | TASK-279 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `node -e` conferindo os formatos antes de codar: `mm/aaaa` → `05/2026`, `{month:'short'}` → `mai. de 2026`, `292.40/2` → `146,20`. `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 1 failed \| 19 passed (20)`; **depois**: `Tests 20 passed (20)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 248 passed (248)` | Commit `426049ff3d`, merge `5959717e6b` |
 | TASK-280 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 2 failed \| 20 passed (22)`; **depois**: `Tests 22 passed (22)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 250 passed (250)` | Commit `c06bd88d34`, merge `76e4c5956d`. Fecha o item de backlog 039 em código |
-| TASK-281 | Pendente | — | — | — | — |
+| TASK-281 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `npx tsc --noEmit` — exit 0. Prova de que a correção do `description` era necessária: removendo o `?? ''`, `tsc` reprova com `GroupForm.tsx(38,26): error TS2345: Argument of type 'string \| null' is not assignable to parameter of type 'SetStateAction<string>'`; restaurado, exit 0. `npx vitest run` — `38 passed (38)`, `Tests 250 passed (250)`. `git status --short` — 13 arquivos de código alterados, **nenhum de teste** | Commit `382a9eb539`, merge `17be73da2b` |
 
 ### TASK-276 — detalhe
 
@@ -89,3 +89,36 @@ Decisões da implementação:
 - **Sem estado vazio para `payers`:** a API valida `payers` com `required|array|min:1` no `store()` e no `update()`, então lista vazia é inalcançável — não inventei um ramo de UI (nem um teste) para um estado que o backend não produz. `perPersonValue()` já protege a divisão.
 
 Arquivos: `frontend/src/pages/ExpenseView.tsx` (seção "Pagadores" + ajuste dos `mb`) e `frontend/src/pages/ExpenseView.test.tsx` (2 casos novos, `within` importado).
+
+### TASK-281 — detalhe
+
+Branch de task `…-TASK-281`, integrada por `git merge --no-ff` e descartada.
+
+**O desenho de `plan.md` §4 se confirmou ao inspecionar os consumidores.** `Dashboard` e as 5 páginas de entrada chamam o **mesmo** `GET /api/groups` (`Dashboard.tsx:98`, `ExpensesEntry.tsx:26`, e as outras quatro), e `GroupForm` e `GroupMembersForm` chamam o **mesmo** `GET /api/groups/{id}`. As 4 formas de `specify.md` §2.8 eram projeções parciais de dois payloads, não 4 recursos — daí `GroupListItem` / `GroupDetail`, tipados pelo endpoint.
+
+**A correção do `description` era real, e verifiquei em vez de assumir.** Com `description: string | null` (o que a tabela realmente permite — `2025_06_07_033033_create_ex_groups_table.php:18`), removi o `?? ''` de propósito e rodei `tsc`: `GroupForm.tsx(38,26): error TS2345: Argument of type 'string | null' is not assignable to parameter of type 'SetStateAction<string>'`. Ou seja, em grupo sem descrição a tela colocava `null` dentro de um `TextField`. Restaurado o `?? ''`, exit 0.
+
+**Execução por script com asserção, não por sed cego.** As trocas em 13 arquivos foram feitas por um script que exige que cada bloco literal apareça exatamente uma vez e falha alto caso contrário (`scratchpad/swap_types.py`, fora do repo) — a alternativa (substituição textual silenciosa em 13 arquivos) esconderia um bloco que não casou. O único trecho por regex foi `\bGroup\b` no `Dashboard`, conferido no diff: `GroupGrossDebtsPanel` e `AvatarGroup` ficaram intactos, como o `\b` garante.
+
+`mostActiveGroup<T extends GroupActivity>` (`pages/mostActiveGroup.ts`) **não foi tocada**: `GroupListItem` satisfaz a constraint estrutural. Ela é o precedente do projeto para compartilhar forma sem tipo nominal.
+
+Arquivos novos: `frontend/src/types/group.ts`, `frontend/src/types/expense.ts`. Alterados: `Dashboard`, as 5 `*Entry`, `GroupForm`, `GroupMembersForm`, `ExpenseForm`, `ExpenseView`, `GroupShellLayout`, `layouts/group/GroupHeader`, `hooks/useGroupCycle`.
+
+## 3. Checklist final na branch da feature integrada (`04-implementation.md` §1.5)
+
+Rodado com as 6 tasks já integradas, para pegar problema de integração entre elas:
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Type-check | `cd frontend && npx tsc --noEmit` | exit 0, sem saída |
+| Suíte completa | `cd frontend && npx vitest run` | `Test Files 38 passed (38)`, `Tests 250 passed (250)` |
+| Build de produção | `npx vite build --outDir <scratchpad>/build-check --emptyOutDir` | `✓ built in 6.12s`, exit 0 |
+| Segredos no diff | `git diff` revisado task a task | nenhum |
+
+O build foi direcionado para fora do repositório de propósito: `frontend/dist/` é versionado (item de backlog **037**), e um `npm run build` normal sujaria arquivos rastreados no meio da feature. O aviso de chunk > 500 kB é pré-existente e não tem relação com estas tasks.
+
+## 4. Gates pendentes
+
+- **Push da branch e PR único contra `dev`**: não feitos — aguardando decisão humana (a branch só existe local).
+- **Merge do PR em `dev`**: gate humano por feature (`00-constitution.md` §5.2).
+- **Promoção `dev` → `main`** (que dispara deploy): passo à parte, só depois de validado em `dev`.

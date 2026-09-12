@@ -13,7 +13,7 @@ Numeração a partir de `TASK-276` (maior ID já usado no projeto: `TASK-275`, e
 | TASK-278 | Corrigir o parse de `date_payment` na página da despesa | frontend | plan.md §2, §6 | nenhum | Integrada na branch da feature |
 | TASK-279 | Exibir o cronograma de parcelas na página da despesa | frontend | plan.md §2 | nenhum | Integrada na branch da feature |
 | TASK-280 | Listar os pagadores com valor individual na página da despesa | frontend | plan.md §3 | nenhum | Integrada na branch da feature |
-| TASK-281 | Extrair os tipos duplicados do frontend para `src/types/` | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-281 | Extrair os tipos duplicados do frontend para `src/types/` | frontend | plan.md §4 | nenhum | Integrada na branch da feature |
 
 Dependências entre tasks (`plan.md` §7): TASK-277 antes de TASK-278 (é o fuso que faz o teste guardar o bug); TASK-278 antes de TASK-279 (é ela que introduz o helper de parse que o cronograma consome). TASK-276, TASK-280 e TASK-281 não dependem de nenhuma — a ordem delas na tabela é só de valor entregue.
 
