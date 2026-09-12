@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import type { ExpenseType } from '../types/expense';
 
 // 'closed_manually': competência fechada manualmente (POST .../expenses/close)
 // mas ainda dentro do mês vigente — revisável (reabrir) até a virada do mês,
@@ -27,8 +28,6 @@ export type SummaryParticipantDetail = {
   avatarUrl: string | null;
 };
 
-export type SummaryExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
-
 export type SummaryExpense = {
   id: number;
   description: string;
@@ -51,7 +50,7 @@ export type SummaryExpense = {
   // Quota só) e numa FIXED ainda projetada vem null; em nenhum dos dois isso
   // significa "parcela 1 de N", então só use o campo quando expenseType for
   // IN_INSTALLMENTS.
-  expenseType?: SummaryExpenseType;
+  expenseType?: ExpenseType;
   installmentNumber?: number | null;
   installmentsTotal?: number;
   totalValue?: number;
