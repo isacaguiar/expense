@@ -21,7 +21,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-276 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `cd frontend && npx vitest run src/pages/ExpenseView.test.tsx` — **antes** da correção: `Tests 2 failed \| 13 passed (15)`; **depois**: `Tests 15 passed (15)`. `npx tsc --noEmit` — exit 0, sem saída. `npx vitest run` (suíte completa) — `Test Files 37 passed (37)`, `Tests 241 passed (241)` | Commit `a05520279f`. 1ª task da feature → direto na branch da feature, sem sub-branch (`04-implementation.md` §1.1) |
 | TASK-277 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `cd frontend && npx vitest run src/suiteTimezone.test.ts` — **antes** da config: `Tests 1 failed \| 1 passed (2)`; **depois**: `Tests 2 passed (2)`. Com a linha `env:` comentada de propósito: falha com `Expected "America/Sao_Paulo" / Received "America/Bahia"`; restaurada: verde. `npx tsc --noEmit` — exit 0. `npx vitest run` (suíte completa, estado final) — `Test Files 38 passed (38)`, `Tests 243 passed (243)` | Commit `109b6d4604`, merge `4df675e639` (`--no-ff`, branch de task descartada). Critério emendado durante a execução — ver abaixo |
 | TASK-278 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `php artisan tinker --execute="…(new Expense(['date_payment' => '2026-08-01']))->toJson()…"` — devolveu `{"date_payment":"2026-08-01T00:00:00.000000Z","total_value":"1754.40"}` e `{"date_expected":"2026-05-10T00:00:00.000000Z",…,"value_quota":"292.40"}`. `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 2 failed \| 15 passed (17)`; **depois**: `Tests 17 passed (17)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 245 passed (245)` | Commit `04563730bc`, merge `214acdf1de`. Gerou o item de backlog 040 |
-| TASK-279 | Pendente | — | — | — | — |
+| TASK-279 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `node -e` conferindo os formatos antes de codar: `mm/aaaa` → `05/2026`, `{month:'short'}` → `mai. de 2026`, `292.40/2` → `146,20`. `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 1 failed \| 19 passed (20)`; **depois**: `Tests 20 passed (20)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 248 passed (248)` | Commit `426049ff3d`, merge `5959717e6b` |
 | TASK-280 | Pendente | — | — | — | — |
 | TASK-281 | Pendente | — | — | — | — |
 
@@ -58,3 +58,20 @@ Consequência para os testes: os **dois** casos novos falhavam antes da correç�
 **Achado fora de escopo, registrado em vez de corrigido:** o mesmo `date_payment` cru alimenta o `<TextField type="date">` do modo de edição (`:192` → `:348`), e `input[type=date]` só aceita `YYYY-MM-DD` — o campo renderiza **vazio**. `specify.md` §4 mantém o modo de edição fora de escopo, então isso virou `docs/backlog/expense-view-edicao-campo-data-vazio.md` (item **040**, MEDIA), com a medição que comprova o formato e a análise de dano (a data é preservada por acaso ao salvar sem tocar no campo; o risco é o usuário preencher o vazio com um palpite). Não foi corrigido aqui para não expandir a task — `04-implementation.md` §1.2.
 
 Arquivos: `frontend/src/pages/ExpenseView.tsx` (`parseLocalDate()` + a chamada na data em destaque) e `frontend/src/pages/ExpenseView.test.tsx` (2 casos novos).
+
+### TASK-279 — detalhe
+
+Branch de task `…-TASK-279`, integrada por `git merge --no-ff` e descartada.
+
+Formatos conferidos com `node -e` **antes** de escrever o teste, para não fixar expectativa errada: `{ month: '2-digit', year: 'numeric' }` dá `05/2026`, e `{ month: 'short' }` em pt-BR dá `mai. de 2026` — confirmando a escolha de `plan.md` §2 por `mm/aaaa`.
+
+Decisões que apareceram só na implementação:
+
+- **Fixture com as quotas fora de ordem** (3, 1, 6, 2, 5, 4), e o teste compara a sequência renderizada com `['1/6' … '6/6']`. Um teste com a fixture já ordenada passaria mesmo sem o `sort()` — não provaria a decisão de `plan.md` §2 de ordenar por `number`.
+- **`perPersonValue()` replica o `max($payers->count(), 1)` do backend**, evitando divisão por zero numa despesa sem pagador; o valor sai por parcela, porque a última parcela absorve o arredondamento (`specify.md` §2.5).
+- **O `mb` do bloco do credor era condicional** (`proofUrl ? 1 : 3`) — a lógica existente era "aperta o espaço se o link de comprovante vem logo em seguida". Com a seção de parcelas no meio, virou `proofUrl && !showInstallments ? 1 : 3`, e a seção nova herdou o `proofUrl ? 1 : 3`. Intenção visual preservada, em vez de fixar `mb: 3` e mudar o espaçamento das outras despesas de passagem.
+- **Os dois testes negativos passam trivialmente antes da implementação** (a seção não existia) — registrado aqui para não dar a impressão de que os três casos estavam vermelhos: só o positivo estava.
+
+Verificação visual no navegador **não** foi feita: exigiria backend local, sessão autenticada e uma despesa parcelada no banco. O critério de aceite aprovado é por teste; os testes cobrem conteúdo e ordem, não layout.
+
+Arquivos: `frontend/src/pages/ExpenseView.tsx` (tipo `ExpenseQuota` com `value_quota`, `formatMonth()`, `perPersonValue()`, seção "Parcelas") e `frontend/src/pages/ExpenseView.test.tsx` (3 casos novos).
