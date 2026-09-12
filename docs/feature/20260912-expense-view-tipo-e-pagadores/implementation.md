@@ -22,7 +22,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-277 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `cd frontend && npx vitest run src/suiteTimezone.test.ts` — **antes** da config: `Tests 1 failed \| 1 passed (2)`; **depois**: `Tests 2 passed (2)`. Com a linha `env:` comentada de propósito: falha com `Expected "America/Sao_Paulo" / Received "America/Bahia"`; restaurada: verde. `npx tsc --noEmit` — exit 0. `npx vitest run` (suíte completa, estado final) — `Test Files 38 passed (38)`, `Tests 243 passed (243)` | Commit `109b6d4604`, merge `4df675e639` (`--no-ff`, branch de task descartada). Critério emendado durante a execução — ver abaixo |
 | TASK-278 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `php artisan tinker --execute="…(new Expense(['date_payment' => '2026-08-01']))->toJson()…"` — devolveu `{"date_payment":"2026-08-01T00:00:00.000000Z","total_value":"1754.40"}` e `{"date_expected":"2026-05-10T00:00:00.000000Z",…,"value_quota":"292.40"}`. `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 2 failed \| 15 passed (17)`; **depois**: `Tests 17 passed (17)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 245 passed (245)` | Commit `04563730bc`, merge `214acdf1de`. Gerou o item de backlog 040 |
 | TASK-279 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `node -e` conferindo os formatos antes de codar: `mm/aaaa` → `05/2026`, `{month:'short'}` → `mai. de 2026`, `292.40/2` → `146,20`. `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 1 failed \| 19 passed (20)`; **depois**: `Tests 20 passed (20)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 248 passed (248)` | Commit `426049ff3d`, merge `5959717e6b` |
-| TASK-280 | Pendente | — | — | — | — |
+| TASK-280 | Integrada na branch da feature | 2026-09-12 | IA (Claude Opus 5) | `npx vitest run src/pages/ExpenseView.test.tsx` — **antes**: `Tests 2 failed \| 20 passed (22)`; **depois**: `Tests 22 passed (22)`. `npx tsc --noEmit` — exit 0. `npx vitest run` — `38 passed (38)`, `Tests 250 passed (250)` | Commit `c06bd88d34`, merge `76e4c5956d`. Fecha o item de backlog 039 em código |
 | TASK-281 | Pendente | — | — | — | — |
 
 ### TASK-276 — detalhe
@@ -75,3 +75,17 @@ Decisões que apareceram só na implementação:
 Verificação visual no navegador **não** foi feita: exigiria backend local, sessão autenticada e uma despesa parcelada no banco. O critério de aceite aprovado é por teste; os testes cobrem conteúdo e ordem, não layout.
 
 Arquivos: `frontend/src/pages/ExpenseView.tsx` (tipo `ExpenseQuota` com `value_quota`, `formatMonth()`, `perPersonValue()`, seção "Parcelas") e `frontend/src/pages/ExpenseView.test.tsx` (3 casos novos).
+
+### TASK-280 — detalhe
+
+Branch de task `…-TASK-280`, integrada por `git merge --no-ff` e descartada. **Com ela o item de backlog 039 está resolvido em código** (rótulo do tipo, cronograma e pagadores); resta só a TASK-281, que é o item 003.
+
+Decisões da implementação:
+
+- **Asserções escopadas na seção.** "Isac" aparece duas vezes na tela (linha do credor, no topo, e linha de pagador), então os testes usam `within((await screen.findByText('Pagadores')).parentElement)`. Um `getByText('Isac')` global passaria por acidente mesmo se a seção não renderizasse o nome.
+- **Segundo caso com 3 pagadores** (`900,00` → `300,00` cada). Com só o caso de 2 pagadores, um bug de divisor fixo (`/ 2`) passaria — e o rateio por número de pagadores é exatamente o que a seção afirma.
+- **Nome e `(credor)` no mesmo `Typography`**, com o marcador num `component="span"` — igual ao modal. Isso é o que permite `getByText('Isac')` continuar casando (a testing-library junta só os nós de texto **diretos** do elemento) enquanto `(credor)` é consultável à parte.
+- **O `mb` condicional do bloco do credor virou fixo (`mb: 3`).** A seção de pagadores sempre vem depois dele, então o `proofUrl ? 1 : 3` ali não tinha mais sentido; o espaçamento apertado antes do link de comprovante migrou para a seção de pagadores, que agora é a última antes dele. A intenção visual original ("aperta o espaço se o comprovante vem logo a seguir") ficou preservada, só mudou de elemento.
+- **Sem estado vazio para `payers`:** a API valida `payers` com `required|array|min:1` no `store()` e no `update()`, então lista vazia é inalcançável — não inventei um ramo de UI (nem um teste) para um estado que o backend não produz. `perPersonValue()` já protege a divisão.
+
+Arquivos: `frontend/src/pages/ExpenseView.tsx` (seção "Pagadores" + ajuste dos `mb`) e `frontend/src/pages/ExpenseView.test.tsx` (2 casos novos, `within` importado).
