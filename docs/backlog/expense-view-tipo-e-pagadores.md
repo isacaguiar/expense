@@ -4,7 +4,7 @@ ID: 039
 Origem: docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/specify.md §4
 Criado em: 2026-09-05
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-276
 
 ## Descrição
 
