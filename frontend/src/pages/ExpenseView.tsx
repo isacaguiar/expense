@@ -76,10 +76,22 @@ const isInstallmentsLocked = (expense: ExpenseDetail): boolean =>
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const typeLabel: Record<ExpenseType, string> = {
-  IN_CASH: 'Variável',
-  IN_INSTALLMENTS: 'Variável',
-  FIXED: 'Fixa'
+/**
+ * Mesmos rótulos do modal "Detalhes da despesa" do ExpenseManager
+ * (`detailTypeLabel`) — as duas telas mostram a mesma despesa e não podem
+ * divergir; antes, `IN_CASH` e `IN_INSTALLMENTS` caíam os dois em "Variável".
+ *
+ * Diferença deliberada em relação ao modal: lá o chip diz "Parcelada 3/6",
+ * porque o backend já escolheu a parcela da competência; aqui a rota não
+ * recebe `cycles_ago`, então o chip traz só o total de parcelas — qual
+ * parcela é qual fica na lista de parcelas.
+ * Ver docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §1.
+ */
+const typeLabel = (expense: ExpenseDetail): string => {
+  if (expense.expense_type === 'FIXED') return 'Fixa';
+  if (expense.expense_type === 'IN_INSTALLMENTS') return `Parcelada (${expense.installments}x)`;
+
+  return 'À Vista';
 };
 
 const ExpenseView: React.FC = () => {
@@ -382,7 +394,7 @@ const ExpenseView: React.FC = () => {
             <Typography variant="h6" fontWeight={700}>
               {expense.description}
             </Typography>
-            <Chip label={typeLabel[expense.expense_type]} size="small" sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primaryDark }} />
+            <Chip label={typeLabel(expense)} size="small" sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primaryDark }} />
           </Box>
 
           <Typography variant="h5" color="primary" fontWeight={700} gutterBottom>

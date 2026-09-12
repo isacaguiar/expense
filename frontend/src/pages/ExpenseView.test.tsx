@@ -69,6 +69,51 @@ describe('ExpenseView', () => {
     expect(vi.mocked(axios.get).mock.calls.some(call => (call[0] as string).includes('/api/expenses/9'))).toBe(true);
   });
 
+  // Uma parcelada era rotulada "Variável", indistinguível de uma à vista, e o
+  // modal da listagem dizia "Parcelada n/N" para a mesma despesa. Backlog 039 /
+  // docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §1.
+  it('labels an IN_INSTALLMENTS expense with the number of installments', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_INSTALLMENTS',
+        installments: 6,
+        total_value: '1754.40',
+        quotas: [{ number: 1, date_expected: '2026-06-01', paid: false, payment_proof_url: null, value_quota: '292.40' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Parcelada (6x)')).toBeInTheDocument();
+    expect(screen.queryByText('Variável')).not.toBeInTheDocument();
+  });
+
+  it('labels an IN_CASH expense as "À Vista"', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_CASH',
+        installments: 1,
+        total_value: '100.00',
+        quotas: [{ number: 1, date_expected: '2026-08-01', paid: false, payment_proof_url: null, value_quota: '100.00' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('À Vista')).toBeInTheDocument();
+    expect(screen.queryByText('Variável')).not.toBeInTheDocument();
+  });
+
   it('shows "não encontrada" with a link back when the expense does not exist or is not accessible', async () => {
     vi.mocked(axios.get).mockImplementation((url: string) => {
       if (url.includes('/expenses/9')) {
