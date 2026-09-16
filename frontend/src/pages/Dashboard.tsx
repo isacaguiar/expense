@@ -42,24 +42,12 @@ import { API_BASE_URL } from '../config';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
 import GroupGrossDebtsPanel from '../components/GroupGrossDebtsPanel';
-
-type Member = { id: number; name: string; email: string };
-
-type Group = {
-  id: number;
-  name: string;
-  description: string;
-  create_date: string;
-  created_by: number | null;
-  creator?: { id: number; email: string } | null;
-  members: Member[];
-  cycle_snapshots_exists: boolean;
-};
+import type { GroupListItem } from '../types/group';
 
 const MAX_GROUPS_CREATED_PER_USER = 3;
 
 const Dashboard: React.FC = () => {
-  const [groups, setGroups] = useState<Group[]>([]);
+  const [groups, setGroups] = useState<GroupListItem[]>([]);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -95,7 +83,7 @@ const Dashboard: React.FC = () => {
       .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
 
     axios
-      .get<Group[]>(`${API_BASE_URL}/api/groups`, { headers })
+      .get<GroupListItem[]>(`${API_BASE_URL}/api/groups`, { headers })
       .then(res => setGroups(res.data))
       .catch(err => {
         console.error('Erro ao carregar grupos:', err);
@@ -138,7 +126,7 @@ const Dashboard: React.FC = () => {
 
   // Ações e toggle de pendências compartilhados entre a tabela (>= sm) e os
   // cartões (< sm), para os dois layouts nunca divergirem de comportamento.
-  const renderExpandToggle = (group: Group, expanded: boolean) => (
+  const renderExpandToggle = (group: GroupListItem, expanded: boolean) => (
     <IconButton
       size="small"
       onClick={() => toggleExpanded(group.id)}
@@ -148,7 +136,7 @@ const Dashboard: React.FC = () => {
     </IconButton>
   );
 
-  const renderGroupActions = (group: Group) => (
+  const renderGroupActions = (group: GroupListItem) => (
     <>
       <IconButton onClick={() => navigate(`/groups/${group.id}/edit`)} aria-label="Editar grupo">
         <EditOutlinedIcon fontSize="small" />
@@ -165,7 +153,7 @@ const Dashboard: React.FC = () => {
     </>
   );
 
-  const renderMembers = (group: Group) => (
+  const renderMembers = (group: GroupListItem) => (
     <AvatarGroup max={5} sx={{ justifyContent: 'flex-end' }}>
       {group.members.map(member => (
         <Avatar
@@ -178,7 +166,7 @@ const Dashboard: React.FC = () => {
     </AvatarGroup>
   );
 
-  const groupNameLink = (group: Group) => (
+  const groupNameLink = (group: GroupListItem) => (
     <Typography
       component={Link}
       to={`/groups/${group.id}/summary`}

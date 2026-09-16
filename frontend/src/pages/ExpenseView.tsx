@@ -25,16 +25,17 @@ import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { buildInstallmentQuotas } from '../utils/installments';
 import UserAvatar from '../components/UserAvatar';
-
-type GroupMember = { id: number; name: string; avatar_url: string | null };
-
-type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
+import type { ExpenseType } from '../types/expense';
+import type { GroupMember } from '../types/group';
 
 type ExpenseQuota = {
   number: number;
   date_expected: string;
   paid: boolean;
   payment_proof_url: string | null;
+  // O cast `decimal:2` do backend serializa número como string ("292.40"),
+  // mesmo caso de `total_value` abaixo — sempre passar por Number().
+  value_quota: string | number;
 };
 
 type ExpenseDetail = {
@@ -76,10 +77,61 @@ const isInstallmentsLocked = (expense: ExpenseDetail): boolean =>
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const typeLabel: Record<ExpenseType, string> = {
-  IN_CASH: 'Variável',
-  IN_INSTALLMENTS: 'Variável',
-  FIXED: 'Fixa'
+/**
+ * `GET /api/expenses/{id}` devolve o model cru, e o cast `date` do Laravel
+ * serializa em ISO-8601 com hora e Z — verificado no model:
+ * `(new Expense(['date_payment' => '2026-08-01']))->toJson()` dá
+ * `"2026-08-01T00:00:00.000000Z"`. `new Date()` dessa string (ou de
+ * 'YYYY-MM-DD') é meia-noite **UTC** e, em fuso negativo como
+ * America/Sao_Paulo, cai no dia anterior ao formatar — é o bug do item de
+ * backlog 013, que a TASK-133 já tirou dos outros arquivos que formatam data
+ * (ExpenseManager, GroupSummary, GroupReports, CycleDetailPanel,
+ * GroupGrossDebtsPanel, Payments, CycleClosingAlert). Esta tela tinha ficado
+ * de fora.
+ *
+ * Cortar em 10 caracteres monta a data a partir das partes, no fuso local, e
+ * atende os dois formatos — não depende de qual deles a API manda.
+ * Ver docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §2.
+ */
+const parseLocalDate = (dateStr: string): Date => {
+  const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
+
+  return new Date(year, month - 1, day);
+};
+
+/**
+ * `mm/aaaa` e não `{ month: 'short' }`: em pt-BR o formato curto rende
+ * "mai. de 2026" — longo e com ponto no meio, ruim numa linha de parcela.
+ */
+const formatMonth = (dateStr: string): string =>
+  parseLocalDate(dateStr).toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' });
+
+/**
+ * O rateio é sempre igualitário: não existe coluna de valor nem de percentual
+ * na pivot `ex_expenses_payers`. Mesmo cálculo que o backend usa para
+ * `valuePerPerson` no summary — `round($entry['value'] / max($payers->count(), 1), 2)`
+ * —, inclusive o `max(…, 1)`, que evita divisão por zero numa despesa sem
+ * pagador.
+ */
+const perPersonValue = (value: number, payersCount: number): number =>
+  Math.round((value / Math.max(payersCount, 1)) * 100) / 100;
+
+/**
+ * Mesmos rótulos do modal "Detalhes da despesa" do ExpenseManager
+ * (`detailTypeLabel`) — as duas telas mostram a mesma despesa e não podem
+ * divergir; antes, `IN_CASH` e `IN_INSTALLMENTS` caíam os dois em "Variável".
+ *
+ * Diferença deliberada em relação ao modal: lá o chip diz "Parcelada 3/6",
+ * porque o backend já escolheu a parcela da competência; aqui a rota não
+ * recebe `cycles_ago`, então o chip traz só o total de parcelas — qual
+ * parcela é qual fica na lista de parcelas.
+ * Ver docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §1.
+ */
+const typeLabel = (expense: ExpenseDetail): string => {
+  if (expense.expense_type === 'FIXED') return 'Fixa';
+  if (expense.expense_type === 'IN_INSTALLMENTS') return `Parcelada (${expense.installments}x)`;
+
+  return 'À Vista';
 };
 
 const ExpenseView: React.FC = () => {
@@ -374,6 +426,12 @@ const ExpenseView: React.FC = () => {
     );
   } else {
     const proofUrl = latestPaidProof(expense.quotas);
+    // Só parcelada tem cronograma: IN_CASH tem uma quota só (o valor já está no
+    // destaque do topo) e FIXED nasce sem Quota na competência — o `quotas[]`
+    // dela é esparso (os meses em que alguém pagou), não um cronograma. A
+    // condição é o tipo, nunca "tem mais de uma quota".
+    // Ver docs/feature/20260912-expense-view-tipo-e-pagadores/specify.md §2.6.
+    const showInstallments = expense.expense_type === 'IN_INSTALLMENTS';
 
     content = (
       <Card elevation={0} sx={{ maxWidth: 560, mx: 'auto' }}>
@@ -382,7 +440,7 @@ const ExpenseView: React.FC = () => {
             <Typography variant="h6" fontWeight={700}>
               {expense.description}
             </Typography>
-            <Chip label={typeLabel[expense.expense_type]} size="small" sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primaryDark }} />
+            <Chip label={typeLabel(expense)} size="small" sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primaryDark }} />
           </Box>
 
           <Typography variant="h5" color="primary" fontWeight={700} gutterBottom>
@@ -390,12 +448,92 @@ const ExpenseView: React.FC = () => {
           </Typography>
 
           <Typography color="text.secondary">
-            {new Date(expense.date_payment).toLocaleDateString('pt-BR')}
+            {parseLocalDate(expense.date_payment).toLocaleDateString('pt-BR')}
           </Typography>
-          <Box display="flex" alignItems="center" gap={1} sx={{ mb: proofUrl ? 1 : 3 }}>
+          {/* A seção de pagadores sempre vem depois daqui, então o espaçamento
+              apertado (mb: 1) que existia quando o link de comprovante vinha
+              logo a seguir migrou para a última seção antes dele. */}
+          <Box display="flex" alignItems="center" gap={1} sx={{ mb: 3 }}>
             <Typography color="text.secondary">Credor:</Typography>
             <UserAvatar name={creditorName} avatarUrl={creditor?.avatar_url} sx={{ width: 24, height: 24, fontSize: '0.7rem' }} />
             <Typography color="text.secondary">{creditorName}</Typography>
+          </Box>
+
+          {showInstallments && (
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="body2" color="text.secondary">
+                Parcelas
+              </Typography>
+              {/* O valor em destaque no topo é o total da compra; aqui cada
+                  linha traz o valor da parcela. Esta legenda amarra os dois. */}
+              <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                Total da despesa: R$ {formatMoney(Number(expense.total_value))} em {expense.installments}x
+              </Typography>
+
+              <Box display="flex" flexDirection="column" gap={1}>
+                {/* Ordena por `number`, não por `date_expected`: `number` é a
+                    identidade da parcela e é o que o rótulo "n/N" afirma. Datas
+                    de parcela podem ter sido deslocadas em massa em produção
+                    (ver as TASK-003/004 de
+                    docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/),
+                    e ordenar por data deixaria a numeração fora de ordem. */}
+                {[...expense.quotas]
+                  .sort((a, b) => a.number - b.number)
+                  .map(quota => (
+                    <Box key={quota.number} display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body2" fontWeight={600} sx={{ minWidth: 36 }}>
+                        {quota.number}/{expense.installments}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" flexGrow={1}>
+                        {formatMonth(quota.date_expected)}
+                      </Typography>
+                      <Box textAlign="right">
+                        <Typography variant="body2">R$ {formatMoney(Number(quota.value_quota))}</Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          R$ {formatMoney(perPersonValue(Number(quota.value_quota), expense.payers.length))} por pessoa
+                        </Typography>
+                      </Box>
+                      <Chip
+                        label={quota.paid ? 'Paga' : 'Pendente'}
+                        color={quota.paid ? 'success' : 'warning'}
+                        size="small"
+                      />
+                    </Box>
+                  ))}
+              </Box>
+            </Box>
+          )}
+
+          {/* Mesmo formato da lista de pagadores do modal "Detalhes da despesa"
+              (`renderDetailPayers` em ExpenseManager.tsx): avatar + nome, o
+              credor marcado, valor à direita. O valor aqui é a cota da pessoa
+              no total da despesa — o valor por parcela já está em cada linha do
+              cronograma acima, então nenhum número aparece duas vezes com base
+              diferente. Ver specify.md §3.3. */}
+          <Box sx={{ mb: proofUrl ? 1 : 3 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Pagadores
+            </Typography>
+
+            <Box display="flex" flexDirection="column" gap={1}>
+              {expense.payers.map(payer => (
+                <Box key={payer.id} display="flex" alignItems="center" gap={1}>
+                  <UserAvatar name={payer.name} avatarUrl={payer.avatar_url} sx={{ width: 28, height: 28, fontSize: '0.75rem' }} />
+                  <Typography variant="body2" flexGrow={1}>
+                    {payer.name}
+                    {payer.id === expense.user_payer_id && (
+                      <Typography component="span" variant="caption" color="text.secondary">
+                        {' '}
+                        (credor)
+                      </Typography>
+                    )}
+                  </Typography>
+                  <Typography variant="body2" fontWeight={600}>
+                    R$ {formatMoney(perPersonValue(Number(expense.total_value), expense.payers.length))}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
           </Box>
 
           {proofUrl && (

@@ -19,14 +19,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { buildInstallmentQuotas, InstallmentQuota } from '../utils/installments';
 import UserAvatar from '../components/UserAvatar';
-
-type ExpenseType = 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
-
-type GroupMember = {
-  id: number;
-  name: string;
-  avatar_url: string | null;
-};
+import type { ExpenseType } from '../types/expense';
+import type { GroupMember } from '../types/group';
 
 type Quota = InstallmentQuota;
 

@@ -4,14 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Box, CircularProgress, Typography } from '@mui/material';
 import { API_BASE_URL } from '../config';
 import { mostActiveGroup } from './mostActiveGroup';
-
-type Group = {
-  id: number;
-  name: string;
-  description: string;
-  create_date: string;
-  expenses_max_date_payment: string | null;
-};
+import type { GroupListItem } from '../types/group';
 
 const MembersEntry: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -22,7 +15,7 @@ const MembersEntry: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     axios
-      .get<Group[]>(`${API_BASE_URL}/api/groups`, {
+      .get<GroupListItem[]>(`${API_BASE_URL}/api/groups`, {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
       .then(res => {
