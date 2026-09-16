@@ -11,15 +11,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
-
-// Tipo do grupo conforme API
-type Group = {
-  id: number;
-  name: string;
-  description: string;
-  create_date: string;
-  closing_day: number | null;
-};
+import type { GroupDetail } from '../types/group';
 
 const GroupForm: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
@@ -38,12 +30,12 @@ const GroupForm: React.FC = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       axios
-        .get<Group>(`${API_BASE_URL}/api/groups/${id}`, {
+        .get<GroupDetail>(`${API_BASE_URL}/api/groups/${id}`, {
           headers: { Authorization: token ? `Bearer ${token}` : '' }
         })
         .then(res => {
           setName(res.data.name);
-          setDescription(res.data.description);
+          setDescription(res.data.description ?? '');
           setClosingDay(res.data.closing_day != null ? String(res.data.closing_day) : '');
         })
         .catch(() => {
@@ -80,7 +72,7 @@ const GroupForm: React.FC = () => {
       } else {
         response = await axios.post(`${API_BASE_URL}/api/groups`, payload, config);
       }
-      const groupId = (response.data as Group).id;
+      const groupId = (response.data as GroupDetail).id;
       navigate('/meus-grupos');
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;

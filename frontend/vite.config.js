@@ -35,6 +35,15 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
+    // O CI roda em ubuntu-latest (UTC), e a classe de bug do item de backlog
+    // 013 — `new Date('YYYY-MM-DD')` é meia-noite UTC e cai no dia anterior em
+    // fuso negativo — é invisível em UTC: lá o código errado acerta por
+    // acidente. Sem fixar o fuso, os testes de regressão de data passam em CI
+    // mesmo com a implementação errada. America/Sao_Paulo é o fuso dos
+    // usuários, e negativo, que é a condição do bug.
+    // Guarda: src/suiteTimezone.test.ts. Ver
+    // docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §5.
+    env: { TZ: 'America/Sao_Paulo' },
     // Node 22-24 expõe `localStorage`/`sessionStorage` globais nativos atrás
     // dessa flag (default-on sem flag a partir do Node 25), que colidem com
     // o polyfill do jsdom e lançam SecurityError ao acessar localStorage nos
