@@ -5,14 +5,7 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 import { API_BASE_URL } from '../config';
 import { mostActiveGroup } from './mostActiveGroup';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
-
-type Group = {
-  id: number;
-  name: string;
-  description: string;
-  create_date: string;
-  expenses_max_date_payment: string | null;
-};
+import type { GroupListItem } from '../types/group';
 
 const ExpensesEntry: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
@@ -23,7 +16,7 @@ const ExpensesEntry: React.FC = () => {
   useEffect(() => {
     const token = localStorage.getItem('accessToken');
     axios
-      .get<Group[]>(`${API_BASE_URL}/api/groups`, {
+      .get<GroupListItem[]>(`${API_BASE_URL}/api/groups`, {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
       .then(res => {

@@ -9,11 +9,7 @@ import GroupSidebar, { groupNavItems } from './group/GroupSidebar';
 import GroupHeader from './group/GroupHeader';
 import MobileNavDrawer from './MobileNavDrawer';
 import { useUnreadNotificationsCount } from '../hooks/useUnreadNotificationsCount';
-
-type GroupOption = {
-  id: number;
-  name: string;
-};
+import type { GroupOption } from '../types/group';
 
 export default function GroupShellLayout() {
   const { id: groupId } = useParams<{ id: string }>();

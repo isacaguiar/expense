@@ -12,11 +12,7 @@ import NotificationsNoneOutlinedIcon from '@mui/icons-material/NotificationsNone
 import { brandColors } from '../../theme/brandColors';
 import { getInitials } from './getInitials';
 import NotificationsMenu from '../../components/NotificationsMenu';
-
-type GroupOption = {
-  id: number;
-  name: string;
-};
+import type { GroupOption } from '../../types/group';
 
 interface GroupHeaderProps {
   title: string;
