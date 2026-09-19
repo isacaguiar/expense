@@ -19,4 +19,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-282 | Concluída | 2026-09-19 | Claude | `php artisan migrate` DONE 88ms; `php artisan db:table ex_user_pre_create` mostra 12 colunas + índice único em email; `migrate:rollback --step=1` DONE 34ms e `migrate` de volta DONE 58ms; `UserPreCreate::count()` no tinker retorna 0; `pint --test` PASS nos 2 arquivos | Migration aditiva (tabela nova). `attempts` aparece como `boolean, unsigned` no `db:table` porque é `TINYINT UNSIGNED` — é o tipo pedido, só a etiqueta do Laravel que confunde. |
