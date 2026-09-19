@@ -14,6 +14,8 @@ Versão: 1.0 · Criado em: 20260919
 | TASK-287 | Implementar a etapa 2 (código, reenvio) e o login automático | frontend | plan.md §6, plan.md §4 | nenhum | Pendente |
 | TASK-288 | Ligar os botões "Cadastre-se" do card de login e do site institucional | frontend | plan.md §7 | nenhum | Pendente |
 | TASK-289 | Atualizar `01-specify.md` §2 e §3.1 com a tabela e o fluxo novos | doc | specify.md §2 | nenhum | Pendente |
+| TASK-290 | Vincular a confirmação a quem submeteu o formulário (handle opaco) e limitar reenvios | backend | plan.md §10 | nenhum | Pendente |
+| TASK-291 | Endurecer `confirm()`: tentativas atômicas, colisão de e-mail e limpeza do material sensível | backend | plan.md §10 | nenhum | Pendente |
 
 ## Critérios de aceite
 
@@ -32,3 +34,7 @@ Versão: 1.0 · Criado em: 20260919
 - **TASK-288**: no card de login, "Cadastre-se" navega para `/app/cadastro` sem recarregar a página. `frontend/src/pages/LoginPage.test.tsx` passa a afirmar o destino novo e `npx vitest run` fica verde. Servindo o site (`php -S localhost:8080 -t site/public`), os três CTAs (`nav.php:23`, `index.php:60`, `index.php:127`) apontam para `/app/cadastro`.
 
 - **TASK-289**: `docs/sdd/01-specify.md` §2 lista `ex_user_pre_create` no glossário e §3.1 descreve o fluxo de auto-cadastro ao lado dos fluxos de convite existentes, com a versão do documento incrementada. Nenhuma afirmação do arquivo contradiz o código mergeado nesta feature.
+
+- **TASK-290**: `php artisan test --filter=PreRegistration` e `--filter=PreRegisterController` verdes com casos novos provando que (a) `POST /pre-register` devolve um `handle`; (b) `verify` com o `handle` errado é recusado sem gastar tentativa, mesmo com o código certo; (c) um pré-cadastro sobrescrito por um terceiro invalida o `handle` anterior, de modo que o código que chegou na caixa da vítima não confirma a senha do atacante; (d) `resend` sem o `handle` correto é recusado; (e) o reenvio nº 6 do mesmo pré-cadastro responde 429.
+
+- **TASK-291**: `php artisan test --filter=PreRegistration` verde com casos novos provando que (a) `attempts` é reservado atomicamente antes do `Hash::check` — a 6ª chamada é recusada mesmo com o código certo; (b) se o `User` daquele e-mail nascer entre o `start()` e o `confirm()` (via `POST /register` ou convite), o `confirm()` responde 422 com mensagem neutra em vez de estourar `QueryException` (que interpola os bindings, incluindo o hash da senha, na mensagem logada — conferido em `vendor/laravel/framework/src/Illuminate/Database/QueryException.php:66`); (c) depois do consumo, `password`, `code_hash` e `handle_hash` da linha estão vazios; (d) falha no envio do e-mail não deixa a pessoa presa no cooldown.
