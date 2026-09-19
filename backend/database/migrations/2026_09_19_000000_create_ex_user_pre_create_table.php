@@ -31,7 +31,15 @@ return new class extends Migration
             // corpo do e-mail enviado.
             $table->string('code_hash');
 
+            // Segredo opaco devolvido a quem submeteu o formulario, exigido de
+            // volta em verify/resend. Sem ele, um terceiro poderia sobrescrever
+            // o pre-cadastro pendente de um e-mail alheio (updateOrCreate e
+            // chaveado so por e-mail) e a vitima, ao digitar o codigo que
+            // chegou na caixa dela, criaria a conta com a senha do atacante.
+            $table->string('handle_hash');
+
             $table->unsignedTinyInteger('attempts')->default(0);
+            $table->unsignedTinyInteger('resend_count')->default(0);
             $table->timestamp('expires_at');
             $table->timestamp('last_sent_at')->nullable();
 

@@ -19,26 +19,30 @@ class UserPreCreate extends Model
 {
     protected $table = 'ex_user_pre_create';
 
+    // Estreito de proposito: tudo que controla o ritmo (attempts, resend_count)
+    // ou o ciclo de vida (consumed_at) e escrito por forceFill/increment no
+    // Service, nunca por mass assignment vindo de request.
     protected $fillable = [
         'name',
         'email',
         'whatsapp',
         'password',
         'code_hash',
-        'attempts',
+        'handle_hash',
         'expires_at',
         'last_sent_at',
-        'consumed_at',
     ];
 
     /** Nunca serializar o material sensível, mesmo que a linha vaze para uma resposta. */
     protected $hidden = [
         'password',
         'code_hash',
+        'handle_hash',
     ];
 
     protected $casts = [
         'attempts' => 'integer',
+        'resend_count' => 'integer',
         'expires_at' => 'datetime',
         'last_sent_at' => 'datetime',
         'consumed_at' => 'datetime',

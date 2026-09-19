@@ -16,6 +16,7 @@ class PreRegisterResendRequest extends FormRequest
     {
         return [
             'email' => 'required|email',
+            'handle' => 'required|string',
         ];
     }
 }

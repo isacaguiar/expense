@@ -24,10 +24,13 @@ class PreRegisterController extends Controller
     /** Recebe o formulário, grava o pré-cadastro e dispara o código. */
     public function store(PreRegisterRequest $request): JsonResponse
     {
-        $this->preRegistration->start($request->validated());
+        $handle = $this->preRegistration->start($request->validated());
 
         return response()->json([
             'message' => 'Enviamos um código de confirmação para o seu e-mail.',
+            // Segredo opaco que amarra a confirmação a quem submeteu este
+            // formulário -- exigido de volta em verify/resend.
+            'handle' => $handle,
             'expires_in_seconds' => PreRegistrationService::CODE_TTL_MINUTES * 60,
             'resend_available_in' => PreRegistrationService::RESEND_COOLDOWN_SECONDS,
         ]);
@@ -38,6 +41,7 @@ class PreRegisterController extends Controller
     {
         $user = $this->preRegistration->confirm(
             $request->input('email'),
+            $request->input('handle'),
             $request->input('code')
         );
 
@@ -53,7 +57,10 @@ class PreRegisterController extends Controller
     /** Gera e reenvia um código novo para um pré-cadastro pendente. */
     public function resend(PreRegisterResendRequest $request): JsonResponse
     {
-        $this->preRegistration->resend($request->input('email'));
+        $this->preRegistration->resend(
+            $request->input('email'),
+            $request->input('handle')
+        );
 
         return response()->json([
             'message' => 'Enviamos um novo código para o seu e-mail.',
