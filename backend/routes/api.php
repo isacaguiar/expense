@@ -9,6 +9,7 @@ use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PixController;
+use App\Http\Controllers\PreRegisterController;
 use App\Http\Controllers\ProofDownloadController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPhotoController;
@@ -19,6 +20,14 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::post('/invitations/verify', [InvitationController::class, 'verify']);
 Route::post('/forgot-password', [InvitationController::class, 'forgotPassword']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+
+// Auto-cadastro publico: formulario -> codigo por e-mail -> conta criada e ja
+// autenticada. O POST /register acima continua intacto (contrato existente,
+// docs/sdd/00-constitution.md 4.1). O throttle por IP e camada extra sobre o
+// limiter global de 60/min; o cooldown por e-mail vive em last_sent_at.
+Route::post('/pre-register', [PreRegisterController::class, 'store'])->middleware('throttle:10,1');
+Route::post('/pre-register/verify', [PreRegisterController::class, 'verify'])->middleware('throttle:10,1');
+Route::post('/pre-register/resend', [PreRegisterController::class, 'resend'])->middleware('throttle:5,1');
 
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
