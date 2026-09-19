@@ -15,6 +15,7 @@ import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
 import Typography from '@mui/material/Typography';
 import Link from '@mui/material/Link';
 import Divider from '@mui/material/Divider';
+import { Link as RouterLink } from 'react-router-dom';
 import googleLogo from '../../assets/illustrations/google-logo.svg';
 import { brandColors } from '../../theme/brandColors';
 
@@ -188,7 +189,7 @@ export default function LoginFormCard({
 
       <Typography sx={{ fontSize: '0.8rem', color: 'text.secondary', mt: 3 }}>
         Ainda não tem uma conta?{' '}
-        <Link href="#" underline="hover" sx={{ color: brandColors.primary }}>
+        <Link component={RouterLink} to="/cadastro" underline="hover" sx={{ color: brandColors.primary }}>
           Cadastre-se
         </Link>
       </Typography>
