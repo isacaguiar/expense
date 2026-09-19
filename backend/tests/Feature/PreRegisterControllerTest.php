@@ -106,7 +106,7 @@ class PreRegisterControllerTest extends TestCase
 
         $response = $this->postJson('/api/pre-register', $data)
             ->assertStatus(200)
-            ->assertJsonStructure(['message', 'expires_in_seconds', 'resend_available_in']);
+            ->assertJsonStructure(['message', 'handle', 'expires_in_seconds', 'resend_available_in']);
 
         $this->assertDatabaseHas('ex_user_pre_create', ['email' => $data['email']]);
         $this->assertDatabaseMissing('ex_users', ['email' => $data['email']]);
@@ -117,6 +117,9 @@ class PreRegisterControllerTest extends TestCase
         $this->assertStringNotContainsString('91234-5678', $body);
         $this->assertStringNotContainsString('senha-forte-123', $body);
         $this->assertStringNotContainsString($this->codeFromLastMail(), $body);
+        // O handle é a única coisa que a resposta devolve de propósito: ele é
+        // para quem submeteu, e é o que impede sequestro do pré-cadastro.
+        $this->assertNotEmpty(json_decode($body, true)['handle']);
     }
 
     public function test_segundo_pedido_dentro_do_cooldown_responde_429_com_retry_after(): void
@@ -132,10 +135,11 @@ class PreRegisterControllerTest extends TestCase
     public function test_codigo_certo_cria_conta_e_devolve_token_utilizavel(): void
     {
         $data = $this->payload();
-        $this->postJson('/api/pre-register', $data)->assertStatus(200);
+        $handle = $this->postJson('/api/pre-register', $data)->assertStatus(200)->json('handle');
 
         $response = $this->postJson('/api/pre-register/verify', [
             'email' => $data['email'],
+            'handle' => $handle,
             'code' => $this->codeFromLastMail(),
         ])->assertStatus(201)->assertJsonStructure(['access_token', 'token_type', 'expires_in']);
 
@@ -151,10 +155,11 @@ class PreRegisterControllerTest extends TestCase
     public function test_codigo_errado_responde_422_no_campo_code(): void
     {
         $data = $this->payload();
-        $this->postJson('/api/pre-register', $data)->assertStatus(200);
+        $handle = $this->postJson('/api/pre-register', $data)->assertStatus(200)->json('handle');
 
         $this->postJson('/api/pre-register/verify', [
             'email' => $data['email'],
+            'handle' => $handle,
             'code' => '000000',
         ])->assertStatus(422)->assertJsonValidationErrors('code');
 
@@ -166,6 +171,7 @@ class PreRegisterControllerTest extends TestCase
     {
         $this->postJson('/api/pre-register/verify', [
             'email' => 'ninguem-'.uniqid().'@example.com',
+            'handle' => bin2hex(random_bytes(32)),
             'code' => '000000',
         ])->assertStatus(422)->assertJsonValidationErrors('code');
     }
@@ -173,17 +179,30 @@ class PreRegisterControllerTest extends TestCase
     public function test_reenvio_respeita_o_cooldown_e_depois_manda_codigo_novo(): void
     {
         $data = $this->payload();
-        $this->postJson('/api/pre-register', $data)->assertStatus(200);
+        $handle = $this->postJson('/api/pre-register', $data)->assertStatus(200)->json('handle');
         $codigoAntigo = $this->codeFromLastMail();
 
-        $this->postJson('/api/pre-register/resend', ['email' => $data['email']])
+        $this->postJson('/api/pre-register/resend', ['email' => $data['email'], 'handle' => $handle])
             ->assertStatus(429);
 
         $this->travel(PreRegistrationService::RESEND_COOLDOWN_SECONDS + 1)->seconds();
 
-        $this->postJson('/api/pre-register/resend', ['email' => $data['email']])
+        $this->postJson('/api/pre-register/resend', ['email' => $data['email'], 'handle' => $handle])
             ->assertStatus(200);
 
         $this->assertNotSame($codigoAntigo, $this->codeFromLastMail());
+    }
+
+    public function test_verify_sem_handle_e_recusado_na_validacao(): void
+    {
+        $data = $this->payload();
+        $this->postJson('/api/pre-register', $data)->assertStatus(200);
+
+        $this->postJson('/api/pre-register/verify', [
+            'email' => $data['email'],
+            'code' => $this->codeFromLastMail(),
+        ])->assertStatus(422)->assertJsonValidationErrors('handle');
+
+        $this->assertDatabaseMissing('ex_users', ['email' => $data['email']]);
     }
 }

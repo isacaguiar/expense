@@ -8,8 +8,10 @@ use App\Models\User;
 use App\Models\UserPreCreate;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
+use Throwable;
 
 /**
  * Regra do auto-cadastro com confirmação de e-mail por código.
@@ -22,7 +24,14 @@ use Illuminate\Validation\ValidationException;
  * hasheada antes de persistir, e do código guarda-se só o hash. O código em
  * claro só trafega dentro do e-mail.
  *
- * Ver docs/feature/20260919-cadastro-de-usuarios/plan.md §2.
+ * **Handle**: `start()` devolve um segredo opaco a quem submeteu o formulário,
+ * exigido de volta em `confirm()`/`resend()`. Sem ele, como `updateOrCreate` é
+ * chaveado só por e-mail, um terceiro poderia sobrescrever o pré-cadastro
+ * pendente de um e-mail alheio com a senha dele; a vítima, ao digitar o código
+ * que acabou de chegar na caixa dela, criaria a conta com a senha do atacante
+ * (account pre-hijacking). O handle amarra a confirmação a quem submeteu.
+ *
+ * Ver docs/feature/20260919-cadastro-de-usuarios/plan.md §2 e §10.
  */
 class PreRegistrationService
 {
@@ -32,16 +41,22 @@ class PreRegistrationService
 
     public const MAX_ATTEMPTS = 5;
 
+    public const MAX_RESENDS = 5;
+
     public const RESEND_COOLDOWN_SECONDS = 60;
+
+    /** Mensagem única para todo caminho de falha de confirmação — não revela qual peça falhou. */
+    private const GENERIC_CODE_ERROR = 'Código inválido ou expirado. Confira o e-mail ou peça um novo código.';
 
     /**
      * Grava (ou regrava) o pré-cadastro do e-mail e manda o código.
      *
      * @param  array{name: string, email: string, password: string, whatsapp?: string|null}  $data
+     * @return string o handle em claro, que só quem submeteu recebe
      *
      * @throws PreRegistrationThrottled quando o último envio para este e-mail foi há menos de RESEND_COOLDOWN_SECONDS
      */
-    public function start(array $data): UserPreCreate
+    public function start(array $data): string
     {
         $existing = UserPreCreate::where('email', $data['email'])->first();
 
@@ -50,6 +65,8 @@ class PreRegistrationService
         }
 
         $code = $this->generateCode();
+        $handle = bin2hex(random_bytes(32));
+        $previousSentAt = $existing?->last_sent_at;
 
         $preCreate = UserPreCreate::updateOrCreate(
             ['email' => $data['email']],
@@ -58,100 +75,107 @@ class PreRegistrationService
                 'whatsapp' => $data['whatsapp'] ?? null,
                 'password' => Hash::make($data['password']),
                 'code_hash' => Hash::make($code),
-                'attempts' => 0,
+                'handle_hash' => Hash::make($handle),
                 'expires_at' => now()->addMinutes(self::CODE_TTL_MINUTES),
                 'last_sent_at' => now(),
-                'consumed_at' => null,
             ]
         );
 
-        $this->sendCode($preCreate, $code);
+        // Contadores nunca vêm de mass assignment (não estão em $fillable).
+        $preCreate->forceFill([
+            'attempts' => 0,
+            'resend_count' => 0,
+            'consumed_at' => null,
+        ])->save();
 
-        return $preCreate;
+        $this->sendCode($preCreate, $code, $previousSentAt);
+
+        return $handle;
     }
 
     /**
      * Gera um código novo para um pré-cadastro que já existe e reenvia.
      *
-     * @throws ValidationException quando não há pré-cadastro pendente para o e-mail
-     * @throws PreRegistrationThrottled quando o cooldown ainda não passou
+     * @throws ValidationException quando não há pré-cadastro pendente para o par e-mail+handle
+     * @throws PreRegistrationThrottled quando o cooldown ainda não passou ou o teto de reenvios foi atingido
      */
-    public function resend(string $email): UserPreCreate
+    public function resend(string $email, string $handle): void
     {
-        $preCreate = UserPreCreate::where('email', $email)->first();
-
-        if ($preCreate === null || $preCreate->isConsumed()) {
-            throw ValidationException::withMessages([
-                'email' => 'Não há cadastro pendente para este e-mail. Preencha o formulário novamente.',
-            ]);
-        }
+        $preCreate = $this->findPending($email, $handle);
 
         $this->guardResendCooldown($preCreate);
 
-        $code = $this->generateCode();
+        if ($preCreate->resend_count >= self::MAX_RESENDS) {
+            throw new PreRegistrationThrottled(
+                'Você já pediu códigos demais para este cadastro. Preencha o formulário novamente.',
+                0
+            );
+        }
 
-        // Código novo zera as tentativas: quem pediu reenvio não deve herdar
-        // o saldo de erros do código anterior.
+        $code = $this->generateCode();
+        $previousSentAt = $preCreate->last_sent_at;
+
+        // Código novo zera as tentativas daquele código, mas o teto de reenvios
+        // impede que isso vire orçamento infinito de adivinhação.
         $preCreate->forceFill([
             'code_hash' => Hash::make($code),
             'attempts' => 0,
+            'resend_count' => $preCreate->resend_count + 1,
             'expires_at' => now()->addMinutes(self::CODE_TTL_MINUTES),
             'last_sent_at' => now(),
         ])->save();
 
-        $this->sendCode($preCreate, $code);
-
-        return $preCreate;
+        $this->sendCode($preCreate, $code, $previousSentAt);
     }
 
     /**
      * Confere o código e, se bater, cria o `User` definitivo.
      *
-     * @throws ValidationException quando o código está errado, expirado ou não há pré-cadastro
+     * @throws ValidationException quando o par e-mail+handle não existe, ou o código está errado/expirado
      * @throws PreRegistrationThrottled quando as tentativas daquele código se esgotaram
      */
-    public function confirm(string $email, string $code): User
+    public function confirm(string $email, string $handle, string $code): User
     {
-        $preCreate = UserPreCreate::where('email', $email)->first();
-
-        if ($preCreate === null || $preCreate->isConsumed()) {
-            throw ValidationException::withMessages([
-                'code' => 'Não há cadastro pendente para este e-mail. Preencha o formulário novamente.',
-            ]);
-        }
+        $preCreate = $this->findPending($email, $handle);
 
         if ($preCreate->isExpired()) {
-            throw ValidationException::withMessages([
-                'code' => 'Este código expirou. Peça um novo código.',
-            ]);
+            throw $this->genericCodeError();
         }
 
-        if ($preCreate->attempts >= self::MAX_ATTEMPTS) {
+        // Reserva a tentativa ANTES de conferir o código, com um UPDATE
+        // condicional: ler `attempts` e só depois incrementar deixaria N
+        // requisições concorrentes passarem todas pelo Hash::check com a mesma
+        // leitura de 0, e o teto de MAX_ATTEMPTS só valeria em cenário serial.
+        $reserved = UserPreCreate::where('id', $preCreate->id)
+            ->where('attempts', '<', self::MAX_ATTEMPTS)
+            ->increment('attempts');
+
+        if ($reserved === 0) {
             throw new PreRegistrationThrottled(
                 'Muitas tentativas com este código. Peça um novo código.',
                 $this->secondsUntilResend($preCreate)
             );
         }
 
-        // Fora da transação de propósito: se o incremento ficasse dentro dela,
-        // o rollback disparado pela exceção abaixo desfaria a contagem e o
-        // limite de tentativas nunca seria atingido.
         if (! Hash::check($code, $preCreate->code_hash)) {
-            $preCreate->increment('attempts');
-
-            throw ValidationException::withMessages([
-                'code' => 'Código inválido. Confira o e-mail e tente novamente.',
-            ]);
+            throw $this->genericCodeError();
         }
 
-        // Só a criação do User entra na transação, com lock para que duas
-        // confirmações simultâneas não gerem dois usuários para o mesmo e-mail.
         return DB::transaction(function () use ($email) {
             $preCreate = UserPreCreate::where('email', $email)->lockForUpdate()->first();
 
             if ($preCreate === null || $preCreate->isConsumed()) {
+                throw $this->genericCodeError();
+            }
+
+            // O unique:ex_users do FormRequest valeu no start(); entre ele e
+            // aqui há até 15 min em que POST /register ou um convite a grupo
+            // podem ter criado o usuário. Sem esta checagem, o save() estoura
+            // QueryException -- que interpola os bindings na mensagem logada,
+            // levando e-mail, telefone e o hash da senha para o laravel.log.
+            if (User::where('email', $preCreate->email)->exists()) {
                 throw ValidationException::withMessages([
-                    'code' => 'Não há cadastro pendente para este e-mail. Preencha o formulário novamente.',
+                    'email' => 'Este e-mail já está cadastrado. Faça login para continuar.',
                 ]);
             }
 
@@ -166,7 +190,15 @@ class PreRegistrationService
             $user->email_verified_at = now();
             $user->save();
 
-            $preCreate->forceFill(['consumed_at' => now()])->save();
+            // A linha fica (hard delete é gate humano), mas sem o material de
+            // credencial: depois do consumo ela não precisa mais guardar uma
+            // segunda cópia do hash da senha nem os segredos do fluxo.
+            $preCreate->forceFill([
+                'consumed_at' => now(),
+                'password' => '',
+                'code_hash' => '',
+                'handle_hash' => '',
+            ])->save();
 
             return $user;
         });
@@ -182,6 +214,36 @@ class PreRegistrationService
         $elapsed = $preCreate->last_sent_at->diffInSeconds(now());
 
         return (int) max(0, self::RESEND_COOLDOWN_SECONDS - $elapsed);
+    }
+
+    /**
+     * Pré-cadastro pendente daquele e-mail, desde que o handle bata.
+     *
+     * Handle errado e e-mail inexistente devolvem exatamente o mesmo erro, para
+     * a rota não virar um oráculo de quem tem cadastro pendente. Handle errado
+     * também não gasta tentativa: quem não submeteu o formulário não pode
+     * queimar o saldo de quem submeteu.
+     *
+     * @throws ValidationException
+     */
+    private function findPending(string $email, string $handle): UserPreCreate
+    {
+        $preCreate = UserPreCreate::where('email', $email)->first();
+
+        if ($preCreate === null || $preCreate->isConsumed()) {
+            throw $this->genericCodeError();
+        }
+
+        if ($preCreate->handle_hash === '' || ! Hash::check($handle, $preCreate->handle_hash)) {
+            throw $this->genericCodeError();
+        }
+
+        return $preCreate;
+    }
+
+    private function genericCodeError(): ValidationException
+    {
+        return ValidationException::withMessages(['code' => self::GENERIC_CODE_ERROR]);
     }
 
     /** @throws PreRegistrationThrottled */
@@ -205,10 +267,28 @@ class PreRegistrationService
         return str_pad((string) random_int(0, $max), self::CODE_LENGTH, '0', STR_PAD_LEFT);
     }
 
-    private function sendCode(UserPreCreate $preCreate, string $code): void
+    /**
+     * Envia o código. Se o envio falhar, devolve `last_sent_at` ao valor
+     * anterior: sem isso a pessoa ficaria presa 60 s num cooldown por um código
+     * que nunca chegou (mesmo cuidado que `InvitationController::forgotPassword`
+     * já toma ao só gravar a chave de rate limit depois do envio).
+     */
+    private function sendCode(UserPreCreate $preCreate, string $code, ?\Illuminate\Support\Carbon $previousSentAt): void
     {
-        Mail::to($preCreate->email)->send(
-            new PreRegisterCodeMail($preCreate->name, $code, self::CODE_TTL_MINUTES)
-        );
+        try {
+            Mail::to($preCreate->email)->send(
+                new PreRegisterCodeMail($preCreate->name, $code, self::CODE_TTL_MINUTES)
+            );
+        } catch (Throwable $e) {
+            $preCreate->forceFill(['last_sent_at' => $previousSentAt])->save();
+
+            // Sem o código e sem o e-mail no log -- só o que dá para agir.
+            Log::error('Falha ao enviar o código de pré-cadastro.', [
+                'pre_create_id' => $preCreate->id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
     }
 }

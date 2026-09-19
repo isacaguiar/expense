@@ -90,6 +90,42 @@ As duas etapas (formulário → código) vivem na mesma rota, como estado do com
 - Migration em local/dev é autônoma; em produção ela roda sozinha no merge em `main` (`deploy-backend.yml` → `php artisan migrate --force`, `ADR-008`). É aditiva, mas o aval fica no PR de promoção `dev` → `main`.
 - 🚩 `.env.production` tem `MAIL_HOST=127.0.0.1`, `MAIL_PORT=1025` e o remetente placeholder. **Nenhum e-mail de código sai em produção** até um SMTP real ser configurado — e credencial é ação 100% humana (`00-constitution.md` §5.2, §6.1). Código e testes funcionam sem isso; o fluxo em produção, não. Precisa constar como pendência explícita no PR de promoção.
 
+## 10. Endurecimento vindo da revisão de segurança (TASK-290, TASK-291)
+
+O agent `security-reviewer` revisou o código entregue por TASK-282..285 e achou defeitos **no código desta própria feature** — não dívida pré-existente. Por isso viraram task daqui (TASK-290, TASK-291) em vez de item de backlog: a feature não pode ser promovida com eles.
+
+### 10.1 Handle opaco amarra a confirmação a quem submeteu (achado 1)
+
+`updateOrCreate` chaveado só por e-mail permitia *account pre-hijacking*: um terceiro submetia `POST /pre-register` com o e-mail da vítima e a senha dele, um código novo saía para a caixa da vítima, e a vítima — ao digitar o código que acabara de chegar — criava a conta dela com a senha do atacante.
+
+`start()` passa a devolver um **handle** (32 bytes aleatórios, guardado só como hash em `handle_hash`), exigido de volta em `verify` e `resend`. Ele vive no estado do componente de duas etapas, sem rota nova e sem `?email=` — mantendo a decisão de §6. Sobrescrever o pré-cadastro invalida o handle anterior, então o atacante ainda atrapalha um cadastro em curso, mas não o sequestra.
+
+Handle errado e e-mail inexistente devolvem **a mesma** mensagem genérica, e handle errado **não gasta tentativa** — quem não submeteu não pode queimar o saldo de quem submeteu.
+
+### 10.2 Teto de reenvios (achado 3)
+
+Código novo zerava `attempts` sem limite de quantas vezes — orçamento de adivinhação infinito, e um canhão de e-mail para caixa de terceiro. Coluna `resend_count` com teto de 5 por pré-cadastro.
+
+### 10.3 Reserva atômica de tentativa (achado 2)
+
+Ler `attempts` e só depois incrementar deixava N requisições concorrentes passarem todas pelo `Hash::check` com a mesma leitura. A tentativa passa a ser **reservada antes** da conferência, com `UPDATE ... WHERE attempts < MAX` — se afetou 0 linhas, o teto foi atingido. Efeito colateral aceito: a confirmação bem-sucedida também gasta uma tentativa.
+
+### 10.4 Colisão de e-mail na janela de 15 min (achado 4)
+
+O `unique:ex_users` do FormRequest vale no `start()`; até o `confirm()` cabem 15 minutos em que `POST /register` ou um convite a grupo podem criar aquele e-mail. O `save()` então estourava `QueryException` — que interpola os bindings na mensagem (`vendor/laravel/framework/src/Illuminate/Database/QueryException.php:66`), levando e-mail, telefone e o **hash da senha** para o `laravel.log`. Agora o `confirm()` checa a existência do `User` dentro da transação e responde 422 com mensagem neutra.
+
+### 10.5 Limpeza do material de credencial no consumo (achado 6)
+
+A linha continua existindo depois de consumida (hard delete é gate humano), mas `password`, `code_hash` e `handle_hash` são esvaziados — não faz sentido manter uma segunda cópia do hash da senha numa tabela sem camada de acesso própria. É `UPDATE`, não delete: cabe dentro do gate atual.
+
+### 10.6 Falha de envio não prende no cooldown (achado 7)
+
+`Mail::send` sem try/catch gravava `last_sent_at` e estourava, deixando a pessoa 60 s presa esperando um código que nunca chegou. Agora o envio restaura o `last_sent_at` anterior em caso de falha — mesmo cuidado que `InvitationController::forgotPassword` já toma.
+
+### 10.7 O que foi para o backlog
+
+Os achados 5 (oráculo de pré-cadastro pendente via `resend`), 8 (traits `Queueable` no Mailable que carrega o código em claro) e 9 (`$fillable`) não são exploráveis hoje na forma entregue; 9 foi estreitado junto, 5 e 8 viraram itens de `docs/backlog/`.
+
 ## 9. Ordem de execução
 
 Há dependência real: §1 (tabela) → §2 (Service) → §3-5 (endpoints e e-mail) → §6 (página, que consome os endpoints) → §7 (ligar os botões, que só faz sentido com a página existindo). A ordem em `tasks.md` segue essa cadeia. A task de documentação é a última porque descreve o comportamento já implementado.

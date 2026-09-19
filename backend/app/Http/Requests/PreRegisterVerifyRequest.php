@@ -22,6 +22,7 @@ class PreRegisterVerifyRequest extends FormRequest
     {
         return [
             'email' => 'required|email',
+            'handle' => 'required|string',
             'code' => 'required|string|digits:6',
         ];
     }
@@ -31,6 +32,7 @@ class PreRegisterVerifyRequest extends FormRequest
         return [
             'code.required' => 'Informe o código recebido por e-mail.',
             'code.digits' => 'O código tem 6 dígitos.',
+            'handle.required' => 'Sessão de cadastro perdida. Preencha o formulário novamente.',
         ];
     }
 }
