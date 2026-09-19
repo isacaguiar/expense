@@ -4,7 +4,7 @@
 >
 > Fontes usadas para levantar este documento: `backend/routes/api.php`, `backend/app/Models/*`, `backend/app/Http/Controllers/*`, `backend/database/migrations/*`, `frontend/src/pages/*`.
 
-Versão: 1.0 · Última atualização: 2026-08-17
+Versão: 1.1 · Última atualização: 2026-09-19
 
 ---
 
@@ -21,12 +21,19 @@ Permitir que um grupo de pessoas (família, república, grupo de amigos) registr
 | `Expense` | `ex_expenses` | `description`, `total_value`, `expense_type` (`IN_CASH`\|`IN_INSTALLMENTS`), `installments`, `date_payment`, `group_id`, `user_creator_id`, `user_payer_id`, `deleted` | `user_payer_id` = quem **pagou de fato** a despesa. |
 | Pagadores/participantes da despesa | `ex_expenses_payers` | `expense_id`, `user_id` | N:N — **quem participa da divisão** do valor (pode incluir ou não o `user_payer_id`). Não existe entidade `GrupoPagadores` separada — o vínculo é direto na despesa. |
 | `Quota` | `ex_quotas` | `expense_id`, `number`, `value_quota`, `date_expected`, `paid` | Parcela da despesa. Para `IN_CASH`, ainda é criada 1 quota. |
+| Pré-cadastro | `ex_user_pre_create` | `name`, `email`, `whatsapp`, `password` (hash), `code_hash`, `handle_hash`, `attempts`, `resend_count`, `expires_at`, `last_sent_at`, `consumed_at` | Dados do formulário de auto-cadastro **antes** de existir um `User`. Vira `User` quando o código de 6 dígitos é confirmado; a linha é marcada `consumed_at` (nunca apagada) e tem o material de credencial esvaziado. |
 | `Participation` | `ex_participations` | `group_id`, `quota_id`, `state` | **Existe na migration/model mas não é populada por nenhum endpoint hoje** — ver seção 6, "Divergências". |
 
 ## 3. Fluxos implementados
 
 ### 3.1 Autenticação e conta
-- `POST /register` — cria usuário (nome, e-mail, senha ≥6 chars). Público.
+- **Auto-cadastro em duas etapas** (público, `PreRegisterController` + `PreRegistrationService`) — é o caminho que a tela `/cadastro` usa:
+  1. `POST /pre-register` — recebe nome, e-mail (+ confirmação), telefone opcional e senha (+ confirmação). **Não cria usuário**: grava uma linha em `ex_user_pre_create` com a senha já hasheada, envia um código de 6 dígitos por e-mail (validade 15 min) e devolve um `handle` opaco a quem submeteu.
+  2. `POST /pre-register/verify` — recebe e-mail + `handle` + código. Confirmando, cria o `User` com `email_verified_at` preenchido e o telefone em `whatsapp`, e devolve o mesmo payload de `POST /login` (a conta já nasce autenticada).
+  3. `POST /pre-register/resend` — novo código para o mesmo pré-cadastro. Cooldown de 60 s, teto de 5 reenvios, 5 tentativas erradas por código.
+
+  O `handle` existe porque o pré-cadastro é chaveado por e-mail: sem ele, um terceiro poderia sobrescrever o pré-cadastro pendente de outra pessoa com a senha dele. Ver `docs/feature/20260919-cadastro-de-usuarios/plan.md` §10.
+- `POST /register` — cria usuário (nome, e-mail, senha ≥6 chars) **sem confirmar o e-mail**. Público, e nenhum cliente o chama desde que o auto-cadastro existe. Mantido por compatibilidade de contrato (`00-constitution.md` §4.1); depreciá-lo é item de backlog.
 - `POST /login` — autentica via `tymon/jwt-auth`, retorna `access_token` (bearer) + TTL. Público.
 - `GET /me`, `POST /logout`, `GET /dashboard` — autenticados.
 - `POST /user/pix` — usuário autenticado define/atualiza a própria chave Pix.
@@ -36,7 +43,7 @@ Permitir que um grupo de pessoas (família, república, grupo de amigos) registr
 2. `POST /groups/{groupId}/members` (`GroupMemberController::store`, autenticado): se o e-mail informado não tem `User`, cria um novo com senha aleatória via `Str::random(10)`, gera token via `Password::getRepository()` e envia `UserInvitedMail` — fluxo de reset de senha padrão do Laravel, diferente do fluxo 1.
 3. `POST /forgot-password` (público): gera token, guarda em cache por 60 min, limita a 1 pedido a cada 15 min, envia e-mail de recuperação.
 
-> Os fluxos 1 e 2 resolvem o mesmo problema (convidar alguém novo) de formas diferentes e não compartilham código — ver "Divergências".
+> Os fluxos 1 e 2 resolvem o mesmo problema (convidar alguém novo) de formas diferentes e não compartilham código — ver "Divergências". O auto-cadastro de 3.1 é um terceiro caminho de criação de `User`, independente destes dois: quem se cadastra sozinho não passa por convite.
 
 ### 3.3 Grupos
 - `GET/POST/PUT/DELETE /groups` (`GroupController`, autenticado, via `Route::apiResource`):
@@ -60,7 +67,7 @@ Permitir que um grupo de pessoas (família, república, grupo de amigos) registr
 - `GET /pix/generate?email=...&valor=...` — gera QR Code + "copia e cola" Pix para a chave cadastrada do usuário do e-mail informado. **Hoje esta rota é pública** (fora do grupo `jwt.auth`) — ver `00-constitution.md`, Governança/Segurança.
 
 ### 3.7 Telas do frontend web atual (`expense/frontend/src/pages`)
-`LoginPage`, `Dashboard`, `GroupList`, `GroupForm`, `GroupMembersForm`, `ExpenseManager`, com navegação em `Navbar`/`InternalLayout`. Este é o conjunto de telas que serve de referência para o Plan de migração para React Native (`02-plan.md`).
+`LoginPage`, `RegisterPage` (`/cadastro`, auto-cadastro em duas etapas), `Dashboard`, `GroupList`, `GroupForm`, `GroupMembersForm`, `ExpenseManager`, com navegação em `Navbar`/`InternalLayout`. Este é o conjunto de telas que serve de referência para o Plan de migração para React Native (`02-plan.md`).
 
 ## 4. Regras de negócio confirmadas
 

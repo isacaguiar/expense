@@ -6,16 +6,16 @@ Versão: 1.0 · Criado em: 20260919
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-282 | Criar migration e model da tabela `ex_user_pre_create` | backend | plan.md §1 | nenhum | Pendente |
-| TASK-283 | Implementar `PreRegistrationService` com geração, reenvio e confirmação de código | backend | plan.md §2 | nenhum | Pendente |
-| TASK-284 | Criar o Mailable e a view do e-mail com o código | backend | plan.md §5 | nenhum | Pendente |
-| TASK-285 | Expor os três endpoints públicos de pré-cadastro (controller, FormRequests, rotas) | backend | plan.md §3, §4 | nenhum | Pendente |
-| TASK-286 | Criar a página `/cadastro` com a etapa 1 (formulário) | frontend | plan.md §6 | nenhum | Pendente |
-| TASK-287 | Implementar a etapa 2 (código, reenvio) e o login automático | frontend | plan.md §6, plan.md §4 | nenhum | Pendente |
-| TASK-288 | Ligar os botões "Cadastre-se" do card de login e do site institucional | frontend | plan.md §7 | nenhum | Pendente |
-| TASK-289 | Atualizar `01-specify.md` §2 e §3.1 com a tabela e o fluxo novos | doc | specify.md §2 | nenhum | Pendente |
-| TASK-290 | Vincular a confirmação a quem submeteu o formulário (handle opaco) e limitar reenvios | backend | plan.md §10 | nenhum | Pendente |
-| TASK-291 | Endurecer `confirm()`: tentativas atômicas, colisão de e-mail e limpeza do material sensível | backend | plan.md §10 | nenhum | Pendente |
+| TASK-282 | Criar migration e model da tabela `ex_user_pre_create` | backend | plan.md §1 | nenhum | Concluída |
+| TASK-283 | Implementar `PreRegistrationService` com geração, reenvio e confirmação de código | backend | plan.md §2 | nenhum | Concluída |
+| TASK-284 | Criar o Mailable e a view do e-mail com o código | backend | plan.md §5 | nenhum | Concluída |
+| TASK-285 | Expor os três endpoints públicos de pré-cadastro (controller, FormRequests, rotas) | backend | plan.md §3, §4 | nenhum | Concluída |
+| TASK-286 | Criar a página `/cadastro` com a etapa 1 (formulário) | frontend | plan.md §6 | nenhum | Concluída |
+| TASK-287 | Implementar a etapa 2 (código, reenvio) e o login automático | frontend | plan.md §6, plan.md §4 | nenhum | Concluída |
+| TASK-288 | Ligar os botões "Cadastre-se" do card de login e do site institucional | frontend | plan.md §7 | nenhum | Concluída |
+| TASK-289 | Atualizar `01-specify.md` §2 e §3.1 com a tabela e o fluxo novos | doc | specify.md §2 | nenhum | Concluída |
+| TASK-290 | Vincular a confirmação a quem submeteu o formulário (handle opaco) e limitar reenvios | backend | plan.md §10 | nenhum | Concluída |
+| TASK-291 | Endurecer `confirm()`: tentativas atômicas, colisão de e-mail e limpeza do material sensível | backend | plan.md §10 | nenhum | Concluída |
 
 ## Critérios de aceite
 
