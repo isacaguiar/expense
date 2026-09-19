@@ -39,7 +39,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 
 | ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
 |---|---|---|---|---|---|---|
-| 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Aberto |
+| 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Promovido para TASK-281 |
 | 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
@@ -52,7 +52,8 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 036 | [frontend-index-html-lang-title-estaticos.md](frontend-index-html-lang-title-estaticos.md) | `frontend/index.html` com `lang="en"` e `<title>` estático | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
 | 037 | [frontend-dist-index-html-versionado.md](frontend-dist-index-html-versionado.md) | `frontend/dist/index.html` versionado apesar de `dist/` no `.gitignore` | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
 | 038 | [expense-parcela-retroativa-paid-by-sem-consentimento.md](expense-parcela-retroativa-paid-by-sem-consentimento.md) | Parcela retroativa nasce `paid`/`paid_by` em nome do credor, sem consentimento nem aviso | despesa-parcelada-retroativa | 2026-09-04 | MEDIA | Aberto |
-| 039 | [expense-view-tipo-e-pagadores.md](expense-view-tipo-e-pagadores.md) | Página da despesa (`ExpenseView`) rotula Parcelada como "Variável" e não lista pagadores | detalhe-despesa-tipo-parcela-valores | 2026-09-05 | MEDIA | Aberto |
+| 039 | [expense-view-tipo-e-pagadores.md](expense-view-tipo-e-pagadores.md) | Página da despesa (`ExpenseView`) rotula Parcelada como "Variável" e não lista pagadores | detalhe-despesa-tipo-parcela-valores | 2026-09-05 | MEDIA | Promovido para TASK-276 |
+| 040 | [expense-view-edicao-campo-data-vazio.md](expense-view-edicao-campo-data-vazio.md) | Modo de edição da página da despesa abre com o campo Data vazio | expense-view-tipo-e-pagadores | 2026-09-12 | MEDIA | Aberto |
 
 ## Itens concluídos
 

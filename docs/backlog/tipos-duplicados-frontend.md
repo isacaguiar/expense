@@ -4,7 +4,7 @@ ID: 003
 Origem: docs/feature/20260817-migracao-frontend-expo/specify.md §2.5
 Criado em: 2026-08-17
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-281
 
 ## Descrição
 

@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -67,6 +67,233 @@ describe('ExpenseView', () => {
     expect(screen.getAllByText('Isac').length).toBeGreaterThan(0);
 
     expect(vi.mocked(axios.get).mock.calls.some(call => (call[0] as string).includes('/api/expenses/9'))).toBe(true);
+  });
+
+  // Uma parcelada era rotulada "Variável", indistinguível de uma à vista, e o
+  // modal da listagem dizia "Parcelada n/N" para a mesma despesa. Backlog 039 /
+  // docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §1.
+  it('labels an IN_INSTALLMENTS expense with the number of installments', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_INSTALLMENTS',
+        installments: 6,
+        total_value: '1754.40',
+        quotas: [{ number: 1, date_expected: '2026-06-01', paid: false, payment_proof_url: null, value_quota: '292.40' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Parcelada (6x)')).toBeInTheDocument();
+    expect(screen.queryByText('Variável')).not.toBeInTheDocument();
+  });
+
+  it('labels an IN_CASH expense as "À Vista"', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_CASH',
+        installments: 1,
+        total_value: '100.00',
+        quotas: [{ number: 1, date_expected: '2026-08-01', paid: false, payment_proof_url: null, value_quota: '100.00' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('À Vista')).toBeInTheDocument();
+    expect(screen.queryByText('Variável')).not.toBeInTheDocument();
+  });
+
+  // `show()` devolve o model cru, e o cast `date` do Laravel serializa em
+  // ISO-8601 com Z — verificado no próprio model: `new Expense(['date_payment'
+  // => '2026-08-01'])->toJson()` dá "2026-08-01T00:00:00.000000Z". `new Date()`
+  // dessa string é meia-noite UTC e cai no dia anterior em fuso negativo (bug
+  // do item de backlog 013). Este assert só guarda o bug porque a suíte roda
+  // fixada em America/Sao_Paulo — ver src/suiteTimezone.test.ts.
+  it('shows the payment date without shifting a day back when the API sends ISO-8601', async () => {
+    mockGetResponses({ expense: { ...expenseDetail, date_payment: '2026-08-01T00:00:00.000000Z' } });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('01/08/2026')).toBeInTheDocument();
+    expect(screen.queryByText('31/07/2026')).not.toBeInTheDocument();
+  });
+
+  it('shows the payment date when the API sends the short YYYY-MM-DD form', async () => {
+    mockGetResponses({ expense: { ...expenseDetail, date_payment: '2026-08-01' } });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('01/08/2026')).toBeInTheDocument();
+  });
+
+  // 6 x R$ 292,40 = R$ 1.754,40 exatos; as quotas vêm fora de ordem de
+  // propósito, para provar a ordenação por `number` (as datas de uma parcelada
+  // podem ter sido deslocadas em massa em produção — ver as TASK-003/004 de
+  // docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/).
+  const installmentsExpense = {
+    ...expenseDetail,
+    expense_type: 'IN_INSTALLMENTS' as const,
+    installments: 6,
+    total_value: '1754.40',
+    quotas: [
+      { number: 3, date_expected: '2026-07-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '292.40' },
+      { number: 1, date_expected: '2026-05-01T00:00:00.000000Z', paid: true, payment_proof_url: null, value_quota: '292.40' },
+      { number: 6, date_expected: '2026-10-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '292.40' },
+      { number: 2, date_expected: '2026-06-01T00:00:00.000000Z', paid: true, payment_proof_url: null, value_quota: '292.40' },
+      { number: 5, date_expected: '2026-09-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '292.40' },
+      { number: 4, date_expected: '2026-08-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '292.40' },
+    ],
+  };
+
+  it('lists every installment in order, with month, value, per-person share and paid status', async () => {
+    mockGetResponses({ expense: installmentsExpense });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Parcelas')).toBeInTheDocument();
+    expect(screen.getByText(/Total da despesa: R\$ 1\.754,40 em 6x/)).toBeInTheDocument();
+
+    // Ordenado por `number`, não pela ordem em que o payload chegou.
+    expect(screen.getAllByText(/^[1-6]\/6$/).map(el => el.textContent)).toEqual([
+      '1/6',
+      '2/6',
+      '3/6',
+      '4/6',
+      '5/6',
+      '6/6',
+    ]);
+
+    // Meses: a parcela 1 é 2026-05-01 em ISO-8601 (meia-noite UTC). Em fuso
+    // negativo, `new Date(string)` daria 04/2026 — ver backlog 013.
+    ['05/2026', '06/2026', '07/2026', '08/2026', '09/2026', '10/2026'].forEach(month => {
+      expect(screen.getByText(month)).toBeInTheDocument();
+    });
+    expect(screen.queryByText('04/2026')).not.toBeInTheDocument();
+
+    expect(screen.getAllByText('R$ 292,40')).toHaveLength(6);
+    // 2 pagadores na fixture → 292,40 / 2.
+    expect(screen.getAllByText(/R\$ 146,20 por pessoa/)).toHaveLength(6);
+
+    expect(screen.getAllByText('Paga')).toHaveLength(2);
+    expect(screen.getAllByText('Pendente')).toHaveLength(4);
+  });
+
+  // No modo de visualização os pagadores não apareciam em lugar nenhum — só no
+  // modo de edição, como checkboxes. Backlog 039 / specify.md §3.3.
+  it('lists each payer with their share of the total and marks only the creditor', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    // Escopado na seção: "Isac" também aparece na linha do credor, acima.
+    const section = (await screen.findByText('Pagadores')).parentElement as HTMLElement;
+
+    expect(within(section).getByText('Isac')).toBeInTheDocument();
+    expect(within(section).getByText('João')).toBeInTheDocument();
+
+    // total_value 1200,00 / 2 pagadores
+    expect(within(section).getAllByText('R$ 600,00')).toHaveLength(2);
+
+    // user_payer_id é 500 (Isac) — só a linha dele leva a marcação.
+    expect(within(section).getAllByText(/\(credor\)/)).toHaveLength(1);
+    expect(within(section).getByText('Isac').textContent).toMatch(/\(credor\)/);
+    expect(within(section).getByText('João').textContent).not.toMatch(/\(credor\)/);
+  });
+
+  it('splits the share by the number of payers, not by a fixed pair', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        total_value: '900.00',
+        payers: [
+          { id: 500, name: 'Isac' },
+          { id: 501, name: 'João' },
+          { id: 502, name: 'Ana' },
+        ],
+      },
+      members: [...members, { id: 502, name: 'Ana' }],
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    const section = (await screen.findByText('Pagadores')).parentElement as HTMLElement;
+    expect(within(section).getAllByText('R$ 300,00')).toHaveLength(3);
+  });
+
+  it('does not list installments for an IN_CASH expense', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        expense_type: 'IN_CASH',
+        installments: 1,
+        total_value: '100.00',
+        quotas: [{ number: 1, date_expected: '2026-08-01T00:00:00.000000Z', paid: false, payment_proof_url: null, value_quota: '100.00' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('À Vista');
+    expect(screen.queryByText('Parcelas')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Total da despesa/)).not.toBeInTheDocument();
+  });
+
+  // Despesa FIXED nasce sem Quota na competência (ExpenseController::pay()
+  // materializa sob demanda), então seu `quotas[]` é esparso — os meses pagos,
+  // não um cronograma. Listar aquilo como "Parcelas" seria mentira de tela.
+  it('does not list installments for a FIXED expense even when it has quotas', async () => {
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        quotas: [
+          { number: 1, date_expected: '2026-07-01T00:00:00.000000Z', paid: true, payment_proof_url: null, value_quota: '1200.00' },
+          { number: 2, date_expected: '2026-08-01T00:00:00.000000Z', paid: true, payment_proof_url: null, value_quota: '1200.00' },
+        ],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Fixa');
+    expect(screen.queryByText('Parcelas')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Total da despesa/)).not.toBeInTheDocument();
   });
 
   it('shows "não encontrada" with a link back when the expense does not exist or is not accessible', async () => {
