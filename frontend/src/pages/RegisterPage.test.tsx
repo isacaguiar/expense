@@ -5,21 +5,31 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import RegisterPage from './RegisterPage';
 import { API_BASE_URL } from '../config';
 
+const navigateMock = vi.fn();
+
 vi.mock('react-router-dom', async importOriginal => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
   return {
     ...actual,
-    useNavigate: () => vi.fn(),
+    useNavigate: () => navigateMock,
   };
 });
+
+const HANDLE = 'a'.repeat(64);
 
 const okPreRegister = {
   ok: true,
   json: async () => ({
     message: 'Enviamos um código de confirmação para o seu e-mail.',
+    handle: HANDLE,
     expires_in_seconds: 900,
     resend_available_in: 60,
   }),
+};
+
+const okVerify = {
+  ok: true,
+  json: async () => ({ access_token: 'token-123', token_type: 'bearer', expires_in: 3600 }),
 };
 
 function renderPage() {
@@ -51,8 +61,16 @@ async function fillForm(user: ReturnType<typeof userEvent.setup>, overrides: Rec
 describe('RegisterPage', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okPreRegister));
+    navigateMock.mockClear();
     localStorage.clear();
   });
+
+  /** Leva a página até a etapa do código, com o pré-cadastro já aceito. */
+  async function advanceToCodeStep(user: ReturnType<typeof userEvent.setup>) {
+    await fillForm(user);
+    await user.click(screen.getByRole('button', { name: 'Criar conta' }));
+    await screen.findByLabelText(/Código de confirmação/);
+  }
 
   it('renders every field of the registration form', () => {
     renderPage();
@@ -120,7 +138,7 @@ describe('RegisterPage', () => {
       })
     );
 
-    expect(await screen.findByText(/Enviamos um código de confirmação/)).toBeInTheDocument();
+    expect(await screen.findByLabelText(/Código de confirmação/)).toBeInTheDocument();
   });
 
   it('sends whatsapp as null when the optional phone is left empty', async () => {
@@ -169,5 +187,81 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: 'Criar conta' }));
 
     expect(await screen.findByText(/Aguarde 42 segundos/)).toBeInTheDocument();
+  });
+
+  it('confirms the code, stores the session and lands on the groups page', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await advanceToCodeStep(user);
+
+    vi.mocked(fetch).mockResolvedValue(okVerify as unknown as Response);
+
+    await user.type(screen.getByLabelText(/Código de confirmação/), '123456');
+    await user.click(screen.getByRole('button', { name: 'Confirmar e entrar' }));
+
+    await vi.waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/meus-grupos'));
+
+    // O handle devolvido pelo pré-cadastro precisa voltar na confirmação --
+    // é ele que amarra a confirmação a quem submeteu o formulário.
+    const verifyCall = vi.mocked(fetch).mock.calls.at(-1)!;
+    expect(verifyCall[0]).toBe(`${API_BASE_URL}/api/pre-register/verify`);
+    expect(JSON.parse(verifyCall[1]!.body as string)).toEqual({
+      email: 'maria@example.com',
+      handle: HANDLE,
+      code: '123456',
+    });
+
+    expect(localStorage.getItem('accessToken')).toBe('token-123');
+  });
+
+  it('keeps the user on the code step and shows the error when the code is wrong', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await advanceToCodeStep(user);
+
+    vi.mocked(fetch).mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        message: 'The given data was invalid.',
+        errors: { code: ['Código inválido ou expirado. Confira o e-mail ou peça um novo código.'] },
+      }),
+    } as unknown as Response);
+
+    await user.type(screen.getByLabelText(/Código de confirmação/), '000000');
+    await user.click(screen.getByRole('button', { name: 'Confirmar e entrar' }));
+
+    expect(await screen.findByText(/Código inválido ou expirado/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Código de confirmação/)).toBeInTheDocument();
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(localStorage.getItem('accessToken')).toBeNull();
+  });
+
+  it('only accepts digits in the code field, capped at six', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await advanceToCodeStep(user);
+
+    await user.type(screen.getByLabelText(/Código de confirmação/), 'a1b2c3d4e5f6g7');
+
+    expect(screen.getByLabelText(/Código de confirmação/)).toHaveValue('123456');
+  });
+
+  it('disables the resend button while the cooldown returned by the API is running', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await advanceToCodeStep(user);
+
+    // resend_available_in = 60 veio do pré-cadastro.
+    expect(screen.getByRole('button', { name: /Reenviar código em \d+s/ })).toBeDisabled();
+  });
+
+  it('goes back to the form when the user picks the wrong-email link', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await advanceToCodeStep(user);
+
+    await user.click(screen.getByRole('button', { name: 'Voltar e corrigir' }));
+
+    expect(await screen.findByRole('button', { name: 'Criar conta' })).toBeInTheDocument();
   });
 });
