@@ -79,5 +79,6 @@ $ogImage = $config['site_url'] . '/' . asset('app-home.png');
   <link rel="icon" type="image/png" href="<?= e(asset('favicon.png')) ?>" />
   <link rel="stylesheet" href="<?= e(asset('style.css')) ?>" />
   <script src="<?= e(asset('nav.js')) ?>" defer></script>
+  <script src="<?= e(asset('consent.js')) ?>" defer></script>
 </head>
 <body class="<?= e($bodyClass ?? '') ?>">
