@@ -24,3 +24,9 @@ identidade visual à marca e direciona o usuário para novemax.com.br. Baixa pri
 ajuste de marca/rodapé, sem prazo natural e sem impacto funcional no produto.
 
 Tipo sugerido: frontend (site institucional, não o app React)
+
+## Resolução
+Concluído em: 2026-09-19
+Feature: docs/feature/concluidas/202609/20260919-logo-novemax-rodape-site/ (migra para lá quando o PR mergear em `dev` — ADR-009; enquanto isso, está em `docs/feature/20260919-logo-novemax-rodape-site/`)
+Tasks: TASK-292, TASK-293
+PRs: https://github.com/isacaguiar/expense/pull/165
