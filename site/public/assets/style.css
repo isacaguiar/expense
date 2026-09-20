@@ -609,6 +609,17 @@ html {
   color: var(--green-dark);
 }
 
+.legal-footer-logo-link {
+  display: inline-flex;
+  align-items: center;
+}
+
+.legal-footer-logo {
+  height: 22px;
+  width: auto;
+  display: block;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 960px) {

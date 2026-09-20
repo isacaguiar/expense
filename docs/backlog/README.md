@@ -91,3 +91,4 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 008 | [workflow-cicd-frontend.md](concluidos/workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | 2026-08-28 | ci-frontend | TASK-215, TASK-216, TASK-217 |
 | 020 | [sistema-notificacoes-frontend.md](concluidos/sistema-notificacoes-frontend.md) | Implementar sistema de notificações | 2026-09-03 | notificacoes-in-app | TASK-260 … TASK-267 |
 | 021 | [avatar-foto-usuario.md](concluidos/avatar-foto-usuario.md) | Suportar foto de perfil do usuário | 2026-09-03 | notificacoes-in-app (agrupado com 020) | TASK-268, TASK-269, TASK-270 |
+| 041 | [site-footer-logo-novemax-link.md](concluidos/site-footer-logo-novemax-link.md) | Trocar link de e-mail do rodapé do site pelo logo da Novemax | 2026-09-19 | logo-novemax-rodape-site | TASK-292, TASK-293 |

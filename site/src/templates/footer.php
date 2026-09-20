@@ -10,7 +10,9 @@ declare(strict_types=1);
       <nav aria-label="Links legais">
         <a href="privacidade.php">Política de Privacidade</a>
         <a href="termos.php">Termos de Serviço</a>
-        <a href="mailto:<?= e($config['contact_email']) ?>"><?= e($config['contact_email']) ?></a>
+        <a href="https://novemax.com.br" target="_blank" rel="noopener" class="legal-footer-logo-link" aria-label="Novemax">
+          <img src="<?= e(asset('logo-novemax.png')) ?>" alt="Novemax" class="legal-footer-logo" />
+        </a>
       </nav>
     </div>
   </footer>
