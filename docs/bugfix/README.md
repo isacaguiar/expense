@@ -60,6 +60,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 |---|---|---|---|---|
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 | [20260901-expense-store-update-422.md](20260901-expense-store-update-422.md) | Testes de despesa (store/update/destroy) falham com 422 após virada de mês | 2026-09-01 | `fix/20260901-expense-store-update-422` | Aberto |
+| [20260920-agents-md-caminho-codex.md](20260920-agents-md-caminho-codex.md) | Caminho dos agents no `AGENTS.md` com caixa errada (`.Codex/agents/`) | 2026-09-20 | `fix/20260920-agents-md-caminho-codex` | Aberto |
 
 ## Concluídos
 
