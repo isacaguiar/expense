@@ -54,6 +54,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 038 | [expense-parcela-retroativa-paid-by-sem-consentimento.md](expense-parcela-retroativa-paid-by-sem-consentimento.md) | Parcela retroativa nasce `paid`/`paid_by` em nome do credor, sem consentimento nem aviso | despesa-parcelada-retroativa | 2026-09-04 | MEDIA | Aberto |
 | 039 | [expense-view-tipo-e-pagadores.md](expense-view-tipo-e-pagadores.md) | Página da despesa (`ExpenseView`) rotula Parcelada como "Variável" e não lista pagadores | detalhe-despesa-tipo-parcela-valores | 2026-09-05 | MEDIA | Promovido para TASK-276 |
 | 040 | [expense-view-edicao-campo-data-vazio.md](expense-view-edicao-campo-data-vazio.md) | Modo de edição da página da despesa abre com o campo Data vazio | expense-view-tipo-e-pagadores | 2026-09-12 | MEDIA | Aberto |
+| 041 | [site-footer-logo-novemax-link.md](site-footer-logo-novemax-link.md) | Trocar link de e-mail do rodapé do site pelo logo da Novemax | solicitação direta do usuário | 2026-09-19 | BAIXA | Promovido para TASK-292 |
 
 ## Itens concluídos
 
