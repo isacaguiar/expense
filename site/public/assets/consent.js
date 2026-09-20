@@ -102,6 +102,13 @@
     });
   }
 
+  // O botão do rodapé nasce com `hidden` no markup justamente para não existir
+  // sem este script — clicar nele sem JS não faria nada.
+  Array.prototype.forEach.call(document.querySelectorAll('[data-consent-open]'), function (button) {
+    button.hidden = false;
+    button.addEventListener('click', show);
+  });
+
   var current = decision();
 
   if (current === 'granted') {
