@@ -45,3 +45,9 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-09-20 | `test -d .codex/agents/` | OK — o caminho agora citado no `AGENTS.md` resolve |
 | 2026-09-20 | `git diff` revisado antes do commit | nenhum segredo novo; 1 linha alterada em `AGENTS.md` + 1 linha nova na tabela do `README.md` |
 | 2026-09-20 | pint / `php artisan test` / `npx tsc --noEmit` | não se aplica: nenhum arquivo em `backend/` ou `frontend/` tocado — o checklist de `04-implementation.md` §1 item 3 é condicional à frente tocada |
+
+## Resolução
+
+Concluído em: 2026-09-20
+Branch: `fix/20260920-agents-md-caminho-codex`
+PR: https://github.com/isacaguiar/expense/pull/170
