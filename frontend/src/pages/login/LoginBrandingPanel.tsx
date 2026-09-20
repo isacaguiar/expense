@@ -26,7 +26,25 @@ const differentials = [
   },
 ];
 
-export default function LoginBrandingPanel() {
+interface LoginBrandingPanelProps {
+  /** Primeira linha do título (cor escura). */
+  headline?: string;
+  /** Segunda linha do título (cor da marca). */
+  highlight?: string;
+  /** Parágrafo abaixo do título. */
+  description?: string;
+}
+
+/**
+ * Painel de marca das telas públicas. Os textos têm default (o do login) e
+ * são sobrescrevíveis para que `/cadastro` reuse o mesmo painel sem duplicar
+ * o componente — docs/feature/20260919-cadastro-de-usuarios/plan.md §6.
+ */
+export default function LoginBrandingPanel({
+  headline = 'Despesas compartilhadas,',
+  highlight = 'contas em dia.',
+  description = 'Controle de despesas mensais fixas e variáveis entre grupos de usuários, com divisão igualitária dos valores entre os pagadores designados.',
+}: LoginBrandingPanelProps = {}) {
   return (
     <Box
       sx={{
@@ -62,16 +80,15 @@ export default function LoginBrandingPanel() {
 
       <Box>
         <Typography sx={{ fontSize: '1.375rem', fontWeight: 'bold', lineHeight: 1.3, color: brandColors.textDark }}>
-          Despesas compartilhadas,
+          {headline}
         </Typography>
         <Typography sx={{ fontSize: '1.375rem', fontWeight: 'bold', lineHeight: 1.3, color: brandColors.primary }}>
-          contas em dia.
+          {highlight}
         </Typography>
       </Box>
 
       <Typography sx={{ fontSize: '0.9rem', color: 'text.secondary', maxWidth: 400 }}>
-        Controle de despesas mensais fixas e variáveis entre grupos de usuários, com
-        divisão igualitária dos valores entre os pagadores designados.
+        {description}
       </Typography>
 
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>

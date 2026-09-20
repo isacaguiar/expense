@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
+import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import GroupForm from './pages/GroupForm';
 import GroupMembersForm from './pages/GroupMembersForm';
@@ -27,6 +28,7 @@ const App = () => {
     <Routes>
       <Route path="/" element={<LoginPage />} />
       <Route path="/aceitar-convite" element={<AcceptInvitePage />} />
+      <Route path="/cadastro" element={<RegisterPage />} />
 
       {/* Rotas privadas */}
       <Route element={<RequireAuth />}>
