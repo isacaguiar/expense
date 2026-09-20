@@ -6,9 +6,13 @@ require __DIR__ . '/../src/helpers.php';
 $config = require __DIR__ . '/../src/config.php';
 
 $pageTitle = $config['brand_name'] . ' — ' . $config['tagline'];
+$pagePath = '/';
 
 $featureCards = [
-    ['icon' => 'users', 'title' => 'Grupos ilimitados', 'text' => 'Crie quantos grupos quiser e organize diferentes despesas facilmente.'],
+    // O texto anterior ("Grupos ilimitados") contradizia
+    // MAX_GROUPS_CREATED_PER_USER = 3 no backend. O número vem do config para
+    // não ser escrito solto aqui.
+    ['icon' => 'users', 'title' => sprintf('Até %d grupos, de graça', $config['free_groups_limit']), 'text' => 'Crie um grupo para cada contexto — a casa, a viagem, a turma — e participe de quantos você for convidado.'],
     ['icon' => 'layers', 'title' => 'Despesas fixas e variáveis', 'text' => 'Cadastre contas mensais ou despesas eventuais em poucos segundos.'],
     ['icon' => 'calculator', 'title' => 'Divisão automática', 'text' => 'O sistema divide os valores igualmente entre os membros e calcula tudo para você.'],
     ['icon' => 'dollar', 'title' => 'Saldos e pagamentos', 'text' => 'Veja quem pagou, quem deve e quem precisa receber de forma clara.'],
@@ -95,6 +99,9 @@ require __DIR__ . '/../src/templates/nav.php';
           </div>
         <?php endforeach; ?>
       </div>
+      <p class="section-more">
+        <a href="/recursos.php">Ver todos os recursos em detalhe <?= icon('arrow-right') ?></a>
+      </p>
     </div>
   </section>
 
@@ -127,12 +134,14 @@ require __DIR__ . '/../src/templates/nav.php';
         <a class="btn btn-primary" href="<?= e($config['app_signup_url']) ?>">
           Criar minha conta grátis <?= icon('arrow-right') ?>
         </a>
-        <a class="btn btn-on-dark" href="#beneficios">Saiba mais</a>
+        <a class="btn btn-on-dark" href="/precos.php">Ver os planos</a>
       </div>
+      <?php /* "Sem cartão" e "Cancelamento fácil" pressupunham um plano pago que não
+               existe. Os selos abaixo afirmam só o que a página de Preços sustenta. */ ?>
       <div class="cta-banner-badges">
-        <span><?= icon('check-circle') ?> Grátis para começar</span>
-        <span><?= icon('check-circle') ?> Sem cartão de crédito</span>
-        <span><?= icon('check-circle') ?> Cancelamento fácil</span>
+        <span><?= icon('check-circle') ?> Grátis para usar</span>
+        <span><?= icon('check-circle') ?> Sem dados de pagamento</span>
+        <span><?= icon('check-circle') ?> Cadastro em 2 minutos</span>
       </div>
     </div>
   </section>
