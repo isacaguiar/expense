@@ -667,6 +667,27 @@ html {
   color: var(--green-dark);
 }
 
+/*
+ * Parece um link do rodapé, mas é `<button>` porque a ação é reabrir o banner,
+ * não navegar. Fica escondido até o `consent.js` revelar.
+ */
+.legal-footer-prefs {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.legal-footer-prefs:hover {
+  color: var(--green-dark);
+}
+
+.legal-footer-prefs[hidden] {
+  display: none;
+}
+
 .legal-footer-logo-link {
   display: inline-flex;
   align-items: center;

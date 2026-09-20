@@ -11,6 +11,15 @@ declare(strict_types=1);
         <?php foreach ($config['footer_nav'] as $item) : ?>
           <a href="<?= e($item['href']) ?>"><?= e($item['label']) ?></a>
         <?php endforeach; ?>
+        <?php
+        /*
+         * Reabre o banner de consentimento. Nasce com `hidden` e quem revela é
+         * o `consent.js`: sem JavaScript este botão não faria nada, e botão
+         * morto já foi defeito neste produto antes — ver
+         * `docs/bugfix/20260830-login-remover-botao-microsoft.md`.
+         */
+        ?>
+        <button type="button" class="legal-footer-prefs" data-consent-open hidden>Preferências de cookies</button>
         <a href="https://novemax.com.br" target="_blank" rel="noopener" class="legal-footer-logo-link" aria-label="Novemax">
           <img src="<?= e(asset('logo-novemax.png')) ?>" alt="Novemax" class="legal-footer-logo" />
         </a>
