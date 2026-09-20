@@ -125,7 +125,7 @@ describe('LoginPage', () => {
 
     expect(screen.getByRole('link', { name: /Google/ })).toHaveAttribute('href', '#');
     expect(screen.queryByRole('link', { name: /Microsoft/ })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Cadastre-se' })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: 'Cadastre-se' })).toHaveAttribute('href', '/cadastro');
     expect(screen.getByRole('link', { name: 'Esqueci minha senha' })).toHaveAttribute('href', '#');
   });
 });

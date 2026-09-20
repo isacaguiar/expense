@@ -54,6 +54,13 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 038 | [expense-parcela-retroativa-paid-by-sem-consentimento.md](expense-parcela-retroativa-paid-by-sem-consentimento.md) | Parcela retroativa nasce `paid`/`paid_by` em nome do credor, sem consentimento nem aviso | despesa-parcelada-retroativa | 2026-09-04 | MEDIA | Aberto |
 | 039 | [expense-view-tipo-e-pagadores.md](expense-view-tipo-e-pagadores.md) | Página da despesa (`ExpenseView`) rotula Parcelada como "Variável" e não lista pagadores | detalhe-despesa-tipo-parcela-valores | 2026-09-05 | MEDIA | Promovido para TASK-276 |
 | 040 | [expense-view-edicao-campo-data-vazio.md](expense-view-edicao-campo-data-vazio.md) | Modo de edição da página da despesa abre com o campo Data vazio | expense-view-tipo-e-pagadores | 2026-09-12 | MEDIA | Aberto |
+| 041 | [site-footer-logo-novemax-link.md](site-footer-logo-novemax-link.md) | Trocar link de e-mail do rodapé do site pelo logo da Novemax | solicitação direta do usuário | 2026-09-19 | BAIXA | Aberto |
+| 042 | [register-legado-sem-verificacao.md](register-legado-sem-verificacao.md) | `POST /register` legado cria conta sem verificar o e-mail | cadastro-de-usuarios | 2026-09-19 | MEDIA | Aberto |
+| 043 | [login-nao-checa-email-verificado.md](login-nao-checa-email-verificado.md) | `AuthController::login` não checa `email_verified_at` | cadastro-de-usuarios | 2026-09-19 | MEDIA | Aberto |
+| 044 | [expurgo-pre-cadastro-expirado.md](expurgo-pre-cadastro-expirado.md) | Sem rotina de expurgo de `ex_user_pre_create` | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
+| 045 | [pre-cadastro-oraculo-e-mailable-queueable.md](pre-cadastro-oraculo-e-mailable-queueable.md) | Endurecer enumeração no pré-cadastro e travar o Mailable do código fora da fila | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
+| 046 | [login-refresh-token-undefined.md](login-refresh-token-undefined.md) | `LoginPage` grava `refreshToken` com a string `"undefined"` | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
+| 047 | [whatsapp-secrets-vazios-sobrescrevem-defaults.md](whatsapp-secrets-vazios-sobrescrevem-defaults.md) | Secrets de WhatsApp ausentes viram string vazia e anulam os defaults de `config/services.php` | cadastro-de-usuarios (verificação do deploy) | 2026-09-19 | BAIXA | Aberto |
 
 ## Itens concluídos
 
@@ -86,3 +93,4 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 008 | [workflow-cicd-frontend.md](concluidos/workflow-cicd-frontend.md) | Workflow de CI/CD para o frontend | 2026-08-28 | ci-frontend | TASK-215, TASK-216, TASK-217 |
 | 020 | [sistema-notificacoes-frontend.md](concluidos/sistema-notificacoes-frontend.md) | Implementar sistema de notificações | 2026-09-03 | notificacoes-in-app | TASK-260 … TASK-267 |
 | 021 | [avatar-foto-usuario.md](concluidos/avatar-foto-usuario.md) | Suportar foto de perfil do usuário | 2026-09-03 | notificacoes-in-app (agrupado com 020) | TASK-268, TASK-269, TASK-270 |
+| 041 | [site-footer-logo-novemax-link.md](concluidos/site-footer-logo-novemax-link.md) | Trocar link de e-mail do rodapé do site pelo logo da Novemax | 2026-09-19 | logo-novemax-rodape-site | TASK-292, TASK-293 |
