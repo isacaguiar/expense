@@ -17,5 +17,6 @@ declare(strict_types=1);
       </nav>
     </div>
   </footer>
+<?php require __DIR__ . '/consent.php'; ?>
 </body>
 </html>
