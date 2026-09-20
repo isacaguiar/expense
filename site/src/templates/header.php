@@ -37,5 +37,6 @@ $description = $pageDescription ?? $config['description'];
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" href="<?= e(asset('favicon.png')) ?>" />
   <link rel="stylesheet" href="<?= e(asset('style.css')) ?>" />
+  <script src="<?= e(asset('nav.js')) ?>" defer></script>
 </head>
 <body class="<?= e($bodyClass ?? '') ?>">

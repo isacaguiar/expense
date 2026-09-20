@@ -21,11 +21,24 @@ return [
     'app_login_url' => '/app/',
     'app_signup_url' => '/app/cadastro',
 
+    // Destinos absolutos de propósito: o site é servido na raiz do domínio (o app
+    // React fica em /app), e âncora relativa como '#recursos' não resolve quando o
+    // menu é renderizado em páginas internas — era o que quebrava em termos.php.
     'nav' => [
-        ['label' => 'Recursos', 'href' => '#recursos'],
-        ['label' => 'Como funciona', 'href' => '#como-funciona'],
-        ['label' => 'Benefícios', 'href' => '#beneficios'],
-        ['label' => 'Preços', 'href' => '#'],
-        ['label' => 'Contato', 'href' => 'mailto:novemax@gmail.com'],
+        ['label' => 'Recursos', 'href' => '/recursos.php'],
+        ['label' => 'Como funciona', 'href' => '/#como-funciona'],
+        ['label' => 'Preços', 'href' => '/precos.php'],
+        ['label' => 'Ajuda', 'href' => '/manual.php'],
+        ['label' => 'Contato', 'href' => '/contato.php'],
+    ],
+
+    // Sugestões vive só aqui e dentro de contato.php — seis itens no menu
+    // principal é excesso.
+    'footer_nav' => [
+        ['label' => 'Política de Privacidade', 'href' => '/privacidade.php'],
+        ['label' => 'Termos de Serviço', 'href' => '/termos.php'],
+        ['label' => 'Ajuda', 'href' => '/manual.php'],
+        ['label' => 'Contato', 'href' => '/contato.php'],
+        ['label' => 'Sugestões', 'href' => '/sugestoes.php'],
     ],
 ];

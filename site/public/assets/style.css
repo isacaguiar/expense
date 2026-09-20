@@ -246,10 +246,68 @@ html {
   color: var(--green);
 }
 
+.main-nav a[aria-current='page'] {
+  color: var(--green-dark);
+  font-weight: 600;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+/* ---------- Menu no celular ---------- */
+
+/* Escondido no desktop; o media query de 640px é quem o revela. */
+.nav-toggle {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.nav-toggle:hover {
+  border-color: var(--green);
+}
+
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.nav-toggle-bar {
+  display: block;
+  width: 18px;
+  height: 2px;
+  margin: 0 auto;
+  border-radius: 2px;
+  background: var(--text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nav-toggle-bar {
+    transition: transform 0.2s ease, opacity 0.2s ease;
+  }
+}
+
+:root[data-nav='open'] .nav-toggle-bar:nth-child(1) {
+  transform: translateY(6px) rotate(45deg);
+}
+
+:root[data-nav='open'] .nav-toggle-bar:nth-child(2) {
+  opacity: 0;
+}
+
+:root[data-nav='open'] .nav-toggle-bar:nth-child(3) {
+  transform: translateY(-6px) rotate(-45deg);
 }
 
 /* ---------- Hero ---------- */
@@ -641,7 +699,46 @@ html {
     flex-wrap: wrap;
   }
 
+  .nav-toggle {
+    display: inline-flex;
+    order: 2;
+  }
+
+  .main-nav {
+    order: 4;
+    flex-basis: 100%;
+    flex: none;
+    width: 100%;
+  }
+
   .main-nav ul {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .main-nav li {
+    border-top: 1px solid var(--border);
+  }
+
+  .main-nav a {
+    display: block;
+    padding: 0.75rem 0.25rem;
+  }
+
+  .header-actions {
+    order: 3;
+    margin-left: auto;
+  }
+
+  /*
+   * Só esconde a navegação depois que nav.js assumiu o controle (ele marca
+   * data-nav no <html>). Sem o script, a lista fica empilhada e visível —
+   * antes daqui o menu simplesmente sumia no celular, sem alternativa.
+   */
+  :root[data-nav='collapsed'] .main-nav ul {
     display: none;
   }
 
