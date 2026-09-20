@@ -59,6 +59,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 044 | [expurgo-pre-cadastro-expirado.md](expurgo-pre-cadastro-expirado.md) | Sem rotina de expurgo de `ex_user_pre_create` | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
 | 045 | [pre-cadastro-oraculo-e-mailable-queueable.md](pre-cadastro-oraculo-e-mailable-queueable.md) | Endurecer enumeração no pré-cadastro e travar o Mailable do código fora da fila | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
 | 046 | [login-refresh-token-undefined.md](login-refresh-token-undefined.md) | `LoginPage` grava `refreshToken` com a string `"undefined"` | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
+| 047 | [whatsapp-secrets-vazios-sobrescrevem-defaults.md](whatsapp-secrets-vazios-sobrescrevem-defaults.md) | Secrets de WhatsApp ausentes viram string vazia e anulam os defaults de `config/services.php` | cadastro-de-usuarios (verificação do deploy) | 2026-09-19 | BAIXA | Aberto |
 
 ## Itens concluídos
 
