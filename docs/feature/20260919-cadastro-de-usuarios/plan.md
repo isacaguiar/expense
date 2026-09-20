@@ -88,7 +88,9 @@ As duas etapas (formulário → código) vivem na mesma rota, como estado do com
 ## 8. Gates e o que não dá para fechar aqui
 
 - Migration em local/dev é autônoma; em produção ela roda sozinha no merge em `main` (`deploy-backend.yml` → `php artisan migrate --force`, `ADR-008`). É aditiva, mas o aval fica no PR de promoção `dev` → `main`.
-- 🚩 `.env.production` tem `MAIL_HOST=127.0.0.1`, `MAIL_PORT=1025` e o remetente placeholder. **Nenhum e-mail de código sai em produção** até um SMTP real ser configurado — e credencial é ação 100% humana (`00-constitution.md` §5.2, §6.1). Código e testes funcionam sem isso; o fluxo em produção, não. Precisa constar como pendência explícita no PR de promoção.
+- **SMTP de produção já está configurado** — não é pendência desta feature. `backend/.env.production` **não é versionado** (`.gitignore:12`) e nunca chega ao servidor: o `deploy-backend.yml` gera o `.env` no runner a partir de GitHub Secrets (linhas 31-64), com `MAIL_HOST`/`MAIL_USERNAME`/`MAIL_PASSWORD` vindo de `ENV_MAIL_*` (presentes no ambiente `PROD` desde 2025-06-13), `MAIL_PORT=587`, `MAIL_ENCRYPTION=tls` e `MAIL_FROM_ADDRESS=no-reply@expense-api.novemax.com.br`. É o mesmo caminho que `UserInvitedMail` e o e-mail de recuperação de senha já usam em produção hoje; `PreRegisterCodeMail` usa o mailer default, então não precisa de configuração própria.
+
+  > Uma versão anterior deste documento afirmava o contrário, lendo `.env.production` como se fosse o arquivo de produção. Era o arquivo **local** de quem desenvolve, apontando para o Mailpit em `127.0.0.1:1025`.
 
 ## 10. Endurecimento vindo da revisão de segurança (TASK-290, TASK-291)
 

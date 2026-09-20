@@ -45,6 +45,5 @@ Confirmado o código, a conta já nasce autenticada: o endpoint de confirmação
 
 - **Depreciar ou remover `POST /register`.** Ele continua registrado e funcionando exatamente como hoje (`00-constitution.md` §4.1 proíbe alterar contrato de rota existente sem depreciação assistida). Decidir o futuro dele é item de backlog.
 - **Exigir e-mail verificado no login.** `AuthController::login` não checa `email_verified_at` hoje, e contas antigas têm o campo `null` — gatear isso quebraria usuários existentes. Item de backlog.
-- **Configurar SMTP real de produção.** Credencial é ação 100% humana (`00-constitution.md` §5.2, §6.1) — ver `plan.md` §8.
 - **Recuperação de senha ("Esqueci minha senha") e login social**, ambos ainda com `href="#"` no mesmo card de login. Já são itens próprios (`docs/backlog/login-social-google.md`).
 - **Rotina de expurgo** das linhas expiradas de `ex_user_pre_create` — expurgo é hard delete, gate humano (`00-constitution.md` §5.2). Item de backlog.
