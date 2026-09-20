@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# O app autenticado não tem conteúdo indexável e exige login.
+Disallow: /app/
+
+Sitemap: https://expense.novemax.com.br/sitemap.xml
