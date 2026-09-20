@@ -6,21 +6,21 @@ Versão: 1.0 · Criado em: 20260920
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-294 | Migrar a navegação do `config.php` para destinos absolutos e acrescentar `footer_nav` | frontend | plan.md §1, §3 | nenhum | Pendente |
-| TASK-295 | Marcar a página corrente no menu com `aria-current` | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-296 | Acrescentar botão hambúrguer com `nav.js` de falha aberta | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-297 | Reescrever o rodapé para iterar `footer_nav` | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-298 | Acrescentar `plans` e `free_groups_limit` ao `config.php` | frontend | plan.md §4, §5 | nenhum | Pendente |
-| TASK-299 | Criar a página de Preços | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-300 | Criar a página de Recursos | frontend | plan.md §6 | nenhum | Pendente |
-| TASK-301 | Criar a página de Manual de uso | frontend | plan.md §7 | nenhum | Pendente |
-| TASK-302 | Criar a página de Contato com os canais vindos do `config.php` | frontend | plan.md §8 | nenhum | Pendente |
-| TASK-303 | Criar a página de Sugestões | frontend | plan.md §8 | nenhum | Pendente |
-| TASK-304 | Corrigir a afirmação "Grupos ilimitados" na home | frontend | plan.md §5 | nenhum | Pendente |
-| TASK-305 | Realinhar os selos do CTA da home com os planos publicados | frontend | plan.md §5 | nenhum | Pendente |
-| TASK-306 | Acrescentar `site_url`, `canonical` e metatags de compartilhamento ao `header.php` | frontend | plan.md §9 | nenhum | Pendente |
-| TASK-307 | Publicar `robots.txt` e `sitemap.xml` | frontend | plan.md §9 | nenhum | Pendente |
-| TASK-308 | Registrar no backlog os achados fora de escopo desta feature | doc | specify.md §3 | nenhum | Pendente |
+| TASK-294 | Migrar a navegação do `config.php` para destinos absolutos e acrescentar `footer_nav` | frontend | plan.md §1, §3 | nenhum | Concluída |
+| TASK-295 | Marcar a página corrente no menu com `aria-current` | frontend | plan.md §1 | nenhum | Concluída |
+| TASK-296 | Acrescentar botão hambúrguer com `nav.js` de falha aberta | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-297 | Reescrever o rodapé para iterar `footer_nav` | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-298 | Acrescentar `plans` e `free_groups_limit` ao `config.php` | frontend | plan.md §4, §5 | nenhum | Concluída |
+| TASK-299 | Criar a página de Preços | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-300 | Criar a página de Recursos | frontend | plan.md §6 | nenhum | Concluída |
+| TASK-301 | Criar a página de Manual de uso | frontend | plan.md §7 | nenhum | Concluída |
+| TASK-302 | Criar a página de Contato com os canais vindos do `config.php` | frontend | plan.md §8 | nenhum | Concluída |
+| TASK-303 | Criar a página de Sugestões | frontend | plan.md §8 | nenhum | Concluída |
+| TASK-304 | Corrigir a afirmação "Grupos ilimitados" na home | frontend | plan.md §5 | nenhum | Concluída |
+| TASK-305 | Realinhar os selos do CTA da home com os planos publicados | frontend | plan.md §5 | nenhum | Concluída |
+| TASK-306 | Acrescentar `site_url`, `canonical` e metatags de compartilhamento ao `header.php` | frontend | plan.md §9 | nenhum | Concluída |
+| TASK-307 | Publicar `robots.txt` e `sitemap.xml` | frontend | plan.md §9 | nenhum | Concluída |
+| TASK-308 | Registrar no backlog os achados fora de escopo desta feature | doc | specify.md §3 | nenhum | Concluída |
 
 ## Critérios de aceite
 
@@ -37,7 +37,7 @@ Versão: 1.0 · Criado em: 20260920
 - **TASK-304**: `grep -rn "ilimitado" site/` não devolve nenhuma ocorrência que contradiga `MAX_GROUPS_CREATED_PER_USER = 3`. O card da home cita o limite interpolado de `free_groups_limit`.
 - **TASK-305**: os selos do CTA não afirmam "Sem cartão de crédito" nem "Cancelamento fácil", e o que afirmam é verificável na página de Preços.
 - **TASK-306**: o HTML servido de `/`, `/precos.php` e `/manual.php` traz `og:image` absoluta, `og:url` absoluta, `twitter:card` e `<link rel="canonical">`, cada página com o seu próprio caminho. A URL de `og:image` responde 200.
-- **TASK-307**: `/robots.txt` e `/sitemap.xml` respondem 200; o sitemap lista as 7 páginas públicas, não inclui `/app`, e o robots aponta para o sitemap. São uma entrega só porque o `robots.txt` referencia o `sitemap.xml` — separá-los deixaria um dos dois quebrado.
+- **TASK-307**: `/robots.txt` e `/sitemap.xml` respondem 200; o sitemap lista as 8 páginas públicas, não inclui `/app`, e o robots aponta para o sitemap. São uma entrega só porque o `robots.txt` referencia o `sitemap.xml` — separá-los deixaria um dos dois quebrado.
 - **TASK-308**: existe um arquivo em `docs/backlog/` para cada achado de `specify.md` §3 marcado como "vai para `docs/backlog/`" (consentimento LGPD do gtag, página 404, três nomes do produto, `updated_at` fixo, ausência de contexto SDD para o site PHP, constante de limite duplicada, asset og:image dedicado), cada um indexado no `docs/backlog/README.md` com ID sequencial a partir do próximo livre.
 
 ## Observações
