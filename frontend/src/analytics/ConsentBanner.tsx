@@ -1,6 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Box, Button, Link, Paper, Snackbar, Typography } from '@mui/material';
-import { getConsent, setConsent, type ConsentDecision } from './consent';
+import {
+  CONSENT_REOPEN_EVENT,
+  getConsent,
+  setConsent,
+  type ConsentDecision,
+} from './consent';
 
 /**
  * Pede o consentimento de cookies de analytics e aplica a escolha na hora.
@@ -10,15 +15,30 @@ import { getConsent, setConsent, type ConsentDecision } from './consent';
  * escolha cobraria caro em conversão, e a LGPD exige escolha livre, não
  * bloqueio.
  *
- * Só aparece quando não existe decisão gravada no cookie `scd_consent` — que é
- * o mesmo cookie do site institucional, na mesma origem: quem já escolheu lá
- * não é perguntado de novo aqui (ver `consent.ts`).
+ * Aparece sozinho quando não existe decisão gravada no cookie `scd_consent` —
+ * que é o mesmo cookie do site institucional, na mesma origem: quem já
+ * escolheu lá não é perguntado de novo aqui (ver `consent.ts`). Também
+ * reabre sob demanda, pelo evento disparado em `Profile`.
  */
 const ConsentBanner: React.FC = () => {
+  const [decisao, setDecisao] = useState<ConsentDecision | null>(() => getConsent());
   const [open, setOpen] = useState(() => getConsent() === null);
+
+  useEffect(() => {
+    const reabrir = () => {
+      // Relê o cookie: a escolha pode ter mudado no site, na mesma origem.
+      setDecisao(getConsent());
+      setOpen(true);
+    };
+
+    window.addEventListener(CONSENT_REOPEN_EVENT, reabrir);
+
+    return () => window.removeEventListener(CONSENT_REOPEN_EVENT, reabrir);
+  }, []);
 
   const escolher = (decision: ConsentDecision) => () => {
     setConsent(decision);
+    setDecisao(decision);
     setOpen(false);
   };
 
@@ -39,6 +59,13 @@ const ConsentBanner: React.FC = () => {
           </Link>
           .
         </Typography>
+
+        {decisao && (
+          <Typography variant="caption" color="text.secondary">
+            Escolha atual:{' '}
+            <strong>{decisao === 'granted' ? 'analytics ativado' : 'analytics desativado'}</strong>.
+          </Typography>
+        )}
 
         <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
           <Button size="small" onClick={escolher('denied')}>

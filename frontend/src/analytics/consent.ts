@@ -106,6 +106,21 @@ export function initAnalytics(): void {
   }
 }
 
+/**
+ * Evento que reabre o banner para rever ou revogar a escolha.
+ *
+ * É evento de DOM, e não React Context, porque quem dispara (`Profile`, dentro
+ * de `<Routes>`) e quem ouve (`ConsentBanner`, acima de `<Routes>`) estão em
+ * ramos diferentes da árvore, e o projeto não usa Context em lugar nenhum —
+ * introduzir um só para isto seria criar padrão novo. É também o mesmo desenho
+ * do site, onde o rodapé chama `window.scdConsent.open()`.
+ */
+export const CONSENT_REOPEN_EVENT = 'scd:consent-reopen';
+
+export function openConsentBanner(): void {
+  window.dispatchEvent(new Event(CONSENT_REOPEN_EVENT));
+}
+
 /** Grava a escolha do usuário e aplica o efeito imediatamente. */
 export function setConsent(decision: ConsentDecision): void {
   rememberConsent(decision);
