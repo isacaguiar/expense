@@ -27,16 +27,32 @@ $ogImage = $config['site_url'] . '/' . asset('app-home.png');
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <!-- Google tag (gtag.js) -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-RNQM4DT19G"></script>
+  <meta charset="UTF-8" />
+  <?php
+  /*
+   * Consent Mode v2 — estado padrão NEGADO, declarado antes de qualquer outra
+   * coisa que possa medir. O `gtag.js` não é carregado aqui: quem carrega é o
+   * `consent.js`, e só depois de um "aceitar" explícito. Até lá não há nenhuma
+   * requisição ao Google, nem cookie.
+   *
+   * Antes desta feature este bloco carregava o gtag incondicionalmente, o que
+   * era o item 048 do backlog (LGPD).
+   *
+   * O ID sai por `json_encode` e não por `e()`: aqui o contexto é JavaScript,
+   * não HTML, e são regras de escape diferentes.
+   */
+  ?>
   <script>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-
-    gtag('config', 'G-RNQM4DT19G');
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      analytics_storage: 'denied'
+    });
+    window.SCD_GA_ID = <?= json_encode($config['ga_measurement_id']) ?>;
   </script>
-  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><?= e($pageTitle) ?></title>
   <meta name="description" content="<?= e($description) ?>" />
