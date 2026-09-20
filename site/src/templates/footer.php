@@ -7,9 +7,10 @@ declare(strict_types=1);
   <footer class="legal-footer">
     <div class="legal-footer-inner">
       <span>&copy; <?= date('Y') ?> <?= e($config['legal_name']) ?></span>
-      <nav aria-label="Links legais">
-        <a href="privacidade.php">Política de Privacidade</a>
-        <a href="termos.php">Termos de Serviço</a>
+      <nav aria-label="Links do rodapé">
+        <?php foreach ($config['footer_nav'] as $item) : ?>
+          <a href="<?= e($item['href']) ?>"><?= e($item['label']) ?></a>
+        <?php endforeach; ?>
         <a href="https://novemax.com.br" target="_blank" rel="noopener" class="legal-footer-logo-link" aria-label="Novemax">
           <img src="<?= e(asset('logo-novemax.png')) ?>" alt="Novemax" class="legal-footer-logo" />
         </a>

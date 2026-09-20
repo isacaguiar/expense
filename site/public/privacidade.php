@@ -7,6 +7,7 @@ $config = require __DIR__ . '/../src/config.php';
 
 $pageTitle = 'Política de Privacidade — ' . $config['legal_name'];
 $pageDescription = 'Como o ' . $config['legal_name'] . ' coleta, usa e protege seus dados.';
+$pagePath = '/privacidade.php';
 
 require __DIR__ . '/../src/templates/header.php';
 require __DIR__ . '/../src/templates/nav.php';

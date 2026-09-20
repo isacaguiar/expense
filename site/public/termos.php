@@ -7,6 +7,7 @@ $config = require __DIR__ . '/../src/config.php';
 
 $pageTitle = 'Termos de Serviço — ' . $config['legal_name'];
 $pageDescription = 'Termos de uso do ' . $config['legal_name'] . '.';
+$pagePath = '/termos.php';
 
 require __DIR__ . '/../src/templates/header.php';
 require __DIR__ . '/../src/templates/nav.php';
