@@ -12,7 +12,7 @@ Nenhum desvio de fluxo. Duas observações de execução que valem para todas as
 
 - **Testes de backend rodam contra o MySQL local** (`DatabaseTransactions`, não `RefreshDatabase` — as linhas de sqlite em `phpunit.xml` estão comentadas). A migration da TASK-282 precisa estar aplicada no banco local antes de rodar a suíte das tasks seguintes.
 - **TASK-284 foi executada antes da TASK-283**, invertendo a ordem listada em `tasks.md`: o Service (283) envia o Mailable (284), então implementar o Service primeiro deixaria a branch num estado que não compila. O Mailable recebe o prazo por construtor em vez de ler a constante do Service, justamente para não depender dele.
-- **O e-mail do código só sai localmente** via Mailpit/Mailhog (`MAIL_HOST=127.0.0.1`, `MAIL_PORT=1025`). Produção ainda não tem SMTP real — ver `plan.md` §8; é pendência humana, não task desta feature.
+- **Localmente o e-mail do código cai no Mailpit/Mailhog** (`MAIL_HOST=127.0.0.1`, `MAIL_PORT=1025` no `.env` de desenvolvimento). Em produção o `.env` é gerado pelo `deploy-backend.yml` a partir de GitHub Secrets e o SMTP já está configurado — ver `plan.md` §8.
 
 ## 2. Checklist final da branch da feature (04-implementation.md §1.5)
 
@@ -27,7 +27,9 @@ Rodado na branch já integrada, depois de todas as tasks:
 
 PR aberto: https://github.com/isacaguiar/expense/pull/164 (contra `dev`).
 
-**Gates pendentes**: merge do PR em `dev` (revisão humana) e, depois, promoção `dev` → `main`. 🚩 Antes da promoção: configurar SMTP real em produção — hoje `.env.production` aponta para `127.0.0.1:1025`, então nenhum código chegaria a ninguém.
+**Gates pendentes**: merge do PR em `dev` (revisão humana) e, depois, promoção `dev` → `main` (que dispara o deploy e roda a migration, aditiva).
+
+**Correção (2026-09-19)**: este documento, o `plan.md` §8 e a descrição do PR afirmavam que o SMTP de produção estava por configurar e bloqueava a promoção. Estava errado — a afirmação veio de ler `backend/.env.production`, que é gitignored e é o arquivo local de desenvolvimento. Produção usa um `.env` gerado pelo workflow a partir dos secrets `ENV_MAIL_*`, que existem desde 2025-06-13. Não há pendência de SMTP.
 
 ## 3. Log de implementação
 
