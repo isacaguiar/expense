@@ -44,4 +44,4 @@ Versão: 1.0 · Criado em: 20260920
 
 - **Ordem**: seguir `plan.md` §11. TASK-294 a TASK-297 (navegação) antes das páginas, senão elas nascem inalcançáveis no celular. TASK-304/305 depois de TASK-299, porque os selos passam a apontar para a página de Preços. TASK-306/307 por último, porque o sitemap precisa da lista final de páginas.
 - **Gate de feature**: merge do PR único em `dev` é gate humano (`00-constitution.md` §5.2). Nenhuma task individual tem gate próprio.
-- **Fora do alcance da feature**: `.github/workflows/deploy-site.yml` não publica em destino definido, então o resultado não chega à produção sozinho. Decisão do dono, registrada em `specify.md` §3.
+- **Publicação**: `.github/workflows/deploy-site.yml` já publica `site/public/` → `/www/` e `site/src/` → `/src/` a cada push em `main`. As páginas novas e o `nav.js` entram nesse fluxo sem alteração no workflow.

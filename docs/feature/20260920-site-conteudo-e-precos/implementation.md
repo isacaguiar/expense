@@ -65,4 +65,6 @@ Antes desta feature, o passo 1 era impossível (não havia hambúrguer, e a list
 
 - **Merge do PR em `dev`** — revisão humana (`00-constitution.md` §5.2).
   PR: https://github.com/isacaguiar/expense/pull/168
-- **Publicação em produção** — `.github/workflows/deploy-site.yml` continua com `local-dir: ./` e `server-dir` comentado. Enquanto o destino não for definido pelo dono, nada desta feature chega ao ar. Fora do escopo, registrado em `specify.md` §3.
+- **Promoção `dev` → `main`** — revisão humana. O merge em `main` dispara `deploy-site.yml`, que publica `site/public/` em `/www/` e `site/src/` em `/src/` via FTP. Nenhuma alteração no workflow foi necessária: as 5 páginas novas, o `nav.js`, o `robots.txt` e o `sitemap.xml` estão todos sob esses dois diretórios.
+
+> **Correção de um erro de leitura durante esta feature.** O `specify.md`, o `tasks.md` e este documento afirmavam inicialmente que o `deploy-site.yml` tinha `local-dir: ./` e `server-dir` comentado, e que portanto a feature não chegaria à produção. Isso veio de `docs/bugfix/concluidos/202608/20260829-deploy-site-secrets-quebrado.md`, que era verdade em 2026-08-29 e deixou o destino explicitamente fora de escopo. O commit `03e077a855` (TASK-228/229/230) resolveu isso depois; o documento de bugfix é registro arquivado daquele momento e não foi atualizado. A lição prática: ler o arquivo de infra, não a descrição dele num documento concluído.
