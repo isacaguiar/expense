@@ -64,4 +64,5 @@ Antes desta feature, o passo 1 era impossível (não havia hambúrguer, e a list
 ## 3. Gates pendentes
 
 - **Merge do PR em `dev`** — revisão humana (`00-constitution.md` §5.2).
+  PR: https://github.com/isacaguiar/expense/pull/168
 - **Publicação em produção** — `.github/workflows/deploy-site.yml` continua com `local-dir: ./` e `server-dir` comentado. Enquanto o destino não for definido pelo dono, nada desta feature chega ao ar. Fora do escopo, registrado em `specify.md` §3.
