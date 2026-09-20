@@ -4,7 +4,7 @@ ID: 048
 Origem: docs/feature/20260920-site-conteudo-e-precos/specify.md §3
 Criado em: 2026-09-20
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-309
 
 ## Descrição
 O `site/src/templates/header.php:18-26` injeta o `gtag.js` (`G-RNQM4DT19G`) incondicionalmente, antes até do `<meta charset>`, sem banner de consentimento e sem nenhuma forma de recusa. O site publica uma Política de Privacidade em `site/public/privacidade.php`, mas não há mecanismo que respeite a escolha do visitante.

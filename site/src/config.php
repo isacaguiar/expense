@@ -18,6 +18,20 @@ return [
     'site_url' => 'https://expense.novemax.com.br',
     'updated_at' => '24 de agosto de 2026',
 
+    /*
+     * Propriedade do Google Analytics. Não é segredo — vai no HTML de qualquer
+     * forma —, mas mora aqui em vez de solto no `header.php` pela mesma regra
+     * dos outros valores deste arquivo: uma fonte só.
+     *
+     * O app React usa a MESMA propriedade, por `VITE_GA_MEASUREMENT_ID`
+     * (`frontend/src/config.ts`, injetada em `deploy-frontend.yml`). Trocar de
+     * propriedade exige mudar nos dois lugares: são deploys separados e não há
+     * código compartilhado entre o site PHP e o app.
+     *
+     * O carregamento é condicionado ao consentimento — ver `consent.php`.
+     */
+    'ga_measurement_id' => 'G-RNQM4DT19G',
+
     // O app React é servido em /app pelo mesmo domínio (ver
     // docs/feature/concluidas/202608/20260829-deploy-topologia-unificada/). A tela de
     // cadastro existe desde docs/feature/20260919-cadastro-de-usuarios/.
