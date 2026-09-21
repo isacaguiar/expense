@@ -15,7 +15,7 @@ require __DIR__ . '/../src/templates/nav.php';
 <main class="page">
   <header class="doc-header">
     <h1>Política de Privacidade</h1>
-    <p class="updated-at">Última atualização: <?= e($config['updated_at']) ?></p>
+    <p class="updated-at">Última atualização: <?= e(legal_updated_at('privacidade')) ?></p>
   </header>
 
   <section>
