@@ -15,6 +15,16 @@ jobs:
     steps:
       - name: 📥 Clonar o repositório
         uses: actions/checkout@v4
+        with:
+          # Histórico completo: o gerador abaixo lê o último commit de cada
+          # documento legal. Com o clone raso padrão (profundidade 1) o git
+          # enxerga todo arquivo como criado no commit do topo e as datas
+          # sairiam com a data do deploy. O script detecta isso e aborta, então
+          # a falta desta linha quebra o deploy em vez de publicar data errada.
+          fetch-depth: 0
+
+      - name: 🗓️ Gerar as datas dos documentos legais
+        run: bash site/tools/gerar-datas-legais.sh
 
       - name: 🚀 Deploy do site (site/public → /www/)
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5

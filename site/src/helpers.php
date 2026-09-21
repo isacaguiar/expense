@@ -54,3 +54,72 @@ function icon(string $name): string
         . 'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">'
         . $body . '</svg>';
 }
+
+/**
+ * Fuso do projeto. O mesmo valor é usado pelo gerador de datas no deploy
+ * (`site/tools/gerar-datas-legais.sh`) — os dois precisam concordar, senão um
+ * documento alterado à noite é datado como do dia seguinte.
+ */
+const FUSO_DO_PROJETO = 'America/Sao_Paulo';
+
+/**
+ * Data da última alteração de um documento legal, por extenso.
+ *
+ * A fonte da verdade é `legal-dates.php`, gerado no deploy a partir do último
+ * commit que tocou o arquivo de conteúdo do documento (ver
+ * `site/tools/gerar-datas-legais.sh`). O servidor não tem git, por isso o
+ * cálculo acontece no runner e chega aqui como dado pronto.
+ *
+ * Fora do deploy — servidor local, onde o artefato não existe — cai no
+ * `filemtime`, que é aproximadamente verdadeiro na máquina de quem edita.
+ * Prefere o arquivo de conteúdo e aceita a própria página enquanto a extração
+ * do texto não aconteceu.
+ *
+ * Nada de `IntlDateFormatter`: a extensão `intl` não está disponível no
+ * ambiente de desenvolvimento nem é garantida na hospedagem compartilhada.
+ */
+function legal_updated_at(string $documento): string
+{
+    static $geradas = null;
+
+    if ($geradas === null) {
+        $artefato = __DIR__ . '/legal-dates.php';
+        $geradas = is_file($artefato) ? require $artefato : [];
+    }
+
+    $iso = $geradas[$documento] ?? null;
+
+    if ($iso === null) {
+        foreach ([__DIR__ . '/legal/' . $documento . '.php', __DIR__ . '/../public/' . $documento . '.php'] as $candidato) {
+            if (is_file($candidato)) {
+                /*
+                 * Fuso explícito, e não `date()`: o `date.timezone` deste
+                 * projeto está vazio, o que faz o PHP assumir UTC. Um arquivo
+                 * tocado às 22h de um dia seria datado como do dia seguinte —
+                 * foi o que aconteceu ao verificar esta função pela primeira
+                 * vez. A data de um documento legal segue o fuso do projeto.
+                 */
+                $momento = (new DateTimeImmutable('@' . filemtime($candidato)))
+                    ->setTimezone(new DateTimeZone(FUSO_DO_PROJETO));
+
+                $iso = $momento->format('Y-m-d');
+                break;
+            }
+        }
+    }
+
+    return $iso === null ? '' : data_por_extenso($iso);
+}
+
+/** Converte `AAAA-MM-DD` em `20 de setembro de 2026`. */
+function data_por_extenso(string $iso): string
+{
+    static $meses = [
+        1 => 'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+        'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+    ];
+
+    [$ano, $mes, $dia] = array_map('intval', explode('-', $iso));
+
+    return sprintf('%d de %s de %d', $dia, $meses[$mes] ?? '?', $ano);
+}
