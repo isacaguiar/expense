@@ -6,18 +6,18 @@ Versão: 1.0 · Criado em: 20260920
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-309 | Acrescentar `ga_measurement_id` ao `config.php` do site | frontend | plan.md §7 | nenhum | Pendente |
-| TASK-310 | Trocar o gtag incondicional do `header.php` pelo bloco de Consent Mode v2 | frontend | plan.md §2, §7 | nenhum | Pendente |
-| TASK-311 | Criar o banner de consentimento do site (`consent.php` + `consent.js` + estilo) | frontend | plan.md §1, §3 | nenhum | Pendente |
-| TASK-312 | Acrescentar o botão "Preferências de cookies" ao rodapé do site | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-313 | Expor `GA_MEASUREMENT_ID` no `config.ts` do frontend com default vazio | frontend | plan.md §7 | nenhum | Pendente |
-| TASK-314 | Injetar `VITE_GA_MEASUREMENT_ID` no build de produção do frontend | infra | plan.md §7 | nenhum | Pendente |
-| TASK-315 | Criar o módulo de consentimento do app (`analytics/consent.ts`) | frontend | plan.md §1, §2, §4 | nenhum | Pendente |
-| TASK-316 | Montar o `ConsentBanner` no `App.tsx`, fora do `RequireAuth` | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-317 | Acrescentar a revogação do consentimento ao `Profile` | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-318 | Escrever `sanitizePath()` com teste de query string e de segmento numérico | frontend | plan.md §6 | nenhum | Pendente |
-| TASK-319 | Disparar `page_view` por rota com o `RouteTracker` | frontend | plan.md §5, §6 | nenhum | Pendente |
-| TASK-320 | Descrever cookies, Google Analytics e revogação na Política de Privacidade | doc | plan.md §8 | nenhum | Pendente |
+| TASK-309 | Acrescentar `ga_measurement_id` ao `config.php` do site | frontend | plan.md §7 | nenhum | Concluída |
+| TASK-310 | Trocar o gtag incondicional do `header.php` pelo bloco de Consent Mode v2 | frontend | plan.md §2, §7 | nenhum | Concluída |
+| TASK-311 | Criar o banner de consentimento do site (`consent.php` + `consent.js` + estilo) | frontend | plan.md §1, §3 | nenhum | Concluída |
+| TASK-312 | Acrescentar o botão "Preferências de cookies" ao rodapé do site | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-313 | Expor `GA_MEASUREMENT_ID` no `config.ts` do frontend com default vazio | frontend | plan.md §7 | nenhum | Concluída |
+| TASK-314 | Injetar `VITE_GA_MEASUREMENT_ID` no build de produção do frontend | infra | plan.md §7 | nenhum | Concluída |
+| TASK-315 | Criar o módulo de consentimento do app (`analytics/consent.ts`) | frontend | plan.md §1, §2, §4 | nenhum | Concluída |
+| TASK-316 | Montar o `ConsentBanner` no `App.tsx`, fora do `RequireAuth` | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-317 | Acrescentar a revogação do consentimento ao `Profile` | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-318 | Escrever `sanitizePath()` com teste de query string e de segmento numérico | frontend | plan.md §6 | nenhum | Concluída |
+| TASK-319 | Disparar `page_view` por rota com o `RouteTracker` | frontend | plan.md §5, §6 | nenhum | Concluída |
+| TASK-320 | Descrever cookies, Google Analytics e revogação na Política de Privacidade | doc | plan.md §8 | nenhum | Concluída |
 
 ## Critérios de aceite
 
