@@ -16,7 +16,7 @@
 -- (R$ 48,73 do Adestrador + R$ 90,50 da Construção), ou seja R$ 696,15 saem do
 -- acerto de agosto. É consequência intencional, não efeito colateral.
 --
--- Ver docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/{specify,plan}.md
+-- Ver docs/feature/concluidas/202609/20260904-detalhe-despesa-tipo-parcela-valores/{specify,plan}.md
 -- §3.5 / §3 pelo raciocínio completo.
 --
 -- Banco: expense-api.novemax.com.br (MySQL, ex-db). Execute manualmente, passo a

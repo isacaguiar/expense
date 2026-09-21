@@ -1147,7 +1147,7 @@ class ExpenseController extends Controller
                     // Aditivos (Constitution §4.1): `isFixed` continua — filtro/ícone de
                     // ExpenseManager, Payments e testes dependem dele. Estes 4 permitem à
                     // UI distinguir À Vista de Parcelada e montar "Parcelada 2/6" com o
-                    // total da despesa (docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/plan.md §1).
+                    // total da despesa (docs/feature/concluidas/202609/20260904-detalhe-despesa-tipo-parcela-valores/plan.md §1).
                     'expenseType' => $entry['expense']->expense_type,
                     'installmentNumber' => $entry['quotaNumber'],
                     'installmentsTotal' => $entry['expense']->installments,

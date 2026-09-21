@@ -819,7 +819,7 @@ class ExpenseControllerSummaryTest extends TestCase
      * O rótulo "Parcelada 2/3" da UI depende de saber, por ciclo, qual parcela
      * daquela despesa vence ali — `installmentNumber` vem da Quota do ciclo, não
      * de contar meses desde `date_payment`
-     * (docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/plan.md §1).
+     * (docs/feature/concluidas/202609/20260904-detalhe-despesa-tipo-parcela-valores/plan.md §1).
      */
     public function test_installments_expense_exposes_type_installment_number_and_total_value_per_cycle(): void
     {
