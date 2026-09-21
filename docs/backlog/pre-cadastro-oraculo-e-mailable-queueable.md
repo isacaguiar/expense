@@ -1,7 +1,7 @@
 # Endurecer enumeração no pré-cadastro e travar o Mailable do código fora da fila
 
 ID: 045
-Origem: revisão de segurança de docs/feature/20260919-cadastro-de-usuarios/ (achados 5 e 8)
+Origem: revisão de segurança de docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/ (achados 5 e 8)
 Criado em: 2026-09-19
 Prioridade: BAIXA
 Status: Aberto

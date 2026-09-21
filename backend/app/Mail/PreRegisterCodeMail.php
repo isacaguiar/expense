@@ -9,7 +9,7 @@ use Illuminate\Queue\SerializesModels;
 /**
  * E-mail com o código de 6 dígitos que confirma o endereço de quem preencheu
  * o formulário de `/cadastro`. Enviado por `PreRegistrationService::start()` e
- * por `resend()`. Ver docs/feature/20260919-cadastro-de-usuarios/plan.md §5.
+ * por `resend()`. Ver docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md §5.
  *
  * Recebe o código em claro (que não existe em lugar nenhum além deste e-mail —
  * a tabela guarda só o hash) e nunca o registra em log.
