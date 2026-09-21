@@ -1,7 +1,7 @@
 # Página da despesa (`ExpenseView`) rotula Parcelada como "Variável" e não lista pagadores
 
 ID: 039
-Origem: docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/specify.md §4
+Origem: docs/feature/concluidas/202609/20260904-detalhe-despesa-tipo-parcela-valores/specify.md §4
 Criado em: 2026-09-05
 Prioridade: MEDIA
 Status: Promovido para TASK-276

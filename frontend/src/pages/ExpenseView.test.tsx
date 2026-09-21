@@ -148,7 +148,7 @@ describe('ExpenseView', () => {
   // 6 x R$ 292,40 = R$ 1.754,40 exatos; as quotas vêm fora de ordem de
   // propósito, para provar a ordenação por `number` (as datas de uma parcelada
   // podem ter sido deslocadas em massa em produção — ver as TASK-003/004 de
-  // docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/).
+  // docs/feature/concluidas/202609/20260904-detalhe-despesa-tipo-parcela-valores/).
   const installmentsExpense = {
     ...expenseDetail,
     expense_type: 'IN_INSTALLMENTS' as const,

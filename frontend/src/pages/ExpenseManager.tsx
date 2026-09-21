@@ -78,7 +78,7 @@ const formatCycleBoundary = (dateStr: string): string => {
  *
  * `expenseType` é opcional: ciclo selado antes desta mudança é servido do
  * snapshot congelado e não tem o campo — nesse caso cai no rótulo antigo.
- * Ver docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/specify.md §3.1.
+ * Ver docs/feature/concluidas/202609/20260904-detalhe-despesa-tipo-parcela-valores/specify.md §3.1.
  */
 const detailTypeLabel = (exp: SummaryExpense): string => {
   if (exp.expenseType === 'FIXED') return 'Fixa';
