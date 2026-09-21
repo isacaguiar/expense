@@ -6,20 +6,24 @@ Versão: 1.0 · Criado em: 20260904
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-001 | Expor tipo, número da parcela, total de parcelas e valor total da despesa no `summary` | backend | plan.md §1 | nenhum | Pendente |
-| TASK-002 | Exibir tipo/parcela, total da parcelada e valor por pagador no modal "Detalhes da despesa" | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-003 | Antecipar um mês nas parcelas das despesas 8658/8659 em produção | infra | plan.md §3 | antes do deploy/migration em produção | Pendente |
+| TASK-001 | Expor tipo, número da parcela, total de parcelas e valor total da despesa no `summary` | backend | plan.md §1 | nenhum | Concluída |
+| TASK-002 | Exibir tipo/parcela, total da parcelada e valor por pagador no modal "Detalhes da despesa" | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-003 | Antecipar um mês nas parcelas das despesas 8658/8659 em produção | infra | plan.md §3 | antes do deploy/migration em produção | Concluída |
 | TASK-004 | Recolocar as parcelas de agosto de 8658/8659 no acerto do grupo 3878 (remover `born_paid`) | infra | — (dado de produção, sem código) | execução em produção | Executada e conferida em 2026-09-06 |
 | TASK-005 | Fechar a competência de agosto/2026 do grupo 3878 em produção (lado credor + lado pagador) | infra | — (dado de produção, sem código) | execução em produção | Executada e conferida em 2026-09-06 |
 | TASK-006 | Limpar do banco de produção as tabelas de trabalho/backup dos scripts e as 4 legadas no singular | infra | — (dado de produção, sem código) | `DROP TABLE` em produção | Executada em 2026-09-06 |
 
 ## Critérios de aceite
 
+> **Status das TASK-001/002/003 corrigido em 2026-09-21.** As três estavam marcadas "Pendente" nesta tabela, mas o código e os testes estão no repositório e as PRs correspondentes foram mergeadas — a tabela parou no commit `093294a02a`, que acrescentou as linhas 004-006 e não voltou nas anteriores. Evidência conferida arquivo a arquivo: `backend/app/Http/Controllers/ExpenseController.php:1151-1154` (as 4 chaves, com `isFixed` preservado em `:1146`) e `backend/tests/Feature/ExpenseControllerSummaryTest.php:824-868` para a TASK-001; `frontend/src/pages/ExpenseManager.tsx:83-94`, `:720-725` e `:732-744`, mais `frontend/src/pages/ExpenseManager.test.tsx:242-326`, para a TASK-002. Nenhum trabalho de código ficou faltando.
+
 - **TASK-001**: `GET /api/groups/{id}/expenses/summary?cycles_ago=N` devolve, em cada item de `expenses`, as chaves `expenseType`, `installmentNumber`, `installmentsTotal` e `totalValue`; para uma despesa `IN_INSTALLMENTS` de 3 parcelas consultada em 3 ciclos consecutivos, `installmentNumber` vale 1, 2 e 3 respectivamente. `isFixed` e todas as demais chaves continuam presentes e inalteradas. Verificável por `php artisan test --filter=ExpenseControllerSummaryTest` verde, com os asserts novos.
 
 - **TASK-002**: no modal "Detalhes da despesa" da tela `/groups/{id}/expenses`: (a) uma despesa parcelada mostra o chip `Parcelada n/N` com o `n` do ciclo aberto, uma À Vista mostra `À Vista` e uma Fixa mostra `Fixa`; (b) a parcelada mostra a linha com o total da despesa e a quantidade de parcelas; (c) o credor aparece com o valor do mês e cada pagador aparece em sua própria linha com avatar, nome e o valor individual; (d) uma despesa vinda de ciclo selado (sem os campos novos) continua abrindo o modal sem erro, com o rótulo antigo. Verificável por `npx vitest run src/pages/ExpenseManager.test.tsx` verde e por navegação no app com screenshot.
 
 - **TASK-003**: no app em produção, grupo 3878 — as despesas Adestrador e Construção aparecem como linha "Paga" em maio, junho, julho **e agosto**/2026, sem gerar cobrança para ninguém nesses meses; a primeira pendência real das duas passa a ser setembro; e não existe mais parcela em novembro (8658) nem em outubro (8659). `focus-cycle` deixa de apontar para agosto. Verificável pelas chamadas de API listadas no passo 5 do script e pela conferência do usuário no app. Execução do SQL é do usuário — gate humano.
+
+  > **Critério parcialmente superado pela TASK-004.** O trecho "sem gerar cobrança para ninguém nesses meses" valeu para agosto por um dia. A TASK-004 reverteu deliberadamente o `born_paid` das duas quotas de 04/08 e recolocou os R$ 696,15 no acerto de agosto — o próprio `fix-prod-3878-agosto-cobrar-parcelas.sql` declara isso no cabeçalho. Lido hoje ao pé da letra, este critério leva à conclusão errada sobre qual é o estado correto do banco. O estado final desejado é o das TASK-004 e TASK-005.
 
 - **TASK-004**: no app em produção, grupo 3878, competência 01/08–31/08 — na aba "À pagar", cada um dos 5 devedores (Isac, ngaguiar, mateus.davi.10, Natália, gabriel) deve a naumel67 **R$ 139,23 a mais** do que hoje (R$ 48,73 do Adestrador + R$ 90,50 da Construção), incluindo uma linha nova `ngaguiar → naumel67 R$ 139,23` que hoje não existe; os cards do topo (Total R$ 14.004,87 / Pago R$ 4.546,67 / A pagar R$ 9.458,20) permanecem **inalterados**, porque `paid` não muda. Verificável pela tabela de valores esperados do passo 4 do script, conferida linha a linha na tela. Execução do SQL é do usuário — gate humano. O script é `fix-prod-3878-agosto-cobrar-parcelas.sql`.
 

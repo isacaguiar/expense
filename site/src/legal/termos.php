@@ -2,17 +2,7 @@
 
 declare(strict_types=1);
 
-/**
- * Texto dos Termos de Serviço.
- *
- * Vive em arquivo próprio para que a data de "Última atualização" exibida em
- * `public/termos.php` siga o histórico DESTE arquivo: mexer em SEO, layout ou
- * navegação da página não anuncia atualização do documento, e mexer no texto
- * sempre anuncia. Ver `legal_updated_at()` em `helpers.php` e
- * `docs/feature/20260920-data-por-documento-legal/plan.md` §1.
- *
- * @var array<string, mixed> $config
- */
+/** @var array<string, mixed> $config — só o texto do documento; ver README.md deste diretório. */
 ?>
 
   <section>
