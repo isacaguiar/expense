@@ -31,6 +31,10 @@ jobs:
         working-directory: frontend
         env:
           VITE_API_BASE_URL: https://expense-api.novemax.com.br
+          # Mesma propriedade do site institucional (`site/src/config.php`).
+          # Inline, não secret: um ID de propriedade GA vai no HTML de qualquer
+          # forma. O carregamento depende do consentimento do usuário.
+          VITE_GA_MEASUREMENT_ID: G-RNQM4DT19G
         run: npm run build
 
       - name: 🚀 Deploy via FTP
