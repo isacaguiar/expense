@@ -31,13 +31,6 @@ class GoogleAuthController extends Controller
             'user_id' => $user->id,
         ], now()->addMinutes(self::STATE_TTL_MINUTES));
 
-        // TEMP diag (fix/20260901-google-callback-logs)
-        Log::info('[google-link] redirectUrl: state gerado e cacheado', [
-            'user_id' => $user->id,
-            'state_len' => strlen($token),
-            'cache_default' => config('cache.default'),
-        ]);
-
         $url = Socialite::driver('google')
             ->stateless()
             ->with(['state' => $token])
@@ -54,15 +47,6 @@ class GoogleAuthController extends Controller
     public function callback(Request $request)
     {
         $frontendUrl = config('services.frontend_url');
-
-        // TEMP diag (fix/20260901-google-callback-logs)
-        Log::info('[google-link] callback recebido', [
-            'has_state' => (bool) $request->query('state'),
-            'state_len' => strlen((string) $request->query('state')),
-            'has_code' => (bool) $request->query('code'),
-            'google_error' => $request->query('error'),
-            'frontend_url' => $frontendUrl,
-        ]);
 
         $state = $this->pullState($request->query('state'));
 

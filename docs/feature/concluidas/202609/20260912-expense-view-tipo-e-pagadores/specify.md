@@ -8,7 +8,7 @@ Versão: 1.1 · Criado em: 20260912 · Emendado em: 20260912 (§2.9 e §3.6, por
 
 ## 1. Problema
 
-**1. Duas telas do mesmo produto discordam sobre a mesma despesa (item 039).** A feature `docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/` consertou o modal "Detalhes da despesa" do `ExpenseManager` — que passou a dizer `Parcelada 3/6` e a listar cada pagador com o valor dele (TASK-001 + TASK-002, já em `dev` via [PR #153](https://github.com/isacaguiar/expense/pull/153)). A **página** de detalhe da mesma despesa continua dizendo `Variável` e não mostra pagador nenhum no modo de visualização. O usuário optou, na época, por tratar só o modal (§4 do `specify.md` daquela feature), registrando o resto como item de backlog.
+**1. Duas telas do mesmo produto discordam sobre a mesma despesa (item 039).** A feature `docs/feature/concluidas/202609/20260904-detalhe-despesa-tipo-parcela-valores/` consertou o modal "Detalhes da despesa" do `ExpenseManager` — que passou a dizer `Parcelada 3/6` e a listar cada pagador com o valor dele (TASK-001 + TASK-002, já em `dev` via [PR #153](https://github.com/isacaguiar/expense/pull/153)). A **página** de detalhe da mesma despesa continua dizendo `Variável` e não mostra pagador nenhum no modo de visualização. O usuário optou, na época, por tratar só o modal (§4 do `specify.md` daquela feature), registrando o resto como item de backlog.
 
 O custo não é estético: a página de detalhe é onde se confere "o que exatamente é essa despesa". Se ela contradiz o modal, ela corrói justamente a confiança no número que a feature anterior quis consertar.
 

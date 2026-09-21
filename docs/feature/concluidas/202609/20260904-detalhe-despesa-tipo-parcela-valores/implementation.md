@@ -102,6 +102,11 @@ Achado não-bloqueante registrado no backlog em vez de virar escopo desta task:
 dois problemas (rótulo e pagadores), mas não tem noção de competência, então "qual parcela" ali
 exige uma decisão de produto que o usuário não tomou.
 
+> **Atualização de 2026-09-21:** esse item deixou de estar aberto. Foi promovido para a TASK-276 e
+> entregue por `docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/` (PRs #161 e
+> #162) — `frontend/src/pages/ExpenseView.tsx:470` e `:527` citam `detailTypeLabel` e
+> `renderDetailPayers` desta feature como referência.
+
 **Verificação em browser não concluída**: `frontend-web` (3000) e `backend-api` (8000) já estavam
 no ar (servidores do próprio usuário), o Browser pane abriu em `http://localhost:3000`, mas a
 aplicação exige login e a IA não digita credenciais. A verificação visual do modal fica pendente
@@ -139,7 +144,7 @@ mass assignment novo). Levantou uma imprecisão de comentário — `installmentN
 
 ### TASK-003 — detalhamento (dados de produção)
 
-Script: `fix-prod-8658-8659-antecipa-mes.sql` (nesta pasta). **Ainda não executado.**
+Script: `fix-prod-8658-8659-antecipa-mes.sql` (nesta pasta). **Executado em 2026-09-05** — ver "Resultado da execução" abaixo. (O texto "ainda não executado" ficou aqui desatualizado até 2026-09-21.)
 
 Sequência: diagnóstico (passo 0) → backup (1) → `date_expected -1 mês` nas 11 quotas e
 `date_payment -1 mês` nas 2 despesas (2) → marcar as parcelas que passaram a cair em julho e
@@ -223,7 +228,7 @@ para o 8659.
 
 ### TASK-004 — detalhamento (recolocar as parcelas no acerto de agosto)
 
-Script: `fix-prod-3878-agosto-cobrar-parcelas.sql` (nesta pasta). **Ainda não executado.**
+Script: `fix-prod-3878-agosto-cobrar-parcelas.sql` (nesta pasta). **Executado e conferido em 2026-09-06** — ver "Resultado da execução" abaixo.
 
 #### Por que existe: a decisão de 2026-09-05 estava errada
 
@@ -322,7 +327,7 @@ Mateus, ian.gaguiar → Ian, juliagaguiar → Júlia). Alteração de cadastro f
 
 ### TASK-005 — detalhamento (fechar agosto/2026 em produção)
 
-Script: `fix-prod-3878-fechar-agosto.sql` (nesta pasta). **Ainda não executado.**
+Script: `fix-prod-3878-fechar-agosto.sql` (nesta pasta). **Executado e conferido em 2026-09-06** — ver "Resultado da execução" abaixo.
 
 Origem: o usuário relatou em 2026-09-06 que "as despesas do dia 04/09 (Adestrador e
 Construção) não foram contabilizadas para o mês de agosto, apesar do fechamento ser dia 5",
@@ -574,15 +579,22 @@ grupo confirmar os valores do mês.
 | PR | Conteúdo | Estado |
 |---|---|---|
 | [#153](https://github.com/isacaguiar/expense/pull/153) | TASK-001 (backend) + TASK-002 (frontend) + scaffold SDD + `.sql` inicial da TASK-003 | Mergeado em `dev` em 2026-09-05 |
-| [#155](https://github.com/isacaguiar/expense/pull/155) | Só docs: revisão da TASK-003 — agosto passa a `born_paid` (specify §3.5.1) | Aberto — **merge é gate humano** |
+| [#155](https://github.com/isacaguiar/expense/pull/155) | Só docs: revisão da TASK-003 — agosto passa a `born_paid` (specify §3.5.1) | Mergeado em `dev` |
+| [#156](https://github.com/isacaguiar/expense/pull/156) | Continuação da feature | Mergeado em `dev` |
+| [#158](https://github.com/isacaguiar/expense/pull/158) | Continuação da feature | Mergeado em `dev` |
+| [#159](https://github.com/isacaguiar/expense/pull/159) | Continuação da feature | Mergeado em `dev` |
 
 O #155 existe porque o #153 foi mergeado (e a branch remota apagada) enquanto a decisão sobre
 agosto ainda estava sendo tomada; o push seguinte recriou a branch com o commit de docs sozinho.
 Não há código nele.
 
 TASK-003 não entra em nenhum merge como comportamento — o `.sql` vai junto só como documento; a
-execução em produção é gate humano separado e **ainda não foi feita**.
+execução em produção foi feita pelo usuário em 2026-09-05 e conferida junto com as TASK-004 e
+TASK-005 em 2026-09-06.
 
-Esta pasta **permanece em `docs/feature/`** (não vai para `concluidas/<AAAAMM>/` ainda, apesar do
-#153 já estar em `dev`): a feature só termina quando a TASK-003 for executada e verificada em
-produção. Mover agora esconderia um trabalho em aberto na pasta de concluídos.
+Esta pasta foi para `docs/feature/concluidas/202609/` em 2026-09-21 (`ADR-009`), depois de uma
+auditoria confirmar que as seis tasks estão entregues: as três de código com evidência no
+repositório (ver a nota no topo dos critérios de aceite em `tasks.md`) e as três de produção com
+relatório de execução conferido aqui. A condição registrada na versão anterior desta seção — "só
+termina quando a TASK-003 for executada e verificada" — foi cumprida em 2026-09-06; a nota é que
+ficou para trás.

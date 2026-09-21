@@ -475,7 +475,7 @@ const ExpenseView: React.FC = () => {
                     identidade da parcela e é o que o rótulo "n/N" afirma. Datas
                     de parcela podem ter sido deslocadas em massa em produção
                     (ver as TASK-003/004 de
-                    docs/feature/20260904-detalhe-despesa-tipo-parcela-valores/),
+                    docs/feature/concluidas/202609/20260904-detalhe-despesa-tipo-parcela-valores/),
                     e ordenar por data deixaria a numeração fora de ordem. */}
                 {[...expense.quotas]
                   .sort((a, b) => a.number - b.number)
