@@ -1,7 +1,7 @@
 # Header do site ocupa duas linhas no celular
 
 ID: 055
-Origem: docs/feature/20260920-site-conteudo-e-precos/ (verificação do deploy em produção)
+Origem: docs/feature/concluidas/202609/20260920-site-conteudo-e-precos/ (verificação do deploy em produção)
 Criado em: 2026-09-20
 Prioridade: BAIXA
 Status: Aberto

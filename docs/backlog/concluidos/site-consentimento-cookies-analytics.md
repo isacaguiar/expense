@@ -1,7 +1,7 @@
 # Google Analytics do site carrega sem consentimento
 
 ID: 048
-Origem: docs/feature/20260920-site-conteudo-e-precos/specify.md §3
+Origem: docs/feature/concluidas/202609/20260920-site-conteudo-e-precos/specify.md §3
 Criado em: 2026-09-20
 Prioridade: MEDIA
 Status: Promovido para TASK-309

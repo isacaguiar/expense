@@ -1,7 +1,7 @@
 # Imagem de compartilhamento do site é uma screenshot reaproveitada
 
 ID: 054
-Origem: docs/feature/20260920-site-conteudo-e-precos/plan.md §9
+Origem: docs/feature/concluidas/202609/20260920-site-conteudo-e-precos/plan.md §9
 Criado em: 2026-09-20
 Prioridade: BAIXA
 Status: Aberto

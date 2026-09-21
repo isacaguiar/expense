@@ -1,7 +1,7 @@
 # Secrets de WhatsApp ausentes viram string vazia e anulam os defaults de `config/services.php`
 
 ID: 047
-Origem: verificação do deploy durante docs/feature/20260919-cadastro-de-usuarios/ (ao conferir como o `.env` de produção é gerado)
+Origem: verificação do deploy durante docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/ (ao conferir como o `.env` de produção é gerado)
 Criado em: 2026-09-19
 Prioridade: BAIXA
 Status: Aberto

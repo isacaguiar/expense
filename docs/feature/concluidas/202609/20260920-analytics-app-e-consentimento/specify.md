@@ -10,7 +10,7 @@ Versão: 1.0 · Criado em: 20260920
 
 O app não é medido e o site é medido errado.
 
-**Não se mede o app.** `frontend/index.html` não carrega nada de analytics — nenhuma ocorrência de `gtag`/`googletagmanager` em `frontend/`. Não há como saber quais telas são usadas, onde o usuário abandona, nem se o cadastro novo (`docs/feature/20260919-cadastro-de-usuarios/`) converte.
+**Não se mede o app.** `frontend/index.html` não carrega nada de analytics — nenhuma ocorrência de `gtag`/`googletagmanager` em `frontend/`. Não há como saber quais telas são usadas, onde o usuário abandona, nem se o cadastro novo (`docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/`) converte.
 
 **O site mede sem consentimento.** `site/src/templates/header.php:18-26` injeta o `gtag.js` (`G-RNQM4DT19G`) incondicionalmente, antes até do `<meta charset>`, sem banner e sem forma de recusa, enquanto `site/public/privacidade.php` publica uma política. É o item 048 do backlog (MEDIA, aberto): analytics com cookie é tratamento de dado pessoal sob a LGPD, e o consentimento precisa ser livre, informado e revogável.
 

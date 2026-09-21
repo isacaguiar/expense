@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  *
  * `password` chega aqui já hasheado e `code_hash` guarda só o hash do código:
  * nem a senha nem o código existem em claro nesta tabela.
- * Ver docs/feature/20260919-cadastro-de-usuarios/plan.md §1.
+ * Ver docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md §1.
  */
 class UserPreCreate extends Model
 {

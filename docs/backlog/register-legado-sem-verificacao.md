@@ -1,7 +1,7 @@
 # `POST /register` legado cria conta sem verificar o e-mail
 
 ID: 042
-Origem: docs/feature/20260919-cadastro-de-usuarios/specify.md §3
+Origem: docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/specify.md §3
 Criado em: 2026-09-19
 Prioridade: MEDIA
 Status: Aberto

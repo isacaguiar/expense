@@ -1,7 +1,7 @@
 # Sem rotina de expurgo de `ex_user_pre_create`
 
 ID: 044
-Origem: docs/feature/20260919-cadastro-de-usuarios/specify.md §3
+Origem: docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/specify.md §3
 Criado em: 2026-09-19
 Prioridade: BAIXA
 Status: Aberto

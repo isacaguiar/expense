@@ -15,7 +15,7 @@ use Illuminate\Http\JsonResponse;
  * mensagem e contadores, para as rotas não virarem um leitor de pré-cadastros
  * alheios (docs/sdd/00-constitution.md §6.5).
  *
- * Ver docs/feature/20260919-cadastro-de-usuarios/plan.md §4.
+ * Ver docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md §4.
  */
 class PreRegisterController extends Controller
 {

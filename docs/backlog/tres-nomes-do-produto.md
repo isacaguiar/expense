@@ -1,7 +1,7 @@
 # O produto se chama de três formas diferentes
 
 ID: 050
-Origem: docs/feature/20260920-site-conteudo-e-precos/specify.md §3
+Origem: docs/feature/concluidas/202609/20260920-site-conteudo-e-precos/specify.md §3
 Criado em: 2026-09-20
 Prioridade: BAIXA
 Status: Aberto
