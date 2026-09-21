@@ -49,3 +49,8 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-09-21 | `bash site/tools/gerar-datas-legais.sh` | `privacidade -> 2026-09-20`, `termos -> 2026-08-24` — iguais às de produção |
 | 2026-09-21 | Páginas renderizadas com o artefato gerado | `/privacidade.php` → "20 de setembro de 2026"; `/termos.php` → "24 de agosto de 2026" |
 | 2026-09-21 | `rg "docs/feature" site/src/legal/*.php` | `0` ocorrências — nenhuma referência de documentação dentro do texto jurídico |
+
+## Resolução
+Concluído em: 2026-09-21
+Branch: `fix/20260921-legal-comentario-redata-documento`
+PR: https://github.com/isacaguiar/expense/pull/182

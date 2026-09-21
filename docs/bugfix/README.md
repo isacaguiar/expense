@@ -60,12 +60,12 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 |---|---|---|---|---|
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 | [20260901-expense-store-update-422.md](20260901-expense-store-update-422.md) | Testes de despesa (store/update/destroy) falham com 422 após virada de mês | 2026-09-01 | `fix/20260901-expense-store-update-422` | Aberto |
-| [20260921-legal-comentario-redata-documento.md](20260921-legal-comentario-redata-documento.md) | Comentário de manutenção dentro do texto jurídico redata o documento | 2026-09-21 | `fix/20260921-legal-comentario-redata-documento` | Aberto |
 
 ## Concluídos
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/202609/20260921-legal-comentario-redata-documento.md](concluidos/202609/20260921-legal-comentario-redata-documento.md) | Comentário de manutenção dentro do texto jurídico redata o documento | 2026-09-21 | #182 |
 | [concluidos/202609/20260920-agents-md-caminho-codex.md](concluidos/202609/20260920-agents-md-caminho-codex.md) | Caminho dos agents no `AGENTS.md` com caixa errada (`.Codex/agents/`) | 2026-09-20 | #170 |
 | [concluidos/202609/20260902-favicon-ausente.md](concluidos/202609/20260902-favicon-ausente.md) | Favicon ausente no site e no app (`/favicon.ico` 404, `index.html` sem `<link rel=icon>`) | 2026-09-02 | #137 |
 | [concluidos/202609/20260901-frontend-meta-viewport-mobile.md](concluidos/202609/20260901-frontend-meta-viewport-mobile.md) | App não responsivo no celular (meta viewport ausente) | 2026-09-01 | #126 |
