@@ -1067,8 +1067,13 @@ html {
    * Só esconde a navegação depois que nav.js assumiu o controle (ele marca
    * data-nav no <html>). Sem o script, a lista fica empilhada e visível —
    * antes daqui o menu simplesmente sumia no celular, sem alternativa.
+   *
+   * Esconde o `.main-nav` inteiro, e não apenas o `ul`: o container é flex item
+   * com `flex-basis: 100%`, então mesmo com altura 0 ele forma uma terceira
+   * linha e cobra mais um `row-gap` de 2rem do `.site-header-inner` — 32px de
+   * espaço morto no rodapé do cabeçalho, em todas as páginas.
    */
-  :root[data-nav='collapsed'] .main-nav ul {
+  :root[data-nav='collapsed'] .main-nav {
     display: none;
   }
 
