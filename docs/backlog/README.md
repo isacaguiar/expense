@@ -67,6 +67,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 052 | [contexto-sdd-para-o-site-php.md](contexto-sdd-para-o-site-php.md) | Site institucional não tem documento de contexto no SDD | site-conteudo-e-precos | 2026-09-20 | BAIXA | Aberto |
 | 053 | [limite-grupos-constante-duplicada.md](limite-grupos-constante-duplicada.md) | Limite de grupos duplicado em backend, frontend e site, agora anunciado como plano | site-conteudo-e-precos | 2026-09-20 | MEDIA | Aberto |
 | 054 | [site-og-image-dedicada.md](site-og-image-dedicada.md) | Imagem de compartilhamento do site é uma screenshot reaproveitada | site-conteudo-e-precos | 2026-09-20 | BAIXA | Aberto |
+| 055 | [site-header-mobile-duas-linhas.md](site-header-mobile-duas-linhas.md) | Header do site ocupa duas linhas no celular | site-conteudo-e-precos (verificação do deploy) | 2026-09-20 | BAIXA | Aberto |
 
 ## Itens concluídos
 
