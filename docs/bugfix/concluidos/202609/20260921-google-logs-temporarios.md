@@ -77,3 +77,8 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-09-21 | `grep -n "use Illuminate"` no controller | o import de `Log` segue na linha 9, ainda necessário |
 | 2026-09-21 | `git diff --stat` | `16 deletions(-)`, **nenhuma inserção** |
 | 2026-09-21 | `pint` / `php artisan test` | **não executados**: `backend/vendor/` não está instalado neste ambiente. Coberto pelo CI. |
+
+## Resolução
+Concluído em: 2026-09-21
+Branch: `fix/20260921-google-logs-temporarios`
+PR: https://github.com/isacaguiar/expense/pull/184
