@@ -453,7 +453,7 @@ class ExpenseControllerStoreTest extends TestCase
         $expenseId = $response->json('expense_id');
 
         // jun/jul/ago (ciclos fechados) → quitadas pelo credor, marcadas born_paid
-        // (TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/):
+        // (TASK-001 de docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/):
         // é esse flag, não `paid`, que tira a parcela do acerto em computeCycleSummary().
         $paid = \App\Models\Quota::where('expense_id', $expenseId)->where('paid', true)->get();
         $this->assertCount(3, $paid);
@@ -486,7 +486,7 @@ class ExpenseControllerStoreTest extends TestCase
         // Mesmo cenário da despesa retroativa acima, mas com um devedor além do
         // credor — é essa combinação (participantsCount > 1) que expõe o bug de
         // computeCycleSummary() gerar settlement fantasma para parcela já paga
-        // (docs/feature/20260904-parcela-retroativa-contabilizacao/specify.md §1).
+        // (docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/specify.md §1).
         Carbon::setTestNow('2026-09-20');
 
         $creditor = User::factory()->create();

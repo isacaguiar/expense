@@ -38,7 +38,7 @@ interface LoginBrandingPanelProps {
 /**
  * Painel de marca das telas públicas. Os textos têm default (o do login) e
  * são sobrescrevíveis para que `/cadastro` reuse o mesmo painel sem duplicar
- * o componente — docs/feature/20260919-cadastro-de-usuarios/plan.md §6.
+ * o componente — docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md §6.
  */
 export default function LoginBrandingPanel({
   headline = 'Despesas compartilhadas,',

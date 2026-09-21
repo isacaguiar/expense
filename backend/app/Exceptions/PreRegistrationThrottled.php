@@ -11,7 +11,7 @@ use Illuminate\Http\JsonResponse;
  * segundos faltam para um novo pedido valer, para a tela poder mostrar o
  * contador sem depender de header (que o CORS não expõe).
  *
- * Ver docs/feature/20260919-cadastro-de-usuarios/plan.md §4.
+ * Ver docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md §4.
  */
 class PreRegistrationThrottled extends Exception
 {

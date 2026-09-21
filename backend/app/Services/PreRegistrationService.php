@@ -31,7 +31,7 @@ use Throwable;
  * que acabou de chegar na caixa dela, criaria a conta com a senha do atacante
  * (account pre-hijacking). O handle amarra a confirmação a quem submeteu.
  *
- * Ver docs/feature/20260919-cadastro-de-usuarios/plan.md §2 e §10.
+ * Ver docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md §2 e §10.
  */
 class PreRegistrationService
 {

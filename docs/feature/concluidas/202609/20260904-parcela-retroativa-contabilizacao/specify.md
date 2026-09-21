@@ -10,7 +10,7 @@ Versão: 1.0 · Criado em: 20260904
 
 A feature `20260903-despesa-parcelada-retroativa` fez `ExpenseController::store()` marcar `paid = true` cada parcela cujo `date_expected` cai em competência `closed`. Isso tira a parcela de `totals.pending`, mas **não** a tira do acerto: `computeCycleSummary()` monta `balances` / `$owed` / `settlements` (`backend/app/Http/Controllers/ExpenseController.php:1164-1186`) **sem checar `$entry['paid']`** — só `totals.pending` (`:1150`) filtra. Resultado: cada parcela retroativa quitada ainda gera um par devedor→credor em `settlements` em toda competência passada `closed` e **não selada**.
 
-Isso está registrado como "limitação aceita" em `docs/feature/20260903-despesa-parcelada-retroativa/specify.md` §2.2 ("Ciclo passado `closed` mas ainda não selado: a parcela aparece como linha já paga e **entra no acerto daquele mês**. Limitação aceita") e como item §2 do backlog `docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimento.md` (ID 038). O usuário testou em produção e reportou que o comportamento não serve.
+Isso está registrado como "limitação aceita" em `docs/feature/concluidas/202609/20260903-despesa-parcelada-retroativa/specify.md` §2.2 ("Ciclo passado `closed` mas ainda não selado: a parcela aparece como linha já paga e **entra no acerto daquele mês**. Limitação aceita") e como item §2 do backlog `docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimento.md` (ID 038). O usuário testou em produção e reportou que o comportamento não serve.
 
 ### Sintomas reportados (produção, grupo 3878 – Piatã House)
 

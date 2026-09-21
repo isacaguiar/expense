@@ -35,7 +35,7 @@ type PendingRegistration = {
  * Espelha o split de `LoginPage` de propósito — quem vem do "Cadastre-se"
  * precisa reconhecer a mesma tela.
  *
- * docs/feature/20260919-cadastro-de-usuarios/plan.md §6 e §10
+ * docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md §6 e §10
  */
 export default function RegisterPage() {
   const navigate = useNavigate();

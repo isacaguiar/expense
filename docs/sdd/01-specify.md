@@ -32,7 +32,7 @@ Permitir que um grupo de pessoas (família, república, grupo de amigos) registr
   2. `POST /pre-register/verify` — recebe e-mail + `handle` + código. Confirmando, cria o `User` com `email_verified_at` preenchido e o telefone em `whatsapp`, e devolve o mesmo payload de `POST /login` (a conta já nasce autenticada).
   3. `POST /pre-register/resend` — novo código para o mesmo pré-cadastro. Cooldown de 60 s, teto de 5 reenvios, 5 tentativas erradas por código.
 
-  O `handle` existe porque o pré-cadastro é chaveado por e-mail: sem ele, um terceiro poderia sobrescrever o pré-cadastro pendente de outra pessoa com a senha dele. Ver `docs/feature/20260919-cadastro-de-usuarios/plan.md` §10.
+  O `handle` existe porque o pré-cadastro é chaveado por e-mail: sem ele, um terceiro poderia sobrescrever o pré-cadastro pendente de outra pessoa com a senha dele. Ver `docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md` §10.
 - `POST /register` — cria usuário (nome, e-mail, senha ≥6 chars) **sem confirmar o e-mail**. Público, e nenhum cliente o chama desde que o auto-cadastro existe. Mantido por compatibilidade de contrato (`00-constitution.md` §4.1); depreciá-lo é item de backlog.
 - `POST /login` — autentica via `tymon/jwt-auth`, retorna `access_token` (bearer) + TTL. Público.
 - `GET /me`, `POST /logout`, `GET /dashboard` — autenticados.

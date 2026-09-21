@@ -34,7 +34,7 @@ return [
 
     // O app React é servido em /app pelo mesmo domínio (ver
     // docs/feature/concluidas/202608/20260829-deploy-topologia-unificada/). A tela de
-    // cadastro existe desde docs/feature/20260919-cadastro-de-usuarios/.
+    // cadastro existe desde docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/.
     'app_login_url' => '/app/',
     'app_signup_url' => '/app/cadastro',
 

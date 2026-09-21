@@ -286,7 +286,7 @@ passo 4 do script.
 Efeito colateral conhecido, não novo: `grossDebts()` filtra por `paid`
 (`ExpenseController.php:814`), então as duas seguem fora do painel de dívidas brutas
 enquanto aparecem no acerto — divergência já registrada como pré-existente em
-`docs/feature/20260904-parcela-retroativa-contabilizacao/specify.md` §3.
+`docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/specify.md` §3.
 
 
 #### Resultado da execução (2026-09-06, conferido no app pela IA)

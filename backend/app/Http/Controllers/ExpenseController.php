@@ -350,7 +350,7 @@ class ExpenseController extends Controller
             // date_payment (mês de início) — o que importa é existir ao menos
             // uma parcela num ciclo ainda aberto. Se TODAS caem em competência
             // já fechada (por data), a despesa só tocaria histórico e é
-            // recusada. Ver docs/feature/20260903-despesa-parcelada-retroativa/
+            // recusada. Ver docs/feature/concluidas/202609/20260903-despesa-parcelada-retroativa/
             // plan.md §1.
             $allQuotasClosed = collect($request->quotas)->every(
                 fn ($quota) => BillingCycle::statusFor(
@@ -1195,7 +1195,7 @@ class ExpenseController extends Controller
             // quota que o credor pagou depois via pay() continua gerando
             // settlement até o devedor confirmar (feature
             // 20260902-pagamento-ciclo-fechado). Ver
-            // docs/feature/20260904-parcela-retroativa-contabilizacao/specify.md §2.1.
+            // docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/specify.md §2.1.
             if ($entry['bornPaid']) {
                 continue;
             }

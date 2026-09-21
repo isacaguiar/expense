@@ -11,7 +11,7 @@
 --
 -- AGOSTO ENTRA COMO QUITADO (born_paid), a pedido do usuário em 2026-09-05.
 -- Isso REVERTE a decisão registrada em
--- docs/feature/20260904-parcela-retroativa-contabilizacao/specify.md §2.5, onde
+-- docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/specify.md §2.5, onde
 -- agosto era dívida real: os 5 devedores deixam de dever R$ 139,23 cada
 -- (R$ 48,73 do Adestrador + R$ 90,50 da Construção), ou seja R$ 696,15 saem do
 -- acerto de agosto. É consequência intencional, não efeito colateral.

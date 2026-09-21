@@ -2,7 +2,7 @@
  * Tipos dos payloads de autenticação, ancorados no que **cada endpoint
  * devolve ou recebe** — mesma convenção de `group.ts`.
  *
- * docs/feature/20260919-cadastro-de-usuarios/plan.md §4
+ * docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/plan.md §4
  */
 
 /** Resposta de `POST /api/login` e de `POST /api/pre-register/verify`. */

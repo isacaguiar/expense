@@ -51,5 +51,5 @@ de fluxo financeiro nova).
     `php artisan test` verde (suíte completa, sem regressão).
   - Agent `security-reviewer` rodado (toca `ExpenseController` / dado financeiro) e
     `pr-readiness-checker` antes de abrir o PR.
-  - `docs/feature/20260903-despesa-parcelada-retroativa/implementation.md` com o
+  - `docs/feature/concluidas/202609/20260903-despesa-parcelada-retroativa/implementation.md` com o
     comando real + resultado de cada verificação acima.
