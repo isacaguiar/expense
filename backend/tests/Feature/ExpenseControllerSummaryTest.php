@@ -611,7 +611,7 @@ class ExpenseControllerSummaryTest extends TestCase
     }
 
     /**
-     * TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/: uma
+     * TASK-001 de docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/: uma
      * parcela nascida quitada (born_paid, ver ExpenseController::store()) fica
      * visível como linha "Paga" no ciclo passado, mas não entra em
      * balances/settlements — nem o credor espera receber, nem o devedor deve.

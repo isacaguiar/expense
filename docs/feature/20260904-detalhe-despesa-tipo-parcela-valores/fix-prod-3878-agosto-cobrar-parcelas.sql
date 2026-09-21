@@ -112,7 +112,7 @@ COMMIT;
 --    Dashboard (grossDebts) filtra por `paid` (ExpenseController.php:814), então
 --    as duas continuam fora dele enquanto aparecem no acerto. Divergência
 --    grossDebts × settlements já registrada como pré-existente em
---    docs/feature/20260904-parcela-retroativa-contabilizacao/specify.md §3.
+--    docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/specify.md §3.
 -- ============================================================================
 
 

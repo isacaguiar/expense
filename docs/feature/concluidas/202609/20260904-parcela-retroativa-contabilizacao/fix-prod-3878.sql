@@ -1,7 +1,7 @@
 -- Ajuste de dados em produção — grupo 3878 (Piatã House), despesas 8658
 -- (Adestrador) e 8659 (Construção parede escritório/demolição stiep).
 --
--- Ver docs/feature/20260904-parcela-retroativa-contabilizacao/{specify,plan}.md
+-- Ver docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/{specify,plan}.md
 -- §2.5 / §3 pelo raciocínio completo.
 --
 -- PRÉ-REQUISITO: TASK-001 desta feature já em produção (migration

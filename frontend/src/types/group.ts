@@ -8,7 +8,7 @@
  * mantém a informação de qual rota traz o quê, que um tipo único com tudo
  * opcional apagaria.
  *
- * Item de backlog 003 · docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §4
+ * Item de backlog 003 · docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/plan.md §4
  */
 
 /** `creator:id,email`, eager-loaded pelos dois endpoints de grupo. */

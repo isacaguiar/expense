@@ -108,7 +108,7 @@ $expense->quotas()->create([
 
 ## 3. Script SQL de produção (`specify.md` §2.5)
 
-Arquivo versionado: `docs/feature/20260904-parcela-retroativa-contabilizacao/fix-prod-3878.sql`. **Não roda em CI/deploy** — é operação manual do usuário no banco `ex-db` (`expense-api.novemax.com.br`), **gate de produção** (Constitution §5.2). Sequência:
+Arquivo versionado: `docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/fix-prod-3878.sql`. **Não roda em CI/deploy** — é operação manual do usuário no banco `ex-db` (`expense-api.novemax.com.br`), **gate de produção** (Constitution §5.2). Sequência:
 
 1. **Deploy da correção de código primeiro** (migration cria `born_paid`; código novo lê o flag e o guard novo de selagem). Rodar o SQL antes disso não corrige o Bug 2 e a desselagem de julho dispararia `Notifier::cycleSettled` espúrio.
 2. Backup: `CREATE TABLE _bkp_ex_quotas_20260904 AS SELECT * FROM ex_quotas WHERE expense_id IN (8658,8659);` e idem para as 2 linhas de `ex_group_cycle_snapshots`.

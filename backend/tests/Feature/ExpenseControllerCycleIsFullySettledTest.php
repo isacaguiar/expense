@@ -122,7 +122,7 @@ class ExpenseControllerCycleIsFullySettledTest extends TestCase
     }
 
     /**
-     * TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/: uma
+     * TASK-001 de docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/: uma
      * parcela born_paid (nasceu quitada em ciclo já fechado) não gera settlement
      * — não precisa de SettlementConfirmation pra o ciclo ficar "quitado".
      * Contraste com test_false_when_a_settlement_pair_has_no_confirmation, que

@@ -14,7 +14,7 @@ Três pedidos do usuário, dois de código e um de dado:
 2. Na mesma tela, deve aparecer o **valor total** e, nos **pagadores**, o valor de cada um.
 3. As despesas *Adestrador* e *Construção parede escritório* (produção, grupo 3878) tiveram a **1ª parcela paga em maio**, mas estão cadastradas começando em junho.
 
-Os itens 1 e 2 são desenvolvimento novo de UI (`docs/feature/`, não BFF). O item 3 é correção de **dado** em produção — nenhum código —, continuação direta de `docs/feature/20260904-parcela-retroativa-contabilizacao/` (mesmas despesas 8658/8659, mesmo grupo, mesmo padrão de script SQL executado pelo usuário).
+Os itens 1 e 2 são desenvolvimento novo de UI (`docs/feature/`, não BFF). O item 3 é correção de **dado** em produção — nenhum código —, continuação direta de `docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/` (mesmas despesas 8658/8659, mesmo grupo, mesmo padrão de script SQL executado pelo usuário).
 
 ## 2. Achados confirmados
 
@@ -45,7 +45,7 @@ Ou seja, o valor por pagador não exige campo novo no backend — exige renderiz
 
 ### 2.5 Dados de produção — grupo 3878, despesas 8658 e 8659
 
-Estado atual, conforme `docs/feature/20260904-parcela-retroativa-contabilizacao/implementation.md` (TASK-002, já executada):
+Estado atual, conforme `docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/implementation.md` (TASK-002, já executada):
 
 | Despesa | id | Parcelas | Valor | Estado hoje |
 |---|---|---|---|---|

@@ -172,7 +172,7 @@ class FocusCycleTest extends TestCase
     }
 
     /**
-     * TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/: sem
+     * TASK-001 de docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/: sem
      * o filtro por born_paid em computeCycleSummary(), uma parcela retroativa
      * compartilhada gerava um settlement fantasma em junho (closed, não selado)
      * e o focus-cycle ficava preso lá — mesmo a parcela sendo `paid = true`.
