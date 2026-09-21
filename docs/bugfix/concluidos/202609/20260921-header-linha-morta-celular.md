@@ -52,3 +52,8 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-09-21 | Medição a 1100px (desktop) | header `76px`, menu visível com 5 itens, hambúrguer `display: none` — inalterado |
 | 2026-09-21 | `curl` nas 8 páginas | todas `200`; `/precos.php` também mede `150px` no celular |
 | 2026-09-21 | Console do navegador | sem erros |
+
+## Resolução
+Concluído em: 2026-09-21
+Branch: `fix/20260921-header-linha-morta-celular`
+PR: https://github.com/isacaguiar/expense/pull/183
