@@ -60,6 +60,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 |---|---|---|---|---|
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 | [20260901-expense-store-update-422.md](20260901-expense-store-update-422.md) | Testes de despesa (store/update/destroy) falham com 422 após virada de mês | 2026-09-01 | `fix/20260901-expense-store-update-422` | Aberto |
+| [20260921-google-logs-temporarios.md](20260921-google-logs-temporarios.md) | Logs de diagnóstico temporários ativos em produção no callback do Google | 2026-09-21 | `fix/20260921-google-logs-temporarios` | Aberto |
 
 ## Concluídos
 
