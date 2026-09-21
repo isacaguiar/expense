@@ -1,7 +1,7 @@
 /**
  * Tipos do recurso Despesa compartilhados entre telas.
  *
- * Item de backlog 003 · docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §4
+ * Item de backlog 003 · docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/plan.md §4
  */
 
 /**

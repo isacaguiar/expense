@@ -27,7 +27,7 @@ TASK-001 é um diff único e coeso: a coluna `born_paid`, quem a escreve (`store
   - `security-reviewer` e `pr-readiness-checker` rodados antes do PR; `implementation.md` com o comando real + resultado de cada verificação.
 
 - **TASK-002**:
-  - Arquivo `docs/feature/20260904-parcela-retroativa-contabilizacao/fix-prod-3878.sql` com: query de diagnóstico (`plan.md` §3.4), `CREATE TABLE` de backup das linhas de `ex_quotas`/`ex_group_cycle_snapshots` afetadas, e as 3 etapas de `UPDATE` (`plan.md` §3.1–3.3) cada uma precedida do `SELECT` de conferência, tudo dentro de transação explícita (`START TRANSACTION` / `COMMIT`).
+  - Arquivo `docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/fix-prod-3878.sql` com: query de diagnóstico (`plan.md` §3.4), `CREATE TABLE` de backup das linhas de `ex_quotas`/`ex_group_cycle_snapshots` afetadas, e as 3 etapas de `UPDATE` (`plan.md` §3.1–3.3) cada uma precedida do `SELECT` de conferência, tudo dentro de transação explícita (`START TRANSACTION` / `COMMIT`).
   - `implementation.md` com runbook: pré-requisito (TASK-001 mergeada e deployada em produção), ordem dos passos, e os `GET` de verificação pós-script (`plan.md` §3.5) com o resultado esperado de cada um.
   - A decisão sobre backfill amplo vs pontual (resultado da query de diagnóstico) registrada em `implementation.md`.
   - **Não** executado por automação — o `UPDATE` em produção é ação manual do usuário (gate). A task fica `Concluída` quando o script + runbook estão revisados e versionados; a execução em si é registrada em `implementation.md` quando o usuário rodar.

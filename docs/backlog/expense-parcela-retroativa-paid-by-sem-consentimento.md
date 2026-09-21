@@ -1,7 +1,7 @@
 # Parcela retroativa nasce `paid`/`paid_by` em nome do credor, sem consentimento nem aviso
 
 ID: 038
-Origem: docs/feature/20260903-despesa-parcelada-retroativa/specify.md §2.2/§2.5 (achado do `security-reviewer` no PR #144)
+Origem: docs/feature/concluidas/202609/20260903-despesa-parcelada-retroativa/specify.md §2.2/§2.5 (achado do `security-reviewer` no PR #144)
 Criado em: 2026-09-04
 Prioridade: MEDIA
 Status: Aberto
@@ -29,7 +29,7 @@ registrar (não bloqueavam o PR #144 — eram decisão explícita do `specify.md
 2. ~~**Ciclo `closed` não selado.** `computeCycleSummary()` não filtra por `paid` ao
    montar `balances`/`settlements` — a parcela retroativa injeta um par de
    `settlement` novo (não confirmado) num mês passado já reconciliado.~~
-   **Resolvido** por `docs/feature/20260904-parcela-retroativa-contabilizacao/`
+   **Resolvido** por `docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/`
    (TASK-001): a parcela nascida quitada passou a gravar `ex_quotas.born_paid`, e
    `computeCycleSummary()` (`ExpenseController.php:1164-1186`) exclui entry
    `bornPaid` de `balances`/`settlements` — a distinção é `born_paid`, nunca

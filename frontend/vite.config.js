@@ -42,7 +42,7 @@ export default defineConfig({
     // mesmo com a implementação errada. America/Sao_Paulo é o fuso dos
     // usuários, e negativo, que é a condição do bug.
     // Guarda: src/suiteTimezone.test.ts. Ver
-    // docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §5.
+    // docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/plan.md §5.
     env: { TZ: 'America/Sao_Paulo' },
     // Node 22-24 expõe `localStorage`/`sessionStorage` globais nativos atrás
     // dessa flag (default-on sem flag a partir do Node 25), que colidem com

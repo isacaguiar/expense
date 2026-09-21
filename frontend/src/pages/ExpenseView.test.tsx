@@ -71,7 +71,7 @@ describe('ExpenseView', () => {
 
   // Uma parcelada era rotulada "Variável", indistinguível de uma à vista, e o
   // modal da listagem dizia "Parcelada n/N" para a mesma despesa. Backlog 039 /
-  // docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §1.
+  // docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/plan.md §1.
   it('labels an IN_INSTALLMENTS expense with the number of installments', async () => {
     mockGetResponses({
       expense: {

@@ -132,7 +132,7 @@ class ExpenseControllerGrossDebtsTest extends TestCase
     }
 
     /**
-     * TASK-001 de docs/feature/20260904-parcela-retroativa-contabilizacao/:
+     * TASK-001 de docs/feature/concluidas/202609/20260904-parcela-retroativa-contabilizacao/:
      * antes do filtro por born_paid em computeCycleSummary(), gross-debts()
      * (que já filtra `paid`) e settlements de summary() discordavam pra uma
      * parcela retroativa quitada no mesmo ciclo — aqui as duas telas devem

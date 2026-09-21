@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-// Guarda do fuso da suíte (docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §5).
+// Guarda do fuso da suíte (docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/plan.md §5).
 //
 // O CI roda em ubuntu-latest, ou seja em UTC — e a classe de bug do item de
 // backlog 013 (`new Date('YYYY-MM-DD')` é meia-noite UTC e cai no dia anterior

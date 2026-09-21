@@ -91,7 +91,7 @@ const formatMoney = (value: number): string =>
  *
  * Cortar em 10 caracteres monta a data a partir das partes, no fuso local, e
  * atende os dois formatos — não depende de qual deles a API manda.
- * Ver docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §2.
+ * Ver docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/plan.md §2.
  */
 const parseLocalDate = (dateStr: string): Date => {
   const [year, month, day] = dateStr.slice(0, 10).split('-').map(Number);
@@ -125,7 +125,7 @@ const perPersonValue = (value: number, payersCount: number): number =>
  * porque o backend já escolheu a parcela da competência; aqui a rota não
  * recebe `cycles_ago`, então o chip traz só o total de parcelas — qual
  * parcela é qual fica na lista de parcelas.
- * Ver docs/feature/20260912-expense-view-tipo-e-pagadores/plan.md §1.
+ * Ver docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/plan.md §1.
  */
 const typeLabel = (expense: ExpenseDetail): string => {
   if (expense.expense_type === 'FIXED') return 'Fixa';
@@ -430,7 +430,7 @@ const ExpenseView: React.FC = () => {
     // destaque do topo) e FIXED nasce sem Quota na competência — o `quotas[]`
     // dela é esparso (os meses em que alguém pagou), não um cronograma. A
     // condição é o tipo, nunca "tem mais de uma quota".
-    // Ver docs/feature/20260912-expense-view-tipo-e-pagadores/specify.md §2.6.
+    // Ver docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/specify.md §2.6.
     const showInstallments = expense.expense_type === 'IN_INSTALLMENTS';
 
     content = (
