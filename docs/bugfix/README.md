@@ -65,6 +65,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/202609/20260921-google-logs-temporarios.md](concluidos/202609/20260921-google-logs-temporarios.md) | Logs de diagnóstico temporários ativos em produção no callback do Google | 2026-09-21 | #184 |
 | [concluidos/202609/20260921-header-linha-morta-celular.md](concluidos/202609/20260921-header-linha-morta-celular.md) | Terceira linha invisível cobra 32px no cabeçalho do celular | 2026-09-21 | #183 |
 | [concluidos/202609/20260921-legal-comentario-redata-documento.md](concluidos/202609/20260921-legal-comentario-redata-documento.md) | Comentário de manutenção dentro do texto jurídico redata o documento | 2026-09-21 | #182 |
 | [concluidos/202609/20260920-agents-md-caminho-codex.md](concluidos/202609/20260920-agents-md-caminho-codex.md) | Caminho dos agents no `AGENTS.md` com caixa errada (`.Codex/agents/`) | 2026-09-20 | #170 |
