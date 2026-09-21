@@ -10,6 +10,7 @@ import {
   CardContent,
   Checkbox,
   CircularProgress,
+  Divider,
   FormControlLabel,
   Snackbar,
   TextField,
@@ -17,6 +18,7 @@ import {
 } from '@mui/material';
 import { API_BASE_URL } from '../config';
 import { getInitials } from '../layouts/group/getInitials';
+import { openConsentBanner } from '../analytics/consent';
 
 const formatWhatsapp = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -265,6 +267,24 @@ const Profile: React.FC = () => {
                 Vincular conta Google
               </Button>
             </Box>
+          </Box>
+
+          {/*
+            Fora do <form>: rever o consentimento não é um campo do perfil e
+            não depende de "Salvar" — a escolha é gravada no próprio banner.
+          */}
+          <Divider sx={{ my: 3 }} />
+          <Box>
+            <Typography variant="subtitle2" gutterBottom>
+              Privacidade
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+              Você decide se o uso do app pode ser medido pelo Google Analytics. Dá para mudar
+              de ideia quando quiser.
+            </Typography>
+            <Button variant="outlined" size="small" onClick={openConsentBanner}>
+              Preferências de cookies
+            </Button>
           </Box>
         </CardContent>
       </Card>

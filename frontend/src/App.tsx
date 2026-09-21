@@ -22,46 +22,60 @@ import ChangePassword from './pages/ChangePassword';
 import RequireAuth from './components/RequireAuth';
 import GroupShellLayout from './layouts/GroupShellLayout';
 import SimpleShellLayout from './layouts/SimpleShellLayout';
+import ConsentBanner from './analytics/ConsentBanner';
+import RouteTracker from './analytics/RouteTracker';
 
 const App = () => {
   return (
-    <Routes>
-      <Route path="/" element={<LoginPage />} />
-      <Route path="/aceitar-convite" element={<AcceptInvitePage />} />
-      <Route path="/cadastro" element={<RegisterPage />} />
+    <>
+      {/*
+        Fora do `RequireAuth` e fora de qualquer layout: o consentimento
+        precisa ser pedido também em `/`, `/cadastro` e `/aceitar-convite`,
+        que são as telas onde um visitante chega antes de ter conta.
+      */}
+      <ConsentBanner />
 
-      {/* Rotas privadas */}
-      <Route element={<RequireAuth />}>
-        {/* Com grupo selecionado: sidebar/navegação de grupo (GroupShellLayout) */}
-        <Route element={<GroupShellLayout />}>
-          <Route path="/groups/:id/summary" element={<GroupSummary />} />
-          <Route path="/groups/:id/payments" element={<Payments />} />
-          <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
-          <Route path="/groups/:id/expenses/new" element={<ExpenseForm />} />
-          <Route path="/groups/:id/expenses/:expenseId" element={<ExpenseView />} />
-          <Route path="/groups/:id/members" element={<GroupMembersForm />} />
-          <Route path="/groups/:id/reports" element={<GroupReports />} />
-          <Route path="/groups/:id/edit" element={<GroupForm />} />
+      {/* Mede cada mudança de rota; não renderiza nada. */}
+      <RouteTracker />
+
+      <Routes>
+        <Route path="/" element={<LoginPage />} />
+        <Route path="/aceitar-convite" element={<AcceptInvitePage />} />
+        <Route path="/cadastro" element={<RegisterPage />} />
+
+        {/* Rotas privadas */}
+        <Route element={<RequireAuth />}>
+          {/* Com grupo selecionado: sidebar/navegação de grupo (GroupShellLayout) */}
+          <Route element={<GroupShellLayout />}>
+            <Route path="/groups/:id/summary" element={<GroupSummary />} />
+            <Route path="/groups/:id/payments" element={<Payments />} />
+            <Route path="/groups/:id/expenses" element={<ExpenseManager />} />
+            <Route path="/groups/:id/expenses/new" element={<ExpenseForm />} />
+            <Route path="/groups/:id/expenses/:expenseId" element={<ExpenseView />} />
+            <Route path="/groups/:id/members" element={<GroupMembersForm />} />
+            <Route path="/groups/:id/reports" element={<GroupReports />} />
+            <Route path="/groups/:id/edit" element={<GroupForm />} />
+          </Route>
+
+          {/* Sem grupo selecionado: cabeçalho simples (SimpleShellLayout) */}
+          <Route element={<SimpleShellLayout />}>
+            <Route path="/meus-grupos" element={<Dashboard />} />
+            <Route path="/dashboard" element={<Navigate to="/meus-grupos" replace />} />
+            <Route path="/groups/new" element={<GroupForm />} />
+            <Route path="/expenses" element={<ExpensesEntry />} />
+            <Route path="/summary" element={<SummaryEntry />} />
+            <Route path="/payments" element={<PaymentsEntry />} />
+            <Route path="/members" element={<MembersEntry />} />
+            <Route path="/reports" element={<ReportsEntry />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/change-password" element={<ChangePassword />} />
+          </Route>
         </Route>
 
-        {/* Sem grupo selecionado: cabeçalho simples (SimpleShellLayout) */}
-        <Route element={<SimpleShellLayout />}>
-          <Route path="/meus-grupos" element={<Dashboard />} />
-          <Route path="/dashboard" element={<Navigate to="/meus-grupos" replace />} />
-          <Route path="/groups/new" element={<GroupForm />} />
-          <Route path="/expenses" element={<ExpensesEntry />} />
-          <Route path="/summary" element={<SummaryEntry />} />
-          <Route path="/payments" element={<PaymentsEntry />} />
-          <Route path="/members" element={<MembersEntry />} />
-          <Route path="/reports" element={<ReportsEntry />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/change-password" element={<ChangePassword />} />
-        </Route>
-      </Route>
-
-      {/* rota “catch-all” opcional */}
-      <Route path="*" element={<h2>404: Página não encontrada</h2>} />
-    </Routes>
+        {/* rota “catch-all” opcional */}
+        <Route path="*" element={<h2>404: Página não encontrada</h2>} />
+      </Routes>
+    </>
   );
 };
 

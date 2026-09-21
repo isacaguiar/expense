@@ -667,6 +667,27 @@ html {
   color: var(--green-dark);
 }
 
+/*
+ * Parece um link do rodapé, mas é `<button>` porque a ação é reabrir o banner,
+ * não navegar. Fica escondido até o `consent.js` revelar.
+ */
+.legal-footer-prefs {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.legal-footer-prefs:hover {
+  color: var(--green-dark);
+}
+
+.legal-footer-prefs[hidden] {
+  display: none;
+}
+
 .legal-footer-logo-link {
   display: inline-flex;
   align-items: center;
@@ -935,6 +956,58 @@ html {
   font-size: 0.95rem;
 }
 
+/* ---------- Consentimento de cookies ---------- */
+
+/*
+ * Banner ancorado embaixo, não modal: não cobre o conteúdo nem exige decisão
+ * para continuar lendo. O estado inicial é o atributo `hidden` do markup —
+ * este bloco cuida só da aparência, e quem revela é o `consent.js`.
+ */
+.consent-banner {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  background: #fff;
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -8px 24px rgba(11, 37, 69, 0.08);
+}
+
+/* Explícito para não depender da especificidade do `[hidden]` do navegador. */
+.consent-banner[hidden] {
+  display: none;
+}
+
+.consent-banner-inner {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.consent-banner-text {
+  flex: 1;
+  min-width: 260px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.consent-banner-text a {
+  color: var(--green-dark);
+  text-decoration: underline;
+}
+
+.consent-banner-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 960px) {
@@ -1014,5 +1087,14 @@ html {
   .cta-banner-inner {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  /* Os dois botões dividem a largura em vez de espremer no canto. */
+  .consent-banner-actions {
+    width: 100%;
+  }
+
+  .consent-banner-actions .btn {
+    flex: 1;
   }
 }
