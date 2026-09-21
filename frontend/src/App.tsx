@@ -23,6 +23,7 @@ import RequireAuth from './components/RequireAuth';
 import GroupShellLayout from './layouts/GroupShellLayout';
 import SimpleShellLayout from './layouts/SimpleShellLayout';
 import ConsentBanner from './analytics/ConsentBanner';
+import RouteTracker from './analytics/RouteTracker';
 
 const App = () => {
   return (
@@ -33,6 +34,9 @@ const App = () => {
         que são as telas onde um visitante chega antes de ter conta.
       */}
       <ConsentBanner />
+
+      {/* Mede cada mudança de rota; não renderiza nada. */}
+      <RouteTracker />
 
       <Routes>
         <Route path="/" element={<LoginPage />} />
