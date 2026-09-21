@@ -6,13 +6,13 @@ Versão: 1.0 · Criado em: 20260920
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-321 | Criar `legal_updated_at()` no `helpers.php`, com fallback por `filemtime` | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-322 | Passar as duas páginas legais a exibir a data pelo helper | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-323 | Extrair o texto da Política de Privacidade para `site/src/legal/privacidade.php` | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-324 | Extrair o texto dos Termos para `site/src/legal/termos.php`, com autoria de 2026-08-24 | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-325 | Criar o gerador `site/tools/gerar-datas-legais.sh` | infra | plan.md §2 | nenhum | Pendente |
-| TASK-326 | Ligar o gerador ao `deploy-site.yml` com histórico completo | infra | plan.md §2 | nenhum | Pendente |
-| TASK-327 | Remover `updated_at` do `config.php` | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-321 | Criar `legal_updated_at()` no `helpers.php`, com fallback por `filemtime` | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-322 | Passar as duas páginas legais a exibir a data pelo helper | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-323 | Extrair o texto da Política de Privacidade para `site/src/legal/privacidade.php` | frontend | plan.md §1 | nenhum | Concluída |
+| TASK-324 | Extrair o texto dos Termos para `site/src/legal/termos.php`, com autoria de 2026-08-24 | frontend | plan.md §1 | nenhum | Concluída |
+| TASK-325 | Criar o gerador `site/tools/gerar-datas-legais.sh` | infra | plan.md §2 | nenhum | Concluída |
+| TASK-326 | Ligar o gerador ao `deploy-site.yml` com histórico completo | infra | plan.md §2 | nenhum | Concluída |
+| TASK-327 | Remover `updated_at` do `config.php` | frontend | plan.md §4 | nenhum | Concluída |
 
 ## Critérios de aceite
 

@@ -16,7 +16,6 @@ return [
 
     // Base absoluta de `og:url` e `<link rel="canonical">`. Sem barra final.
     'site_url' => 'https://expense.novemax.com.br',
-    'updated_at' => '24 de agosto de 2026',
 
     /*
      * Propriedade do Google Analytics. Não é segredo — vai no HTML de qualquer
