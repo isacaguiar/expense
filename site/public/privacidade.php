@@ -35,6 +35,15 @@ require __DIR__ . '/../src/templates/nav.php';
       <li><strong>Dados de grupos e despesas:</strong> grupos que você cria ou participa, despesas lançadas, parcelas, categorias e participantes.</li>
       <li><strong>Dados de pagamento:</strong> informações necessárias para gerar cobranças via Pix e comprovantes de pagamento anexados por você.</li>
       <li><strong>Dados técnicos:</strong> registros de acesso e uso básicos, necessários para segurança e funcionamento do serviço.</li>
+      <li>
+        <strong>Dados de medição de uso (só com o seu consentimento):</strong> se você aceitar,
+        usamos o Google Analytics para entender como o site e o aplicativo são usados — páginas
+        e telas visitadas, origem da visita, tipo de dispositivo e navegador. Essa medição usa
+        cookies. <strong>Enquanto você não aceitar, nenhum cookie de medição é criado e nenhum
+        dado é enviado ao Google.</strong> Os endereços das telas são enviados sem identificadores:
+        o endereço de uma despesa, por exemplo, é registrado como um padrão genérico, nunca com o
+        número do seu grupo, da sua despesa, nem com dados que venham no endereço.
+      </li>
     </ul>
   </section>
 
@@ -56,6 +65,12 @@ require __DIR__ . '/../src/templates/nav.php';
       viabilizam funcionalidades do serviço (por exemplo, geração de cobrança Pix), sempre limitado
       ao necessário para a funcionalidade.
     </p>
+    <p>
+      Se — e somente se — você aceitar a medição de uso, os dados descritos no item 2 são tratados
+      pelo <strong>Google</strong> (Google Analytics), que atua como operador desses dados e pode
+      processá-los fora do Brasil. Nenhum dado de conta, grupo, despesa ou pagamento é enviado ao
+      Google.
+    </p>
   </section>
 
   <section>
@@ -72,6 +87,14 @@ require __DIR__ . '/../src/templates/nav.php';
     <p>
       Você pode solicitar acesso, correção ou exclusão dos seus dados pessoais a qualquer momento,
       entrando em contato pelo e-mail informado abaixo.
+    </p>
+    <p>
+      A medição de uso descrita no item 2 depende do seu consentimento, e esse consentimento é
+      <strong>revogável a qualquer momento</strong>, sem prejuízo de nada: continuar usando o
+      serviço não exige aceitá-la. Para rever ou mudar a sua escolha, use
+      <strong>"Preferências de cookies"</strong>, no rodapé deste site, ou a seção
+      <strong>Privacidade</strong> do seu perfil, dentro do aplicativo. Ao recusar, a medição
+      deixa de acontecer a partir daquele momento.
     </p>
   </section>
 
