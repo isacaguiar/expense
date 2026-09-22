@@ -415,6 +415,8 @@ class ExpenseController extends Controller
             $expense->payers()->syncWithoutDetaching($request->payers);
 
             // Quotas
+            $bornPaidCount = 0;
+
             foreach ($request->quotas as $quotaData) {
                 // Regra geral: a despesa nasce PENDENTE — o cliente não decide o
                 // status inicial, mesmo enviando 'paid' no payload.
@@ -431,6 +433,10 @@ class ExpenseController extends Controller
                         Carbon::now()
                     ) === 'closed';
 
+                if ($bornPaid) {
+                    $bornPaidCount++;
+                }
+
                 $expense->quotas()->create([
                     'date_expected' => $quotaData['date_expected'],
                     'number' => $quotaData['number'],
@@ -446,6 +452,12 @@ class ExpenseController extends Controller
 
             // Fora da transação: uma falha aqui não desfaz a despesa criada.
             Notifier::expenseCreated($expense);
+
+            // Parcela retroativa nasceu paga em nome do credor sem ele ter
+            // registrado a despesa — avisa ele (docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimento.md).
+            if ($bornPaidCount > 0) {
+                Notifier::expenseBornPaid($expense, $bornPaidCount);
+            }
 
             return response()->json(['message' => 'Despesa criada com sucesso', 'expense_id' => $expense->id], 201);
 

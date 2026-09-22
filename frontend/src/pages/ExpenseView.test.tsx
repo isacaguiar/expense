@@ -397,6 +397,27 @@ describe('ExpenseView', () => {
     expect(payload).toMatchObject({ total_value: 1234.56 });
   });
 
+  // Regressão do item de backlog 040: date_payment vem da API em ISO-8601 com
+  // hora e Z; um <input type="date"> só aceita YYYY-MM-DD e descarta qualquer
+  // outro formato, renderizando o campo vazio (a fixture padrão desta suíte
+  // usa o formato curto, que mascara o bug — por isso o override aqui).
+  it('pre-fills the Data field when the API sends date_payment in ISO-8601', async () => {
+    const user = userEvent.setup();
+    mockGetResponses({ expense: { ...expenseDetail, date_payment: '2026-08-01T00:00:00.000000Z' } });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    await user.click(screen.getByRole('button', { name: 'Editar' }));
+    await screen.findByText('Editar despesa');
+
+    expect(screen.getByLabelText('Data')).toHaveValue('2026-08-01');
+  });
+
   it('shows the error message returned by the API when saving fails', async () => {
     const user = userEvent.setup();
     vi.mocked(axios.put).mockRejectedValue({
