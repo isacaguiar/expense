@@ -21,7 +21,7 @@ Nenhuma marcada → segue no BFF.
 - **Sintoma:** em produção, o formulário de `/cadastro` é submetido com sucesso e a tela avança normalmente para a etapa "digite o código", mas o e-mail com o código de 6 dígitos nunca chega à caixa da pessoa. Sem o código, a conta não é criada — o cadastro público está inutilizável em produção. Atinge igualmente os outros dois e-mails do sistema (`UserInvitedMail`, recuperação de senha), que usam o mesmo mailer default.
 - **Reprodução:** 1) abrir `https://expense.novemax.com.br/app/cadastro`; 2) preencher o formulário com um e-mail Gmail válido; 3) submeter → `POST /api/pre-register` devolve 200 e a UI mostra a etapa do código; 4) conferir a caixa de entrada e o spam do destinatário → nada chega, nem depois de minutos.
 - **Esperado vs. atual:** esperado — o e-mail com o código chega em segundos, dentro da validade de 15 min (`PreRegistrationService::CODE_TTL_MINUTES`). Atual — nenhuma mensagem chega e nenhum erro é sinalizado em lugar nenhum: nem na tela, nem no `laravel.log`, nem como bounce.
-- **Causa raiz:** **parcialmente determinada — não fechar esta seção antes do veredito do Track Delivery.** Está provado que a aplicação e a configuração de e-mail do Laravel estão corretas (itens 3 e 6 da investigação abaixo): o Exim da conta **aceita e entrega** mensagens enviadas pelo app. A falha está na **entrega de saída** do Exim da hospedagem compartilhada (`br980.hostgator.com.br`) para destinos externos — fora do repositório. Falta o veredito por mensagem (cPanel → Email → Track Delivery e Mail Queue Manager) para saber se é deferimento por reputação do IP compartilhado, limite de envio da conta ou descarte silencioso.
+- **Causa raiz:** **confirmada (Teste E).** `config/mail.php:46` repassa `MAIL_EHLO_DOMAIN` para `local_domain` do transporte SMTP, e essa variável **nunca era definida em nenhum lugar do projeto** — não estava em `.env.example`, não estava em `.env`/`.env.production` local, e principalmente não estava em `.github/workflows/deploy-backend.yml`, que gera o `.env` de produção (item 11). Sem `local_domain`, o Symfony Mailer declarava o HELO/EHLO da sessão SMTP usando o hostname da própria máquina — em hospedagem compartilhada isso normalmente não é um domínio reconhecível (`localhost`/hostname interno), e a HostGator filtra silenciosamente (aceita, nunca entrega, sem bounce) mensagens cujo HELO não bate com um domínio válido apontando para o IP do servidor. É comportamento documentado da própria HostGator para clientes com o mesmo sintoma (PHP/Laravel, e-mail de verificação de conta): suporte da HostGator respondeu a um relato idêntico dizendo textualmente que o script "está enviando de localhost como o nome HELO (ou 127.0.0.1)" e que os servidores deles "não permitem que e-mails sejam enviados do localhost por questões de segurança" — <https://www.reddit.com/r/laravel/comments/tj85xt/problem_with_hostgators_smtp_filtering/>. Isso explica de forma consistente toda a investigação: Testes A e B aceitos sem exceção e sem bounce (item 4-5, filtro de saída silencioso, não rejeição SMTP), Teste C entregue (item 6, entrega **local** dentro do próprio servidor não passa pelo mesmo filtro de HELO de saída), nenhuma DSN no Maildir (item 7, não é rejeição — é descarte), e o **Teste E chegou** (item 12) com `local_domain` setado explicitamente para `novemax.com.br`, nas mesmas condições dos testes A/B que sumiram sem ele.
 
 ### Investigação (2026-09-21)
 
@@ -36,6 +36,9 @@ Nenhuma marcada → segue no BFF.
 | 7 | Maildir de `admin@novemax.com.br` (`~/mail/novemax.com.br/admin/{new,cur}`) após os testes | Nenhuma DSN / `Mailer-Daemon` / bounce; as mensagens vizinhas são de 21/09 05:20 e 16/09, sem relação | Rejeição dura do Gmail dentro da sessão SMTP (geraria bounce em segundos) |
 | 8 | `nslookup -type=TXT/MX` nos dois domínios | `novemax.com.br`: SPF com `+include:websitewelcome.com`. `expense-api.novemax.com.br`: SPF **sem** o include e **sem MX**; DKIM publicado | — (achado, ver abaixo) |
 | 9 | `exim -bp` no servidor | `permission denied; not admin` | Inspeção da fila pelo shell — só via cPanel |
+| 10 | `uapi EmailTrack search` no servidor | `errors: Failed to load module "EmailTrack": Can't locate Cpanel/API/EmailTrack.pm in @INC` | API do Track Delivery via shell — módulo não instalado nesta conta HostGator; só resta a UI web (cPanel → Email → Track Delivery) |
+| 11 | Auditoria de `MAIL_EHLO_DOMAIN` no repo (`.env.example`, `.env`, `.env.production`, `deploy-backend.yml`) | Variável **não definida em nenhum arquivo**; `config('mail.mailers.smtp.local_domain')` resolve `null` em produção | Hipótese descartada; confirma que o HELO/EHLO da sessão SMTP fica a cargo do fallback do Symfony Mailer, não de config explícita |
+| 12 | Teste E — mesmo `Mail::raw` dos testes A/B, com `config(['mail.mailers.smtp.local_domain' => 'novemax.com.br'])` antes do envio | **Chegou** — `ok E`, mensagem recebida na caixa Gmail de destino | Confirmação final: com `local_domain` setado o e-mail chega; sem ele (testes A/B, mesmas condições) some. Causa raiz provada |
 
 **Achados de configuração já confirmados, independentes do veredito final** (entram na §2 conforme a correção escolhida):
 
@@ -48,10 +51,10 @@ Nenhuma marcada → segue no BFF.
 
 ## 2. Correção
 
-- **O que muda e por quê:** <descrição da mudança>
-- **Arquivos tocados:** <lista>
-- **Teste de regressão:** <qual teste reproduz o bug e passa a verde com a correção — ou "sem teste: <motivo>", ex. bug puramente visual>
-- **Riscos / efeitos colaterais:** <o que mais pode ser afetado; "nenhum identificado" se for o caso>
+- **O que muda e por quê:** `deploy-backend.yml` passa a escrever `MAIL_EHLO_DOMAIN=novemax.com.br` no `.env` gerado (mesmo domínio da conta autenticada `admin@novemax.com.br`, que resolve para o IP do servidor — `nslookup novemax.com.br` inclui `162.241.203.30`). Isso preenche `local_domain` em `config/mail.php:46`, que ficava `null` e fazia o Symfony Mailer declarar HELO/EHLO com o hostname da máquina em vez de um domínio reconhecível — o gatilho do filtro de saída da HostGator, confirmado pelo Teste E (item 12).
+- **Arquivos tocados:** `.github/workflows/deploy-backend.yml` (adiciona uma linha ao bloco que gera o `.env`, ~linha 51). Tentei documentar a variável em `backend/.env.example` também, mas esse arquivo está no `.gitignore` raiz e nunca foi versionado — a edição existe só localmente e não entra neste PR; registrado como achado à parte em `docs/backlog/backend-env-example-gitignored.md` (item 056).
+- **Teste de regressão:** não há teste automatizado de infraestrutura de deploy no projeto (o workflow não roda em CI de PR). Validação é manual, igual aos Testes A-E já feitos: depois do deploy, `POST /api/pre-register` em produção com um e-mail Gmail real e confirmar chegada do código na caixa de entrada (não só "sem exceção").
+- **Riscos / efeitos colaterais:** nenhum identificado — `MAIL_EHLO_DOMAIN` é aditivo, não sobrescreve nada existente, e não é segredo (pode ficar em texto plano no workflow, como `APP_URL` já fica). Efeito colateral **desejado**: como os três e-mails do sistema (`PreRegisterCodeMail`, `UserInvitedMail`, recuperação de senha) compartilham o mailer default, a correção destrava os três de uma vez.
 
 ## 3. Implementação (log)
 
@@ -59,4 +62,7 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 
 | Data | Comando | Resultado |
 |---|---|---|
-| <AAAA-MM-DD> | <ex.: `cd frontend && npx tsc --noEmit`> | <ex.: sem erros> |
+| 2026-09-21 | `php artisan tinker --execute="config(['mail.mailers.smtp.local_domain' => 'novemax.com.br']); Mail::raw(...)"` no servidor de produção (Teste E) | `ok E` sem exceção **e** mensagem recebida na caixa Gmail de destino — confirma a causa raiz antes de tocar em código |
+| 2026-09-21 | `git diff -- .github/workflows/deploy-backend.yml backend/.env.example` | Diff mínimo: 1 linha nova no workflow (`MAIL_EHLO_DOMAIN=novemax.com.br`), bloco de comentário + variável documentada no `.env.example` |
+| 2026-09-21 | Checagem de sintaxe do YAML | Sem `actionlint`/`yaml` disponíveis neste ambiente; validação manual — indentação idêntica às linhas irmãs do mesmo bloco `echo "..." >> .env`, `gh workflow view deploy-backend.yml` reconhece o arquivo sem erro de parse |
+| — (pendente) | Deploy real (`main`) + `POST /api/pre-register` em produção com e-mail Gmail real | A rodar após merge do PR — é a validação de ponta a ponta que fecha o bug (Teste E comprovou a causa, mas em sessão manual isolada, sem passar pelo `deploy-backend.yml`) |

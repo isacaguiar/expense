@@ -51,6 +51,7 @@ jobs:
           echo "MAIL_ENCRYPTION=tls" >> .env
           echo "MAIL_FROM_ADDRESS=no-reply@expense-api.novemax.com.br" >> .env
           echo "MAIL_FROM_NAME=\"SCD Novemax\"" >> .env
+          echo "MAIL_EHLO_DOMAIN=novemax.com.br" >> .env
 
           echo "JWT_SECRET=${{ secrets.ENV_JWT_KEY }}" >> .env
           echo "PIX_KEY=${{ secrets.ENV_PIX_KEY }}" >> .env

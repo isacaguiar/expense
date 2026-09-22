@@ -66,6 +66,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 053 | [limite-grupos-constante-duplicada.md](limite-grupos-constante-duplicada.md) | Limite de grupos duplicado em backend, frontend e site, agora anunciado como plano | site-conteudo-e-precos | 2026-09-20 | MEDIA | Aberto |
 | 054 | [site-og-image-dedicada.md](site-og-image-dedicada.md) | Imagem de compartilhamento do site é uma screenshot reaproveitada | site-conteudo-e-precos | 2026-09-20 | BAIXA | Aberto |
 | 055 | [site-header-mobile-duas-linhas.md](site-header-mobile-duas-linhas.md) | Header do site ocupa duas linhas no celular | site-conteudo-e-precos (verificação do deploy) | 2026-09-20 | BAIXA | Aberto |
+| 056 | [backend-env-example-gitignored.md](backend-env-example-gitignored.md) | `backend/.env.example` está no `.gitignore` e nunca foi versionado | cadastro-codigo-email-nao-chega | 2026-09-21 | BAIXA | Aberto |
 
 ## Itens concluídos
 
