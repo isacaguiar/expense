@@ -66,6 +66,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 053 | [limite-grupos-constante-duplicada.md](limite-grupos-constante-duplicada.md) | Limite de grupos duplicado em backend, frontend e site, agora anunciado como plano | site-conteudo-e-precos | 2026-09-20 | MEDIA | Aberto |
 | 054 | [site-og-image-dedicada.md](site-og-image-dedicada.md) | Imagem de compartilhamento do site é uma screenshot reaproveitada | site-conteudo-e-precos | 2026-09-20 | BAIXA | Aberto |
 | 055 | [site-header-mobile-duas-linhas.md](site-header-mobile-duas-linhas.md) | Header do site ocupa duas linhas no celular | site-conteudo-e-precos (verificação do deploy) | 2026-09-20 | BAIXA | Aberto |
+| 056 | [baseline-especificacao-convite-grupo-desatualizada.md](baseline-especificacao-convite-grupo-desatualizada.md) | `01-specify.md` §3.2 descreve o convite de grupo com token errado (`Password::getRepository()` em vez do cache dedicado real) | convite-e-recuperacao-senha-link-dominio-errado | 2026-09-21 | BAIXA | Aberto |
 
 ## Itens concluídos
 
