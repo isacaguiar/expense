@@ -4,7 +4,7 @@ ID: 040
 Origem: docs/feature/concluidas/202609/20260912-expense-view-tipo-e-pagadores/implementation.md (achado ao executar a TASK-278)
 Criado em: 2026-09-12
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-347
 
 ## Descrição
 

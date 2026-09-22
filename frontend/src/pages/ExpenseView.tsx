@@ -207,7 +207,10 @@ const ExpenseView: React.FC = () => {
     // valor por ~100 se o usuário salvar sem tocar no campo. Formatando aqui
     // pro mesmo padrão pt-BR que o parser espera.
     setValue(Number(expense.total_value).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
-    setDate(expense.date_payment);
+    // date_payment vem cru da API (ISO-8601 com hora e Z — comentário acima de
+    // parseLocalDate()); um <input type="date"> só aceita YYYY-MM-DD e
+    // descarta silenciosamente qualquer outro formato, renderizando vazio.
+    setDate(expense.date_payment.slice(0, 10));
     setPayerId(String(expense.user_payer_id));
     setParticipantIds(expense.payers.map(p => p.id));
     setExpenseType(expense.expense_type);
