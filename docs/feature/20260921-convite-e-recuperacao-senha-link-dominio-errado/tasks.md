@@ -6,14 +6,14 @@ Versão: 1.0 · Criado em: 20260921
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-328 | Trocar `url()` por `config('services.frontend_url')` no link do convite de grupo | backend | plan.md §1 | nenhum | Pendente |
-| TASK-329 | Trocar `url()` por `config('services.frontend_url')` no link de recuperação de senha | backend | plan.md §1 | nenhum | Pendente |
-| TASK-330 | Adicionar teste que prova o host do link de `UserInvitedMail` | backend | plan.md §3 | nenhum | Pendente |
-| TASK-331 | Adicionar teste que prova o host do link de `forgotPassword` | backend | plan.md §3 | nenhum | Pendente |
-| TASK-332 | Dar a `AcceptInvitePage` a prop `mode` e a copy condicional de `mode="reset"` | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-333 | Registrar a rota `/recuperar-senha` em `App.tsx` | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-334 | Teste de `AcceptInvitePage` para `mode="reset"` | frontend | plan.md §3 | nenhum | Pendente |
-| TASK-335 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §4 | antes do merge | Pendente |
+| TASK-328 | Trocar `url()` por `config('services.frontend_url')` no link do convite de grupo | backend | plan.md §1 | nenhum | Concluída |
+| TASK-329 | Trocar `url()` por `config('services.frontend_url')` no link de recuperação de senha | backend | plan.md §1 | nenhum | Concluída |
+| TASK-330 | Adicionar teste que prova o host do link de `UserInvitedMail` | backend | plan.md §3 | nenhum | Concluída |
+| TASK-331 | Adicionar teste que prova o host do link de `forgotPassword` | backend | plan.md §3 | nenhum | Concluída |
+| TASK-332 | Dar a `AcceptInvitePage` a prop `mode` e a copy condicional de `mode="reset"` | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-333 | Registrar a rota `/recuperar-senha` em `App.tsx` | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-334 | Teste de `AcceptInvitePage` para `mode="reset"` | frontend | plan.md §3 | nenhum | Concluída |
+| TASK-335 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §4 | antes do merge | Concluída |
 
 ## Critérios de aceite
 
