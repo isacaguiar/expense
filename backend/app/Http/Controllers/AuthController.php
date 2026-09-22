@@ -33,6 +33,15 @@ class AuthController extends Controller
             return response()->json(['error' => 'Não autorizado'], 401);
         }
 
+        if (Auth::guard('api')->user()->email_verified_at === null) {
+            Log::warning('Falha no login: e-mail não verificado', ['email' => $credentials['email'] ?? null]);
+            Auth::guard('api')->logout();
+
+            return response()->json([
+                'error' => 'E-mail não verificado. Use "Esqueci minha senha" para confirmar seu e-mail e definir uma nova senha.',
+            ], 403);
+        }
+
         Log::info('Login bem-sucedido para o usuário', [
             'user_id' => Auth::guard('api')->user()->id,
             'email' => Auth::guard('api')->user()->email,
