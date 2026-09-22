@@ -4,7 +4,7 @@ ID: 042
 Origem: docs/feature/concluidas/202609/20260919-cadastro-de-usuarios/specify.md §3
 Criado em: 2026-09-19
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-336
 
 ## Descrição
 

@@ -54,8 +54,8 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 038 | [expense-parcela-retroativa-paid-by-sem-consentimento.md](expense-parcela-retroativa-paid-by-sem-consentimento.md) | Parcela retroativa nasce `paid`/`paid_by` em nome do credor, sem consentimento nem aviso | despesa-parcelada-retroativa | 2026-09-04 | MEDIA | Aberto |
 | 039 | [expense-view-tipo-e-pagadores.md](expense-view-tipo-e-pagadores.md) | Página da despesa (`ExpenseView`) rotula Parcelada como "Variável" e não lista pagadores | detalhe-despesa-tipo-parcela-valores | 2026-09-05 | MEDIA | Promovido para TASK-276 |
 | 040 | [expense-view-edicao-campo-data-vazio.md](expense-view-edicao-campo-data-vazio.md) | Modo de edição da página da despesa abre com o campo Data vazio | expense-view-tipo-e-pagadores | 2026-09-12 | MEDIA | Aberto |
-| 042 | [register-legado-sem-verificacao.md](register-legado-sem-verificacao.md) | `POST /register` legado cria conta sem verificar o e-mail | cadastro-de-usuarios | 2026-09-19 | MEDIA | Aberto |
-| 043 | [login-nao-checa-email-verificado.md](login-nao-checa-email-verificado.md) | `AuthController::login` não checa `email_verified_at` | cadastro-de-usuarios | 2026-09-19 | MEDIA | Aberto |
+| 042 | [register-legado-sem-verificacao.md](register-legado-sem-verificacao.md) | `POST /register` legado cria conta sem verificar o e-mail | cadastro-de-usuarios | 2026-09-19 | MEDIA | Promovido para TASK-336 |
+| 043 | [login-nao-checa-email-verificado.md](login-nao-checa-email-verificado.md) | `AuthController::login` não checa `email_verified_at` | cadastro-de-usuarios | 2026-09-19 | MEDIA | Promovido para TASK-338 |
 | 044 | [expurgo-pre-cadastro-expirado.md](expurgo-pre-cadastro-expirado.md) | Sem rotina de expurgo de `ex_user_pre_create` | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
 | 045 | [pre-cadastro-oraculo-e-mailable-queueable.md](pre-cadastro-oraculo-e-mailable-queueable.md) | Endurecer enumeração no pré-cadastro e travar o Mailable do código fora da fila | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
 | 046 | [login-refresh-token-undefined.md](login-refresh-token-undefined.md) | `LoginPage` grava `refreshToken` com a string `"undefined"` | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
@@ -68,6 +68,8 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 055 | [site-header-mobile-duas-linhas.md](site-header-mobile-duas-linhas.md) | Header do site ocupa duas linhas no celular | site-conteudo-e-precos (verificação do deploy) | 2026-09-20 | BAIXA | Aberto |
 | 056 | [backend-env-example-gitignored.md](backend-env-example-gitignored.md) | `backend/.env.example` está no `.gitignore` e nunca foi versionado | cadastro-codigo-email-nao-chega | 2026-09-21 | BAIXA | Aberto |
 | 057 | [baseline-especificacao-convite-grupo-desatualizada.md](baseline-especificacao-convite-grupo-desatualizada.md) | `01-specify.md` §3.2 descreve o convite de grupo com token errado (`Password::getRepository()` em vez do cache dedicado real) | convite-e-recuperacao-senha-link-dominio-errado | 2026-09-21 | BAIXA | Aberto |
+| 058 | [auth-login-logout-acoplado-jwt-blacklist-enabled.md](auth-login-logout-acoplado-jwt-blacklist-enabled.md) | Gate de e-mail não verificado no login depende silenciosamente de `JWT_BLACKLIST_ENABLED` | email-verificado-obrigatorio | 2026-09-22 | BAIXA | Aberto |
+| 059 | [constitution-log-debug-credenciais-desatualizado.md](constitution-log-debug-credenciais-desatualizado.md) | `00-constitution.md` §5 item 3 cita `Log::debug` de credenciais que não existe mais no código | email-verificado-obrigatorio | 2026-09-22 | BAIXA | Aberto |
 
 ## Itens concluídos
 

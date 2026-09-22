@@ -10,7 +10,7 @@ Versão: 1.0 · Criado em: 20260922
 | TASK-337 | Teste que prova que `POST /register` responde 410 e não cria conta | backend | plan.md §1 | nenhum | Concluída |
 | TASK-338 | Gatear `login()` por `email_verified_at` nulo (403 + invalida token + mensagem) | backend | plan.md §2 | nenhum | Concluída |
 | TASK-339 | Teste que prova login recusado para conta não verificada e mantido para conta verificada | backend | plan.md §2 | nenhum | Concluída |
-| TASK-340 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §1, §2 | antes do merge | Pendente |
+| TASK-340 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §1, §2 | antes do merge | Concluída |
 
 ## Critérios de aceite
 
