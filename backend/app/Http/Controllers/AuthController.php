@@ -2,30 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
     public function register(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:100',
-            'email' => 'required|email|unique:ex_users',
-            'password' => 'required|min:6',
-            'role' => 'nullable|string',
-        ]);
-
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
-
-        return response()->json(['message' => 'Usuário criado com sucesso'], 201);
+        return response()->json([
+            'message' => 'Este endpoint foi descontinuado. Use /api/pre-register.',
+        ], 410);
     }
 
     public function login(Request $request)
@@ -44,6 +31,15 @@ class AuthController extends Controller
             Log::warning('Falha no login: credenciais inválidas', ['email' => $credentials['email'] ?? null]);
 
             return response()->json(['error' => 'Não autorizado'], 401);
+        }
+
+        if (Auth::guard('api')->user()->email_verified_at === null) {
+            Log::warning('Falha no login: e-mail não verificado', ['email' => $credentials['email'] ?? null]);
+            Auth::guard('api')->logout();
+
+            return response()->json([
+                'error' => 'E-mail não verificado. Use "Esqueci minha senha" para confirmar seu e-mail e definir uma nova senha.',
+            ], 403);
         }
 
         Log::info('Login bem-sucedido para o usuário', [
