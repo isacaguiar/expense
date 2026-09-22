@@ -37,6 +37,18 @@ describe('notificationText', () => {
     );
   });
 
+  it('expense_born_paid uses singular for a single quota', () => {
+    expect(
+      notificationText('expense_born_paid', { actorName: 'Ana', expenseDescription: 'Financiamento', quotasCount: 1 })
+    ).toBe('Ana registrou "Financiamento" com 1 parcela já paga em seu nome');
+  });
+
+  it('expense_born_paid uses plural for more than one quota', () => {
+    expect(
+      notificationText('expense_born_paid', { actorName: 'Ana', expenseDescription: 'Financiamento', quotasCount: 3 })
+    ).toBe('Ana registrou "Financiamento" com 3 parcelas já pagas em seu nome');
+  });
+
   it('falls back to a generic text for an unknown type', () => {
     expect(notificationText('whatever', {})).toBe('Nova notificação');
   });
