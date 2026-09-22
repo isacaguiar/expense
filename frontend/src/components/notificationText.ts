@@ -29,6 +29,12 @@ export function notificationText(type: string, data: NotificationData): string {
       return `${str(data.actorName)} adicionou você ao grupo "${str(data.groupName)}"`;
     case 'expense_created':
       return `${str(data.actorName)} adicionou a despesa "${str(data.expenseDescription)}"`;
+    case 'expense_born_paid': {
+      const count = Number(data.quotasCount) || 0;
+      const parcela = count === 1 ? 'parcela' : 'parcelas';
+      const paga = count === 1 ? 'já paga' : 'já pagas';
+      return `${str(data.actorName)} registrou "${str(data.expenseDescription)}" com ${count} ${parcela} ${paga} em seu nome`;
+    }
     default:
       return 'Nova notificação';
   }
