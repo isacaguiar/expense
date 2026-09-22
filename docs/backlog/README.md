@@ -70,6 +70,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 057 | [baseline-especificacao-convite-grupo-desatualizada.md](baseline-especificacao-convite-grupo-desatualizada.md) | `01-specify.md` §3.2 descreve o convite de grupo com token errado (`Password::getRepository()` em vez do cache dedicado real) | convite-e-recuperacao-senha-link-dominio-errado | 2026-09-21 | BAIXA | Aberto |
 | 058 | [auth-login-logout-acoplado-jwt-blacklist-enabled.md](auth-login-logout-acoplado-jwt-blacklist-enabled.md) | Gate de e-mail não verificado no login depende silenciosamente de `JWT_BLACKLIST_ENABLED` | email-verificado-obrigatorio | 2026-09-22 | BAIXA | Aberto |
 | 059 | [constitution-log-debug-credenciais-desatualizado.md](constitution-log-debug-credenciais-desatualizado.md) | `00-constitution.md` §5 item 3 cita `Log::debug` de credenciais que não existe mais no código | email-verificado-obrigatorio | 2026-09-22 | BAIXA | Aberto |
+| 060 | [group-controller-log-info-user-completo.md](group-controller-log-info-user-completo.md) | `GroupController::store` loga o model `User` inteiro em texto | limite-grupos-fonte-unica | 2026-09-22 | BAIXA | Aberto |
 
 ## Itens concluídos
 

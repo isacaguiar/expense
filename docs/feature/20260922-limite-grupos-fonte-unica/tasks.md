@@ -10,7 +10,7 @@ Versão: 1.0 · Criado em: 20260922
 | TASK-350 | Teste que prova que `/api/me` expõe `max_groups_per_user` sem quebrar os campos existentes | backend | plan.md §1 | nenhum | Concluída |
 | TASK-351 | `Dashboard.tsx` consome `max_groups_per_user` da API em vez de constante hardcoded | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-352 | Teste que prova o botão de criar grupo reagindo ao limite vindo da API (e não travando antes de carregar) | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-353 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §1 | antes do merge | Pendente |
+| TASK-353 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §1 | antes do merge | Concluída |
 
 ## Critérios de aceite
 
