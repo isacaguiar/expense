@@ -440,4 +440,102 @@ class NotifierTriggersTest extends TestCase
 
         $this->assertSame(0, Notification::where('type', 'expense_created')->count());
     }
+
+    // --- expense_born_paid (ExpenseController@store) ----------------------
+
+    /**
+     * Mesmo cenário de `ExpenseControllerStoreTest::test_installments_expense_starting_in_a_closed_cycle_is_created_with_past_quotas_paid`
+     * (2026-09-20, closing_day nulo): jun/jul/ago-2026 já `closed` → 3 quotas
+     * nascem `born_paid`; set/out/nov ficam pendentes.
+     */
+    private function retroactiveInstallmentsPayload(Group $group, User $creator, User $payer): array
+    {
+        return [
+            'date_payment' => '2026-06-05',
+            'description' => 'Financiamento retroativo',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 6,
+            'total_value' => 600,
+            'group_id' => $group->id,
+            'user_creator_id' => $creator->id,
+            'user_payer_id' => $payer->id,
+            'payers' => [$payer->id],
+            'quotas' => [
+                ['date_expected' => '2026-06-05', 'number' => 1, 'value_quota' => 100],
+                ['date_expected' => '2026-07-05', 'number' => 2, 'value_quota' => 100],
+                ['date_expected' => '2026-08-05', 'number' => 3, 'value_quota' => 100],
+                ['date_expected' => '2026-09-05', 'number' => 4, 'value_quota' => 100],
+                ['date_expected' => '2026-10-05', 'number' => 5, 'value_quota' => 100],
+                ['date_expected' => '2026-11-05', 'number' => 6, 'value_quota' => 100],
+            ],
+        ];
+    }
+
+    public function test_expense_born_paid_notifies_the_creditor_when_someone_else_registers_it(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $creator = User::factory()->create();
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'República']);
+        $group->members()->attach([$creator->id, $creditor->id]);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->postJson('/api/expenses', $this->retroactiveInstallmentsPayload($group, $creator, $creditor));
+
+        $response->assertStatus(201);
+
+        $rows = Notification::where('type', 'expense_born_paid')->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame($creditor->id, $rows->first()->user_id);
+
+        $data = $rows->first()->data;
+        $this->assertSame($creator->name, $data['actorName']);
+        $this->assertSame('Financiamento retroativo', $data['expenseDescription']);
+        $this->assertSame($group->id, $data['groupId']);
+        $this->assertSame('República', $data['groupName']);
+        $this->assertSame(3, $data['quotasCount']); // jun/jul/ago fechados
+    }
+
+    public function test_expense_born_paid_does_not_notify_when_the_creditor_registers_it_themselves(): void
+    {
+        Carbon::setTestNow('2026-09-20');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson('/api/expenses', $this->retroactiveInstallmentsPayload($group, $creditor, $creditor))
+            ->assertStatus(201);
+
+        $this->assertSame(0, Notification::where('type', 'expense_born_paid')->count());
+    }
+
+    public function test_expense_born_paid_is_not_sent_when_no_quota_is_born_paid(): void
+    {
+        Carbon::setTestNow('2026-08-15 12:00:00');
+
+        $creator = User::factory()->create();
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'República']);
+        $group->members()->attach([$creator->id, $creditor->id]);
+
+        $this->withToken($this->tokenFor($creator))
+            ->postJson('/api/expenses', [
+                'date_payment' => '2026-08-15',
+                'description' => 'Conta de internet',
+                'expense_type' => 'IN_CASH',
+                'installments' => 1,
+                'total_value' => 120,
+                'group_id' => $group->id,
+                'user_creator_id' => $creator->id,
+                'user_payer_id' => $creditor->id,
+                'payers' => [$creditor->id],
+                'quotas' => [['date_expected' => '2026-08-15', 'number' => 1, 'value_quota' => 120]],
+            ])
+            ->assertStatus(201);
+
+        $this->assertSame(0, Notification::where('type', 'expense_born_paid')->count());
+    }
 }
