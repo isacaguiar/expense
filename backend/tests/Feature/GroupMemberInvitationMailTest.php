@@ -54,4 +54,28 @@ class GroupMemberInvitationMailTest extends TestCase
                 && $mail->group->is($group);
         });
     }
+
+    // Regressão: o link já chegou a ser montado com url() (APP_URL, domínio
+    // da API), o que deixa o convite morto -- ver
+    // docs/bugfix/20260921-cadastro-codigo-email-nao-chega.md.
+    public function test_activation_link_points_to_the_frontend_domain(): void
+    {
+        Mail::fake();
+
+        $member = User::factory()->create(['name' => 'Convidante']);
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $newMemberEmail = 'novo.membro.'.uniqid().'@example.com';
+
+        $this->withToken($this->tokenFor($member))
+            ->postJson('/api/groups/'.$group->id.'/members', ['email' => $newMemberEmail]);
+
+        Mail::assertSent(UserInvitedMail::class, function (UserInvitedMail $mail) {
+            $activationLink = $mail->build()->viewData['activationLink'];
+
+            return str_starts_with($activationLink, config('services.frontend_url'))
+                && ! str_starts_with($activationLink, config('app.url'));
+        });
+    }
 }
