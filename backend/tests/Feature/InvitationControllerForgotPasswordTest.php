@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Mockery;
 use Tests\TestCase;
 
 class InvitationControllerForgotPasswordTest extends TestCase
@@ -40,6 +41,30 @@ class InvitationControllerForgotPasswordTest extends TestCase
         $response->assertStatus(200);
         $this->assertTrue(Hash::check('senha-original', $user->refresh()->password));
         $this->assertTrue(Cache::has('password-reset-rate:'.$user->email));
+    }
+
+    // Regressão: o link já chegou a ser montado com url() (APP_URL, domínio
+    // da API) -- ver docs/bugfix/20260921-cadastro-codigo-email-nao-chega.md.
+    // forgotPassword usa Mail::send($view, $data, $closure) bruto (não um
+    // Mailable), então a única forma de inspecionar o link é capturar o
+    // argumento $data passado ao Mail::send mockado.
+    public function test_reset_link_points_to_the_frontend_domain(): void
+    {
+        $user = User::factory()->create(['password' => 'senha-original']);
+
+        Mail::shouldReceive('send')->once()->with(
+            'email.password-reset',
+            Mockery::on(function (array $data) {
+                return isset($data['resetLink'])
+                    && str_starts_with($data['resetLink'], config('services.frontend_url'))
+                    && ! str_starts_with($data['resetLink'], config('app.url'));
+            }),
+            Mockery::any()
+        );
+
+        $response = $this->postJson('/api/forgot-password', ['email' => $user->email]);
+
+        $response->assertStatus(200);
     }
 
     public function test_second_request_right_after_success_is_rate_limited(): void
