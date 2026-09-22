@@ -81,7 +81,7 @@ class InvitationController extends Controller
         $cacheKeyToken = 'password-reset-token:'.$user->email;
         Cache::put($cacheKeyToken, $token, now()->addMinutes(60));
 
-        $resetLink = url("/recuperar-senha?email={$user->email}&token={$token}");
+        $resetLink = config('services.frontend_url')."/recuperar-senha?email={$user->email}&token={$token}";
 
         try {
             Mail::send('email.password-reset', [

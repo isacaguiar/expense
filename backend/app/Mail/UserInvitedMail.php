@@ -30,7 +30,7 @@ class UserInvitedMail extends Mailable
 
     public function build()
     {
-        $activationLink = url("/aceitar-convite?email={$this->user->email}&token={$this->token}");
+        $activationLink = config('services.frontend_url')."/aceitar-convite?email={$this->user->email}&token={$this->token}";
 
         return $this->subject("Você foi convidado para o grupo “{$this->group->name}”")
             ->view('email.invitation')
