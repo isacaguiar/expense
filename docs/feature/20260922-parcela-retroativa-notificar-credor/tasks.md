@@ -11,7 +11,7 @@ Versão: 1.0 · Criado em: 20260922
 | TASK-343 | Teste que prova a notificação (credor ≠ criador notifica; credor = criador não notifica; `quotasCount` correto) | backend | plan.md §1 | nenhum | Concluída |
 | TASK-344 | Adicionar `case 'expense_born_paid'` em `notificationText.ts` | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-345 | Teste de `notificationText` para `expense_born_paid` (singular e plural) | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-346 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §1, §2 | antes do merge | Pendente |
+| TASK-346 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §1, §2 | antes do merge | Concluída |
 
 ## Critérios de aceite
 
