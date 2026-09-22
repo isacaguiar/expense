@@ -4,7 +4,7 @@ ID: 038
 Origem: docs/feature/concluidas/202609/20260903-despesa-parcelada-retroativa/specify.md §2.2/§2.5 (achado do `security-reviewer` no PR #144)
 Criado em: 2026-09-04
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-341
 
 ## Descrição
 

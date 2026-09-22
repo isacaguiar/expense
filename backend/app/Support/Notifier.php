@@ -60,6 +60,34 @@ class Notifier
     }
 
     /**
+     * Despesa parcelada retroativa nasceu com quota(s) já `paid` em nome do
+     * credor (`ExpenseController@store`, ciclo já fechado) → avisa o credor,
+     * só quando quem registrou não foi ele mesmo (se foi, ele já sabe).
+     */
+    public static function expenseBornPaid(Expense $expense, int $bornPaidQuotasCount): void
+    {
+        self::guard('expense_born_paid', function () use ($expense, $bornPaidQuotasCount) {
+            $recipients = collect([$expense->user_payer_id])
+                ->reject(fn ($id) => $id === $expense->user_creator_id);
+
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            $expense->loadMissing('creator', 'group');
+
+            self::fanOut($recipients, 'expense_born_paid', $expense->group_id, [
+                'actorName' => $expense->creator?->name,
+                'groupId' => $expense->group_id,
+                'groupName' => $expense->group?->name,
+                'expenseId' => $expense->id,
+                'expenseDescription' => $expense->description,
+                'quotasCount' => $bornPaidQuotasCount,
+            ]);
+        });
+    }
+
+    /**
      * O credor marcou a ocorrência de uma despesa como paga
      * (`ExpenseController@pay`) → avisa os pagadores dela, menos o próprio
      * credor.
