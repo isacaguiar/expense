@@ -44,11 +44,10 @@ import { brandColors } from '../theme/brandColors';
 import GroupGrossDebtsPanel from '../components/GroupGrossDebtsPanel';
 import type { GroupListItem } from '../types/group';
 
-const MAX_GROUPS_CREATED_PER_USER = 3;
-
 const Dashboard: React.FC = () => {
   const [groups, setGroups] = useState<GroupListItem[]>([]);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [maxGroupsPerUser, setMaxGroupsPerUser] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState<string>('');
@@ -78,8 +77,11 @@ const Dashboard: React.FC = () => {
     const headers = { Authorization: token ? `Bearer ${token}` : '' };
 
     axios
-      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers })
-      .then(res => setCurrentUserId(res.data.id))
+      .get<{ id: number; max_groups_per_user: number }>(`${API_BASE_URL}/api/me`, { headers })
+      .then(res => {
+        setCurrentUserId(res.data.id);
+        setMaxGroupsPerUser(res.data.max_groups_per_user);
+      })
       .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
 
     axios
@@ -101,7 +103,7 @@ const Dashboard: React.FC = () => {
   );
 
   const myGroupsCount = groups.filter(group => group.created_by === currentUserId).length;
-  const reachedCreationLimit = myGroupsCount >= MAX_GROUPS_CREATED_PER_USER;
+  const reachedCreationLimit = maxGroupsPerUser !== null && myGroupsCount >= maxGroupsPerUser;
 
   const removeGroup = groups.find(group => group.id === removeGroupId) ?? null;
 
@@ -234,7 +236,7 @@ const Dashboard: React.FC = () => {
           size="small"
           sx={{ minWidth: 260 }}
         />
-        <Tooltip title={reachedCreationLimit ? `Você já atingiu o limite de ${MAX_GROUPS_CREATED_PER_USER} grupos criados.` : ''}>
+        <Tooltip title={reachedCreationLimit ? `Você já atingiu o limite de ${maxGroupsPerUser} grupos criados.` : ''}>
           <span>
             <Button
               variant="contained"
