@@ -18,3 +18,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 |---|---|---|---|---|---|
 | TASK-347 | Concluída | 2026-09-22 | Claude (via `/promover-backlog`) | `npx tsc --noEmit` — sem erro | `startEditing()` agora usa `expense.date_payment.slice(0, 10)` |
 | TASK-348 | Concluída | 2026-09-22 | Claude (via `/promover-backlog`) | `npx vitest run src/pages/ExpenseView.test.tsx` — 23 passed; prova de regressão: `git stash` de `ExpenseView.tsx` + re-rodar só o teste novo → `FAIL` ("Received: " vazio, reproduz exatamente o sintoma do item de backlog 040); `git stash pop` restaurou o fix | — |
+| — | — | — | — | `npx vitest run` (suíte completa) — 282 passed, 1 failed (`AcceptInvitePage.test.tsx`, arquivo não tocado por esta feature); re-rodado isolado: `npx vitest run src/pages/AcceptInvitePage.test.tsx` — 5 passed. Flakiness sob carga da suíte completa, não é regressão desta mudança | `npx tsc --noEmit` (suíte completa) — sem erro |
