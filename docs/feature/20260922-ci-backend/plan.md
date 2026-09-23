@@ -100,6 +100,14 @@ Versão: 1.0 · Criado em: 20260922
 
 - **Arquivos afetados**: `.github/workflows/ci-backend.yml` (novo).
 
+## 1.1 Achado ao rodar o workflow de verdade (TASK-354, PR #197): débito de Pint pré-existente em `dev`
+
+O primeiro run real de `ci-backend.yml` (disparado ao abrir o PR desta feature) falhou no passo de Pint — não por bug no workflow, mas porque `dev` já tem 8 arquivos fora do padrão (`app/Helpers/PixPayload.php`, `app/Models/Expense.php`, `app/Models/User.php` e 5 migrations antigas), nunca pegos porque nunca existiu CI de backend. Como `pint --test` varre o repositório inteiro (não só o diff do PR), **qualquer** PR futuro nasceria com esse check vermelho, mesmo sem tocar nesses arquivos.
+
+**Decisão (confirmada com o usuário)**: corrigir com `./vendor/bin/pint` (auto-fix) nesta mesma feature, antes de fechar TASK-355. Conferido antes de decidir: o diff que o Pint produz nesses 8 arquivos é só espaçamento/linha em branco/posição de chave (`class_attributes_separation`, `concat_space`, `braces_position`, etc.) — nenhuma mudança de lógica. Alternativas descartadas: excluir os arquivos via `pint.json` (adiaria a dívida sem necessidade, já que o fix é trivial e sem risco) e deixar vermelho (treina o time a ignorar o check logo na primeira feature que o introduz).
+
+Vira task nova (TASK-356) em vez de expandir TASK-354, por `04-implementation.md` §1 item 2 ("achou trabalho extra, vira task nova").
+
 ## 2. Ordem de execução
 
 Item único (o workflow inteiro é uma peça só) — sem dependência com outra parte do sistema. `tasks.md` divide em: criar o workflow, e validar que ele de fato roda e falha/passa quando deveria.
