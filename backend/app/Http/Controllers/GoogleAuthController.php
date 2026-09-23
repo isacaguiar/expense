@@ -18,6 +18,27 @@ class GoogleAuthController extends Controller
     private const STATE_TTL_MINUTES = 5;
 
     /**
+     * Redireciona direto para o consentimento do Google, para o botão "Google" da tela de
+     * login (usuário ainda não autenticado — sem chamada XHR prévia, ao contrário de redirectUrl()).
+     */
+    public function loginRedirect()
+    {
+        $token = Str::random(40);
+
+        Cache::put(self::STATE_CACHE_PREFIX.$token, [
+            'intent' => 'login',
+        ], now()->addMinutes(self::STATE_TTL_MINUTES));
+
+        $url = Socialite::driver('google')
+            ->stateless()
+            ->with(['state' => $token])
+            ->redirect()
+            ->getTargetUrl();
+
+        return redirect()->away($url);
+    }
+
+    /**
      * Devolve a URL de consentimento do Google para o usuário autenticado vincular a própria conta.
      */
     public function redirectUrl(Request $request)

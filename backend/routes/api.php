@@ -19,6 +19,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/invitations/verify', [InvitationController::class, 'verify']);
 Route::post('/forgot-password', [InvitationController::class, 'forgotPassword']);
+Route::get('/auth/google/login', [GoogleAuthController::class, 'loginRedirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 
 // Auto-cadastro publico: formulario -> codigo por e-mail -> conta criada e ja
