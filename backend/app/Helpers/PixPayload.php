@@ -5,52 +5,64 @@ namespace App\Helpers;
 class PixPayload
 {
     private string $pixKey;
+
     private ?string $description = null;
+
     private string $merchantName = 'NOVEMAX';
+
     private string $merchantCity = 'SAO PAULO';
+
     private ?string $amount = null;
+
     private string $txid = 'NOVEMAX123';
 
     public function setPixKey(string $key): self
     {
         $this->pixKey = $key;
+
         return $this;
     }
 
     public function setDescription(?string $desc): self
     {
         $this->description = $desc;
+
         return $this;
     }
 
     public function setMerchantName(string $name): self
     {
         $this->merchantName = strtoupper($name);
+
         return $this;
     }
 
     public function setMerchantCity(string $city): self
     {
         $this->merchantCity = strtoupper($city);
+
         return $this;
     }
 
     public function setAmount(string $amount): self
     {
         $this->amount = number_format($amount, 2, '.', '');
+
         return $this;
     }
 
     public function setTxid(string $txid): self
     {
         $this->txid = $txid;
+
         return $this;
     }
 
     private function formatField(string $id, string $value): string
     {
         $len = str_pad(strlen($value), 2, '0', STR_PAD_LEFT);
-        return $id . $len . $value;
+
+        return $id.$len.$value;
     }
 
     public function getPayload(): string
@@ -58,7 +70,7 @@ class PixPayload
         $gui = $this->formatField('00', 'br.gov.bcb.pix');
         $key = $this->formatField('01', $this->pixKey);
         $desc = $this->description ? $this->formatField('02', $this->description) : '';
-        $merchantAccountInfo = $this->formatField('26', $gui . $key . $desc);
+        $merchantAccountInfo = $this->formatField('26', $gui.$key.$desc);
 
         $payload = [
             $this->formatField('00', '01'),                  // Payload Format Indicator
@@ -74,8 +86,9 @@ class PixPayload
         ];
 
         $fullPayload = implode('', $payload);
-        $crc = $this->formatField('63', strtoupper($this->crc16($fullPayload . '6304')));
-        return $fullPayload . $crc;
+        $crc = $this->formatField('63', strtoupper($this->crc16($fullPayload.'6304')));
+
+        return $fullPayload.$crc;
     }
 
     private function crc16(string $payload): string
