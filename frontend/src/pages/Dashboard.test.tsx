@@ -55,9 +55,14 @@ const groups: Group[] = [
 
 type GrossDebtsByGroup = Record<number, { cycle: { start: string; end: string; status: string }; creditors: unknown[] }>;
 
-function mockGroupsAndMe(groupsData: Group[], meId = 10, grossDebtsByGroup: GrossDebtsByGroup = {}) {
+function mockGroupsAndMe(
+  groupsData: Group[],
+  meId = 10,
+  grossDebtsByGroup: GrossDebtsByGroup = {},
+  maxGroupsPerUser = 3
+) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
-    if (url.includes('/api/me')) return Promise.resolve({ data: { id: meId } });
+    if (url.includes('/api/me')) return Promise.resolve({ data: { id: meId, max_groups_per_user: maxGroupsPerUser } });
     const grossDebtsMatch = url.match(/\/groups\/(\d+)\/expenses\/gross-debts/);
     if (grossDebtsMatch) {
       const groupId = Number(grossDebtsMatch[1]);
@@ -81,7 +86,7 @@ describe('Dashboard', () => {
 
   it('redirects to login when the groups request returns 401', async () => {
     vi.mocked(axios.get).mockImplementation((url: string) => {
-      if (url.includes('/api/me')) return Promise.resolve({ data: { id: 1 } });
+      if (url.includes('/api/me')) return Promise.resolve({ data: { id: 1, max_groups_per_user: 3 } });
       return Promise.reject({ response: { status: 401 } });
     });
 
@@ -238,6 +243,46 @@ describe('Dashboard', () => {
     );
 
     await screen.findByText('Viagem SP');
+
+    expect(screen.getByRole('link', { name: 'Novo grupo' })).not.toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('disables "Novo grupo" using the limit returned by GET /api/me, not a hardcoded 3', async () => {
+    const twoOwnGroups: Group[] = [
+      { id: 1, name: 'Grupo 1', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [], cycle_snapshots_exists: false },
+      { id: 2, name: 'Grupo 2', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [], cycle_snapshots_exists: false },
+    ];
+    mockGroupsAndMe(twoOwnGroups, 10, {}, 2);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Grupo 1');
+
+    expect(screen.getByRole('link', { name: 'Novo grupo' })).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('keeps "Novo grupo" enabled while GET /api/me has not resolved yet', async () => {
+    const threeOwnGroups: Group[] = [
+      { id: 1, name: 'Grupo 1', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [], cycle_snapshots_exists: false },
+      { id: 2, name: 'Grupo 2', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [], cycle_snapshots_exists: false },
+      { id: 3, name: 'Grupo 3', description: '', create_date: '2026-01-01', created_by: 10, creator: { id: 10, email: 'eu@example.com' }, members: [], cycle_snapshots_exists: false },
+    ];
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/api/me')) return new Promise(() => {});
+      return Promise.resolve({ data: threeOwnGroups });
+    });
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Grupo 1');
 
     expect(screen.getByRole('link', { name: 'Novo grupo' })).not.toHaveAttribute('aria-disabled', 'true');
   });
