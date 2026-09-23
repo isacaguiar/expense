@@ -1,0 +1,75 @@
+name: CI Backend
+
+on:
+  pull_request:
+    branches:
+      - dev
+      - main
+
+jobs:
+  test:
+    name: Pint + PHPUnit (backend)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0.17
+        env:
+          MYSQL_ROOT_PASSWORD: 3xp3ns1v3
+          MYSQL_DATABASE: ex-db
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -p3xp3ns1v3"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: 📥 Clonar o repositório
+        uses: actions/checkout@v4
+
+      - name: 🧰 Configurar PHP com Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, bcmath, ctype, fileinfo, json, openssl, pdo, tokenizer, xml, curl, gd
+          coverage: none
+
+      - name: 📦 Instalar dependências
+        working-directory: backend
+        run: composer install --prefer-dist --no-interaction
+
+      - name: 🔐 Gerar .env de teste
+        working-directory: backend
+        run: |
+          echo "APP_NAME=SCD" > .env
+          echo "APP_ENV=testing" >> .env
+          echo "APP_DEBUG=true" >> .env
+          echo "APP_URL=http://127.0.0.1:8000" >> .env
+          echo "FRONTEND_URL=http://localhost:5173" >> .env
+
+          echo "DB_CONNECTION=mysql" >> .env
+          echo "DB_HOST=127.0.0.1" >> .env
+          echo "DB_PORT=3306" >> .env
+          echo "DB_DATABASE=ex-db" >> .env
+          echo "DB_USERNAME=root" >> .env
+          echo "DB_PASSWORD=3xp3ns1v3" >> .env
+
+          echo "JWT_SECRET=ci-test-secret-nao-e-credencial-real" >> .env
+
+      - name: 🔑 Gerar chave do aplicativo
+        working-directory: backend
+        run: php artisan key:generate
+
+      - name: 🗄️ Rodar migrations
+        working-directory: backend
+        run: php artisan migrate --force
+
+      - name: 🎨 Pint (estilo)
+        working-directory: backend
+        run: ./vendor/bin/pint --test
+
+      - name: 🧪 PHPUnit
+        working-directory: backend
+        run: php artisan test
