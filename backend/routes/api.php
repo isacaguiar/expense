@@ -21,6 +21,7 @@ Route::post('/invitations/verify', [InvitationController::class, 'verify']);
 Route::post('/forgot-password', [InvitationController::class, 'forgotPassword']);
 Route::get('/auth/google/login', [GoogleAuthController::class, 'loginRedirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
+Route::get('/auth/google/exchange', [GoogleAuthController::class, 'exchangeLoginCode']);
 
 // Auto-cadastro publico: formulario -> codigo por e-mail -> conta criada e ja
 // autenticada. O POST /register acima continua intacto (contrato existente,

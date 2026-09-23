@@ -134,6 +134,25 @@ class GoogleAuthController extends Controller
     }
 
     /**
+     * Troca o código de uso único (gerado por handleLoginCallback) pelo JWT de fato. Pública e
+     * sem autenticação de propósito: é exatamente o que entrega a sessão a quem ainda não tem uma.
+     */
+    public function exchangeLoginCode(Request $request)
+    {
+        $token = Cache::pull(self::LOGIN_CODE_CACHE_PREFIX.$request->query('code'));
+
+        if (! $token) {
+            return response()->json(['message' => 'Código inválido ou expirado.'], 401);
+        }
+
+        return response()->json([
+            'access_token' => $token,
+            'token_type' => 'bearer',
+            'expires_in' => auth('api')->factory()->getTTL() * 60,
+        ]);
+    }
+
+    /**
      * Resolve intent=login: acha o usuário pelo google_id, senão pelo e-mail (auto-vínculo,
      * assume que o Google só devolve e-mail verificado), senão cria uma conta nova sem senha
      * local. Emite o mesmo JWT que o login por e-mail/senha usa e devolve um código de uso
