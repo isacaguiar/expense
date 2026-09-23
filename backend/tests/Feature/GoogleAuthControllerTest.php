@@ -283,4 +283,39 @@ class GoogleAuthControllerTest extends TestCase
 
         $response->assertRedirect('http://localhost:3000/login?google_error=1');
     }
+
+    public function test_exchange_returns_the_access_token_for_a_valid_code(): void
+    {
+        $jwt = $this->tokenFor(User::factory()->create());
+        $code = Str::random(40);
+        Cache::put("google_login_code:{$code}", $jwt, now()->addMinutes(1));
+
+        $response = $this->getJson('/api/auth/google/exchange?code='.$code);
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('access_token', $jwt);
+        $response->assertJsonPath('token_type', 'bearer');
+        $this->assertIsInt($response->json('expires_in'));
+    }
+
+    public function test_exchange_rejects_an_unknown_or_expired_code(): void
+    {
+        $response = $this->getJson('/api/auth/google/exchange?code='.Str::random(40));
+
+        $response->assertStatus(401);
+        $response->assertJsonPath('message', 'Código inválido ou expirado.');
+    }
+
+    public function test_exchange_code_is_single_use(): void
+    {
+        $jwt = $this->tokenFor(User::factory()->create());
+        $code = Str::random(40);
+        Cache::put("google_login_code:{$code}", $jwt, now()->addMinutes(1));
+
+        $first = $this->getJson('/api/auth/google/exchange?code='.$code);
+        $first->assertStatus(200);
+
+        $second = $this->getJson('/api/auth/google/exchange?code='.$code);
+        $second->assertStatus(401);
+    }
 }
