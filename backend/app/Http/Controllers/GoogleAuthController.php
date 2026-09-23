@@ -153,10 +153,11 @@ class GoogleAuthController extends Controller
     }
 
     /**
-     * Resolve intent=login: acha o usuário pelo google_id, senão pelo e-mail (auto-vínculo,
-     * assume que o Google só devolve e-mail verificado), senão cria uma conta nova sem senha
-     * local. Emite o mesmo JWT que o login por e-mail/senha usa e devolve um código de uso
-     * único — nunca o token cru na query string (evita expor em histórico/logs/Referer).
+     * Resolve intent=login: acha o usuário pelo google_id, senão pelo e-mail — só auto-vincula
+     * por e-mail se o Google confirmar que o e-mail é verificado (`email_verified` no payload
+     * OIDC), nunca por presunção — senão cria uma conta nova sem senha local. Emite o mesmo JWT
+     * que o login por e-mail/senha usa e devolve um código de uso único — nunca o token cru na
+     * query string (evita expor em histórico/logs/Referer).
      */
     private function handleLoginCallback(string $frontendUrl)
     {
@@ -170,8 +171,25 @@ class GoogleAuthController extends Controller
             return redirect()->away("{$frontendUrl}/login?google_error=1");
         }
 
-        $user = User::where('google_id', $googleUser->getId())->first()
-            ?? User::where('email', $googleUser->getEmail())->first();
+        $user = User::where('google_id', $googleUser->getId())->first();
+
+        if (! $user) {
+            $existingByEmail = User::where('email', $googleUser->getEmail())->first();
+
+            if ($existingByEmail) {
+                $emailVerified = (bool) (($googleUser->getRaw() ?? [])['email_verified'] ?? false);
+
+                if (! $emailVerified) {
+                    Log::warning('[google-login] e-mail do Google nao verificado, recusando auto-vinculo -> login error', [
+                        'user_id' => $existingByEmail->id,
+                    ]);
+
+                    return redirect()->away("{$frontendUrl}/login?google_error=1");
+                }
+
+                $user = $existingByEmail;
+            }
+        }
 
         try {
             if ($user) {

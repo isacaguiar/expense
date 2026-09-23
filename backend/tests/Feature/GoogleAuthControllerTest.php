@@ -61,13 +61,14 @@ class GoogleAuthControllerTest extends TestCase
         return $query['google_code'];
     }
 
-    private function fakeGoogleUser(string $googleId = 'google-123'): SocialiteUser
+    private function fakeGoogleUser(string $googleId = 'google-123', bool $emailVerified = true): SocialiteUser
     {
         $googleUser = new SocialiteUser;
         $googleUser->id = $googleId;
         $googleUser->email = 'ana@example.com';
         $googleUser->name = 'Ana Google';
         $googleUser->avatar = 'https://google.example/pic.jpg';
+        $googleUser->setRaw(['email_verified' => $emailVerified]);
 
         return $googleUser;
     }
@@ -251,6 +252,20 @@ class GoogleAuthControllerTest extends TestCase
             'id' => $existing->id,
             'google_id' => 'google-456',
         ]);
+    }
+
+    public function test_login_callback_refuses_to_auto_link_when_google_email_is_not_verified(): void
+    {
+        config(['services.frontend_url' => 'http://localhost:3000']);
+        $existing = User::factory()->create(['email' => 'ana@example.com', 'google_id' => null]);
+        Socialite::fake('google', $this->fakeGoogleUser('google-999', false));
+
+        $state = $this->loginState();
+
+        $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
+
+        $response->assertRedirect('http://localhost:3000/login?google_error=1');
+        $this->assertDatabaseHas('ex_users', ['id' => $existing->id, 'google_id' => null]);
     }
 
     public function test_login_callback_reuses_existing_user_found_by_google_id(): void

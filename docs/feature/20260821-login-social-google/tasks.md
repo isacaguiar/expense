@@ -8,18 +8,22 @@ Versão: 1.0 · Criado em: 20260922
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-357 | Rota pública `GET /api/auth/google/login` e `GoogleAuthController::loginRedirect()` | backend | plan.md §1 | nenhum | Pendente |
-| TASK-358 | Teste que prova `loginRedirect()` grava state com `intent=login` e redireciona para o Google | backend | plan.md §1 | nenhum | Pendente |
-| TASK-359 | `callback()` resolve `intent=login`: acha/cria usuário, emite JWT e gera código de troca | backend | plan.md §1, §2 | nenhum | Pendente |
-| TASK-360 | Testes de `callback()` para `intent=login` (novo, auto-vínculo, repetido, erro) e ajuste do teste de 501 existente | backend | plan.md §1 | nenhum | Pendente |
-| TASK-361 | Endpoint `GET /api/auth/google/exchange` — troca o código de uso único pelo JWT | backend | plan.md §2 | nenhum | Pendente |
-| TASK-362 | Teste do endpoint de troca (sucesso, código inválido/expirado, uso único) | backend | plan.md §2 | nenhum | Pendente |
-| TASK-363 | `UserController::changePassword` devolve 422 tratado quando a conta não tem senha local | backend | plan.md §3 | nenhum | Pendente |
-| TASK-364 | Teste que prova o guard de `changePassword` para senha nula | backend | plan.md §3 | nenhum | Pendente |
-| TASK-365 | Botão "Google" do login aponta para `GET /api/auth/google/login` em vez de `href="#"` | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-366 | `LoginPage` conclui a sessão ao voltar do Google (`google_code`/`google_error`) | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-367 | Testes de `LoginPage`/`LoginFormCard` para o novo botão e o retorno do fluxo | frontend | plan.md §4 | nenhum | Pendente |
-| TASK-368 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §1, §2 | antes do merge | Pendente |
+| TASK-357 | Rota pública `GET /api/auth/google/login` e `GoogleAuthController::loginRedirect()` | backend | plan.md §1 | nenhum | Concluída |
+| TASK-358 | Teste que prova `loginRedirect()` grava state com `intent=login` e redireciona para o Google | backend | plan.md §1 | nenhum | Concluída |
+| TASK-359 | `callback()` resolve `intent=login`: acha/cria usuário, emite JWT e gera código de troca | backend | plan.md §1, §2 | nenhum | Concluída |
+| TASK-360 | Testes de `callback()` para `intent=login` (novo, auto-vínculo, repetido, erro) e ajuste do teste de 501 existente | backend | plan.md §1 | nenhum | Concluída |
+| TASK-361 | Endpoint `GET /api/auth/google/exchange` — troca o código de uso único pelo JWT | backend | plan.md §2 | nenhum | Concluída |
+| TASK-362 | Teste do endpoint de troca (sucesso, código inválido/expirado, uso único) | backend | plan.md §2 | nenhum | Concluída |
+| TASK-363 | `UserController::changePassword` devolve 422 tratado quando a conta não tem senha local | backend | plan.md §3 | nenhum | Concluída |
+| TASK-364 | Teste que prova o guard de `changePassword` para senha nula | backend | plan.md §3 | nenhum | Concluída |
+| TASK-365 | Botão "Google" do login aponta para `GET /api/auth/google/login` em vez de `href="#"` | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-366 | `LoginPage` conclui a sessão ao voltar do Google (`google_code`/`google_error`) | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-367 | Testes de `LoginPage`/`LoginFormCard` para o novo botão e o retorno do fluxo | frontend | plan.md §4 | nenhum | Concluída |
+| TASK-368 | Revisão de segurança (`security-reviewer`) antes do PR | doc | plan.md §1, §2 | antes do merge | Concluída |
+| TASK-369 | Auto-vínculo por e-mail só ocorre se o Google confirmar `email_verified` | backend | plan.md §1 | nenhum | Concluída |
+| TASK-370 | Teste que prova a recusa de auto-vínculo com e-mail não verificado (e a exploração antes do fix) | backend | plan.md §1 | nenhum | Concluída |
+
+> TASK-369/370 adicionadas em 2026-09-23, depois da TASK-368: o `security-reviewer` achou que o auto-vínculo por e-mail confiava cegamente que "o Google só devolve e-mail verificado" (premissa do `specify.md` §2.3 original) sem checar o campo `email_verified` que o Socialite já expõe — permitia takeover de conta local. Achado classificado como bloqueante (não vira item de backlog); corrigido nesta mesma feature por já estar no escopo do que a TASK-359 introduziu.
 
 ## Critérios de aceite
 
@@ -51,3 +55,7 @@ Versão: 1.0 · Criado em: 20260922
 - **TASK-367**: `frontend/src/pages/LoginPage.test.tsx` — linha 126 (`expect(screen.getByRole('link', { name: /Google/ })).toHaveAttribute('href', '#')`) passa a esperar `` `${API_BASE_URL}/api/auth/google/login` ``. Dois testes novos: (1) renderizar `LoginPage` com `initialEntries: ['/login?google_code=abc123']`, mock do `fetch` para `/api/auth/google/exchange` devolvendo `{access_token, token_type, expires_in}`, e afirmar que `localStorage.getItem('accessToken')` foi setado e houve navegação para `/meus-grupos`; (2) `initialEntries: ['/login?google_error=1']` e afirmar que a mensagem de erro aparece na tela. `npx vitest run src/pages/LoginPage.test.tsx` verde.
 
 - **TASK-368**: agent `security-reviewer` executado sobre o diff final de `backend/` (rotas novas, `GoogleAuthController`, `UserController::changePassword`) antes de abrir o PR — atenção especial ao endpoint de troca (`exchange`, público, sem autenticação, entrega um JWT) e à criação de conta sem senha via `intent=login`. Sem achado bloqueante pendente; achado não-bloqueante vira item de backlog, não trava esta feature.
+
+- **TASK-369**: em `handleLoginCallback`, o lookup por `google_id` continua igual; só quando não achar por `google_id` é que busca por `email` — e só reaproveita essa conta encontrada por e-mail se `(bool) (($googleUser->getRaw() ?? [])['email_verified'] ?? false)` for `true`. Se vier `false`, `Log::warning('[google-login] e-mail do Google nao verificado...')` + `redirect()->away("{$frontendUrl}/login?google_error=1")`, sem tocar na conta existente. `./vendor/bin/pint --test app/Http/Controllers/GoogleAuthController.php` limpo.
+
+- **TASK-370**: `fakeGoogleUser()` em `GoogleAuthControllerTest.php` ganha parâmetro `bool $emailVerified = true` e passa a chamar `$googleUser->setRaw(['email_verified' => $emailVerified])` (default `true` não quebra nenhum teste existente). Novo teste `test_login_callback_refuses_to_auto_link_when_google_email_is_not_verified`: usuário existente por e-mail + `fakeGoogleUser('google-999', false)` → `callback` redireciona para `.../login?google_error=1` e `assertDatabaseHas('ex_users', ['id' => $existing->id, 'google_id' => null])` (conta não tocada). Prova de regressão: reverter a TASK-369 localmente e rodar esse teste de novo → falha mostrando que o redirect virou `google_code=...` em vez de `google_error=1` (o takeover teria sido bem-sucedido). `php artisan test --filter=GoogleAuthControllerTest` verde (17 testes).
