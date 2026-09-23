@@ -40,7 +40,6 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | ID | Arquivo | Título | Origem | Criado em | Prioridade | Status |
 |---|---|---|---|---|---|---|
 | 003 | [tipos-duplicados-frontend.md](tipos-duplicados-frontend.md) | Extrair tipos duplicados para módulo compartilhado | migracao-frontend-expo | 2026-08-17 | BAIXA | Promovido para TASK-281 |
-| 014 | [login-social-google.md](login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 015 | [login-social-microsoft.md](login-social-microsoft.md) | Implementar login social via Microsoft (OAuth) | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 016 | [i18n-frontend.md](i18n-frontend.md) | Implementar internacionalização (i18n) real do frontend | novo-layout-tela-login | 2026-08-19 | BAIXA | Aberto |
 | 024 | [expense-campo-categoria.md](expense-campo-categoria.md) | Adicionar campo "categoria" em despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
@@ -75,6 +74,7 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 
 | ID | Arquivo | Título | Resolvido em | Feature | Tasks |
 |---|---|---|---|---|---|
+| 014 | [concluidos/login-social-google.md](concluidos/login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-09-23 | 20260821-login-social-google | TASK-357 a TASK-370 |
 | 040 | [concluidos/expense-view-edicao-campo-data-vazio.md](concluidos/expense-view-edicao-campo-data-vazio.md) | Modo de edição da página da despesa abre com o campo Data vazio | expense-view-tipo-e-pagadores | 2026-09-22 | 20260922-expense-view-edicao-data-vazio | TASK-347, TASK-348 |
 | 034 | [concluidos/workflow-ci-backend.md](concluidos/workflow-ci-backend.md) | Workflow de CI (verificação) para o backend | 2026-09-22 | 20260922-ci-backend | TASK-354, TASK-356, TASK-355 |
 | 053 | [concluidos/limite-grupos-constante-duplicada.md](concluidos/limite-grupos-constante-duplicada.md) | Limite de grupos por usuário está duplicado em três lugares | 2026-09-22 | 20260922-limite-grupos-fonte-unica | TASK-349 a TASK-353 |

@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { setSession } from '../auth/session';
+import type { LoginResponse } from '../types/auth';
 import LoginBrandingPanel from './login/LoginBrandingPanel';
 import LoginFormCard from './login/LoginFormCard';
 import LoginPageFooter from './login/LoginPageFooter';
@@ -11,6 +13,31 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  useEffect(() => {
+    const code = searchParams.get('google_code');
+    const hasError = searchParams.get('google_error');
+
+    if (code) {
+      setSearchParams({}, { replace: true });
+      fetch(`${API_BASE_URL}/api/auth/google/exchange?code=${encodeURIComponent(code)}`)
+        .then(async (res) => {
+          if (!res.ok) {
+            throw new Error('Falha ao trocar o código do Google pelo token.');
+          }
+          const data: LoginResponse = await res.json();
+          setSession(data);
+          navigate('/meus-grupos');
+        })
+        .catch(() => {
+          setError('Não foi possível concluir o login com o Google. Tente novamente.');
+        });
+    } else if (hasError) {
+      setSearchParams({}, { replace: true });
+      setError('Não foi possível entrar com o Google. Tente novamente.');
+    }
+  }, [searchParams, setSearchParams, navigate]);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
