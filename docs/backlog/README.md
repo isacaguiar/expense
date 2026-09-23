@@ -47,7 +47,6 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 033 | [eslint-setup-frontend.md](eslint-setup-frontend.md) | Configurar ESLint no frontend | ci-frontend | 2026-08-27 | BAIXA | Aberto |
-| 034 | [workflow-ci-backend.md](workflow-ci-backend.md) | Workflow de CI (verificação) para o backend | ci-frontend | 2026-08-27 | MEDIA | Aberto |
 | 035 | [google-oauth-state-pull-nao-atomico.md](google-oauth-state-pull-nao-atomico.md) | `Cache::pull` do state OAuth não é atômico (uso único não estrito) | google-oauth-state-opaco | 2026-09-01 | BAIXA | Aberto |
 | 036 | [frontend-index-html-lang-title-estaticos.md](frontend-index-html-lang-title-estaticos.md) | `frontend/index.html` com `lang="en"` e `<title>` estático | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
 | 037 | [frontend-dist-index-html-versionado.md](frontend-dist-index-html-versionado.md) | `frontend/dist/index.html` versionado apesar de `dist/` no `.gitignore` | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
@@ -77,6 +76,7 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 
 | ID | Arquivo | Título | Resolvido em | Feature | Tasks |
 |---|---|---|---|---|---|
+| 034 | [concluidos/workflow-ci-backend.md](concluidos/workflow-ci-backend.md) | Workflow de CI (verificação) para o backend | 2026-09-22 | 20260922-ci-backend | TASK-354, TASK-356, TASK-355 |
 | 051 | [concluidos/site-updated-at-fixo-documentos-legais.md](concluidos/site-updated-at-fixo-documentos-legais.md) | `updated_at` dos documentos legais é uma string fixa | 2026-09-21 | 20260920-data-por-documento-legal | TASK-321 a TASK-327 |
 | 048 | [concluidos/site-consentimento-cookies-analytics.md](concluidos/site-consentimento-cookies-analytics.md) | Google Analytics do site carrega sem consentimento (LGPD) | 2026-09-20 | 20260920-analytics-app-e-consentimento | TASK-309 a TASK-320 |
 | 005 | [node-modules-versionado-frontend.md](concluidos/node-modules-versionado-frontend.md) | node_modules do frontend versionado no repositório | 2026-08-21 (fora do fluxo SDD — commit `477d27665`, anterior) | — | — |
