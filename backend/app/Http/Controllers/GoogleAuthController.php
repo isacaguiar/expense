@@ -17,6 +17,10 @@ class GoogleAuthController extends Controller
 
     private const STATE_TTL_MINUTES = 5;
 
+    private const LOGIN_CODE_CACHE_PREFIX = 'google_login_code:';
+
+    private const LOGIN_CODE_TTL_MINUTES = 1;
+
     /**
      * Redireciona direto para o consentimento do Google, para o botão "Google" da tela de
      * login (usuário ainda não autenticado — sem chamada XHR prévia, ao contrário de redirectUrl()).
@@ -62,8 +66,8 @@ class GoogleAuthController extends Controller
     }
 
     /**
-     * Callback público do Google. Hoje só atende intent=link (vínculo de conta a partir de Minha
-     * Conta); intent de login fica para a feature login-social-google estender este mesmo método.
+     * Callback público do Google. Atende intent=link (vínculo de conta a partir de Minha Conta)
+     * e intent=login (autenticação via Google na tela de login).
      */
     public function callback(Request $request)
     {
@@ -77,8 +81,14 @@ class GoogleAuthController extends Controller
             return redirect()->away("{$frontendUrl}/profile?linked=error");
         }
 
-        if (($state['intent'] ?? null) !== 'link') {
-            Log::warning('[google-link] intent != link -> 501', ['intent' => $state['intent'] ?? null]);
+        $intent = $state['intent'] ?? null;
+
+        if ($intent === 'login') {
+            return $this->handleLoginCallback($frontendUrl);
+        }
+
+        if ($intent !== 'link') {
+            Log::warning('[google-link] intent != link -> 501', ['intent' => $intent]);
 
             return response()->json(['message' => 'Login via Google ainda não implementado.'], 501);
         }
@@ -121,6 +131,62 @@ class GoogleAuthController extends Controller
         Log::info('[google-link] vinculo concluido -> linked=success', ['user_id' => $user->id, 'google_id' => $user->google_id]);
 
         return redirect()->away("{$frontendUrl}/profile?linked=success");
+    }
+
+    /**
+     * Resolve intent=login: acha o usuário pelo google_id, senão pelo e-mail (auto-vínculo,
+     * assume que o Google só devolve e-mail verificado), senão cria uma conta nova sem senha
+     * local. Emite o mesmo JWT que o login por e-mail/senha usa e devolve um código de uso
+     * único — nunca o token cru na query string (evita expor em histórico/logs/Referer).
+     */
+    private function handleLoginCallback(string $frontendUrl)
+    {
+        try {
+            $googleUser = Socialite::driver('google')->stateless()->user();
+        } catch (Throwable $e) {
+            Log::warning('[google-login] Socialite falhou ao obter usuario Google -> login error', [
+                'exception' => get_class($e).': '.$e->getMessage(),
+            ]);
+
+            return redirect()->away("{$frontendUrl}/login?google_error=1");
+        }
+
+        $user = User::where('google_id', $googleUser->getId())->first()
+            ?? User::where('email', $googleUser->getEmail())->first();
+
+        try {
+            if ($user) {
+                $user->google_id = $googleUser->getId();
+                $user->avatar_url = $user->avatar_url ?: $googleUser->getAvatar();
+                $user->email_verified_at = $user->email_verified_at ?? now();
+                $user->save();
+            } else {
+                $user = new User([
+                    'name' => $googleUser->getName(),
+                    'email' => $googleUser->getEmail(),
+                    'password' => null,
+                ]);
+                $user->google_id = $googleUser->getId();
+                $user->avatar_url = $googleUser->getAvatar();
+                $user->email_verified_at = now();
+                $user->save();
+            }
+        } catch (QueryException $e) {
+            Log::warning('[google-login] save falhou (QueryException) -> login error', [
+                'exception' => $e->getMessage(),
+            ]);
+
+            return redirect()->away("{$frontendUrl}/login?google_error=1");
+        }
+
+        Log::info('[google-login] login concluido', ['user_id' => $user->id, 'google_id' => $user->google_id]);
+
+        $token = auth('api')->login($user);
+
+        $code = Str::random(40);
+        Cache::put(self::LOGIN_CODE_CACHE_PREFIX.$code, $token, now()->addMinutes(self::LOGIN_CODE_TTL_MINUTES));
+
+        return redirect()->away("{$frontendUrl}/login?google_code={$code}");
     }
 
     /**
