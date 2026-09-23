@@ -63,13 +63,13 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 049 | [site-pagina-404.md](site-pagina-404.md) | Site não tem página 404 com o layout e a navegação | site-conteudo-e-precos | 2026-09-20 | BAIXA | Aberto |
 | 050 | [tres-nomes-do-produto.md](tres-nomes-do-produto.md) | O produto se chama "Shared Expense", "Controle de Despesas Compartilhadas" e "SCD" | site-conteudo-e-precos | 2026-09-20 | BAIXA | Aberto |
 | 052 | [contexto-sdd-para-o-site-php.md](contexto-sdd-para-o-site-php.md) | Site institucional não tem documento de contexto no SDD | site-conteudo-e-precos | 2026-09-20 | BAIXA | Aberto |
-| 053 | [limite-grupos-constante-duplicada.md](limite-grupos-constante-duplicada.md) | Limite de grupos duplicado em backend, frontend e site, agora anunciado como plano | site-conteudo-e-precos | 2026-09-20 | MEDIA | Aberto |
 | 054 | [site-og-image-dedicada.md](site-og-image-dedicada.md) | Imagem de compartilhamento do site é uma screenshot reaproveitada | site-conteudo-e-precos | 2026-09-20 | BAIXA | Aberto |
 | 055 | [site-header-mobile-duas-linhas.md](site-header-mobile-duas-linhas.md) | Header do site ocupa duas linhas no celular | site-conteudo-e-precos (verificação do deploy) | 2026-09-20 | BAIXA | Aberto |
 | 056 | [backend-env-example-gitignored.md](backend-env-example-gitignored.md) | `backend/.env.example` está no `.gitignore` e nunca foi versionado | cadastro-codigo-email-nao-chega | 2026-09-21 | BAIXA | Aberto |
 | 057 | [baseline-especificacao-convite-grupo-desatualizada.md](baseline-especificacao-convite-grupo-desatualizada.md) | `01-specify.md` §3.2 descreve o convite de grupo com token errado (`Password::getRepository()` em vez do cache dedicado real) | convite-e-recuperacao-senha-link-dominio-errado | 2026-09-21 | BAIXA | Aberto |
 | 058 | [auth-login-logout-acoplado-jwt-blacklist-enabled.md](auth-login-logout-acoplado-jwt-blacklist-enabled.md) | Gate de e-mail não verificado no login depende silenciosamente de `JWT_BLACKLIST_ENABLED` | email-verificado-obrigatorio | 2026-09-22 | BAIXA | Aberto |
 | 059 | [constitution-log-debug-credenciais-desatualizado.md](constitution-log-debug-credenciais-desatualizado.md) | `00-constitution.md` §5 item 3 cita `Log::debug` de credenciais que não existe mais no código | email-verificado-obrigatorio | 2026-09-22 | BAIXA | Aberto |
+| 060 | [group-controller-log-info-user-completo.md](group-controller-log-info-user-completo.md) | `GroupController::store` loga o model `User` inteiro em texto | limite-grupos-fonte-unica | 2026-09-22 | BAIXA | Aberto |
 
 ## Itens concluídos
 
@@ -77,6 +77,7 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 
 | ID | Arquivo | Título | Resolvido em | Feature | Tasks |
 |---|---|---|---|---|---|
+| 053 | [concluidos/limite-grupos-constante-duplicada.md](concluidos/limite-grupos-constante-duplicada.md) | Limite de grupos por usuário está duplicado em três lugares | 2026-09-22 | 20260922-limite-grupos-fonte-unica | TASK-349 a TASK-353 |
 | 051 | [concluidos/site-updated-at-fixo-documentos-legais.md](concluidos/site-updated-at-fixo-documentos-legais.md) | `updated_at` dos documentos legais é uma string fixa | 2026-09-21 | 20260920-data-por-documento-legal | TASK-321 a TASK-327 |
 | 048 | [concluidos/site-consentimento-cookies-analytics.md](concluidos/site-consentimento-cookies-analytics.md) | Google Analytics do site carrega sem consentimento (LGPD) | 2026-09-20 | 20260920-analytics-app-e-consentimento | TASK-309 a TASK-320 |
 | 005 | [node-modules-versionado-frontend.md](concluidos/node-modules-versionado-frontend.md) | node_modules do frontend versionado no repositório | 2026-08-21 (fora do fluxo SDD — commit `477d27665`, anterior) | — | — |

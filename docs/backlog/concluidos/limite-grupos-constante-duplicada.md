@@ -4,7 +4,7 @@ ID: 053
 Origem: docs/feature/concluidas/202609/20260920-site-conteudo-e-precos/specify.md §3
 Criado em: 2026-09-20
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-349
 
 ## Descrição
 O número 3 aparece como constante independente em:
@@ -21,3 +21,14 @@ Esse valor deixou de ser só uma regra anti-abuso: desde a feature `20260920-sit
 A correção provável é expor o limite numa resposta da API (`/me` ou um endpoint de configuração pública) e o frontend consumir de lá. O site, por ser um deploy estático separado, provavelmente continuará com a cópia — mas aí com apenas uma duplicação, e documentada.
 
 Tipo sugerido: backend
+
+## Resolução
+Concluído em: 2026-09-22
+Feature: docs/feature/concluidas/202609/20260922-limite-grupos-fonte-unica/ (migra para lá quando o PR mergear em `dev` — ADR-009)
+Tasks: TASK-349 a TASK-353
+PRs: https://github.com/isacaguiar/expense/pull/196
+
+A correção saiu como o item previu: `AuthController::me()` passa a expor `max_groups_per_user`
+(lido direto de `GroupController::MAX_GROUPS_CREATED_PER_USER`) e `Dashboard.tsx` consome de lá
+em vez de hardcodar. O `site/` manteve a cópia própria em `config.php`, já documentada como
+espelho intencional — não virou consumidor da API, como o próprio item já antecipava.

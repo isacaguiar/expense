@@ -52,7 +52,10 @@ class AuthController extends Controller
 
     public function me()
     {
-        return response()->json(auth('api')->user());
+        return response()->json(array_merge(
+            auth('api')->user()->toArray(),
+            ['max_groups_per_user' => GroupController::MAX_GROUPS_CREATED_PER_USER],
+        ));
     }
 
     protected function respondWithToken($token)
