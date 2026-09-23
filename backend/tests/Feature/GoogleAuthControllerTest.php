@@ -84,6 +84,29 @@ class GoogleAuthControllerTest extends TestCase
         $this->assertSame($user->id, $context['user_id']);
     }
 
+    public function test_login_redirect_sends_the_user_to_google_with_opaque_login_state(): void
+    {
+        config(['services.google.client_id' => 'test-client-id']);
+        config(['services.google.client_secret' => 'test-client-secret']);
+        config(['services.google.redirect' => 'http://localhost/api/auth/google/callback']);
+
+        $response = $this->get('/api/auth/google/login');
+
+        $response->assertStatus(302);
+
+        $url = $response->headers->get('Location');
+        $this->assertStringStartsWith('https://accounts.google.com/o/oauth2/auth', $url);
+
+        parse_str(parse_url($url, PHP_URL_QUERY), $query);
+        $this->assertSame('test-client-id', $query['client_id']);
+
+        $this->assertMatchesRegularExpression('/^[A-Za-z0-9]{40}$/', $query['state']);
+
+        $context = Cache::get("google_oauth_state:{$query['state']}");
+        $this->assertSame('login', $context['intent']);
+        $this->assertArrayNotHasKey('user_id', $context);
+    }
+
     public function test_callback_links_google_account_to_user_from_valid_state(): void
     {
         config(['services.frontend_url' => 'http://localhost:3000']);
