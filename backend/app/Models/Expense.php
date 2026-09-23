@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Expense extends Model
-{  
+{
     use HasFactory;
 
     protected $table = 'ex_expenses';
@@ -26,10 +26,10 @@ class Expense extends Model
     ];
 
     protected $casts = [
-        'create_date'    => 'datetime',
-        'date_payment'   => 'date',
-        'total_value'    => 'decimal:2',
-        'deleted'        => 'boolean',
+        'create_date' => 'datetime',
+        'date_payment' => 'date',
+        'total_value' => 'decimal:2',
+        'deleted' => 'boolean',
         'fixed_recurrence_ends_at' => 'date',
     ];
 
@@ -66,5 +66,4 @@ class Expense extends Model
     {
         return $this->hasMany(Quota::class, 'expense_id');
     }
-
 }

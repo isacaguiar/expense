@@ -47,13 +47,11 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 025 | [expense-status-aguardando.md](expense-status-aguardando.md) | Definir e implementar status "Aguardando" para despesas | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 026 | [expense-busca-filtro-paginacao-backend.md](expense-busca-filtro-paginacao-backend.md) | Busca, filtro por tipo e paginação server-side no endpoint de despesas do grupo | atualizacao-layout-paginas | 2026-08-20 | BAIXA | Aberto |
 | 033 | [eslint-setup-frontend.md](eslint-setup-frontend.md) | Configurar ESLint no frontend | ci-frontend | 2026-08-27 | BAIXA | Aberto |
-| 034 | [workflow-ci-backend.md](workflow-ci-backend.md) | Workflow de CI (verificação) para o backend | ci-frontend | 2026-08-27 | MEDIA | Aberto |
 | 035 | [google-oauth-state-pull-nao-atomico.md](google-oauth-state-pull-nao-atomico.md) | `Cache::pull` do state OAuth não é atômico (uso único não estrito) | google-oauth-state-opaco | 2026-09-01 | BAIXA | Aberto |
 | 036 | [frontend-index-html-lang-title-estaticos.md](frontend-index-html-lang-title-estaticos.md) | `frontend/index.html` com `lang="en"` e `<title>` estático | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
 | 037 | [frontend-dist-index-html-versionado.md](frontend-dist-index-html-versionado.md) | `frontend/dist/index.html` versionado apesar de `dist/` no `.gitignore` | frontend-meta-viewport-mobile | 2026-09-01 | BAIXA | Aberto |
 | 038 | [expense-parcela-retroativa-paid-by-sem-consentimento.md](expense-parcela-retroativa-paid-by-sem-consentimento.md) | Parcela retroativa nasce `paid`/`paid_by` em nome do credor, sem consentimento nem aviso | despesa-parcelada-retroativa | 2026-09-04 | MEDIA | Promovido para TASK-341 |
 | 039 | [expense-view-tipo-e-pagadores.md](expense-view-tipo-e-pagadores.md) | Página da despesa (`ExpenseView`) rotula Parcelada como "Variável" e não lista pagadores | detalhe-despesa-tipo-parcela-valores | 2026-09-05 | MEDIA | Promovido para TASK-276 |
-| 040 | [expense-view-edicao-campo-data-vazio.md](expense-view-edicao-campo-data-vazio.md) | Modo de edição da página da despesa abre com o campo Data vazio | expense-view-tipo-e-pagadores | 2026-09-12 | MEDIA | Aberto |
 | 042 | [register-legado-sem-verificacao.md](register-legado-sem-verificacao.md) | `POST /register` legado cria conta sem verificar o e-mail | cadastro-de-usuarios | 2026-09-19 | MEDIA | Promovido para TASK-336 |
 | 043 | [login-nao-checa-email-verificado.md](login-nao-checa-email-verificado.md) | `AuthController::login` não checa `email_verified_at` | cadastro-de-usuarios | 2026-09-19 | MEDIA | Promovido para TASK-338 |
 | 044 | [expurgo-pre-cadastro-expirado.md](expurgo-pre-cadastro-expirado.md) | Sem rotina de expurgo de `ex_user_pre_create` | cadastro-de-usuarios | 2026-09-19 | BAIXA | Aberto |
@@ -77,6 +75,8 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 
 | ID | Arquivo | Título | Resolvido em | Feature | Tasks |
 |---|---|---|---|---|---|
+| 040 | [concluidos/expense-view-edicao-campo-data-vazio.md](concluidos/expense-view-edicao-campo-data-vazio.md) | Modo de edição da página da despesa abre com o campo Data vazio | expense-view-tipo-e-pagadores | 2026-09-22 | 20260922-expense-view-edicao-data-vazio | TASK-347, TASK-348 |
+| 034 | [concluidos/workflow-ci-backend.md](concluidos/workflow-ci-backend.md) | Workflow de CI (verificação) para o backend | 2026-09-22 | 20260922-ci-backend | TASK-354, TASK-356, TASK-355 |
 | 053 | [concluidos/limite-grupos-constante-duplicada.md](concluidos/limite-grupos-constante-duplicada.md) | Limite de grupos por usuário está duplicado em três lugares | 2026-09-22 | 20260922-limite-grupos-fonte-unica | TASK-349 a TASK-353 |
 | 051 | [concluidos/site-updated-at-fixo-documentos-legais.md](concluidos/site-updated-at-fixo-documentos-legais.md) | `updated_at` dos documentos legais é uma string fixa | 2026-09-21 | 20260920-data-por-documento-legal | TASK-321 a TASK-327 |
 | 048 | [concluidos/site-consentimento-cookies-analytics.md](concluidos/site-consentimento-cookies-analytics.md) | Google Analytics do site carrega sem consentimento (LGPD) | 2026-09-20 | 20260920-analytics-app-e-consentimento | TASK-309 a TASK-320 |

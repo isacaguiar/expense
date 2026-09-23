@@ -25,3 +25,13 @@ O dano hoje é de confiança, não de dado: o state continua com a string ISO qu
 Remédio: normalizar na entrada do state (`setDate(expense.date_payment.slice(0, 10))`) — uma linha, no mesmo arquivo que já tem `parseLocalDate()` desde a TASK-278 —, com um caso de teste usando a fixture em ISO. Enquanto isso não for feito, vale conferir se outras telas que pré-preenchem `input[type=date]` com dado vindo direto de um model (ex.: `ExpenseForm`) têm o mesmo problema.
 
 Tipo sugerido: frontend
+
+## Resolução
+Concluído em: 2026-09-22
+Feature: docs/feature/concluidas/202609/20260922-expense-view-edicao-data-vazio/
+Tasks: TASK-347, TASK-348
+PRs: https://github.com/isacaguiar/expense/pull/194
+
+Remédio aplicado exatamente como descrito: `setDate(expense.date_payment.slice(0, 10))`
+em `startEditing()` (`ExpenseView.tsx`). TASK-348 cobriu o caso com fixture em
+ISO-8601 completo e provou a regressão via `git stash` antes do fix.
