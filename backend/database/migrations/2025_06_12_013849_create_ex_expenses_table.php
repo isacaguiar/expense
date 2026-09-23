@@ -21,8 +21,6 @@ return new class extends Migration
             $table->integer('installments')->default(1);
             $table->decimal('total_value', 38, 2);
 
-            
-
             $table->unsignedBigInteger('group_id');
             $table->unsignedBigInteger('user_creator_id');
             $table->unsignedBigInteger('user_payer_id');
@@ -30,7 +28,7 @@ return new class extends Migration
             $table->foreign('group_id')->references('id')->on('ex_groups');
             $table->foreign('user_creator_id')->references('id')->on('ex_users');
             $table->foreign('user_payer_id')->references('id')->on('ex_users');
-            
+
             $table->boolean('deleted')->default(false);
             $table->timestamps();
 
