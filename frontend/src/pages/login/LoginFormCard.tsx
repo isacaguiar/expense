@@ -18,6 +18,7 @@ import Divider from '@mui/material/Divider';
 import { Link as RouterLink } from 'react-router-dom';
 import googleLogo from '../../assets/illustrations/google-logo.svg';
 import { brandColors } from '../../theme/brandColors';
+import { API_BASE_URL } from '../../config';
 
 interface LoginFormCardProps {
   email: string;
@@ -176,7 +177,7 @@ export default function LoginFormCard({
 
         <Box sx={{ display: 'flex', gap: 2 }}>
           <Button
-            href="#"
+            href={`${API_BASE_URL}/api/auth/google/login`}
             variant="outlined"
             fullWidth
             sx={{ fontSize: '0.8rem' }}
