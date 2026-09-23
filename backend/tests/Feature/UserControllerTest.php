@@ -115,6 +115,22 @@ class UserControllerTest extends TestCase
         $this->assertTrue(Hash::check('senha-antiga', $user->refresh()->password));
     }
 
+    public function test_change_password_rejects_account_without_local_password(): void
+    {
+        $user = User::factory()->create(['password' => null, 'google_id' => 'google-x']);
+
+        $response = $this->withToken($this->tokenFor($user))
+            ->putJson('/api/user/password', [
+                'current_password' => 'qualquer-coisa',
+                'new_password' => 'senha-nova-123',
+                'new_password_confirmation' => 'senha-nova-123',
+            ]);
+
+        $response->assertStatus(422);
+        $response->assertJsonPath('errors.current_password.0', 'Esta conta não tem senha local definida.');
+        $this->assertNull($user->refresh()->password);
+    }
+
     public function test_change_password_rejects_mismatched_confirmation(): void
     {
         $user = User::factory()->create(['password' => 'senha-antiga']);

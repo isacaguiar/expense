@@ -124,6 +124,12 @@ class UserController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        if ($user->password === null) {
+            return response()->json([
+                'errors' => ['current_password' => ['Esta conta não tem senha local definida.']],
+            ], 422);
+        }
+
         if (! Hash::check($request->current_password, $user->password)) {
             return response()->json([
                 'errors' => ['current_password' => ['Senha atual incorreta.']],

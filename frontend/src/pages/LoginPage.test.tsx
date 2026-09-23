@@ -1,15 +1,17 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from './LoginPage';
 import { API_BASE_URL } from '../config';
 
+const mockNavigate = vi.fn();
+
 vi.mock('react-router-dom', async importOriginal => {
   const actual = await importOriginal<typeof import('react-router-dom')>();
   return {
     ...actual,
-    useNavigate: () => vi.fn(),
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -23,6 +25,7 @@ describe('LoginPage', () => {
       })
     );
     localStorage.clear();
+    mockNavigate.mockClear();
   });
 
   it('renders the email/password fields and the submit button', () => {
@@ -123,9 +126,47 @@ describe('LoginPage', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByRole('link', { name: /Google/ })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: /Google/ })).toHaveAttribute(
+      'href',
+      `${API_BASE_URL}/api/auth/google/login`
+    );
     expect(screen.queryByRole('link', { name: /Microsoft/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cadastre-se' })).toHaveAttribute('href', '/cadastro');
     expect(screen.getByRole('link', { name: 'Esqueci minha senha' })).toHaveAttribute('href', '#');
+  });
+
+  it('exchanges the google_code for a token and redirects to the groups page', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ access_token: 'google-token-123', token_type: 'bearer', expires_in: 3600 }),
+      })
+    );
+
+    render(
+      <MemoryRouter initialEntries={['/login?google_code=abc123']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(localStorage.getItem('accessToken')).toBe('google-token-123');
+    });
+
+    expect(fetch).toHaveBeenCalledWith(`${API_BASE_URL}/api/auth/google/exchange?code=abc123`);
+    expect(mockNavigate).toHaveBeenCalledWith('/meus-grupos');
+  });
+
+  it('shows an error message when google_error is present', async () => {
+    render(
+      <MemoryRouter initialEntries={['/login?google_error=1']}>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    expect(
+      await screen.findByText('Não foi possível entrar com o Google. Tente novamente.')
+    ).toBeInTheDocument();
   });
 });
