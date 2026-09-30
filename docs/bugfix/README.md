@@ -61,12 +61,12 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 | [20260901-expense-store-update-422.md](20260901-expense-store-update-422.md) | Testes de despesa (store/update/destroy) falham com 422 após virada de mês | 2026-09-01 | `fix/20260901-expense-store-update-422` | Aberto |
 | [20260921-cadastro-codigo-email-nao-chega.md](20260921-cadastro-codigo-email-nao-chega.md) | Código de confirmação do cadastro não chega ao e-mail (produção) | 2026-09-21 | `fix/20260921-cadastro-codigo-email-nao-chega` | Aberto |
-| [20260930-login-mensagem-email-nao-verificado.md](20260930-login-mensagem-email-nao-verificado.md) | Login exibe mensagem genérica em vez de orientar verificação de e-mail | 2026-09-30 | `fix/20260930-login-mensagem-email-nao-verificado` | Aberto |
 
 ## Concluídos
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/202609/20260930-login-mensagem-email-nao-verificado.md](concluidos/202609/20260930-login-mensagem-email-nao-verificado.md) | Login exibe mensagem genérica em vez de orientar verificação de e-mail | 2026-09-30 | #201 |
 | [concluidos/202609/20260921-google-logs-temporarios.md](concluidos/202609/20260921-google-logs-temporarios.md) | Logs de diagnóstico temporários ativos em produção no callback do Google | 2026-09-21 | #184 |
 | [concluidos/202609/20260921-header-linha-morta-celular.md](concluidos/202609/20260921-header-linha-morta-celular.md) | Terceira linha invisível cobra 32px no cabeçalho do celular | 2026-09-21 | #183 |
 | [concluidos/202609/20260921-legal-comentario-redata-documento.md](concluidos/202609/20260921-legal-comentario-redata-documento.md) | Comentário de manutenção dentro do texto jurídico redata o documento | 2026-09-21 | #182 |

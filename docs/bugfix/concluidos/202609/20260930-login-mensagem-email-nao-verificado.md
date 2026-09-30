@@ -21,7 +21,7 @@ Nenhuma marcada → segue no BFF.
 - **Sintoma:** usuário com conta antiga (`email_verified_at` nulo) tenta logar com e-mail/senha corretos em produção e recebe a mensagem genérica "Não foi possível fazer login. Tente novamente em instantes." — sem nenhuma orientação de como resolver. Retentar não adianta (o bloqueio é intencional, não transitório), então o usuário fica sem caminho de saída percebido.
 - **Reprodução:** 1) abrir `https://expense.novemax.com.br/app/` (tela de login); 2) logar com uma conta cujo `email_verified_at` é nulo (ex. conta criada antes da feature `email-verificado-obrigatorio`, PR #192); 3) `POST /api/login` responde `403` com `{"error": "E-mail não verificado. Use \"Esqueci minha senha\" para confirmar seu e-mail e definir uma nova senha."}` (`backend/app/Http/Controllers/AuthController.php:36-43`); 4) a tela mostra "Não foi possível fazer login. Tente novamente em instantes." em vez da mensagem do backend. Reproduzido em produção em 2026-09-30 (rede: `POST https://expense-api.novemax.com.br/api/login` → `403`).
 - **Esperado vs. atual:** esperado — a tela exibe a mensagem específica do backend, orientando o uso de "Esqueci minha senha". Atual — `frontend/src/pages/LoginPage.tsx:53-59` só trata os status `401`/`422` com mensagem própria ("E-mail ou senha inválidos."); qualquer outro status (incluindo o `403` de e-mail não verificado) cai no `else` genérico e o corpo da resposta (`res.json()`) nunca é lido nesse branch.
-- **Causa raiz:** [`frontend/src/pages/LoginPage.tsx:53-59`](../../frontend/src/pages/LoginPage.tsx#L53-L59) — `handleSubmit` decide a mensagem de erro só pelo `res.status`, sem ler `await res.json()` para o caso de erro. O backend já manda a mensagem certa (`AuthController.php:41`, decidida em `docs/feature/20260922-email-verificado-obrigatorio/plan.md` §2), mas ela nunca chega à tela.
+- **Causa raiz:** [`frontend/src/pages/LoginPage.tsx:53-59`](../../../frontend/src/pages/LoginPage.tsx#L53-L59) — `handleSubmit` decide a mensagem de erro só pelo `res.status`, sem ler `await res.json()` para o caso de erro. O backend já manda a mensagem certa (`AuthController.php:41`, decidida em `docs/feature/20260922-email-verificado-obrigatorio/plan.md` §2), mas ela nunca chega à tela.
 
 ## 2. Correção
 
@@ -40,3 +40,8 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-09-30 | `cd frontend && npx tsc --noEmit` | sem erros |
 | 2026-09-30 | `cd frontend && npx vitest run` (suíte completa) | 43 arquivos / 291 testes passaram, sem regressão |
 | 2026-09-30 | Verificação manual no navegador (`npm run dev`, `fetch` da rota `/api/login` mockado para devolver `403` com o corpo real do backend) | Tela exibe "E-mail não verificado. Use \"Esqueci minha senha\" para confirmar seu e-mail e definir uma nova senha." em vez da mensagem genérica |
+
+## Resolução
+Concluído em: 2026-09-30
+Branch: fix/20260930-login-mensagem-email-nao-verificado
+PR: https://github.com/isacaguiar/expense/pull/201
