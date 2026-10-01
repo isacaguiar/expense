@@ -56,7 +56,7 @@ class InvitationControllerForgotPasswordTest extends TestCase
             'email.password-reset',
             Mockery::on(function (array $data) {
                 return isset($data['resetLink'])
-                    && str_starts_with($data['resetLink'], config('services.frontend_url'))
+                    && str_starts_with($data['resetLink'], config('services.frontend_app_url'))
                     && ! str_starts_with($data['resetLink'], config('app.url'));
             }),
             Mockery::any()
