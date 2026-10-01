@@ -71,7 +71,7 @@ class GoogleAuthController extends Controller
      */
     public function callback(Request $request)
     {
-        $frontendUrl = config('services.frontend_url');
+        $frontendUrl = config('services.frontend_app_url');
 
         $state = $this->pullState($request->query('state'));
 
@@ -168,7 +168,7 @@ class GoogleAuthController extends Controller
                 'exception' => get_class($e).': '.$e->getMessage(),
             ]);
 
-            return redirect()->away("{$frontendUrl}/login?google_error=1");
+            return redirect()->away("{$frontendUrl}?google_error=1");
         }
 
         $user = User::where('google_id', $googleUser->getId())->first();
@@ -184,7 +184,7 @@ class GoogleAuthController extends Controller
                         'user_id' => $existingByEmail->id,
                     ]);
 
-                    return redirect()->away("{$frontendUrl}/login?google_error=1");
+                    return redirect()->away("{$frontendUrl}?google_error=1");
                 }
 
                 $user = $existingByEmail;
@@ -213,7 +213,7 @@ class GoogleAuthController extends Controller
                 'exception' => $e->getMessage(),
             ]);
 
-            return redirect()->away("{$frontendUrl}/login?google_error=1");
+            return redirect()->away("{$frontendUrl}?google_error=1");
         }
 
         Log::info('[google-login] login concluido', ['user_id' => $user->id, 'google_id' => $user->google_id]);
@@ -223,7 +223,7 @@ class GoogleAuthController extends Controller
         $code = Str::random(40);
         Cache::put(self::LOGIN_CODE_CACHE_PREFIX.$code, $token, now()->addMinutes(self::LOGIN_CODE_TTL_MINUTES));
 
-        return redirect()->away("{$frontendUrl}/login?google_code={$code}");
+        return redirect()->away("{$frontendUrl}?google_code={$code}");
     }
 
     /**

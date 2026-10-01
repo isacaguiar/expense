@@ -39,6 +39,12 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
 
+    // URL base da SPA, já com o prefixo de deploy /app (frontend/vite.config.js
+    // "base: '/app/'"). Para link clicável enviado ao usuário (e-mail, redirect
+    // do navegador) — nunca para CORS, que usa frontend_url puro (sem path, pois
+    // precisa bater com o header Origin). Ver docs/feature/20260930-frontend-links-prefixo-app.
+    'frontend_app_url' => rtrim(env('FRONTEND_URL', 'http://localhost:3000'), '/').'/app',
+
     'whatsapp' => [
         'enabled' => env('WHATSAPP_ENABLED', false),
         'token' => env('WHATSAPP_TOKEN'),
