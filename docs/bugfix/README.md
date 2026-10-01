@@ -58,6 +58,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Criado em | Branch | Status |
 |---|---|---|---|---|
+| [20260930-logo-email-marca-novemax.md](20260930-logo-email-marca-novemax.md) | Logo e marca "Novemax" nos e-mails do sistema (deveria ser Shared Expense) | 2026-09-30 | `fix/20260930-logo-email-marca-novemax` | Escalonado → `docs/feature/20260930-recuperacao-acesso/` |
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 | [20260901-expense-store-update-422.md](20260901-expense-store-update-422.md) | Testes de despesa (store/update/destroy) falham com 422 após virada de mês | 2026-09-01 | `fix/20260901-expense-store-update-422` | Aberto |
 | [20260921-cadastro-codigo-email-nao-chega.md](20260921-cadastro-codigo-email-nao-chega.md) | Código de confirmação do cadastro não chega ao e-mail (produção) | 2026-09-21 | `fix/20260921-cadastro-codigo-email-nao-chega` | Aberto |

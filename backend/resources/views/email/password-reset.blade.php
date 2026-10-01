@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Recuperação de senha - Novemax</title>
+  <title>Recuperação de senha - Shared Expense</title>
   <style>
     body { background-color: #f2f4f8; font-family: 'Segoe UI', Helvetica, Arial, sans-serif; padding: 20px; }
     .container { background: #ffffff; border-radius: 8px; padding: 30px; max-width: 600px; margin: auto; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); }
@@ -15,7 +15,7 @@
 <body>
   <div class="container">
     <div class="logo">
-      <img src="https://novemax.com.br/assets/images/logo.png" alt="Novemax">
+      <img src="{{ $message->embed(resource_path('images/mail/logo-expense.png')) }}" alt="Shared Expense">
     </div>
 
     <h2>Recuperação de senha</h2>
@@ -33,7 +33,7 @@
 
     <div class="footer">
       <p>Se você não solicitou esta recuperação, apenas ignore este e-mail.</p>
-      <p>© {{ now()->year }} Novemax Soluções em Informática</p>
+      <p>© {{ now()->year }} Shared Expense</p>
     </div>
   </div>
 </body>
