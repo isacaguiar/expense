@@ -7,8 +7,8 @@ Versão: 1.0 · Criado em: 20260930
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-380 | Corrigir marca "Novemax"→"Shared Expense" nos 4 templates de e-mail (CID embed da logo) | backend | plan.md §1 | nenhum | Concluída |
-| TASK-381 | Criar tela pública "Esqueci minha senha" (etapa 1) e ligar o link morto do login | frontend | plan.md §2 | nenhum | Pendente |
-| TASK-382 | Validar fluxo completo de recuperação de senha enviando e-mail real via Mailpit local | doc | plan.md §3 | nenhum | Pendente |
+| TASK-381 | Criar tela pública "Esqueci minha senha" (etapa 1) e ligar o link morto do login | frontend | plan.md §2 | nenhum | Concluída |
+| TASK-382 | Validar fluxo completo de recuperação de senha enviando e-mail real via Mailpit local | doc | plan.md §3 | nenhum | Concluída |
 
 ## Critérios de aceite
 
