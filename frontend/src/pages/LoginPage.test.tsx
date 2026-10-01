@@ -190,7 +190,10 @@ describe('LoginPage', () => {
     );
     expect(screen.queryByRole('link', { name: /Microsoft/ })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Cadastre-se' })).toHaveAttribute('href', '/cadastro');
-    expect(screen.getByRole('link', { name: 'Esqueci minha senha' })).toHaveAttribute('href', '#');
+    expect(screen.getByRole('link', { name: 'Esqueci minha senha' })).toHaveAttribute(
+      'href',
+      '/recuperar-acesso'
+    );
   });
 
   it('exchanges the google_code for a token and redirects to the groups page', async () => {
