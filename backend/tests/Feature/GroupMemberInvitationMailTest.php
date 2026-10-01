@@ -74,7 +74,7 @@ class GroupMemberInvitationMailTest extends TestCase
         Mail::assertSent(UserInvitedMail::class, function (UserInvitedMail $mail) {
             $activationLink = $mail->build()->viewData['activationLink'];
 
-            return str_starts_with($activationLink, config('services.frontend_url'))
+            return str_starts_with($activationLink, config('services.frontend_app_url'))
                 && ! str_starts_with($activationLink, config('app.url'));
         });
     }

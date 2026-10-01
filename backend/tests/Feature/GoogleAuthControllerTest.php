@@ -131,7 +131,7 @@ class GoogleAuthControllerTest extends TestCase
 
     public function test_callback_links_google_account_to_user_from_valid_state(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
         Socialite::fake('google', $this->fakeGoogleUser('google-123'));
 
         $user = User::factory()->create();
@@ -139,7 +139,7 @@ class GoogleAuthControllerTest extends TestCase
 
         $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
 
-        $response->assertRedirect('http://localhost:3000/profile?linked=success');
+        $response->assertRedirect('http://localhost:3000/app/profile?linked=success');
         $this->assertDatabaseHas('ex_users', [
             'id' => $user->id,
             'google_id' => 'google-123',
@@ -149,22 +149,22 @@ class GoogleAuthControllerTest extends TestCase
 
     public function test_callback_state_is_single_use(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
         Socialite::fake('google', $this->fakeGoogleUser('google-123'));
 
         $user = User::factory()->create();
         $state = $this->linkState($user->id);
 
         $first = $this->get('/api/auth/google/callback?state='.urlencode($state));
-        $first->assertRedirect('http://localhost:3000/profile?linked=success');
+        $first->assertRedirect('http://localhost:3000/app/profile?linked=success');
 
         $second = $this->get('/api/auth/google/callback?state='.urlencode($state));
-        $second->assertRedirect('http://localhost:3000/profile?linked=error');
+        $second->assertRedirect('http://localhost:3000/app/profile?linked=error');
     }
 
     public function test_callback_redirects_with_error_on_unknown_state(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
         Socialite::fake('google', $this->fakeGoogleUser());
 
         $user = User::factory()->create();
@@ -172,22 +172,22 @@ class GoogleAuthControllerTest extends TestCase
 
         $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
 
-        $response->assertRedirect('http://localhost:3000/profile?linked=error');
+        $response->assertRedirect('http://localhost:3000/app/profile?linked=error');
         $this->assertDatabaseHas('ex_users', ['id' => $user->id, 'google_id' => null]);
     }
 
     public function test_callback_redirects_with_error_on_garbage_state(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
 
         $response = $this->get('/api/auth/google/callback?state=not-a-valid-state-token');
 
-        $response->assertRedirect('http://localhost:3000/profile?linked=error');
+        $response->assertRedirect('http://localhost:3000/app/profile?linked=error');
     }
 
     public function test_callback_redirects_with_error_when_google_id_already_linked_to_another_user(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
         User::factory()->create(['google_id' => 'google-123']);
         Socialite::fake('google', $this->fakeGoogleUser('google-123'));
 
@@ -196,7 +196,7 @@ class GoogleAuthControllerTest extends TestCase
 
         $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
 
-        $response->assertRedirect('http://localhost:3000/profile?linked=error');
+        $response->assertRedirect('http://localhost:3000/app/profile?linked=error');
         $this->assertDatabaseHas('ex_users', ['id' => $user->id, 'google_id' => null]);
     }
 
@@ -212,7 +212,7 @@ class GoogleAuthControllerTest extends TestCase
 
     public function test_login_callback_creates_a_new_user_and_redirects_with_an_exchange_code(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
         Socialite::fake('google', $this->fakeGoogleUser('google-new-1'));
 
         $state = $this->loginState();
@@ -221,7 +221,7 @@ class GoogleAuthControllerTest extends TestCase
 
         $response->assertStatus(302);
         $this->assertMatchesRegularExpression(
-            '#^http://localhost:3000/login\?google_code=[A-Za-z0-9]{40}$#',
+            '#^http://localhost:3000/app\?google_code=[A-Za-z0-9]{40}$#',
             $response->headers->get('Location')
         );
 
@@ -237,7 +237,7 @@ class GoogleAuthControllerTest extends TestCase
 
     public function test_login_callback_auto_links_existing_user_found_by_email(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
         $existing = User::factory()->create(['email' => 'ana@example.com', 'google_id' => null]);
         Socialite::fake('google', $this->fakeGoogleUser('google-456'));
         $countBefore = User::count();
@@ -256,7 +256,7 @@ class GoogleAuthControllerTest extends TestCase
 
     public function test_login_callback_refuses_to_auto_link_when_google_email_is_not_verified(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
         $existing = User::factory()->create(['email' => 'ana@example.com', 'google_id' => null]);
         Socialite::fake('google', $this->fakeGoogleUser('google-999', false));
 
@@ -264,13 +264,13 @@ class GoogleAuthControllerTest extends TestCase
 
         $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
 
-        $response->assertRedirect('http://localhost:3000/login?google_error=1');
+        $response->assertRedirect('http://localhost:3000/app?google_error=1');
         $this->assertDatabaseHas('ex_users', ['id' => $existing->id, 'google_id' => null]);
     }
 
     public function test_login_callback_reuses_existing_user_found_by_google_id(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
         $existing = User::factory()->create(['google_id' => 'google-789', 'email' => 'outro@example.com']);
         Socialite::fake('google', $this->fakeGoogleUser('google-789'));
         $countBefore = User::count();
@@ -290,13 +290,13 @@ class GoogleAuthControllerTest extends TestCase
 
     public function test_login_callback_redirects_with_error_when_socialite_fails(): void
     {
-        config(['services.frontend_url' => 'http://localhost:3000']);
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
 
         $state = $this->loginState();
 
         $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
 
-        $response->assertRedirect('http://localhost:3000/login?google_error=1');
+        $response->assertRedirect('http://localhost:3000/app?google_error=1');
     }
 
     public function test_exchange_returns_the_access_token_for_a_valid_code(): void
