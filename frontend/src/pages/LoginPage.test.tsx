@@ -86,6 +86,64 @@ describe('LoginPage', () => {
     expect(await screen.findByText('E-mail ou senha inválidos.')).toBeInTheDocument();
   });
 
+  it('shows the backend message when login is rejected for unverified e-mail', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 403,
+        json: async () => ({
+          error: 'E-mail não verificado. Use "Esqueci minha senha" para confirmar seu e-mail e definir uma nova senha.',
+        }),
+      })
+    );
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await user.type(screen.getByLabelText(/E-mail/), 'user@example.com');
+    await user.type(screen.getByLabelText(/^Senha/), 'secret123');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(
+      await screen.findByText(
+        'E-mail não verificado. Use "Esqueci minha senha" para confirmar seu e-mail e definir uma nova senha.'
+      )
+    ).toBeInTheDocument();
+  });
+
+  it('falls back to the generic message when an unexpected status has no JSON body', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 500,
+        json: async () => {
+          throw new Error('not json');
+        },
+      })
+    );
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <LoginPage />
+      </MemoryRouter>
+    );
+
+    await user.type(screen.getByLabelText(/E-mail/), 'user@example.com');
+    await user.type(screen.getByLabelText(/^Senha/), 'secret123');
+    await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+    expect(
+      await screen.findByText('Não foi possível fazer login. Tente novamente em instantes.')
+    ).toBeInTheDocument();
+  });
+
   it('shows a connection error message when the request fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('network down')));
     const user = userEvent.setup();

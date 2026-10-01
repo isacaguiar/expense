@@ -51,11 +51,20 @@ export default function LoginPage() {
       });
 
       if (!res.ok) {
-        setError(
-          res.status === 401 || res.status === 422
-            ? 'E-mail ou senha inválidos.'
-            : 'Não foi possível fazer login. Tente novamente em instantes.'
-        );
+        if (res.status === 401 || res.status === 422) {
+          setError('E-mail ou senha inválidos.');
+        } else {
+          let message = 'Não foi possível fazer login. Tente novamente em instantes.';
+          try {
+            const data = await res.json();
+            if (typeof data?.error === 'string' && data.error) {
+              message = data.error;
+            }
+          } catch {
+            // corpo sem JSON válido: mantém a mensagem genérica
+          }
+          setError(message);
+        }
         return;
       }
 
