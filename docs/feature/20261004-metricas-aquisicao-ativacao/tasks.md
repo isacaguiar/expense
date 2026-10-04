@@ -10,7 +10,7 @@ IDs a partir de TASK-383: o maior em `dev` é TASK-379 e a branch `backend/20260
 |---|---|---|---|---|---|
 | TASK-383 | Corrigir o gate de consentimento do app: revogar interrompe os envios e reaceitar reenvia `consent update granted` | frontend | plan.md §1 | nenhum | Concluída |
 | TASK-384 | Criar `trackEvent` com lista fechada de eventos e parâmetros e `page_location` sanitizado, extraindo o montador compartilhado com `trackPageView` | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-385 | Capturar a campanha UTM validada em memória e anexá-la ao primeiro envio medido | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-385 | Capturar a campanha UTM validada em memória e anexá-la ao primeiro envio medido | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-386 | Informar `new_user` na troca do código do login Google | backend | plan.md §4 | nenhum | Pendente |
 | TASK-387 | Disparar `sign_up` com `method: email` ao confirmar o cadastro por e-mail | frontend | plan.md §5 | nenhum | Pendente |
 | TASK-388 | Disparar `sign_up` com `method: invite` ao ativar a conta por convite | frontend | plan.md §5 | nenhum | Pendente |
