@@ -84,9 +84,15 @@ function loadAnalytics(): void {
   gtag('config', GA_MEASUREMENT_ID, { send_page_view: false });
 }
 
-/** Já existe consentimento concedido e o gtag foi carregado nesta sessão? */
+/**
+ * O gtag foi carregado nesta sessão **e** o consentimento atual é `granted`?
+ *
+ * Olha o cookie a cada chamada, e não só `SCD_GA_LOADED`: o script não é
+ * removido ao revogar, então só a flag continuaria liberando `page_view` e
+ * eventos até a próxima recarga.
+ */
 export function isAnalyticsActive(): boolean {
-  return Boolean(window.SCD_GA_LOADED);
+  return Boolean(window.SCD_GA_LOADED) && getConsent() === 'granted';
 }
 
 /**
@@ -126,7 +132,14 @@ export function setConsent(decision: ConsentDecision): void {
   rememberConsent(decision);
 
   if (decision === 'granted') {
-    loadAnalytics();
+    if (window.SCD_GA_LOADED) {
+      // O script já está na página (a pessoa aceitou, revogou e aceitou de novo
+      // sem recarregar). `loadAnalytics` sairia cedo e o GA ficaria negado até
+      // a próxima recarga, mesmo com o cookie em `granted`.
+      gtag('consent', 'update', { analytics_storage: 'granted' });
+    } else {
+      loadAnalytics();
+    }
 
     return;
   }
