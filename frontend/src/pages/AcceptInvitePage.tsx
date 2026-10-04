@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { trackEvent } from '../analytics/trackEvent';
 
 type AcceptInvitePageProps = {
   /**
@@ -75,6 +76,11 @@ const AcceptInvitePage: React.FC<AcceptInvitePageProps> = ({ mode = 'invite' }) 
         password,
         password_confirmation: confirmPassword
       });
+      // O mesmo componente e o mesmo endpoint também servem à redefinição de senha: só o
+      // convite é um cadastro (a pessoa nasceu como convidada e agora ativa a conta).
+      if (!isReset) {
+        trackEvent('sign_up', { method: 'invite' });
+      }
       setSuccess(true);
       setTimeout(() => navigate('/'), 2000);
     } catch (err) {
