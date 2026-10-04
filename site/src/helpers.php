@@ -8,6 +8,32 @@ function e(string $value): string
     return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
 }
 
+/**
+ * ID do Google Analytics a publicar na página, ou `null` fora de produção.
+ *
+ * O ID é fixo em `config.php`, então sem esta checagem qualquer visita, inclusive a do
+ * servidor local de quem desenvolve, contaria na propriedade real quando a pessoa aceita o
+ * banner (já aconteceu: `docs/feature/concluidas/202609/20260920-analytics-app-e-consentimento/`,
+ * `implementation.md`). Só o host de `site_url` — e o `www.` dele — recebe o ID; sem ID,
+ * o `consent.js` não carrega nada.
+ *
+ * `$host` é o `Host` da requisição, com ou sem porta. O cabeçalho vem do cliente, mas o pior
+ * que um host forjado consegue é fazer o próprio navegador de quem o forjou medir.
+ */
+function analytics_id(array $config, ?string $host): ?string
+{
+    $producao = parse_url($config['site_url'], PHP_URL_HOST);
+
+    if (!is_string($producao) || $host === null) {
+        return null;
+    }
+
+    $producao = strtolower($producao);
+    $atual = strtolower(preg_replace('/:\d+$/', '', $host) ?? '');
+
+    return in_array($atual, [$producao, 'www.' . $producao], true) ? $config['ga_measurement_id'] : null;
+}
+
 /** Resolve o caminho público de um asset relativo a site/public/assets. */
 function asset(string $path): string
 {
