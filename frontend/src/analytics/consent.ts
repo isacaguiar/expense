@@ -1,4 +1,5 @@
 import { GA_MEASUREMENT_ID } from '../config';
+import { captureCampaign } from './campaign';
 
 /**
  * Consentimento de cookies e carregamento condicional do Google Analytics.
@@ -100,6 +101,10 @@ export function isAnalyticsActive(): boolean {
  * carrega o analytics. Chamado uma vez, no `main.tsx`, antes de renderizar.
  */
 export function initAnalytics(): void {
+  // Antes de tudo: a campanha vem da URL de chegada e ainda não foi navegada
+  // para fora dela. Fica só em memória até o primeiro envio medido.
+  captureCampaign();
+
   gtag('consent', 'default', {
     ad_storage: 'denied',
     ad_user_data: 'denied',
