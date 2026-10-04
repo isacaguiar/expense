@@ -333,4 +333,82 @@ class GoogleAuthControllerTest extends TestCase
         $second = $this->getJson('/api/auth/google/exchange?code='.$code);
         $second->assertStatus(401);
     }
+
+    /**
+     * Roda o callback de login com o usuário do Google já "falsificado" e devolve
+     * o resultado da troca do código — o caminho real que o frontend percorre.
+     */
+    private function exchangeAfterLoginCallback(): \Illuminate\Testing\TestResponse
+    {
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
+
+        $callback = $this->get('/api/auth/google/callback?state='.urlencode($this->loginState()));
+
+        return $this->getJson('/api/auth/google/exchange?code='.$this->extractGoogleCode($callback));
+    }
+
+    // Pega a troca que não informa que a conta acabou de nascer: o frontend não
+    // conseguiria distinguir um cadastro novo de um login comum.
+    public function test_exchange_reports_a_new_user_when_the_login_callback_created_the_account(): void
+    {
+        Socialite::fake('google', $this->fakeGoogleUser('google-new-2'));
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
+
+        $callback = $this->get('/api/auth/google/callback?state='.urlencode($this->loginState()));
+        $code = $this->extractGoogleCode($callback);
+
+        $first = $this->getJson('/api/auth/google/exchange?code='.$code);
+
+        $first->assertStatus(200);
+        $this->assertSame(true, $first->json('new_user'));
+        $this->assertNotEmpty($first->json('access_token'));
+        $this->assertSame('bearer', $first->json('token_type'));
+        $this->assertIsInt($first->json('expires_in'));
+
+        // A marca é consumida junto com o código: não sobra nada no cache esperando o TTL.
+        $this->assertFalse(Cache::has("google_login_new_user:{$code}"));
+
+        $this->getJson('/api/auth/google/exchange?code='.$code)->assertStatus(401);
+    }
+
+    // Pega a flag que vira `true` para qualquer login: todo login por Google
+    // passaria a contar como cadastro.
+    public function test_exchange_does_not_report_a_new_user_for_an_existing_google_id(): void
+    {
+        User::factory()->create(['google_id' => 'google-789', 'email' => 'outro@example.com']);
+        Socialite::fake('google', $this->fakeGoogleUser('google-789'));
+
+        $response = $this->exchangeAfterLoginCallback();
+
+        $response->assertStatus(200);
+        $this->assertSame(false, $response->json('new_user'));
+    }
+
+    // Pega o auto-vínculo por e-mail sendo tratado como conta nova: a pessoa já
+    // tinha cadastro, só ganhou o vínculo com o Google.
+    public function test_exchange_does_not_report_a_new_user_when_the_account_was_linked_by_email(): void
+    {
+        User::factory()->create(['email' => 'ana@example.com', 'google_id' => null]);
+        Socialite::fake('google', $this->fakeGoogleUser('google-456'));
+
+        $response = $this->exchangeAfterLoginCallback();
+
+        $response->assertStatus(200);
+        $this->assertSame(false, $response->json('new_user'));
+    }
+
+    // Pega a troca que depende da flag existir: um código emitido antes do deploy
+    // (TTL de 1 minuto) só tem o token no cache e precisa continuar válido.
+    public function test_exchange_does_not_report_a_new_user_for_a_code_issued_without_the_flag(): void
+    {
+        $jwt = $this->tokenFor(User::factory()->create());
+        $code = Str::random(40);
+        Cache::put("google_login_code:{$code}", $jwt, now()->addMinutes(1));
+
+        $response = $this->getJson('/api/auth/google/exchange?code='.$code);
+
+        $response->assertStatus(200);
+        $this->assertSame($jwt, $response->json('access_token'));
+        $this->assertSame(false, $response->json('new_user'));
+    }
 }
