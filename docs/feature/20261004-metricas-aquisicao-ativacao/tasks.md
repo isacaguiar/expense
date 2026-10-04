@@ -14,7 +14,7 @@ IDs a partir de TASK-383: o maior em `dev` é TASK-379 e a branch `backend/20260
 | TASK-386 | Informar `new_user` na troca do código do login Google | backend | plan.md §4 | nenhum | Concluída |
 | TASK-387 | Disparar `sign_up` com `method: email` ao confirmar o cadastro por e-mail | frontend | plan.md §5 | nenhum | Concluída |
 | TASK-388 | Disparar `sign_up` com `method: invite` ao ativar a conta por convite | frontend | plan.md §5 | nenhum | Concluída |
-| TASK-389 | Disparar `sign_up` com `method: google` ao criar conta pelo login Google | frontend | plan.md §5 | nenhum | Pendente |
+| TASK-389 | Disparar `sign_up` com `method: google` ao criar conta pelo login Google | frontend | plan.md §5 | nenhum | Concluída |
 | TASK-390 | Disparar `group_created` ao criar um grupo | frontend | plan.md §5 | nenhum | Pendente |
 | TASK-391 | Disparar `expense_created` ao registrar uma despesa | frontend | plan.md §5 | nenhum | Pendente |
 | TASK-392 | Publicar o ID do GA no site só no host de produção | frontend | plan.md §6 | nenhum | Pendente |
