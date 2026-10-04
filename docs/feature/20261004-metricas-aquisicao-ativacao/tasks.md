@@ -16,7 +16,7 @@ IDs a partir de TASK-383: o maior em `dev` é TASK-379 e a branch `backend/20260
 | TASK-388 | Disparar `sign_up` com `method: invite` ao ativar a conta por convite | frontend | plan.md §5 | nenhum | Concluída |
 | TASK-389 | Disparar `sign_up` com `method: google` ao criar conta pelo login Google | frontend | plan.md §5 | nenhum | Concluída |
 | TASK-390 | Disparar `group_created` ao criar um grupo | frontend | plan.md §5 | nenhum | Concluída |
-| TASK-391 | Disparar `expense_created` ao registrar uma despesa | frontend | plan.md §5 | nenhum | Pendente |
+| TASK-391 | Disparar `expense_created` ao registrar uma despesa | frontend | plan.md §5 | nenhum | Concluída |
 | TASK-392 | Publicar o ID do GA no site só no host de produção | frontend | plan.md §6 | nenhum | Pendente |
 | TASK-393 | Atualizar a política de privacidade para eventos de ação e etiquetas de campanha | frontend | plan.md §7 | antes do merge (usuário revisa o texto) | Pendente |
 | TASK-394 | Documentar as métricas em `docs/analytics/README.md` e apontar para ele no contexto do frontend | doc | plan.md §8 | nenhum | Pendente |
