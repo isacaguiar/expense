@@ -4,6 +4,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import LoginPage from './LoginPage';
 import { API_BASE_URL } from '../config';
+import { trackEvent } from '../analytics/trackEvent';
+
+// O contrato da página com a camada de analytics é a chamada em si (o que o
+// `trackEvent` envia ao GA já é coberto em `analytics/trackEvent.test.ts`).
+vi.mock('../analytics/trackEvent', () => ({ trackEvent: vi.fn() }));
 
 const mockNavigate = vi.fn();
 
@@ -26,6 +31,7 @@ describe('LoginPage', () => {
     );
     localStorage.clear();
     mockNavigate.mockClear();
+    vi.mocked(trackEvent).mockClear();
   });
 
   it('renders the email/password fields and the submit button', () => {
@@ -226,5 +232,88 @@ describe('LoginPage', () => {
     expect(
       await screen.findByText('Não foi possível entrar com o Google. Tente novamente.')
     ).toBeInTheDocument();
+  });
+
+  describe('medição do cadastro por Google (sign_up)', () => {
+    function stubExchange(body: Record<string, unknown>) {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({
+          ok: true,
+          json: async () => ({ access_token: 'google-token-123', token_type: 'bearer', expires_in: 3600, ...body }),
+        })
+      );
+    }
+
+    function renderWithGoogleCode() {
+      return render(
+        <MemoryRouter initialEntries={['/login?google_code=abc123']}>
+          <LoginPage />
+        </MemoryRouter>
+      );
+    }
+
+    // Pega a medição que não existe, ou que dispara com método errado.
+    it('mede sign_up com method google, uma vez, quando a troca informa conta nova', async () => {
+      stubExchange({ new_user: true });
+
+      renderWithGoogleCode();
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/meus-grupos'));
+      expect(trackEvent).toHaveBeenCalledTimes(1);
+      expect(trackEvent).toHaveBeenCalledWith('sign_up', { method: 'google' });
+      expect(vi.mocked(trackEvent).mock.invocationCallOrder[0]).toBeLessThan(
+        mockNavigate.mock.invocationCallOrder[0]
+      );
+    });
+
+    // Pega a medição que trata todo login por Google como cadastro.
+    it('não mede quando a troca informa que a conta já existia', async () => {
+      stubExchange({ new_user: false });
+
+      renderWithGoogleCode();
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/meus-grupos'));
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    // Pega a medição que depende de a flag existir: respostas sem `new_user`
+    // (um backend anterior ao deploy da TASK-386) não podem contar como cadastro.
+    it('não mede quando a resposta não traz new_user', async () => {
+      stubExchange({});
+
+      renderWithGoogleCode();
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/meus-grupos'));
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    // Pega a medição disparada antes de saber se a troca deu certo.
+    it('não mede quando a troca do código falha', async () => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, json: async () => ({ new_user: true }) }));
+
+      renderWithGoogleCode();
+
+      expect(
+        await screen.findByText('Não foi possível concluir o login com o Google. Tente novamente.')
+      ).toBeInTheDocument();
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('não mede o login por e-mail e senha', async () => {
+      const user = userEvent.setup();
+      render(
+        <MemoryRouter>
+          <LoginPage />
+        </MemoryRouter>
+      );
+
+      await user.type(screen.getByLabelText(/E-mail/), 'user@example.com');
+      await user.type(screen.getByLabelText(/^Senha/), 'secret123');
+      await user.click(screen.getByRole('button', { name: 'Entrar' }));
+
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/meus-grupos'));
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
   });
 });

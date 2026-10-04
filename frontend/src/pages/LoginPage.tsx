@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { trackEvent } from '../analytics/trackEvent';
 import { setSession } from '../auth/session';
-import type { LoginResponse } from '../types/auth';
+import type { GoogleExchangeResponse } from '../types/auth';
 import LoginBrandingPanel from './login/LoginBrandingPanel';
 import LoginFormCard from './login/LoginFormCard';
 import LoginPageFooter from './login/LoginPageFooter';
@@ -26,8 +27,12 @@ export default function LoginPage() {
           if (!res.ok) {
             throw new Error('Falha ao trocar o código do Google pelo token.');
           }
-          const data: LoginResponse = await res.json();
+          const data: GoogleExchangeResponse = await res.json();
           setSession(data);
+          // A conta é criada dentro do login por Google: só `new_user` distingue cadastro de login.
+          if (data.new_user === true) {
+            trackEvent('sign_up', { method: 'google' });
+          }
           navigate('/meus-grupos');
         })
         .catch(() => {
