@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { trackEvent } from '../analytics/trackEvent';
 import {
   Alert,
   Box,
@@ -126,6 +127,7 @@ const ExpenseForm: React.FC = () => {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
       .then(() => {
+        trackEvent('expense_created');
         navigate(`/groups/${groupId}/expenses`);
       })
       .catch(err => {
