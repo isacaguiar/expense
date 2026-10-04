@@ -20,7 +20,7 @@ IDs a partir de TASK-383: o maior em `dev` é TASK-379 e a branch `backend/20260
 | TASK-392 | Publicar o ID do GA no site só no host de produção | frontend | plan.md §6 | nenhum | Concluída |
 | TASK-393 | Atualizar a política de privacidade para eventos de ação e etiquetas de campanha | frontend | plan.md §7 | antes do merge (usuário revisa o texto) | Concluída (texto aguarda aprovação do usuário) |
 | TASK-394 | Documentar as métricas em `docs/analytics/README.md` e apontar para ele no contexto do frontend | doc | plan.md §8 | nenhum | Concluída (conteúdo aguarda aprovação do usuário) |
-| TASK-395 | Validar os fluxos no preview inspecionando o `dataLayer` | frontend | plan.md §9 | nenhum | Pendente |
+| TASK-395 | Validar os fluxos no preview inspecionando o `dataLayer` | frontend | plan.md §9 | nenhum | Concluída |
 | TASK-396 | Validar os eventos no GA4 depois do deploy e concluir o checklist do console | infra | plan.md §8 e §9 | depois do deploy em produção; o usuário opera o GA4 | Pendente |
 
 TASK-392 e TASK-393 são tipo `frontend` porque o site institucional (PHP, `site/`) não tem tipo próprio na tabela do SDD e é entregue pelo mesmo fluxo de deploy do frontend (`deploy-site.yml`).
