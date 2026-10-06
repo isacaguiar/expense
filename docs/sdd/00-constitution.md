@@ -2,7 +2,7 @@
 
 > Este documento define as regras que **todo** trabalho no projeto (humano ou IA) deve seguir. Ele é o topo da hierarquia do SDD: Specify, Plan, Tasks e Implementation não podem contradizê-lo. Mudar a Constitution é sempre um **gate humano** (ver bloco Governança).
 
-Versão: 1.5 · Última atualização: 2026-09-01
+Versão: 1.6 · Última atualização: 2026-10-08
 
 ---
 
@@ -32,17 +32,17 @@ Trava as versões/peças abaixo. Trocar qualquer uma é decisão de **Governanç
 | Backend | PHP 8.1+, Laravel 10, `tymon/jwt-auth` (auth), Laravel Sanctum, `endroid/qr-code` (Pix) |
 | Banco | MySQL 8.0 |
 | Frontend web | React 18 + TypeScript + Vite + MUI (`@mui/material`) + `react-router-dom` + `axios` |
-| Frontend mobile/web unificado *(em migração)* | Expo + `react-native-web` + Expo Router + `react-native-paper` — ver `02-plan.md` |
+| App mobile | Flutter (Dart) + Material 3, projeto `app/` — ver `decisions/ADR-010` |
 | Infra local | Docker Compose (MySQL + Adminer) |
 | Deploy backend | GitHub Actions → SSH/rsync porta 2222 (`easingthemes/ssh-deploy`) → `expense-api.novemax.com.br` — ver `decisions/ADR-008` |
 
-> Decisão já tomada e registrada em `02-plan.md`/`03-tasks.md`: migração do frontend para **Expo + React Native Paper**, em projeto novo (`expense/app`), com `expense/frontend` (React web atual) continuando em paralelo até o corte.
+> Decisão registrada em `decisions/ADR-010`: app móvel em **Flutter**, em projeto novo (`app/`), com `frontend/` (React web) permanecendo como cliente web em produção. Substitui a migração para Expo do `decisions/ADR-001`.
 
 ## 4. Compatibilidade
 
 1. A API hoje é **sem versionamento** (`/api/*`). Mudança breaking em contrato de resposta/rota exige uma de duas coisas: (a) campo/rota nova aditiva, ou (b) introdução de `/api/v2` — nunca alterar o contrato de um endpoint existente em produção sem depreciação assistida.
 2. Migrations são **aditivas por padrão** (nova coluna nullable ou com default, nova tabela). Migration destrutiva (`drop`, `rename`, alterar tipo de coluna existente) é ação com **gate humano** (Governança) antes de rodar em qualquer banco compartilhado.
-3. Quando o app Expo (`expense/app`) e o frontend web (`expense/frontend`) coexistirem, ambos consomem a **mesma API** — nenhuma mudança de contrato pode quebrar um dos dois sem o outro ser atualizado junto.
+3. Quando o app Flutter (`app/`) e o frontend web (`frontend/`) coexistirem, ambos consomem a **mesma API** — nenhuma mudança de contrato pode quebrar um dos dois sem o outro ser atualizado junto.
 4. Navegadores: baseline "evergreen" (últimas 2 versões de Chrome/Edge/Firefox/Safari) — sem suporte a IE ou navegadores EOL.
 
 ## 5. Governança
@@ -79,10 +79,10 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 | Merge de PR de bugfix em `dev` | ❌ | ✅ (revisão humana do PR) |
 | Abrir PR de promoção (`dev` → `main`), após validação/teste em `dev` | ✅ | — |
 | Merge em `main` (produção) | ❌ | ✅ (revisão humana do PR de promoção) |
-| Deploy (workflow `deploy-backend.yml`, EAS build do Expo) | ❌ | ✅ — na prática, o próprio merge em `main` já dispara `deploy-backend.yml`; não fazer merge em `main` sem essa consequência estar clara |
+| Deploy (workflow `deploy-backend.yml`) | ❌ | ✅ — na prática, o próprio merge em `main` já dispara `deploy-backend.yml`; não fazer merge em `main` sem essa consequência estar clara |
 | Rotacionar, expor ou remover segredo/credencial | ❌ | ✅ |
 | Apagar dado definitivamente (hard delete) | ❌ | ✅ |
-| Corte de produção do frontend novo (`expense/app`) substituindo `expense/frontend` | ❌ | ✅ |
+| Publicar o app na Google Play (primeira versão e releases em produção; o `frontend/` web não é substituído) | ❌ | ✅ |
 
 3. Achados que **já exigem decisão humana** (não corrigir silenciosamente; estado de remediação em `docs/feature/concluidas/202608/20260817-seguranca-api/tasks.md`):
    - Segredos versionados em texto puro (`README.md` raiz: senha do jasypt; client-id/secret do Google OAuth; arquivo `client_secret_*.json` na raiz do repositório) → precisa rotacionar credenciais e remover do histórico/arquivo.
