@@ -161,6 +161,10 @@ const Payments: React.FC = () => {
     const form = new FormData();
     form.append('to_user_id', String(confirmSettlementTarget.to_user_id));
     form.append('comprovante', selectedSettlementFile);
+    // Sem isto o backend assume o ciclo corrente (aberto) e recusa o acerto de um
+    // ciclo anterior já fechado: "só pode ser confirmado depois que a competência
+    // é fechada". Mesmo parâmetro que `handlePay`/`handleUnpay` já mandam.
+    form.append('cycles_ago', String(cyclesAgo));
 
     axios
       .post(`${API_BASE_URL}/api/groups/${groupId}/settlements/confirm`, form, {

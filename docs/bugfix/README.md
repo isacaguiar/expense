@@ -66,6 +66,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/202610/20261006-acerto-comprovante-sem-cycles-ago.md](concluidos/202610/20261006-acerto-comprovante-sem-cycles-ago.md) | Acerto do devedor: comprovante de ciclo anterior recusado por falta de `cycles_ago` | 2026-10-06 | #207 |
 | [concluidos/202610/20261006-cadastro-fetch-sem-accept-json.md](concluidos/202610/20261006-cadastro-fetch-sem-accept-json.md) | Cadastro: erro de validação (422) vira redirecionamento bloqueado por CORS | 2026-10-06 | #206 |
 | [concluidos/202609/20260930-login-mensagem-email-nao-verificado.md](concluidos/202609/20260930-login-mensagem-email-nao-verificado.md) | Login exibe mensagem genérica em vez de orientar verificação de e-mail | 2026-09-30 | #201 |
 | [concluidos/202609/20260921-google-logs-temporarios.md](concluidos/202609/20260921-google-logs-temporarios.md) | Logs de diagnóstico temporários ativos em produção no callback do Google | 2026-09-21 | #184 |
