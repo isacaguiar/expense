@@ -4,7 +4,7 @@ Versão: 1.0 · Criado em: 20261006 · Branch: `fix/20261006-cadastro-fetch-sem-
 
 > Fluxo BFF — ver `docs/bugfix/README.md`. Se qualquer caixa da Triagem for marcada, este trabalho **não** é BFF: crie `docs/feature/<AAAAMMDD>-<slug>/` com `/nova-feature` e deixe aqui só um ponteiro.
 >
-> Origem: item 068 do backlog (`docs/backlog/cadastro-fetch-sem-accept-json-redireciona-422.md`, no PR #205 enquanto não for mergeado em `dev`), achado em 2026-10-04 durante a TASK-395 da feature `20261004-metricas-aquisicao-ativacao`.
+> Origem: item 068 do backlog (`docs/backlog/concluidos/cadastro-fetch-sem-accept-json-redireciona-422.md`, movido para `concluidos/` por este bugfix depois que o #205 foi mergeado em `dev`), achado em 2026-10-04 durante a TASK-395 da feature `20261004-metricas-aquisicao-ativacao`.
 
 ## Triagem
 
