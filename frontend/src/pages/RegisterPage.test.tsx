@@ -369,4 +369,89 @@ describe('RegisterPage', () => {
       expect(trackEvent).not.toHaveBeenCalled();
     });
   });
+
+  /**
+   * Dublê do backend para uma falha de validação. O Laravel só devolve o `422` em JSON a quem
+   * pede JSON (`Accept: application/json`); sem isso responde `302` para a origem do frontend,
+   * que o navegador bloqueia por CORS, e o `fetch` rejeita com `TypeError`. Comprovado com
+   * `curl` e no navegador em `docs/bugfix/20261006-cadastro-fetch-sem-accept-json.md`, §1.
+   * Os mocks acima respondem `{ ok: false, json }` para qualquer request e por isso nunca
+   * pegaram o defeito.
+   */
+  function validationFailure(body: object) {
+    return vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      const accept = new Headers(init?.headers).get('Accept') ?? '';
+
+      if (!accept.includes('application/json')) {
+        throw new TypeError('Failed to fetch');
+      }
+
+      return { ok: false, status: 422, json: async () => body } as unknown as Response;
+    });
+  }
+
+  describe('validation errors from the API reach the user (regression: requests sent no Accept header)', () => {
+    // Pega o `fetch` do pré-cadastro sem `Accept`: o e-mail repetido viraria "verifique sua conexão".
+    it('shows the field error instead of a connection error when pre-register validation fails', async () => {
+      vi.stubGlobal(
+        'fetch',
+        validationFailure({
+          message: 'The given data was invalid.',
+          errors: { email: ['Este e-mail já está cadastrado.'] },
+        })
+      );
+      const user = userEvent.setup();
+      renderPage();
+
+      await fillForm(user);
+      await user.click(screen.getByRole('button', { name: 'Criar conta' }));
+
+      expect(await screen.findByText('Este e-mail já está cadastrado.')).toBeInTheDocument();
+      expect(screen.queryByText(/Verifique sua conexão/)).not.toBeInTheDocument();
+    });
+
+    // Pega o `fetch` da confirmação sem `Accept`: o código errado viraria "verifique sua conexão".
+    it('shows "invalid code" instead of a connection error when the confirmation code is wrong', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await advanceToCodeStep(user);
+
+      vi.stubGlobal(
+        'fetch',
+        validationFailure({
+          message: 'The given data was invalid.',
+          errors: { code: ['Código inválido ou expirado. Confira o e-mail ou peça um novo código.'] },
+        })
+      );
+
+      await user.type(screen.getByLabelText(/Código de confirmação/), '000000');
+      await user.click(screen.getByRole('button', { name: 'Confirmar e entrar' }));
+
+      expect(await screen.findByText(/Código inválido ou expirado/)).toBeInTheDocument();
+      expect(screen.queryByText(/Verifique sua conexão/)).not.toBeInTheDocument();
+    });
+
+    // Pega o `fetch` do reenvio sem `Accept`.
+    it('shows the API message instead of a connection error when resending the code is refused', async () => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          message: 'Enviamos um código de confirmação para o seu e-mail.',
+          handle: HANDLE,
+          expires_in_seconds: 900,
+          resend_available_in: 0,
+        }),
+      } as unknown as Response);
+      const user = userEvent.setup();
+      renderPage();
+      await advanceToCodeStep(user);
+
+      vi.stubGlobal('fetch', validationFailure({ message: 'Este cadastro não pode mais receber um novo código.' }));
+
+      await user.click(screen.getByRole('button', { name: 'Reenviar código' }));
+
+      expect(await screen.findByText('Este cadastro não pode mais receber um novo código.')).toBeInTheDocument();
+      expect(screen.queryByText(/Verifique sua conexão/)).not.toBeInTheDocument();
+    });
+  });
 });
