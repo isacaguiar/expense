@@ -64,9 +64,16 @@ type MemberFixture = { id: number; name: string; email: string; pix: string | nu
 function mockGetResponses(
   expensesList: SummaryExpenseFixture[] = [],
   overrides: SummaryOverrides = {},
-  members: MemberFixture[] = []
+  members: MemberFixture[] = [],
+  focusCyclesAgo: number | null = null
 ) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
+    // Sem `focusCyclesAgo` o focus-cycle continua "inesperado" (a tela cai no
+    // ciclo corrente, como nos demais testes). Com ele, a tela abre no ciclo
+    // fechado que o backend aponta — o caminho real de quem tem acerto pendente.
+    if (url.includes('/expenses/focus-cycle') && focusCyclesAgo !== null) {
+      return Promise.resolve({ data: { cycles_ago: focusCyclesAgo } });
+    }
     if (url.includes('/expenses/summary')) {
       return Promise.resolve({ data: summaryResponse(expensesList, overrides) });
     }
@@ -326,7 +333,50 @@ describe('Payments', () => {
     expect(body).toBeInstanceOf(FormData);
     expect((body as FormData).get('to_user_id')).toBe('999');
     expect((body as FormData).get('comprovante')).toBe(file);
+    expect((body as FormData).get('cycles_ago')).toBe('0');
 
     expect(await screen.findByText('Comprovante enviado.')).toBeInTheDocument();
+  });
+
+  // Regressão: o envio do comprovante do acerto não mandava `cycles_ago`, então o
+  // backend avaliava o ciclo CORRENTE (aberto) em vez do que está na tela e
+  // respondia 422 "O acerto só pode ser confirmado depois que a competência é
+  // fechada." para quem acertava um ciclo anterior já fechado.
+  it('sends the cycles_ago of the cycle on screen when the debtor confirms a past closed cycle', async () => {
+    const user = userEvent.setup();
+
+    mockGetResponses(
+      [],
+      {
+        balances: [
+          { user_id: CURRENT_USER_ID, name: 'Isac', balance: -50 },
+          { user_id: 999, name: 'Maria', balance: 50 },
+        ],
+        settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+        cycle: { start: '2026-09-01', end: '2026-09-30', status: 'closed' },
+      },
+      [{ id: 999, name: 'Maria', email: 'maria@example.com', pix: 'maria@pix.com' }],
+      1
+    );
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar comprovante' }));
+
+    const file = new File(['foto'], 'pix.png', { type: 'image/png' });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, file);
+    await user.click(await screen.findByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/groups/1/settlements/confirm');
+    expect((body as FormData).get('to_user_id')).toBe('999');
+    expect((body as FormData).get('cycles_ago')).toBe('1');
   });
 });
