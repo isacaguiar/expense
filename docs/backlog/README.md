@@ -67,6 +67,15 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 058 | [auth-login-logout-acoplado-jwt-blacklist-enabled.md](auth-login-logout-acoplado-jwt-blacklist-enabled.md) | Gate de e-mail não verificado no login depende silenciosamente de `JWT_BLACKLIST_ENABLED` | email-verificado-obrigatorio | 2026-09-22 | BAIXA | Aberto |
 | 059 | [constitution-log-debug-credenciais-desatualizado.md](constitution-log-debug-credenciais-desatualizado.md) | `00-constitution.md` §5 item 3 cita `Log::debug` de credenciais que não existe mais no código | email-verificado-obrigatorio | 2026-09-22 | BAIXA | Aberto |
 | 060 | [group-controller-log-info-user-completo.md](group-controller-log-info-user-completo.md) | `GroupController::store` loga o model `User` inteiro em texto | limite-grupos-fonte-unica | 2026-09-22 | BAIXA | Aberto |
+| 061 | [site-paginas-por-publico.md](site-paginas-por-publico.md) | Páginas de aquisição por público e caso de uso | conversa-divulgacao-gratuita | 2026-10-04 | MEDIA | Aberto |
+| 062 | [site-conteudo-organico-seo.md](site-conteudo-organico-seo.md) | Conteúdo educativo para aquisição orgânica | conversa-divulgacao-gratuita | 2026-10-04 | MEDIA | Aberto |
+| 063 | [kit-divulgacao-comunidades.md](kit-divulgacao-comunidades.md) | Kit de divulgação e piloto em comunidades | conversa-divulgacao-gratuita | 2026-10-04 | MEDIA | Aberto |
+| 064 | [site-casos-reais-demonstracao.md](site-casos-reais-demonstracao.md) | Casos reais e demonstrações dos fluxos do produto | conversa-divulgacao-gratuita | 2026-10-04 | MEDIA | Aberto |
+| 065 | [indicacao-compartilhamento-produto.md](indicacao-compartilhamento-produto.md) | Indicação e compartilhamento do produto pelo usuário | conversa-divulgacao-gratuita | 2026-10-04 | MEDIA | Aberto |
+| 066 | [metricas-aquisicao-ativacao.md](metricas-aquisicao-ativacao.md) | Medir aquisição, cadastro e ativação por canal | conversa-divulgacao-gratuita | 2026-10-04 | MEDIA | Promovido para TASK-383 |
+| 067 | [site-consentimento-reaceite-nao-reenvia-granted.md](site-consentimento-reaceite-nao-reenvia-granted.md) | Banner de consentimento do site não reenvia `granted` ao aceitar de novo na mesma página | metricas-aquisicao-ativacao | 2026-10-04 | BAIXA | Aberto |
+| 068 | [cadastro-fetch-sem-accept-json-redireciona-422.md](cadastro-fetch-sem-accept-json-redireciona-422.md) | Cadastro: erro de validação (422) vira redirecionamento bloqueado por CORS e a tela mostra "verifique sua conexão" | metricas-aquisicao-ativacao (TASK-395) | 2026-10-04 | ALTA | Aberto |
+| 069 | [consentimento-revogar-nao-apaga-cookies-ga.md](consentimento-revogar-nao-apaga-cookies-ga.md) | Revogar o consentimento não apaga os cookies `_ga*` do navegador | metricas-aquisicao-ativacao (TASK-395) | 2026-10-04 | BAIXA | Aberto |
 
 ## Itens concluídos
 

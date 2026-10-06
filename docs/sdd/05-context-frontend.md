@@ -2,7 +2,7 @@
 
 > Documento **portátil** (markdown puro, sem nada específico de ferramenta): o que qualquer assistente de IA (ou dev) deve carregar antes de mexer na UI. Contrato de portabilidade e relação com as skills: `README.md`, "Skills e portabilidade".
 
-Versão: 1.3 · Última atualização: 2026-08-30
+Versão: 1.4 · Última atualização: 2026-10-04
 
 ---
 
@@ -29,6 +29,7 @@ Esses mockups são **referência de layout e fluxo**, não a implementação atu
    - `02-plan.md` §2 — mapeamento de peças da migração (`react-router-dom` → Expo Router, MUI → `react-native-paper`, `localStorage` → `expo-secure-store`) e quais telas faltam portar.
    - `01-specify.md` §2-3 — glossário de domínio (User, Group, Expense, Quota, payers) e fluxos, para nomear campos/telas de forma consistente com o backend.
    - O arquivo de padrão mais próximo já existente no frontend alvo (ex.: `frontend/src/api.ts`, `frontend/src/theme.ts`, ou uma tela irmã em `frontend/src/pages/` ou `app/`) — use como referência de estilo antes de inventar um padrão novo.
+   - `docs/analytics/README.md` — **só se a tarefa dispara evento de analytics** (`trackEvent`, `gtag`), mexe em UTM/campanha ou no consentimento de cookies: lista os eventos medidos, o que nunca pode sair para o Google e a ordem para acrescentar um evento novo. Evita que um evento nasça fora da camada `frontend/src/analytics/`.
 
 ## Convenções fixas
 
