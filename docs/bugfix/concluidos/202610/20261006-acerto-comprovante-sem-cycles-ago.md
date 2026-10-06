@@ -61,3 +61,8 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-10-06 | `git rebase origin/dev` (branch ainda não publicado; `dev` avançou com o #205) | Sem conflitos; `Payments*` e o `README` do BFF não foram tocados pelo #205 |
 | 2026-10-06 | `cd frontend && npx vitest run --maxWorkers=2` (suíte completa sobre o branch rebaseado em `dev` `715b884a38`) | `Test Files 45 passed (45)`, `Tests 335 passed (335)`, exit 0 |
 | 2026-10-06 | Desmontagem do ambiente de teste | Parados backend (8001) e frontend (3001); `backend/.env.testing` removido; container `mysql-expense-test` removido; `git status` só com os arquivos do bugfix e os dois itens não rastreados de outra frente |
+
+## Resolução
+Concluído em: 2026-10-06
+Branch: fix/20261006-acerto-comprovante-sem-cycles-ago
+PR: https://github.com/isacaguiar/expense/pull/207
