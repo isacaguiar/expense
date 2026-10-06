@@ -25,11 +25,19 @@ declare(strict_types=1);
       <li>
         <strong>Dados de medição de uso (só com o seu consentimento):</strong> se você aceitar,
         usamos o Google Analytics para entender como o site e o aplicativo são usados — páginas
-        e telas visitadas, origem da visita, tipo de dispositivo e navegador. Essa medição usa
-        cookies. <strong>Enquanto você não aceitar, nenhum cookie de medição é criado e nenhum
-        dado é enviado ao Google.</strong> Os endereços das telas são enviados sem identificadores:
-        o endereço de uma despesa, por exemplo, é registrado como um padrão genérico, nunca com o
-        número do seu grupo, da sua despesa, nem com dados que venham no endereço.
+        e telas visitadas, origem da visita, tipo de dispositivo e navegador — e se algumas ações
+        foram concluídas: finalizar o cadastro (e se foi por e-mail, pelo Google ou por convite),
+        criar um grupo e registrar uma despesa. Cada ação é registrada apenas como algo que
+        aconteceu, sem o seu conteúdo: não enviamos nomes, e-mails, valores, descrições nem
+        identificadores de grupo ou de despesa. Essa medição usa cookies.
+        <strong>Enquanto você não aceitar, nenhum cookie de medição é criado e nenhum dado é
+        enviado ao Google.</strong> No aplicativo, os endereços das telas são enviados sem
+        identificadores: o endereço de uma despesa, por exemplo, é registrado como um padrão
+        genérico, nunca com o número do seu grupo nem da sua despesa, e e-mails ou códigos de
+        convite que venham no endereço nunca são enviados. Do que vem depois do endereço, o
+        aplicativo envia apenas etiquetas de campanha (“utm_source”, “utm_medium”,
+        “utm_campaign” e “utm_content”), que dizem de onde veio o link em que você clicou — por
+        exemplo, de qual publicação ou comunidade — e não identificam você.
       </li>
     </ul>
   </section>
@@ -56,7 +64,7 @@ declare(strict_types=1);
       Se — e somente se — você aceitar a medição de uso, os dados descritos no item 2 são tratados
       pelo <strong>Google</strong> (Google Analytics), que atua como operador desses dados e pode
       processá-los fora do Brasil. Nenhum dado de conta, grupo, despesa ou pagamento é enviado ao
-      Google.
+      Google: apenas o registro de que uma ação aconteceu, sem o seu conteúdo.
     </p>
   </section>
 

@@ -39,7 +39,9 @@ $ogImage = $config['site_url'] . '/' . asset('app-home.png');
    * era o item 048 do backlog (LGPD).
    *
    * O ID sai por `json_encode` e não por `e()`: aqui o contexto é JavaScript,
-   * não HTML, e são regras de escape diferentes.
+   * não HTML, e são regras de escape diferentes. E só sai no host de produção
+   * (`analytics_id()`, em `helpers.php`): fora dele vai `null` e o `consent.js`
+   * não carrega nada, para o tráfego de desenvolvimento não contar na propriedade real.
    */
   ?>
   <script>
@@ -51,7 +53,7 @@ $ogImage = $config['site_url'] . '/' . asset('app-home.png');
       ad_personalization: 'denied',
       analytics_storage: 'denied'
     });
-    window.SCD_GA_ID = <?= json_encode($config['ga_measurement_id']) ?>;
+    window.SCD_GA_ID = <?= json_encode(analytics_id($config, $_SERVER['HTTP_HOST'] ?? null)) ?>;
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><?= e($pageTitle) ?></title>

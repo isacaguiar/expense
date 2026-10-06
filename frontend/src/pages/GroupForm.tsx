@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
+import { trackEvent } from '../analytics/trackEvent';
 import type { GroupDetail } from '../types/group';
 
 const GroupForm: React.FC = () => {
@@ -71,6 +72,8 @@ const GroupForm: React.FC = () => {
         response = await axios.put(`${API_BASE_URL}/api/groups/${id}`, payload, config);
       } else {
         response = await axios.post(`${API_BASE_URL}/api/groups`, payload, config);
+        // Este handler também edita (ramo acima): só a criação é medida.
+        trackEvent('group_created');
       }
       const groupId = (response.data as GroupDetail).id;
       navigate('/meus-grupos');

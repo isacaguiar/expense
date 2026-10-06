@@ -22,6 +22,13 @@ class GoogleAuthController extends Controller
     private const LOGIN_CODE_TTL_MINUTES = 1;
 
     /**
+     * Marca, ao lado do código de troca, que a conta acabou de ser criada neste login. Fica numa
+     * chave separada (e não dentro do valor do código) para o contrato antigo do código seguir
+     * intacto: um código emitido antes do deploy continua válido e simplesmente não tem a marca.
+     */
+    private const LOGIN_NEW_USER_CACHE_PREFIX = 'google_login_new_user:';
+
+    /**
      * Redireciona direto para o consentimento do Google, para o botão "Google" da tela de
      * login (usuário ainda não autenticado — sem chamada XHR prévia, ao contrário de redirectUrl()).
      */
@@ -145,10 +152,15 @@ class GoogleAuthController extends Controller
             return response()->json(['message' => 'Código inválido ou expirado.'], 401);
         }
 
+        // `new_user` serve ao frontend para distinguir um cadastro novo de um login comum, já que a
+        // conta é criada dentro do próprio login. Sempre presente; `false` quando não é conta nova.
+        $isNewUser = (bool) Cache::pull(self::LOGIN_NEW_USER_CACHE_PREFIX.$request->query('code'), false);
+
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
             'expires_in' => auth('api')->factory()->getTTL() * 60,
+            'new_user' => $isNewUser,
         ]);
     }
 
@@ -191,6 +203,8 @@ class GoogleAuthController extends Controller
             }
         }
 
+        $isNewUser = false;
+
         try {
             if ($user) {
                 $user->google_id = $googleUser->getId();
@@ -207,6 +221,7 @@ class GoogleAuthController extends Controller
                 $user->avatar_url = $googleUser->getAvatar();
                 $user->email_verified_at = now();
                 $user->save();
+                $isNewUser = true;
             }
         } catch (QueryException $e) {
             Log::warning('[google-login] save falhou (QueryException) -> login error', [
@@ -222,6 +237,10 @@ class GoogleAuthController extends Controller
 
         $code = Str::random(40);
         Cache::put(self::LOGIN_CODE_CACHE_PREFIX.$code, $token, now()->addMinutes(self::LOGIN_CODE_TTL_MINUTES));
+
+        if ($isNewUser) {
+            Cache::put(self::LOGIN_NEW_USER_CACHE_PREFIX.$code, true, now()->addMinutes(self::LOGIN_CODE_TTL_MINUTES));
+        }
 
         return redirect()->away("{$frontendUrl}?google_code={$code}");
     }
