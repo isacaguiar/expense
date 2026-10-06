@@ -47,3 +47,4 @@ Data: <AAAA-MM-DD>
 | [ADR-007](ADR-007-fonte-unica-e-arquitetura-do-agente.md) | Fonte única por fato + documento de arquitetura do agente | Aceita |
 | [ADR-008](ADR-008-deploy-backend-ssh-rsync.md) | Deploy do backend via SSH/rsync em vez de FTP | Aceita |
 | [ADR-009](ADR-009-arquivar-concluidos-por-anomes.md) | Arquivar feature/bugfix concluídos em `concluidas`/`concluidos/<AAAAMM>/` | Aceita |
+| [ADR-010](ADR-010-app-movel-em-flutter.md) | App móvel em Flutter (substitui a migração para Expo do ADR-001) | Proposta |
