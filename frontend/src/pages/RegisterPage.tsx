@@ -22,6 +22,19 @@ const EMPTY_FORM: RegisterFormValues = {
   passwordConfirmation: '',
 };
 
+/**
+ * Cabeçalhos dos três `fetch` do cadastro. O `Accept` não é enfeite: sem ele o Laravel não
+ * entende que o request espera JSON e, numa falha de validação (código errado, e-mail
+ * inválido ou já usado), responde com um `302` para a origem do frontend em vez do `422`.
+ * O navegador bloqueia esse redirecionamento por CORS, o `fetch` rejeita e a tela mostra
+ * "verifique sua conexão" no lugar da mensagem da API. O `axios` manda esse cabeçalho sozinho;
+ * o `fetch` não.
+ */
+const JSON_HEADERS = {
+  'Content-Type': 'application/json',
+  Accept: 'application/json',
+};
+
 /** Pré-cadastro em curso: o handle amarra a confirmação a esta submissão. */
 type PendingRegistration = {
   email: string;
@@ -89,7 +102,7 @@ export default function RegisterPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/pre-register`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({
           name: values.name,
           email: values.email,
@@ -138,7 +151,7 @@ export default function RegisterPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/pre-register/verify`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ email: pending.email, handle: pending.handle, code }),
       });
 
@@ -177,7 +190,7 @@ export default function RegisterPage() {
     try {
       const res = await fetch(`${API_BASE_URL}/api/pre-register/resend`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: JSON_HEADERS,
         body: JSON.stringify({ email: pending.email, handle: pending.handle }),
       });
 
