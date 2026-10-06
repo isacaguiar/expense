@@ -75,6 +75,11 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 066 | [metricas-aquisicao-ativacao.md](metricas-aquisicao-ativacao.md) | Medir aquisição, cadastro e ativação por canal | conversa-divulgacao-gratuita | 2026-10-04 | MEDIA | Promovido para TASK-383 |
 | 067 | [site-consentimento-reaceite-nao-reenvia-granted.md](site-consentimento-reaceite-nao-reenvia-granted.md) | Banner de consentimento do site não reenvia `granted` ao aceitar de novo na mesma página | metricas-aquisicao-ativacao | 2026-10-04 | BAIXA | Aberto |
 | 069 | [consentimento-revogar-nao-apaga-cookies-ga.md](consentimento-revogar-nao-apaga-cookies-ga.md) | Revogar o consentimento não apaga os cookies `_ga*` do navegador | metricas-aquisicao-ativacao (TASK-395) | 2026-10-04 | BAIXA | Aberto |
+| 070 | [rateio-parcelas-no-backend.md](rateio-parcelas-no-backend.md) | Rateio de parcelas no backend (`quotas` opcional, regeneração na edição, `value_per_person`). 1º da trilha 070 → 071 → 074 | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
+| 071 | [web-usar-rateio-do-backend.md](web-usar-rateio-do-backend.md) | Web passa a usar o contrato novo e remove o rateio de parcelas do cliente. Depende do 070 em produção | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
+| 072 | [exclusao-de-conta.md](exclusao-de-conta.md) | Exclusão de conta (backend, web e página pública), exigência da Play e da LGPD. Antes do release do app | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
+| 073 | [versao-minima-api-atualizacao-forcada.md](versao-minima-api-atualizacao-forcada.md) | Versão mínima da API / atualização forçada. Antes do release do app | app na Google Play (análise de 2026-10-06) | 2026-10-06 | MEDIA | Aberto |
+| 074 | [app-flutter-google-play.md](app-flutter-google-play.md) | App Flutter do Shared Expense na Google Play. Depende do 070 e do 071 em produção e do ADR-010 | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
 
 ## Itens concluídos
 
