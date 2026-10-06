@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
+import { trackEvent } from '../analytics/trackEvent';
 import { setSession } from '../auth/session';
 import { formatWhatsapp } from '../utils/phone';
 import LoginBrandingPanel from './login/LoginBrandingPanel';
@@ -168,6 +169,8 @@ export default function RegisterPage() {
 
       const data: LoginResponse = await res.json();
       setSession(data);
+      // A conta só passa a existir aqui, depois do código confirmado — não no pré-cadastro.
+      trackEvent('sign_up', { method: 'email' });
       navigate('/meus-grupos');
     } catch (err) {
       console.error('Falha na confirmação do código:', err);

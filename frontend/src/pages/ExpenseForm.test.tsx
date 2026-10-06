@@ -4,8 +4,13 @@ import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExpenseForm from './ExpenseForm';
+import { trackEvent } from '../analytics/trackEvent';
 
 vi.mock('axios');
+
+// O contrato da página com a camada de analytics é a chamada em si (o que o
+// `trackEvent` envia ao GA já é coberto em `analytics/trackEvent.test.ts`).
+vi.mock('../analytics/trackEvent', () => ({ trackEvent: vi.fn() }));
 
 type ExpensePayload = {
   expense_type: string;
@@ -66,6 +71,7 @@ async function selectExpenseType(label: string) {
 describe('ExpenseForm', () => {
   beforeEach(() => {
     navigateMock.mockClear();
+    vi.mocked(trackEvent).mockClear();
     vi.mocked(axios.get).mockReset();
     vi.mocked(axios.post).mockReset();
     vi.mocked(axios.post).mockResolvedValue({ data: { expense_id: 1 } });
@@ -245,5 +251,80 @@ describe('ExpenseForm', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(navigateMock).toHaveBeenCalledWith('/groups/1/expenses');
+  });
+
+  describe('medição da despesa registrada (expense_created)', () => {
+    // Pega a medição que não existe, ou que dispara depois do navigate.
+    it('mede expense_created, uma vez, antes de voltar para a listagem', async () => {
+      await renderForm();
+
+      await userEvent.type(screen.getByLabelText('Descrição'), 'Mercado');
+      await userEvent.type(screen.getByLabelText('Valor'), '150,00');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/groups/1/expenses'));
+      expect(trackEvent).toHaveBeenCalledTimes(1);
+      expect(trackEvent).toHaveBeenCalledWith('expense_created');
+      expect(vi.mocked(trackEvent).mock.invocationCallOrder[0]).toBeLessThan(
+        navigateMock.mock.invocationCallOrder[0]
+      );
+    });
+
+    // Pega a medição disparada antes de saber se a API aceitou: a competência
+    // fechada recusa a despesa e ela contaria como registrada.
+    it('não mede quando a API recusa a despesa', async () => {
+      vi.mocked(axios.post).mockRejectedValueOnce({
+        response: { data: { error: 'Não é possível alterar dados de uma competência já fechada.' } },
+      });
+      await renderForm();
+
+      await userEvent.type(screen.getByLabelText('Descrição'), 'Adestrador');
+      await userEvent.type(screen.getByLabelText('Valor'), '1754,40');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Não é possível alterar dados de uma competência já fechada.'
+      );
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('não mede quando o salvamento falha por erro de rede', async () => {
+      vi.mocked(axios.post).mockRejectedValueOnce(new Error('Network Error'));
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await renderForm();
+
+      await userEvent.type(screen.getByLabelText('Descrição'), 'Mercado');
+      await userEvent.type(screen.getByLabelText('Valor'), '80,00');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Falha ao salvar despesa.');
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    // Pega a medição colocada antes da validação local: o clique em Salvar sem
+    // participante nem chega à API.
+    it('não mede quando o formulário é bloqueado pela validação local', async () => {
+      await renderForm();
+
+      await userEvent.type(screen.getByLabelText('Descrição'), 'Cinema');
+      await userEvent.type(screen.getByLabelText('Valor'), '50,00');
+      await userEvent.click(screen.getByRole('checkbox', { name: 'Isac' }));
+      await userEvent.click(screen.getByRole('checkbox', { name: 'João' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Selecione ao menos um participante da divisão.'
+      );
+      expect(axios.post).not.toHaveBeenCalled();
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('não mede ao cancelar', async () => {
+      await renderForm();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
   });
 });

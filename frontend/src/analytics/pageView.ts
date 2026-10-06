@@ -1,4 +1,5 @@
 import { gtag, isAnalyticsActive } from './consent';
+import { buildPageLocation } from './pageLocation';
 import { sanitizePath } from './sanitizePath';
 
 /**
@@ -19,7 +20,8 @@ const BASENAME = '/app';
  *
  * `page_location` é montado a partir do caminho já normalizado em vez de
  * deixar o gtag usar `document.location`, que carregaria a query string do
- * convite (e-mail e token) para dentro do evento.
+ * convite (e-mail e token) para dentro do evento. A montagem é a mesma dos
+ * eventos de ação (`pageLocation.ts`).
  */
 export function trackPageView(pathname: string): void {
   if (!isAnalyticsActive()) {
@@ -30,6 +32,6 @@ export function trackPageView(pathname: string): void {
 
   gtag('event', 'page_view', {
     page_path: caminho,
-    page_location: `${window.location.origin}${caminho}`,
+    page_location: buildPageLocation(caminho),
   });
 }

@@ -4,6 +4,11 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import RegisterPage from './RegisterPage';
 import { API_BASE_URL } from '../config';
+import { trackEvent } from '../analytics/trackEvent';
+
+// O contrato da página com a camada de analytics é a chamada em si (o que o
+// `trackEvent` envia ao GA já é coberto em `analytics/trackEvent.test.ts`).
+vi.mock('../analytics/trackEvent', () => ({ trackEvent: vi.fn() }));
 
 const navigateMock = vi.fn();
 
@@ -62,6 +67,7 @@ describe('RegisterPage', () => {
   beforeEach(() => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(okPreRegister));
     navigateMock.mockClear();
+    vi.mocked(trackEvent).mockClear();
     localStorage.clear();
   });
 
@@ -263,6 +269,105 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: 'Voltar e corrigir' }));
 
     expect(await screen.findByRole('button', { name: 'Criar conta' })).toBeInTheDocument();
+  });
+
+  describe('medição do cadastro (sign_up)', () => {
+    async function confirmWith(user: ReturnType<typeof userEvent.setup>, code: string) {
+      await user.type(screen.getByLabelText(/Código de confirmação/), code);
+      await user.click(screen.getByRole('button', { name: 'Confirmar e entrar' }));
+    }
+
+    // Pega a medição que não existe, ou que dispara com método errado.
+    it('mede sign_up com method email, uma vez, quando o código é confirmado', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await advanceToCodeStep(user);
+
+      vi.mocked(fetch).mockResolvedValue(okVerify as unknown as Response);
+      await confirmWith(user, '123456');
+
+      await vi.waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/meus-grupos'));
+      expect(trackEvent).toHaveBeenCalledTimes(1);
+      expect(trackEvent).toHaveBeenCalledWith('sign_up', { method: 'email' });
+    });
+
+    // Pega o evento disparado depois do navigate: a tela desmonta e o envio fica
+    // à mercê do que acontecer na rota seguinte.
+    it('mede antes de navegar para a página de grupos', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await advanceToCodeStep(user);
+
+      vi.mocked(fetch).mockResolvedValue(okVerify as unknown as Response);
+      await confirmWith(user, '123456');
+
+      await vi.waitFor(() => expect(navigateMock).toHaveBeenCalled());
+      expect(vi.mocked(trackEvent).mock.invocationCallOrder[0]).toBeLessThan(
+        navigateMock.mock.invocationCallOrder[0]
+      );
+    });
+
+    // Pega a medição colocada no pré-cadastro: contaria quem nunca confirmou o
+    // e-mail e ainda não tem conta.
+    it('não mede quando o pré-cadastro é aceito e o código ainda não foi confirmado', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await advanceToCodeStep(user);
+
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('não mede quando o código está errado', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await advanceToCodeStep(user);
+
+      vi.mocked(fetch).mockResolvedValue({
+        ok: false,
+        json: async () => ({
+          message: 'The given data was invalid.',
+          errors: { code: ['Código inválido ou expirado. Confira o e-mail ou peça um novo código.'] },
+        }),
+      } as unknown as Response);
+      await confirmWith(user, '000000');
+
+      expect(await screen.findByText(/Código inválido ou expirado/)).toBeInTheDocument();
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('não mede quando a confirmação falha por erro de rede', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await advanceToCodeStep(user);
+
+      vi.mocked(fetch).mockRejectedValue(new Error('Failed to fetch'));
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      await confirmWith(user, '123456');
+
+      expect(await screen.findByText(/Verifique sua conexão/)).toBeInTheDocument();
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    // Pega a medição no reenvio: reenviar o código não é um novo cadastro.
+    it('não mede quando o código é reenviado', async () => {
+      vi.mocked(fetch).mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          message: 'Enviamos um código de confirmação para o seu e-mail.',
+          handle: HANDLE,
+          expires_in_seconds: 900,
+          resend_available_in: 0,
+        }),
+      } as unknown as Response);
+      const user = userEvent.setup();
+      renderPage();
+      await advanceToCodeStep(user);
+
+      await user.click(screen.getByRole('button', { name: 'Reenviar código' }));
+
+      expect(await screen.findByText(/Enviamos um novo código/)).toBeInTheDocument();
+      expect(trackEvent).not.toHaveBeenCalled();
+    });
   });
 
   /**
