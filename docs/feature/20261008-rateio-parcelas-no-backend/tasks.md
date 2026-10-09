@@ -9,7 +9,7 @@ IDs a partir de TASK-397: o maior em `dev` é TASK-396 (feature `20261004-metric
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-397 | Criar `App\Support\InstallmentSchedule` com o rateio em centavos (resto na última parcela, meses com clamp de fim de mês) e testes unitários com vetores fixos | backend | plan.md §1 | nenhum | Concluída |
-| TASK-398 | Conferir a paridade do `InstallmentSchedule` com `frontend/src/utils/installments.ts` nos mesmos vetores e registrar o resultado | backend | plan.md §1 | nenhum | Pendente |
+| TASK-398 | Conferir a paridade do `InstallmentSchedule` com `frontend/src/utils/installments.ts` nos mesmos vetores e registrar o resultado | backend | plan.md §1 | nenhum | Concluída |
 | TASK-399 | Tornar `quotas` opcional em `POST /api/expenses`, gerando as parcelas no servidor, com teto de 120 parcelas | backend | plan.md §2 | nenhum | Pendente |
 | TASK-400 | Gerar as parcelas no servidor ao trocar para parcelada em `PUT /api/expenses/{id}` sem `quotas`, com o mesmo teto | backend | plan.md §3 | nenhum | Pendente |
 | TASK-401 | Regenerar as quotas na edição quando valor, data ou nº de parcelas mudam numa despesa não-fixa sem parcela paga | backend | plan.md §4 | nenhum | Pendente |
