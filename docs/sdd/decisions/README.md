@@ -38,7 +38,7 @@ Data: <AAAA-MM-DD>
 
 | ID | Título | Status |
 |---|---|---|
-| [ADR-001](ADR-001-migracao-frontend-expo.md) | Migração do frontend para Expo + React Native Paper | Aceita |
+| [ADR-001](ADR-001-migracao-frontend-expo.md) | Migração do frontend para Expo + React Native Paper | Superada por ADR-010 |
 | [ADR-002](ADR-002-sdd-por-feature.md) | SDD por feature (`docs/feature/<AAAAMMDD>-<slug>/`) em vez de arquivos únicos | Aceita |
 | [ADR-003](ADR-003-fluxo-branch-por-feature.md) | Fluxo de branch por feature (branch principal + tasks mergeadas nela) | Aceita |
 | [ADR-004](ADR-004-fluxo-bugfix.md) | Fluxo de correção de bug (BFF) paralelo ao SDD-por-feature | Aceita |
@@ -47,4 +47,4 @@ Data: <AAAA-MM-DD>
 | [ADR-007](ADR-007-fonte-unica-e-arquitetura-do-agente.md) | Fonte única por fato + documento de arquitetura do agente | Aceita |
 | [ADR-008](ADR-008-deploy-backend-ssh-rsync.md) | Deploy do backend via SSH/rsync em vez de FTP | Aceita |
 | [ADR-009](ADR-009-arquivar-concluidos-por-anomes.md) | Arquivar feature/bugfix concluídos em `concluidas`/`concluidos/<AAAAMM>/` | Aceita |
-| [ADR-010](ADR-010-app-movel-em-flutter.md) | App móvel em Flutter (substitui a migração para Expo do ADR-001) | Proposta |
+| [ADR-010](ADR-010-app-movel-em-flutter.md) | App móvel em Flutter (substitui a migração para Expo do ADR-001) | Aceita |

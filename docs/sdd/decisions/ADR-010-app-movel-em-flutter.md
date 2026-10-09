@@ -1,9 +1,9 @@
 # ADR-010: App móvel em Flutter (substitui a migração para Expo)
 
-Status: Proposta
+Status: Aceita
 Data: 2026-10-06
 
-> Rascunho para aprovação do mantenedor. Enquanto o status for **Proposta**, o `ADR-001` continua **Aceita**, a Constitution §3 continua dizendo Expo e nenhum documento além deste e do índice foi alterado. Os ajustes do SDD estão listados em "Consequências" e só acontecem depois da aceitação (gate humano, `00-constitution.md` §5.2).
+> Aceita pelo mantenedor em 2026-10-08. Este PR muda o status e marca o `ADR-001` como "Superada por ADR-010"; a alteração da Constitution (gate humano, `00-constitution.md` §5.2) e os demais ajustes do SDD, listados em "Consequências", vão em PRs próprios, e o da Constitution só deve ser mergeado depois deste.
 
 ## Contexto
 
@@ -30,7 +30,7 @@ O `ADR-001` já tinha considerado Flutter e o descartou porque "dobraria o esfor
 3. O **backend não muda de contrato por causa do app**: mudanças só aditivas (`00-constitution.md` §4.1 e §4.3), e web e app consomem a mesma API.
 4. **Regra de negócio fica no backend**, como já exige a Constitution §1 item 1 ("nenhuma lógica de negócio deve viver no frontend além de validação de UX"). O app não reimplementa regra de dinheiro, o que inclui o rateio de parcelas: hoje ele é montado pelo web, um desvio dessa regra, e passa ao backend antes de o app começar (itens 070 e 071 do backlog).
 5. **Escolhas de biblioteca não são decididas aqui** (gerência de estado, rotas, cliente HTTP, armazenamento seguro, deep links, etc.): ficam para o `plan.md` da feature do app (item 074 do backlog).
-6. Esta decisão **substitui o `ADR-001`**. Ao ser aceita, o `ADR-001` passa a "Superada por ADR-010" e o Épico A é marcado como substituído (TASK-001 a TASK-010 e TASK-022 a TASK-026 ficam obsoletas).
+6. Esta decisão **substitui o `ADR-001`**: com ela aceita, o `ADR-001` passa a "Superada por ADR-010" e o Épico A é marcado como substituído (TASK-001 a TASK-010 e TASK-022 a TASK-026 ficam obsoletas).
 
 ## Consequências
 
@@ -46,7 +46,7 @@ O `ADR-001` já tinha considerado Flutter e o descartou porque "dobraria o esfor
 - **O app começa depois**: a ordem escolhida para reduzir risco é 070 (rateio no backend) → 071 (web usa o contrato novo) → 074 (app). O contrato novo é provado em produção por um cliente maduro antes de o app depender dele.
 - O mantenedor passa a manter duas stacks de UI.
 
-**Ajustes do SDD após a aceitação** (nenhum feito neste rascunho)
+**Ajustes do SDD** (o status deste ADR e o do `ADR-001` mudam neste PR; o resto vai em PRs próprios)
 - `00-constitution.md`, **5 linhas** (além do cabeçalho: versão 1.5 → 1.6 e data), em PR próprio e só depois da aceitação. Texto proposto:
   - §3, tabela de stack: a linha "Frontend mobile/web unificado *(em migração)*" vira `App mobile | Flutter (Dart) + Material 3, projeto app/ — ver decisions/ADR-010`.
   - §3, nota abaixo da tabela: "Decisão registrada em `decisions/ADR-010`: app móvel em **Flutter**, em projeto novo (`app/`), com `frontend/` (React web) permanecendo como cliente web em produção. Substitui a migração para Expo do `decisions/ADR-001`."
@@ -54,7 +54,7 @@ O `ADR-001` já tinha considerado Flutter e o descartou porque "dobraria o esfor
   - §5.2, linha de deploy: "Deploy (workflow `deploy-backend.yml`, EAS build do Expo)" vira "Deploy (workflow `deploy-backend.yml`)", sem a menção ao EAS, que não existe em Flutter.
   - §5.2, linha do corte de produção: "Corte de produção do frontend novo (`expense/app`) substituindo `expense/frontend`" vira "Publicar o app na Google Play (primeira versão e releases em produção; o `frontend/` web não é substituído)", continuando gate humano. Com este ADR não há corte do web.
 - Outros 12 documentos que citam a stack ou esse gate (varredura por `Expo`, `React Native`, `expense/app`, "corte de produção", "app novo"): `02-plan.md` (13 menções, principalmente o §2), `05-context-frontend.md` (6), `01-specify.md`, `03-tasks.md` (ponteiro do Épico A), `06-context-backend.md`, `docs/sdd/README.md`, `agent-architecture.md` (gate "corte de produção do app novo"), `agents-roadmap.md`, `modelo-arquitetural.md` (inclui a linha espelho do gate), `CLAUDE.md`, `AGENTS.md` e a skill `.claude/skills/expense-frontend/SKILL.md`. Total, com a Constitution: 13 arquivos.
-- `ADR-001`: status para "Superada por ADR-010"; este ADR no índice de `decisions/README.md` passa a "Aceita".
+- `ADR-001` para "Superada por ADR-010" e este ADR para "Aceita" no índice de `decisions/README.md` (feito neste PR).
 - Novo `docs/sdd/07-context-mobile.md` e skill `expense-mobile`, no molde de `05` e `06`.
 - Nota de supersessão em `docs/feature/20260817-migracao-frontend-expo/`.
 - Os arquivos em `concluidas/` e `concluidos/` são retratos históricos e não são alterados.
