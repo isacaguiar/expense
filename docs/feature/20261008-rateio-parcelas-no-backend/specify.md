@@ -47,7 +47,7 @@ O contrato novo precisa estar em produção, provado pelo web (item 071), antes 
 
 **R2 — Edição com troca para parcelada.** Em `PUT /api/expenses/{id}`, quando `expense_type` for `IN_INSTALLMENTS` e `quotas` não vier, o backend gera as parcelas com `installments`, o total final (`total_value` do payload ou o atual) e a data inicial (`date_payment` do payload ou a atual). Troca para À Vista continua como hoje.
 
-**R3 — Regeneração na edição (decisão D1 abaixo).** Numa despesa não-fixa sem nenhuma quota paga, se o payload trouxer `total_value`, `date_payment` ou `installments` e **não** trouxer `expense_type`, o backend regenera as quotas conforme o tipo atual (À Vista: 1 quota; Parcelada: N quotas), em vez de deixá-las com valor e data antigos. Despesa Fixa continua fora: o `total_value` dela é o modelo das ocorrências futuras.
+**R3 — Regeneração na edição (D1, incluída).** Numa despesa não-fixa sem nenhuma quota paga, se o payload trouxer `total_value`, `date_payment` ou `installments` e **não** trouxer `expense_type`, o backend regenera as quotas conforme o tipo atual (À Vista: 1 quota; Parcelada: N quotas), em vez de deixá-las com valor e data antigos. Despesa Fixa continua fora: o `total_value` dela é o modelo das ocorrências futuras.
 
 **R4 — `value_per_person` por quota.** `GET /api/expenses/{id}` passa a devolver, em cada quota, `value_per_person` = `round(value_quota / max(pagadores, 1), 2)`, com a mesma fórmula de `computeCycleSummary()` e sem consulta extra por quota (sem N+1). É campo novo e aditivo; nenhum campo atual muda.
 
@@ -55,13 +55,13 @@ O contrato novo precisa estar em produção, provado pelo web (item 071), antes 
 
 **R6 — Retrocompatibilidade.** Quem envia `quotas` (o web de hoje, incluindo abas antigas em cache) continua funcionando exatamente como antes. Todos os testes atuais que enviam `quotas` passam sem alteração. Sem migration (Constitution §4.2); mudança de API só aditiva (§4.1).
 
-**R7 — Teto de parcelas na geração (decisão D2).** Nos caminhos em que o servidor gera as parcelas (R1 e R2), `installments` tem um máximo, para que um payload pequeno não gere linhas sem limite. Quem envia `quotas` próprias não muda.
+**R7 — Teto de 120 parcelas na geração (D2).** Nos caminhos em que o servidor gera as parcelas (R1, R2 e R3), `installments` tem máximo de 120, para que um payload pequeno não gere linhas sem limite. Quem envia `quotas` próprias não muda.
 
-### 2.3 Decisões a aprovar
+### 2.3 Decisões (aprovadas em 2026-10-08)
 
-- **D1 — Regeneração na edição (R3).** Recomendação: incluir. Fecha a armadilha das quotas desatualizadas para qualquer cliente novo (o app), e o web não é afetado, porque já reenvia tipo e quotas. Alternativa: deixar fora e documentar que só `expense_type` dispara a geração.
-- **D2 — Valor do teto (R7).** Recomendação: **120 parcelas** (10 anos mensais). É folgado para uso real e impede amplificação. Qualquer valor acima de 1 serve ao requisito; o número é decisão de produto.
-- **D3 — Conferir a soma de À Vista e Fixa quando o cliente envia `quotas`.** Recomendação: **não incluir agora**. Fechar essa lacuna para quem manda `quotas` pode quebrar clientes e fixtures de teste que hoje enviam valores arbitrários, e perde a urgência quando o web parar de mandar `quotas` (item 071). Fica como candidato a backlog depois do 071.
+- **D1 — Regeneração na edição (R3): incluir.** Fecha a armadilha das quotas desatualizadas para qualquer cliente novo (o app), e o web não é afetado, porque já reenvia tipo e quotas.
+- **D2 — Teto de parcelas na geração (R7): 120** (10 anos mensais). É folgado para uso real e impede amplificação. O teto vale só quando o servidor gera as parcelas.
+- **D3 — Conferir a soma de À Vista e Fixa quando o cliente envia `quotas`: não incluir agora.** Fechar essa lacuna para quem manda `quotas` pode quebrar clientes e fixtures de teste que hoje enviam valores arbitrários, e perde a urgência quando o web parar de mandar `quotas` (item 071). Fica como candidato a backlog depois do 071.
 
 ## 3. Fora de escopo desta feature
 
