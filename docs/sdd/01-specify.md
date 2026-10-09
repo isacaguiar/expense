@@ -67,7 +67,7 @@ Permitir que um grupo de pessoas (família, república, grupo de amigos) registr
 - `GET /pix/generate?email=...&valor=...` — gera QR Code + "copia e cola" Pix para a chave cadastrada do usuário do e-mail informado. **Hoje esta rota é pública** (fora do grupo `jwt.auth`) — ver `00-constitution.md`, Governança/Segurança.
 
 ### 3.7 Telas do frontend web atual (`expense/frontend/src/pages`)
-`LoginPage`, `RegisterPage` (`/cadastro`, auto-cadastro em duas etapas), `Dashboard`, `GroupList`, `GroupForm`, `GroupMembersForm`, `ExpenseManager`, com navegação em `Navbar`/`InternalLayout`. Este é o conjunto de telas que serve de referência para o Plan de migração para React Native (`02-plan.md`).
+`LoginPage`, `RegisterPage` (`/cadastro`, auto-cadastro em duas etapas), `Dashboard`, `GroupList`, `GroupForm`, `GroupMembersForm`, `ExpenseManager`, com navegação em `Navbar`/`InternalLayout`. Este é o conjunto de telas que servia de referência para o plano de migração para React Native (`02-plan.md`, superado pelo `decisions/ADR-010`: o app móvel passa a ser em Flutter).
 
 ## 4. Regras de negócio confirmadas
 

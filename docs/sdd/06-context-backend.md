@@ -2,11 +2,11 @@
 
 > Documento **portátil** (markdown puro, sem nada específico de ferramenta): o que qualquer assistente de IA (ou dev) deve carregar antes de mexer na API. Contrato de portabilidade e relação com as skills: `README.md`, "Skills e portabilidade".
 
-Versão: 1.1 · Última atualização: 2026-08-30
+Versão: 1.2 · Última atualização: 2026-10-08
 
 ---
 
-API REST stateless em Laravel 10 / PHP 8.1+, MySQL 8, autenticação JWT (`tymon/jwt-auth`). Consumida por `expense/frontend` (React web) e, em migração, por `expense/app` (Expo).
+API REST stateless em Laravel 10 / PHP 8.1+, MySQL 8, autenticação JWT (`tymon/jwt-auth`). Consumida por `frontend/` (React web) e, no futuro, por `app/` (app móvel em Flutter, `decisions/ADR-010`).
 
 ## Antes de codar
 
