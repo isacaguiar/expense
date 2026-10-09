@@ -4,7 +4,7 @@ ID: 070
 Origem: análise do app na Google Play (conversa de 2026-10-06); `frontend/src/utils/installments.ts` e `backend/app/Http/Controllers/ExpenseController.php`
 Criado em: 2026-10-06
 Prioridade: ALTA
-Status: Aberto
+Status: Promovido para TASK-397
 
 ## Descrição
 Hoje o cliente web monta o array `quotas` de uma despesa: `frontend/src/utils/installments.ts` divide o total em centavos, joga o resto na última parcela e soma meses com clamp de fim de mês, e `ExpenseForm.tsx:91-105` (criar) e `ExpenseView.tsx:241-258` (editar) o enviam pronto. O backend só confere quantidade e soma das parceladas (`ExpenseController::store()` em `:385-396`, `update()` em `:204-210`); para À Vista e Fixa nem confere `value_quota` contra `total_value`. A regra vem da TASK-049 (2026-08-18), herdada do contrato original, e não há ADR defendendo que o cliente monte as parcelas.
