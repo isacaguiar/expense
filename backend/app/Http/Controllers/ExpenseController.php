@@ -8,6 +8,7 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
+use App\Support\InstallmentSchedule;
 use App\Support\Notifier;
 use App\Support\ProofStorage;
 use App\Support\WhatsApp\WhatsAppNotifier;
@@ -333,17 +334,41 @@ class ExpenseController extends Controller
             'date_payment' => 'required|date',
             'description' => 'required|string|max:255',
             'expense_type' => 'required|in:IN_CASH,IN_INSTALLMENTS,FIXED',
-            'installments' => 'required|integer|min:1',
+            'installments' => [
+                'required',
+                'integer',
+                'min:1',
+                // Sem `quotas`, é o servidor quem gera as parcelas: entre 2 e o teto, para
+                // que um payload pequeno não peça linhas sem limite. Com `quotas` enviadas,
+                // nada muda (docs/feature/20261008-rateio-parcelas-no-backend/specify.md R7).
+                Rule::when(
+                    ! $request->has('quotas') && $request->expense_type === 'IN_INSTALLMENTS',
+                    ['between:2,'.InstallmentSchedule::MAX_INSTALLMENTS]
+                ),
+            ],
             'total_value' => 'required|numeric|min:0',
             'user_creator_id' => 'required|exists:ex_users,id',
             'user_payer_id' => ['required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $request->group_id)],
             'payers' => 'required|array|min:1',
             'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $request->group_id),
-            'quotas' => 'required|array|min:1',
+            'quotas' => 'sometimes|array|min:1',
             'quotas.*.date_expected' => 'required|date',
             'quotas.*.number' => 'required|integer',
             'quotas.*.value_quota' => 'required|numeric|min:0',
         ]);
+
+        // `quotas` é opcional: quem envia (o web hoje) vale como sempre; sem ele, o
+        // servidor gera as parcelas com o mesmo rateio do web — À Vista e Fixa têm uma
+        // só. As regras abaixo (competência fechada, retroativa, `born_paid`) rodam
+        // sobre `$quotas`, seja qual for a origem. `has` (e não `filled`) separa
+        // "ausente" de "presente e inválido": `quotas: []` segue dando 422 acima.
+        $quotas = $request->has('quotas')
+            ? $request->input('quotas')
+            : InstallmentSchedule::build(
+                $request->total_value,
+                $request->expense_type === 'IN_INSTALLMENTS' ? (int) $request->installments : 1,
+                $request->date_payment
+            );
 
         if ($request->expense_type === 'IN_INSTALLMENTS') {
             // Parcelada retroativa: a trava de competência fechada não olha o
@@ -352,7 +377,7 @@ class ExpenseController extends Controller
             // já fechada (por data), a despesa só tocaria histórico e é
             // recusada. Ver docs/feature/concluidas/202609/20260903-despesa-parcelada-retroativa/
             // plan.md §1.
-            $allQuotasClosed = collect($request->quotas)->every(
+            $allQuotasClosed = collect($quotas)->every(
                 fn ($quota) => BillingCycle::statusFor(
                     $group->closing_day,
                     Carbon::parse($quota['date_expected']),
@@ -377,17 +402,17 @@ class ExpenseController extends Controller
                 return response()->json(['error' => 'Despesa fixa deve ter installments=1.'], 422);
             }
 
-            if (count($request->quotas) !== 1) {
+            if (count($quotas) !== 1) {
                 return response()->json(['error' => 'Despesa fixa deve ter exatamente 1 quota.'], 422);
             }
         }
 
         if ($request->expense_type === 'IN_INSTALLMENTS') {
-            if (count($request->quotas) !== (int) $request->installments) {
+            if (count($quotas) !== (int) $request->installments) {
                 return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
             }
 
-            $quotasSum = round(array_sum(array_column($request->quotas, 'value_quota')), 2);
+            $quotasSum = round(array_sum(array_column($quotas, 'value_quota')), 2);
             $totalValue = round((float) $request->total_value, 2);
 
             if (abs($quotasSum - $totalValue) > 0.01) {
@@ -417,7 +442,7 @@ class ExpenseController extends Controller
             // Quotas
             $bornPaidCount = 0;
 
-            foreach ($request->quotas as $quotaData) {
+            foreach ($quotas as $quotaData) {
                 // Regra geral: a despesa nasce PENDENTE — o cliente não decide o
                 // status inicial, mesmo enviando 'paid' no payload.
                 //
