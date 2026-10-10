@@ -1,25 +1,27 @@
 # Tasks — Migração do Frontend para React Native (Expo)
 
+> **Substituída pelo `ADR-010` (2026-10-08)** (`docs/sdd/decisions/ADR-010-app-movel-em-flutter.md`): o app móvel será em Flutter, não Expo. **Todas as tasks abaixo estão obsoletas** e nunca foram executadas (inclusive TASK-022 e TASK-023, que refatorariam o web só para servir ao Expo); o conteúdo é o plano original, mantido como retrato histórico. O trabalho do app está no item 074 do backlog (`docs/backlog/app-flutter-google-play.md`).
+
 > IDs TASK-001 a TASK-010 preservados de `docs/sdd/03-tasks.md` (Épico A original) para manter rastreabilidade. TASK-022/023 (consolidação técnica) e TASK-024/025/026 (divisão da TASK-007 original, por atomicidade) são novas, com os próximos IDs livres do projeto (maior ID anterior: TASK-021). Formato igual ao usado no SDD geral — ver `docs/sdd/03-tasks.md` para a definição completa do formato e a regra de atomicidade ("se a descrição tem 'e' ligando duas entregas independentes, é duas tasks").
 
 Versão: 1.0 · Criado em: 20260817
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-022 | Consolidar client HTTP único em `frontend/src/api.ts` com interceptor de `Authorization`, substituindo chamadas axios/fetch diretas com URL hardcoded em todas as páginas | frontend | plan.md §2.1 | antes do merge | Pendente |
-| TASK-023 | Introduzir abstração assíncrona de storage de token (`getToken`/`setToken`/`clearToken`) e `AuthContext` compartilhado, substituindo a leitura síncrona de `localStorage` duplicada em 8 arquivos | frontend | plan.md §2.1 | antes do merge | Pendente |
-| TASK-001 | Scaffold do projeto Expo (TypeScript) em `expense/app`, com Expo Router configurado e uma rota placeholder — sem telas de negócio ainda | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-002 | Instalar e configurar `react-native-paper`, com tema (`MD3Theme`) espelhando cores/tipografia de `frontend/src/theme.ts` | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-003 | Portar client HTTP (`api.ts`, já consolidado pela TASK-022) para `expense/app`, trocando armazenamento do JWT para a abstração da TASK-023 (`expo-secure-store`), com fallback web funcional via `react-native-web` | frontend | plan.md §1.1 | nenhum | Pendente |
-| TASK-004 | Implementar fluxo de login (`LoginPage` → tela Expo Router com RN Paper), incluindo persistência/leitura do token via TASK-003/023 | frontend | plan.md §1.2 | nenhum | Pendente |
-| TASK-005 | Navegação principal: portar `Navbar`/`InternalLayout` para layout do Expo Router (tabs ou drawer, a definir na task) | frontend | plan.md §1.1 | nenhum | Pendente |
-| TASK-006 | Tela Dashboard | frontend | plan.md §1.2 | nenhum | Pendente |
-| TASK-024 | Tela `GroupList` (Expo Router + RN Paper) | frontend | plan.md §1.2 | nenhum | Pendente |
-| TASK-025 | Tela `GroupForm` (criação/edição de grupo) | frontend | plan.md §1.2 | nenhum | Pendente |
-| TASK-026 | Tela `GroupMembersForm` | frontend | plan.md §1.2 | nenhum | Pendente |
-| TASK-008 | Tela de Despesas: `ExpenseManager` (criação de despesa, seleção de pagadores, parcelas) | frontend | plan.md §1.2 | nenhum | Pendente |
-| TASK-009 | Validar build web do Expo (`react-native-web`) rodando em porta separada da atual (5173 é do `expense/frontend`), com todas as telas das TASK-004, TASK-005, TASK-006, TASK-024, TASK-025, TASK-026 e TASK-008 navegáveis | frontend | plan.md §1 | nenhum | Pendente |
-| TASK-010 | Decisão de corte: apontar produção para `expense/app` no lugar de `expense/frontend` (ou manter os dois) | infra | plan.md §1 | **antes do deploy** | Pendente |
+| TASK-022 | Consolidar client HTTP único em `frontend/src/api.ts` com interceptor de `Authorization`, substituindo chamadas axios/fetch diretas com URL hardcoded em todas as páginas | frontend | plan.md §2.1 | antes do merge | Obsoleta (ADR-010) |
+| TASK-023 | Introduzir abstração assíncrona de storage de token (`getToken`/`setToken`/`clearToken`) e `AuthContext` compartilhado, substituindo a leitura síncrona de `localStorage` duplicada em 8 arquivos | frontend | plan.md §2.1 | antes do merge | Obsoleta (ADR-010) |
+| TASK-001 | Scaffold do projeto Expo (TypeScript) em `expense/app`, com Expo Router configurado e uma rota placeholder — sem telas de negócio ainda | frontend | plan.md §1 | nenhum | Obsoleta (ADR-010) |
+| TASK-002 | Instalar e configurar `react-native-paper`, com tema (`MD3Theme`) espelhando cores/tipografia de `frontend/src/theme.ts` | frontend | plan.md §1 | nenhum | Obsoleta (ADR-010) |
+| TASK-003 | Portar client HTTP (`api.ts`, já consolidado pela TASK-022) para `expense/app`, trocando armazenamento do JWT para a abstração da TASK-023 (`expo-secure-store`), com fallback web funcional via `react-native-web` | frontend | plan.md §1.1 | nenhum | Obsoleta (ADR-010) |
+| TASK-004 | Implementar fluxo de login (`LoginPage` → tela Expo Router com RN Paper), incluindo persistência/leitura do token via TASK-003/023 | frontend | plan.md §1.2 | nenhum | Obsoleta (ADR-010) |
+| TASK-005 | Navegação principal: portar `Navbar`/`InternalLayout` para layout do Expo Router (tabs ou drawer, a definir na task) | frontend | plan.md §1.1 | nenhum | Obsoleta (ADR-010) |
+| TASK-006 | Tela Dashboard | frontend | plan.md §1.2 | nenhum | Obsoleta (ADR-010) |
+| TASK-024 | Tela `GroupList` (Expo Router + RN Paper) | frontend | plan.md §1.2 | nenhum | Obsoleta (ADR-010) |
+| TASK-025 | Tela `GroupForm` (criação/edição de grupo) | frontend | plan.md §1.2 | nenhum | Obsoleta (ADR-010) |
+| TASK-026 | Tela `GroupMembersForm` | frontend | plan.md §1.2 | nenhum | Obsoleta (ADR-010) |
+| TASK-008 | Tela de Despesas: `ExpenseManager` (criação de despesa, seleção de pagadores, parcelas) | frontend | plan.md §1.2 | nenhum | Obsoleta (ADR-010) |
+| TASK-009 | Validar build web do Expo (`react-native-web`) rodando em porta separada da atual (5173 é do `expense/frontend`), com todas as telas das TASK-004, TASK-005, TASK-006, TASK-024, TASK-025, TASK-026 e TASK-008 navegáveis | frontend | plan.md §1 | nenhum | Obsoleta (ADR-010) |
+| TASK-010 | Decisão de corte: apontar produção para `expense/app` no lugar de `expense/frontend` (ou manter os dois) | infra | plan.md §1 | **antes do deploy** | Obsoleta (ADR-010) |
 
 > Nota: TASK-007 do épico original ("Telas de Grupo: `GroupList`, `GroupForm`, `GroupMembersForm`") foi substituída pelas TASK-024/025/026 acima — a descrição original agrupava três entregas independentes numa task só, o que viola a regra de atomicidade deste mesmo arquivo.
 

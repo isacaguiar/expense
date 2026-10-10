@@ -2,6 +2,8 @@
 
 > Traduz o `01-specify.md` em decisões técnicas. Toda task em `03-tasks.md` deve apontar para uma seção daqui.
 >
+> **Superado em parte pelo `decisions/ADR-010` (2026-10-08):** o app móvel passa a ser em Flutter (`app/`), não Expo. O diagrama do §1, todo o §2 e o item de EAS no §6 descrevem o plano original da migração para Expo e ficam como histórico; não os siga para trabalho novo.
+>
 > **Documento congelado em 2026-08-17** (`decisions/ADR-002-sdd-por-feature.md`). Os achados de segurança/infra citados abaixo (Pix público, path do deploy, credenciais OAuth órfãs) podem já ter sido corrigidos — status atual e canônico em `00-constitution.md` §5.3 e nas pastas de `docs/feature/`.
 
 Versão: 1.0 · Última atualização: 2026-08-17
@@ -26,11 +28,13 @@ Versão: 1.0 · Última atualização: 2026-08-17
                   └────────────────────┘                      └──────────────┘
 ```
 
-Os dois frontends coexistem durante a migração e consomem a **mesma API** sem contrato divergente (regra de Compatibilidade da Constitution).
+Os dois frontends coexistem durante a migração e consomem a **mesma API** sem contrato divergente (regra de Compatibilidade da Constitution). Pelo `decisions/ADR-010`, o `expense/app` do diagrama passa a ser o app Flutter (`app/`).
 
-## 2. Frontend — migração para React Native (decisão tomada)
+## 2. Frontend — migração para React Native (superado pelo ADR-010)
 
-**Stack escolhida**: Expo (managed workflow) + `react-native-web` + **Expo Router** (roteamento por arquivo) + **React Native Paper** (Material Design — mesma linguagem visual do MUI atual, minimiza redesenho).
+> **Superado pelo `decisions/ADR-010` (2026-10-08):** o app móvel será em Flutter, e o Épico A (Expo) ficou obsoleto sem ter sido iniciado. Esta seção é o plano original e fica só como histórico.
+
+**Stack escolhida (plano original, superado)**: Expo (managed workflow) + `react-native-web` + **Expo Router** (roteamento por arquivo) + **React Native Paper** (Material Design — mesma linguagem visual do MUI atual, minimiza redesenho).
 
 **Local**: novo projeto em `expense/app`. `expense/frontend` **não é alterado nem desligado** durante a migração — continua em produção normalmente. O corte (apontar produção para `expense/app`) é um gate humano (ver Constitution, Governança).
 
@@ -57,7 +61,7 @@ Os dois frontends coexistem durante a migração e consomem a **mesma API** sem 
 
 - Convenção de camadas alvo (para código novo/refatorado, não retrofit obrigatório do existente): `Route → Controller (fino) → FormRequest (validação) → Service/Action (regra de negócio) → Model`.
 - Onde nasce a camada de Service primeiro: cálculo de divisão de despesa (hoje em `ExpenseController`) e apuração de saldo (hoje em `GroupExpenseReportController`), porque são as duas áreas com lógica de negócio mais densa e mais reaproveitável entre os dois relatórios existentes (`reportByGroupAndYear` e `reportByGroupAndYearMonthlySettlement` duplicam ~80% da lógica hoje).
-- Débitos de implementação a resolver antes de expandir a API (senão os próximos consumidores — o app RN — herdam os mesmos bugs): métodos ausentes em `ExpenseController` (`index`/`show`/`update`/`destroy`) e em `GroupMemberController` (`destroy`), ambos registrados via rota mas inexistentes hoje (ver `01-specify.md` §3.3/3.4 e Constitution §2.4).
+- Débitos de implementação a resolver antes de expandir a API (senão os próximos consumidores — o app móvel (RN no plano original, Flutter pelo `decisions/ADR-010`) — herdam os mesmos bugs): métodos ausentes em `ExpenseController` (`index`/`show`/`update`/`destroy`) e em `GroupMemberController` (`destroy`), ambos registrados via rota mas inexistentes hoje (ver `01-specify.md` §3.3/3.4 e Constitution §2.4).
 
 ## 4. Banco de dados
 
@@ -76,7 +80,7 @@ Os dois frontends coexistem durante a migração e consomem a **mesma API** sem 
 - **Local**: `docker-compose.yml` sobe MySQL 8.0 (porta 3306) + Adminer; backend roda via `php artisan serve`/equivalente (não há serviço Docker para o PHP em si no compose atual); frontend via `npm run dev` (Vite, porta 5173 conforme README).
 - **Produção (backend)**: GitHub Actions (`.github/workflows/deploy-backend.yml`) → build Laravel → deploy via FTP para `scd.novemax.com.br`, usando `secrets.*` do GitHub (boa prática — contrasta com os segredos vazados em texto puro no repo). **Flag**: o workflow usa `working-directory: backend-php`, mas a pasta real do projeto é `backend/` — o deploy de produção provavelmente está apontando para um caminho que não existe no repo atual. Precisa de correção humana e validação de que o último deploy realmente funcionou antes de mexer em mais nada de infra.
 - **Produção (frontend)**: não há workflow de deploy para `expense/frontend` no `.github/workflows` atual — a build/deploy do front, se existe, é manual ou fora deste repositório.
-- **App Expo (`expense/app`)**: ainda não existe ambiente de build/deploy (EAS) — será criado como parte do épico de migração em `03-tasks.md`, com deploy sempre como gate humano.
+- **App Expo (`expense/app`)** *(superado pelo `decisions/ADR-010`, que troca o app para Flutter)*: ainda não existe ambiente de build/deploy (EAS) — será criado como parte do épico de migração em `03-tasks.md`, com deploy sempre como gate humano.
 
 ## 7. Decisões em aberto (produto, não técnicas)
 

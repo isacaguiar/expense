@@ -18,6 +18,7 @@ Spec-Driven Development do projeto, com **human-in-the-loop**: a IA (ou qualquer
         ↓
 05-context-frontend.md → contexto de execução portátil para tarefas de frontend
 06-context-backend.md  → contexto de execução portátil para tarefas de backend
+07-context-mobile.md   → contexto de execução portátil para tarefas do app móvel (Flutter)
 ```
 
 Leitura transversal (não é uma fase): `agent-architecture.md` — o SDD + `.claude/` vistos como um agente (6 peças, loop, condição de parada, fronteira de autonomia).
@@ -50,7 +51,7 @@ Quando alguém decide de fato executar um item do backlog, o slash command `/pro
 
 ## Skills e portabilidade
 
-`05-context-frontend.md` e `06-context-backend.md` são markdown puro, sem nada específico de ferramenta — contêm o que carregar antes de codar e as convenções fixas de cada frente (os gates continuam só em `00-constitution.md` §5.2). Hoje eles são referenciados por duas skills do Claude Code (`expense/.claude/skills/expense-frontend` e `expense-backend`), que são só **adaptadores finos**: frontmatter com a `description` que dispara a auto-invocação + uma linha apontando pra cá. Se o projeto trocar de ferramenta de IA no futuro, só o adaptador precisa ser reescrito (no formato da ferramenta nova); o conteúdo real permanece nestes dois arquivos.
+`05-context-frontend.md`, `06-context-backend.md` e `07-context-mobile.md` são markdown puro, sem nada específico de ferramenta — contêm o que carregar antes de codar e as convenções fixas de cada frente (os gates continuam só em `00-constitution.md` §5.2). Hoje eles são referenciados por três skills do Claude Code (`expense/.claude/skills/expense-frontend`, `expense-backend` e `expense-mobile`), que são só **adaptadores finos**: frontmatter com a `description` que dispara a auto-invocação + uma linha apontando pra cá. Se o projeto trocar de ferramenta de IA no futuro, só o adaptador precisa ser reescrito (no formato da ferramenta nova); o conteúdo real permanece nestes três arquivos.
 
 Além das skills, o projeto tem agents nativos do Claude Code em `.claude/agents/` (`security-reviewer`, `pr-readiness-checker`) — cada um construído só quando um gatilho concreto justificou. Ver `docs/sdd/agents-roadmap.md` para o que já existe e o que é candidato futuro.
 
@@ -58,6 +59,6 @@ Além das skills, o projeto tem agents nativos do Claude Code em `.claude/agents
 
 Tabela normativa: `00-constitution.md` §5.2. Desenho da fronteira de autonomia: `agent-architecture.md` §5.
 
-## Estado atual (2026-08-17)
+## Estado atual (2026-08-17; Épico A atualizado em 2026-10-08)
 
-Primeiro conjunto de tasks definido em `03-tasks.md`: **Épico A** é a migração do frontend para React Native (Expo + React Native Paper, novo projeto em `expense/app`, `expense/frontend` continua ativo em paralelo). Também há 3 achados de segurança/infra já registrados como tasks prioritárias (Épico B) encontrados durante a criação deste SDD — ver `00-constitution.md` §5.3 antes de mexer em Pix, grupos ou nos segredos do repositório.
+Primeiro conjunto de tasks definido em `03-tasks.md`: **Épico A** era a migração do frontend para React Native (Expo + React Native Paper). Foi **substituído pelo `decisions/ADR-010`** (2026-10-08): o app móvel será em Flutter, em `app/`, e o `frontend/` continua ativo como cliente web. O trabalho do app está no item 074 do backlog. Também há 3 achados de segurança/infra já registrados como tasks prioritárias (Épico B) encontrados durante a criação deste SDD — ver `00-constitution.md` §5.3 antes de mexer em Pix, grupos ou nos segredos do repositório.
