@@ -1108,4 +1108,97 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
         $this->assertSame('9999-01-31', $quotas[0]['date']);
         $this->assertSame('9999-12-31', $quotas[11]['date']);
     }
+
+    /**
+     * TASK-405 (achado A1 da revisão de segurança): o update() grava a despesa, os
+     * pagadores e as quotas numa transação — uma falha no meio da recriação das
+     * quotas não pode deixar a despesa com quotas parciais ou sem nenhuma.
+     */
+    private function failWhenQuotaNumberTwoIsCreated(): void
+    {
+        \App\Models\Quota::creating(function (\App\Models\Quota $quota) {
+            if ($quota->number === 2) {
+                throw new \RuntimeException('falha simulada na criação da quota 2');
+            }
+        });
+    }
+
+    public function test_update_is_atomic_when_the_regeneration_of_the_quotas_fails_midway(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+        $other = User::factory()->create();
+        Group::find($expense->group_id)->members()->attach($other->id);
+        $idsBefore = $this->quotaIds($expense);
+        $this->failWhenQuotaNumberTwoIsCreated();
+
+        try {
+            $response = $this->withToken($this->tokenFor($creator))
+                ->putJson("/api/expenses/{$expense->id}", [
+                    'total_value' => 300,
+                    'description' => 'Descrição que não pode ficar',
+                    'payers' => [$other->id],
+                ]);
+        } finally {
+            \App\Models\Quota::flushEventListeners();
+        }
+
+        $response->assertStatus(500);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 200, 'description' => 'Despesa de teste']);
+        $this->assertSame([$creator->id], $expense->payers()->pluck('ex_users.id')->all());
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+        $this->assertSame([
+            ['number' => 1, 'date' => '2026-08-15', 'value' => '100.00', 'paid' => false],
+            ['number' => 2, 'date' => '2026-09-15', 'value' => '100.00', 'paid' => false],
+        ], $this->quotaRows($expense->id));
+    }
+
+    public function test_update_is_atomic_when_the_type_change_fails_midway(): void
+    {
+        [$creator, $expense] = $this->inCashExpenseWithOneQuota(['total_value' => 100]);
+        $idsBefore = $this->quotaIds($expense);
+        $this->failWhenQuotaNumberTwoIsCreated();
+
+        try {
+            $response = $this->withToken($this->tokenFor($creator))
+                ->putJson("/api/expenses/{$expense->id}", ['expense_type' => 'IN_INSTALLMENTS', 'installments' => 2]);
+        } finally {
+            \App\Models\Quota::flushEventListeners();
+        }
+
+        $response->assertStatus(500);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'expense_type' => 'IN_CASH', 'installments' => 1]);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+        $this->assertSame(
+            [['number' => 1, 'date' => '2026-08-15', 'value' => '100.00', 'paid' => false]],
+            $this->quotaRows($expense->id)
+        );
+    }
+
+    public function test_update_is_atomic_when_the_payers_sync_fails(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+        $other = User::factory()->create();
+        Group::find($expense->group_id)->members()->attach($other->id);
+        $idsBefore = $this->quotaIds($expense);
+
+        // Falha na gravação dos pagadores, que vem depois da despesa e antes das quotas.
+        $armed = true;
+        \Illuminate\Support\Facades\DB::listen(function ($query) use (&$armed) {
+            if ($armed && str_starts_with($query->sql, 'insert into `ex_expenses_payers`')) {
+                throw new \RuntimeException('falha simulada na gravação dos pagadores');
+            }
+        });
+
+        try {
+            $response = $this->withToken($this->tokenFor($creator))
+                ->putJson("/api/expenses/{$expense->id}", ['total_value' => 300, 'payers' => [$other->id]]);
+        } finally {
+            $armed = false;
+        }
+
+        $response->assertStatus(500);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 200]);
+        $this->assertSame([$creator->id], $expense->payers()->pluck('ex_users.id')->all());
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+    }
 }
