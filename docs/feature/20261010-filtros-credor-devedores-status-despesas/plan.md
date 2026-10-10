@@ -59,7 +59,7 @@ Em `frontend/src/pages/ExpenseManager.tsx`, no bloco de estado de `:113-115`:
   const selectedCreditors = useMemo(() => creditorOptions.filter(o => creditorKeys.includes(o.key)), [creditorOptions, creditorKeys]);
   ```
 
-  Assim, ao navegar para uma competência em que a pessoa não aparece, ela some do campo e do critério na hora, e o `Autocomplete` nunca recebe valor fora das opções (o MUI avisa no console quando isso acontece). O `onChange` regrava o estado só com as chaves visíveis, então uma chave "órfã" sobrevive no máximo até o usuário mexer no controle.
+  Assim, ao navegar para uma competência em que a pessoa não aparece, ela some do campo e do critério na hora, e o `Autocomplete` nunca recebe valor fora das opções (o que deixaria na tela o chip de uma pessoa que não existe na competência; o MUI 7.2.0 desta base não emite warning para isso, então o teste olha o chip e não o console). O `onChange` regrava o estado só com as chaves visíveis, então uma chave "órfã" sobrevive no máximo até o usuário mexer no controle.
 - `filteredExpenses` passa a ser `filterExpenses(expenses, { search, type: typeFilter, status: statusFilter, creditorKeys: selectedCreditors.map(o => o.key), debtorKeys: selectedDebtors.map(o => o.key) })`.
 - Nenhum `useEffect` novo, nenhuma chamada nova de rede (R5). Os hooks entram junto dos outros estados: o componente não tem retorno antecipado antes deles.
 
@@ -99,7 +99,7 @@ Casos (selecionar com `getByRole('combobox', { name: 'Credor' })` e `getByRole('
 4. Combinação: Credor = Isac + Pendentes → Internet; somar a busca "net" mantém Internet; busca "alu" zera e mostra "Nenhuma despesa encontrada para esse filtro."
 5. Nenhum dos filtros novos refaz GET em `/expenses/summary` (mesma asserção de `:187`).
 6. **Ciclo selado (R6)**: payload só com `participants` (sem `participantDetails`) → as opções de Devedores saem por nome e o filtro funciona.
-7. **Poda ao trocar de competência (D2)**: `mockImplementation` lendo `config.params.cycles_ago` para devolver um `summary` diferente por competência. Com Maria selecionada, clicar em "Competência anterior" para uma competência em que ela não existe → o chip some e a lista mostra tudo, sem warning do MUI no console.
+7. **Poda ao trocar de competência (D2)**: `mockImplementation` lendo `config.params.cycles_ago` para devolver um `summary` diferente por competência. Com uma pessoa selecionada, clicar em "Competência anterior" para uma competência em que ela não existe → o chip some do campo e a lista mostra tudo; e, para quem existe nas duas, o filtro continua valendo. Cobre Credor e Devedores, e a asserção olha os chips do campo.
 
 Não-flakiness: usar `await screen.findByRole('option', …)` (o popper do `Autocomplete` monta de forma assíncrona) e asserções por descrição de despesa, não por nome de pessoa (o nome aparece ao mesmo tempo na coluna Credor, no chip e na opção).
 
