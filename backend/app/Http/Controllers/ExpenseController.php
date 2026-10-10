@@ -22,14 +22,6 @@ use Illuminate\Validation\ValidationException;
 
 class ExpenseController extends Controller
 {
-    /**
-     * Quantos ciclos para trás o `focusCycle()` varre à procura de um ciclo
-     * fechado ainda não quitado. Um ciclo pendente há mais de um ano é caso
-     * de exceção — não vale pagar o custo de varrer o histórico inteiro a
-     * cada abertura de grupo.
-     */
-    private const FOCUS_LOOKBACK = 12;
-
     public function indexByGroup($groupId, Request $request)
     {
         $group = Group::findOrFail($groupId);
@@ -727,12 +719,14 @@ class ExpenseController extends Controller
     /**
      * Diz em qual competência o app deve abrir o grupo: o ciclo **fechado (ou na
      * janela de carência) mais recente que ainda não está totalmente quitado**
-     * (`cycleIsFullySettled`), varrendo até `FOCUS_LOOKBACK` ciclos para trás.
-     * Se nenhum tem pendência, devolve `0` — o app abre na competência vigente
-     * (comportamento pré-`20260902`). Ciclo `future` (ou `open` cuja fronteira
-     * ainda não passou) não conta; ciclo selado é pulado. Um ciclo em carência
-     * (`open` mas com `end` no passado) conta: a Home fica nele durante os dias
-     * de carência e não pula quando ele vira `closed` em `closesAt`. Ver
+     * (`cycleIsFullySettled`), varrendo ciclos para trás até o limite do
+     * serviço. Se nenhum tem pendência, devolve `0` — o app abre na competência
+     * vigente (comportamento pré-`20260902`). Ciclo `future` (ou `open` cuja
+     * fronteira ainda não passou) não conta; ciclo selado é pulado. Um ciclo em
+     * carência (`open` mas com `end` no passado) conta: a Home fica nele durante
+     * os dias de carência e não pula quando ele vira `closed` em `closesAt`.
+     *
+     * A varredura mora em `CycleSummaryService::focus`. Ver
      * docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §4 e §10.
      */
     public function focusCycle($groupId)
@@ -740,36 +734,7 @@ class ExpenseController extends Controller
         $group = Group::findOrFail($groupId);
         $this->authorizeGroupMembership($group);
 
-        for ($ago = 0; $ago <= self::FOCUS_LOOKBACK; $ago++) {
-            $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $ago);
-
-            $snapshot = GroupCycleSnapshot::where('group_id', $groupId)
-                ->where('cycle_start', $cycle['start']->toDateString())
-                ->first();
-
-            if ($snapshot && $snapshot->isSealed()) {
-                continue;
-            }
-
-            $cycleIsClosed = $cycle['status'] === 'closed'
-                || ($cycle['status'] === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive());
-
-            // Ciclo na carência: fronteira já passou, mas ainda `open` (fecha só
-            // em `closesAt`). Nunca acontece para `$ago = 0` (o ciclo vigente
-            // nunca tem `end` no passado).
-            $inGrace = $cycle['status'] === 'open'
-                && Carbon::now()->startOfDay()->gt($cycle['end']);
-
-            if (! $cycleIsClosed && ! $inGrace) {
-                continue;
-            }
-
-            if (! $this->cycleIsFullySettled($group, $groupId, $cycle['start'], $cycle['end'])) {
-                return response()->json(['cycles_ago' => $ago]);
-            }
-        }
-
-        return response()->json(['cycles_ago' => 0]);
+        return response()->json(['cycles_ago' => $this->cycles()->focus($group)]);
     }
 
     /**
