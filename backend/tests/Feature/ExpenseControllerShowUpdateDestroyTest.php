@@ -910,4 +910,145 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
         $accepted->assertStatus(200);
         $this->assertSame($idsBefore, $this->quotaIds($expense));
     }
+
+    /**
+     * TASK-402 (docs/feature/20261008-rateio-parcelas-no-backend/): GET
+     * /api/expenses/{id} devolve `value_per_person` em cada quota, com a mesma
+     * fórmula do `valuePerPerson` de computeCycleSummary() — round(valor ÷
+     * max(pagadores, 1), 2).
+     *
+     * @param  list<float|int|string>  $quotaValues
+     * @return array{0: User, 1: Expense}
+     */
+    private function expenseWithPayers(int $payersCount, array $quotaValues, array $overrides = []): array
+    {
+        $viewer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($viewer->id);
+        $expense = $this->createExpense($group, $viewer, $viewer, array_merge([
+            'expense_type' => count($quotaValues) > 1 ? 'IN_INSTALLMENTS' : 'IN_CASH',
+            'installments' => count($quotaValues),
+            'total_value' => array_sum($quotaValues),
+        ], $overrides));
+        $expense->payers()->detach();
+
+        for ($i = 0; $i < $payersCount; $i++) {
+            $payer = $i === 0 ? $viewer : User::factory()->create();
+            $group->members()->syncWithoutDetaching([$payer->id]);
+            $expense->payers()->attach($payer->id);
+        }
+
+        foreach (array_values($quotaValues) as $i => $value) {
+            $expense->quotas()->create([
+                'date_expected' => Carbon::parse('2026-08-15')->addMonthsNoOverflow($i)->toDateString(),
+                'number' => $i + 1,
+                'paid' => false,
+                'value_quota' => $value,
+            ]);
+        }
+
+        return [$viewer, $expense];
+    }
+
+    /**
+     * @return list<float|int>
+     */
+    private function valuePerPersonByQuota(User $viewer, Expense $expense): array
+    {
+        $response = $this->withToken($this->tokenFor($viewer))->getJson("/api/expenses/{$expense->id}");
+        $response->assertStatus(200);
+
+        return collect($response->json('quotas'))->sortBy('number')->pluck('value_per_person')->values()->all();
+    }
+
+    public function test_show_returns_the_value_per_person_of_each_quota_split_between_two_payers(): void
+    {
+        [$viewer, $expense] = $this->expenseWithPayers(2, [33.33, 33.33, 33.34]);
+
+        $this->assertSame([16.67, 16.67, 16.67], $this->valuePerPersonByQuota($viewer, $expense));
+    }
+
+    public function test_show_returns_the_whole_quota_value_when_there_is_a_single_payer(): void
+    {
+        [$viewer, $expense] = $this->expenseWithPayers(1, [33.33, 33.33, 33.34]);
+
+        $this->assertSame([33.33, 33.33, 33.34], $this->valuePerPersonByQuota($viewer, $expense));
+    }
+
+    public function test_show_splits_a_quota_between_three_payers(): void
+    {
+        [$viewer, $expense] = $this->expenseWithPayers(3, [100]);
+
+        $this->assertSame([33.33], $this->valuePerPersonByQuota($viewer, $expense));
+    }
+
+    public function test_show_uses_a_divisor_of_one_when_the_expense_has_no_payers(): void
+    {
+        [$viewer, $expense] = $this->expenseWithPayers(0, [100]);
+
+        // O JSON não preserva a fração zero: 100.0 chega como 100.
+        $this->assertEquals([100], $this->valuePerPersonByQuota($viewer, $expense));
+    }
+
+    public function test_show_value_per_person_matches_the_one_in_the_cycle_summary(): void
+    {
+        // 0,29 ÷ 2 = 0,145: o round() do PHP dá 0,15 (o perPersonValue() do web
+        // dava 0,14). A API segue o resumo, não o web.
+        [$viewer, $expense] = $this->expenseWithPayers(2, [0.29]);
+
+        $summary = $this->withToken($this->tokenFor($viewer))
+            ->getJson("/api/groups/{$expense->group_id}/expenses/summary");
+        $summary->assertStatus(200);
+
+        $fromSummary = collect($summary->json('expenses'))->firstWhere('id', $expense->id)['valuePerPerson'];
+
+        $this->assertSame(0.15, $fromSummary);
+        $this->assertSame([$fromSummary], $this->valuePerPersonByQuota($viewer, $expense));
+    }
+
+    public function test_show_keeps_every_existing_field_of_the_quota(): void
+    {
+        [$viewer, $expense] = $this->expenseWithPayers(2, [33.33, 33.33, 33.34]);
+
+        $response = $this->withToken($this->tokenFor($viewer))->getJson("/api/expenses/{$expense->id}");
+
+        $response->assertStatus(200);
+        $response->assertJsonPath('total_value', '100.00');
+        $response->assertJsonCount(2, 'payers');
+        $response->assertJsonCount(3, 'quotas');
+        $quota = collect($response->json('quotas'))->sortBy('number')->first();
+        $this->assertSame('33.33', $quota['value_quota']);
+        $this->assertSame(1, $quota['number']);
+        $this->assertFalse($quota['paid']);
+        $this->assertFalse($quota['born_paid']);
+        $this->assertSame($expense->id, $quota['expense_id']);
+        $this->assertArrayHasKey('date_expected', $quota);
+        $this->assertArrayHasKey('payment_proof_url', $quota);
+        $this->assertArrayNotHasKey('expense', $quota);
+    }
+
+    public function test_show_runs_the_same_number_of_queries_with_one_and_with_ten_quotas(): void
+    {
+        [$viewerOne, $expenseOne] = $this->expenseWithPayers(2, [100]);
+        [$viewerTen, $expenseTen] = $this->expenseWithPayers(2, array_fill(0, 10, 10));
+        // Comprovante em todas as quotas: força o accessor payment_proof_url, que
+        // precisa de expense->group_id (o ponto onde um N+1 apareceria).
+        \App\Models\Quota::whereIn('expense_id', [$expenseOne->id, $expenseTen->id])->update(['payment_proof_path' => 'comprovante.jpg']);
+
+        // Aquece o que é cacheado na primeira requisição, fora da contagem.
+        $this->withToken($this->tokenFor($viewerOne))->getJson("/api/expenses/{$expenseOne->id}")->assertStatus(200);
+
+        $queries = function (User $viewer, Expense $expense): int {
+            $token = $this->tokenFor($viewer);
+            \Illuminate\Support\Facades\DB::flushQueryLog();
+            \Illuminate\Support\Facades\DB::enableQueryLog();
+            $this->withToken($token)->getJson("/api/expenses/{$expense->id}")->assertStatus(200);
+            $count = count(\Illuminate\Support\Facades\DB::getQueryLog());
+            \Illuminate\Support\Facades\DB::disableQueryLog();
+
+            return $count;
+        };
+
+        $this->assertSame($queries($viewerOne, $expenseOne), $queries($viewerTen, $expenseTen));
+    }
 }

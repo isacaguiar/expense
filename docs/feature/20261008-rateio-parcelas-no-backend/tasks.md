@@ -13,7 +13,7 @@ IDs a partir de TASK-397: o maior em `dev` é TASK-396 (feature `20261004-metric
 | TASK-399 | Tornar `quotas` opcional em `POST /api/expenses`, gerando as parcelas no servidor, com teto de 120 parcelas | backend | plan.md §2 | nenhum | Concluída |
 | TASK-400 | Gerar as parcelas no servidor ao trocar para parcelada em `PUT /api/expenses/{id}` sem `quotas`, com o mesmo teto | backend | plan.md §3 | nenhum | Concluída |
 | TASK-401 | Regenerar as quotas na edição quando valor, data ou nº de parcelas mudam numa despesa não-fixa sem parcela paga | backend | plan.md §4 | nenhum | Concluída |
-| TASK-402 | Devolver `value_per_person` por quota em `GET /api/expenses/{id}` | backend | plan.md §5 | nenhum | Pendente |
+| TASK-402 | Devolver `value_per_person` por quota em `GET /api/expenses/{id}` | backend | plan.md §5 | nenhum | Concluída |
 | TASK-403 | Revisar a feature com `security-reviewer` e `pr-readiness-checker` e rodar a suíte completa do backend | backend | plan.md §6 | antes do merge | Pendente |
 
 Ordem: TASK-397 → 398 → 399 → 400 → 401 → 402 → 403 (plan.md §8). TASK-397 sustenta 399, 400 e 401; TASK-401 depende da 400; TASK-402 é independente das demais, e fica depois só para manter o caminho de criação e edição na frente.

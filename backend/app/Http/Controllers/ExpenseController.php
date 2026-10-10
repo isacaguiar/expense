@@ -120,6 +120,7 @@ class ExpenseController extends Controller
         $expense = $this->findExpenseForMember($id);
         $expense->load(['payers', 'quotas']);
         $this->hydrateQuotaExpense($expense);
+        $this->appendValuePerPerson($expense);
 
         return response()->json($expense);
     }
@@ -135,6 +136,27 @@ class ExpenseController extends Controller
         if ($expense->relationLoaded('quotas')) {
             $expense->quotas->each(fn (Quota $quota) => $quota->setRelation('expense', $expense));
         }
+    }
+
+    /**
+     * Acrescenta `value_per_person` a cada Quota já carregada: a mesma conta do
+     * `valuePerPerson` de computeCycleSummary() — round(valor ÷ max(pagadores,
+     * 1), 2) — para o cliente não repetir a regra. Atributo local do `show()`
+     * (e não acessor de Quota) porque aparece só nesta resposta; usa só as
+     * relações em memória, então não faz consulta por quota.
+     */
+    private function appendValuePerPerson(Expense $expense): void
+    {
+        if (! $expense->relationLoaded('quotas') || ! $expense->relationLoaded('payers')) {
+            return;
+        }
+
+        $divisor = max($expense->payers->count(), 1);
+
+        $expense->quotas->each(fn (Quota $quota) => $quota->setAttribute(
+            'value_per_person',
+            round((float) $quota->value_quota / $divisor, 2)
+        ));
     }
 
     public function update(Request $request, $id)
