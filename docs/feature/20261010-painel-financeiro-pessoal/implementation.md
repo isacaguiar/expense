@@ -23,7 +23,8 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 |---|---|---|---|---|---|
 | TASK-409 | Concluída (commit `5e9c517c24` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário para iniciar e para commitar | Ver §3 | Mutação derruba só os testes novos: o caso "pendente" do teste existente é mascarado pelo acerto sem comprovante (§3) |
 | TASK-410 | Concluída (commit `d6411f26c2`, merge `9542dbeef4` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §4 | A fronteira de 12 ciclos do `focus()` não tinha nenhum teste; só os novos a pegam (§4) |
-| TASK-411 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-411`) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §5 | `ExpenseController` não foi tocado; a ausência de deriva em relação a `summary()` é provada por teste de reconciliação (§5) |
+| TASK-411 | Concluída (commit `8ac9908b89`, merge `682f5ad95c` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §5 | `ExpenseController` não foi tocado; a ausência de deriva em relação a `summary()` é provada por teste de reconciliação (§5) |
+| TASK-412 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-412`) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §6 | Os 16 testes passaram de primeira; a prova de que testam algo são 4 mutações, cada uma derrubando testes (§6) |
 
 ## 3. Evidências da TASK-409
 
@@ -89,3 +90,38 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-411`, criada da branch d
 | Arquivos alterados | `git status --short` | `M app/Services/CycleSummaryService.php` e `M tests/Feature/CycleSummaryServiceTest.php` (teste criado na TASK-409). `ExpenseController.php` e os demais testes intactos |
 
 **Para a próxima task.** `view()` já devolve os acertos com as confirmações e o `in_grace`; a `PersonalOverviewService` (TASK-412) parte de `focus()` + `view()` e acrescenta `cycles_ago`, que o `view()` não carrega de propósito. Os helpers `expenseBetween(…, $date)` e `confirmFor(…)` do teste foram generalizados com parâmetro opcional, sem alterar nenhum teste anterior.
+
+## 6. Evidências da TASK-412
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-412`, criada da branch da feature (`682f5ad95c`). Mesmo ambiente (MySQL descartável na 3308).
+
+`App\Services\PersonalOverviewService::forUser(User): array` devolve `{user{id,name}, groups[]}`. Cada grupo: `group`, `cycle` (de `view()` mais `cycles_ago`), `owe`, `receive`, `to_pay`, `to_receive`, `my_items`, `pending_items_count`, `has_open` (a ordem das chaves é a do `plan.md` §1.1 e é fixada por teste). Não grava nada: usa `focus()` e `view()`.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Ponto de partida | `php artisan test` na TASK-411 | 481 verdes (2986 asserções) |
+| **RED** | `php artisan test --no-ansi --filter=PersonalOverviewServiceTest` | `Tests: 16 failed (0 assertions)`, todos `Class "App\Services\PersonalOverviewService" does not exist` |
+| **GREEN** | mesmo comando | `Tests: 16 passed (118 assertions)` |
+| Devedor | `test_a_debtor_sees_…` e `test_a_confirmed_settlement_…` | Despesa de 100 dividida com o credor, em setembro (`cycles_ago` 1, `closed`): `to_pay` com 1 acerto de 50,00; `owe` `{50, 0, 50}`; `can_confirm` verdadeiro; credor com chaves exatas `id,name,email,pix,avatar_url`. Com a confirmação gravada: `confirmed 50`, `open 0`, `confirmed_at` e `confirmed_proof_url` preenchidos, `has_open` falso e `pending_items_count` 1 (o acerto está confirmado, a despesa segue pendente) |
+| Credor | `test_a_creditor_sees_…` | `to_receive` e `receive` espelhados; o devedor sai com as chaves exatas `id,name,avatar_url`, **sem e-mail nem Pix** |
+| Dois papéis | `test_owe_and_receive_use_the_net_settlement_…` | Ana pagou 100 e Beto pagou 40, ambas divididas ao meio: um único acerto líquido de 30,00 (`owe.total` 30 para Beto, `receive.total` 30 para Ana, o outro lado zerado) |
+| `my_items` | `test_my_items_…`, `test_installment_…`, `test_born_paid_…`, `test_an_expense_the_user_does_not_take_part_in_…` | `role` e `my_share` corretos; devedor **nunca** tem `can_pay`/`can_unpay`; credor tem `can_pay` só na aberta e `can_unpay` só na paga; `installment` `{number 2, total 3}` na parcelada e `null` na À Vista; `bornPaid` fora da lista; despesa de que o usuário não participa fora da lista |
+| Snapshot antigo | `test_items_of_an_old_snapshot_…` | Ciclo vigente selado, despesas só com nomes (sem `participantDetails` nem `valuePerPerson`): o id resolve pelos membros e `my_share` vem de valor ÷ participantes (50,00) |
+| `can_confirm` por status | `test_can_confirm_…` (2 testes) | Falso no vigente aberto (o acerto existe ao vivo); verdadeiro em `closed_manually` ativo; falso em ciclo selado (`closed`, `settled`) |
+| Ordenação e "em dia" | `test_groups_with_something_open_come_first_…` | Grupos Zeta, Beta (com algo em aberto) e Alfa (em dia): ordem `Beta, Zeta, Alfa`; Alfa com totais, listas e `pending_items_count` zerados e `cycles_ago` 0 |
+| Escopo | `test_a_deleted_group_…`, `test_a_user_without_groups_…` | Grupo `deleted` e grupo de outra pessoa nunca aparecem; usuário sem grupos recebe `groups: []` |
+| **Mutação 1** (critério) | somar `confirmed` sem checar `confirmed_at` | `3 failed, 13 passed` (devedor, credor e ordenação). Revertida |
+| **Mutação 2** (critério) | inverter o `role` | `2 failed, 14 passed` (`my_items` e snapshot antigo). Revertida |
+| **Mutação 3** (privacidade) | `from_user` passa a levar e-mail e Pix (`withContact: true`) | `1 failed, 15 passed`: cai o teste do credor. Revertida |
+| **Mutação 4** | `can_confirm` sem o `! settled` | `1 failed, 15 passed`: cai o teste do ciclo selado. Revertida |
+| Reversão conferida | `Grep` por `=> true)`, `withContact: true`, `'debtor' : 'creditor'` e `$cycle['settled'];` no serviço; depois `--filter=PersonalOverviewServiceTest` | Só restam as formas corretas (`withContact: true` apenas no credor, `:75`); `Tests: 16 passed (118 assertions)` |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 169 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 497 passed (3104 assertions)`: 481 + 16 testes e 2986 + 118 asserções |
+| Arquivos | `git status --short` | Só os dois arquivos novos (`app/Services/PersonalOverviewService.php`, `tests/Feature/PersonalOverviewServiceTest.php`); nenhum arquivo existente alterado |
+
+**Decisões de implementação a conhecer**
+- `has_open` depende só dos **acertos** (`owe.open` ou `receive.open` > 0), nunca das despesas pendentes. Num ciclo vigente aberto, o acerto acumulado ao vivo já conta como "em aberto" (o chip de status do ciclo diz que é prévia); `can_confirm` é o que diferencia o que dá para agir.
+- `my_share` é 0 para quem só pagou e não participa do rateio; o item aparece como `creditor`.
+- Participante que não casa com nenhum membro do grupo (membro removido) vira `Desconhecido`, em vez de derrubar a visão.
+- A ordenação por nome usa `Str::ascii` + `strcasecmp` (sem acento, sem caixa), para "Álvaro" não ir depois de "Bruno".
+- O custo é o de `focus()` + `view()` por grupo (típico 1 a 3 cálculos de ciclo); a medição fica para a TASK-423.
