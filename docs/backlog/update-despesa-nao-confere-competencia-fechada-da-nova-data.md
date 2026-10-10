@@ -1,7 +1,7 @@
 # `update()` de despesa não confere se a nova data cai numa competência fechada
 
 ID: 077
-Origem: docs/feature/20261008-rateio-parcelas-no-backend/implementation.md (achado da TASK-401); `backend/app/Http/Controllers/ExpenseController.php` (`update()`, `rejectIfCycleClosed`, `store()`, `rejectIfCompetenceClosed`)
+Origem: docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/implementation.md (achado da TASK-401); `backend/app/Http/Controllers/ExpenseController.php` (`update()`, `rejectIfCycleClosed`, `store()`, `rejectIfCompetenceClosed`)
 Criado em: 2026-10-09
 Prioridade: MEDIA
 Status: Aberto

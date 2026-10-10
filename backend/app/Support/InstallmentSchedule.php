@@ -13,7 +13,7 @@ use InvalidArgumentException;
  * É a regra que o frontend web monta hoje em `frontend/src/utils/installments.ts`
  * (`buildInstallmentQuotas`/`addMonthsClamped`); o resultado precisa ser idêntico
  * enquanto os dois existirem. À Vista e Fixa usam o mesmo caminho com uma parcela.
- * Ver docs/feature/20261008-rateio-parcelas-no-backend/plan.md §1.
+ * Ver docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/plan.md §1.
  */
 class InstallmentSchedule
 {

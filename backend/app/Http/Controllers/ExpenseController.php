@@ -452,7 +452,7 @@ class ExpenseController extends Controller
                 'min:1',
                 // Sem `quotas`, é o servidor quem gera as parcelas: entre 2 e o teto, para
                 // que um payload pequeno não peça linhas sem limite. Com `quotas` enviadas,
-                // nada muda (docs/feature/20261008-rateio-parcelas-no-backend/specify.md R7).
+                // nada muda (docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/specify.md R7).
                 Rule::when(
                     ! $request->has('quotas') && $request->expense_type === 'IN_INSTALLMENTS',
                     ['between:2,'.InstallmentSchedule::MAX_INSTALLMENTS]

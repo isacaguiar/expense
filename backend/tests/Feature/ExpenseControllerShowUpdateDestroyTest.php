@@ -483,7 +483,7 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
     }
 
     /**
-     * TASK-400 (docs/feature/20261008-rateio-parcelas-no-backend/): ao trocar para
+     * TASK-400 (docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/): ao trocar para
      * parcelada sem `quotas`, o update() gera as quotas com
      * App\Support\InstallmentSchedule. Quem envia `quotas` segue o caminho antigo.
      *
@@ -689,7 +689,7 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
     }
 
     /**
-     * TASK-401 (docs/feature/20261008-rateio-parcelas-no-backend/): editar valor,
+     * TASK-401 (docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/): editar valor,
      * data ou nº de parcelas de uma despesa não-fixa sem parcela paga refaz as
      * quotas no servidor, sem precisar mandar `expense_type` nem `quotas`.
      *
@@ -912,7 +912,7 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
     }
 
     /**
-     * TASK-402 (docs/feature/20261008-rateio-parcelas-no-backend/): GET
+     * TASK-402 (docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/): GET
      * /api/expenses/{id} devolve `value_per_person` em cada quota, com a mesma
      * fórmula do `valuePerPerson` de computeCycleSummary() — round(valor ÷
      * max(pagadores, 1), 2).

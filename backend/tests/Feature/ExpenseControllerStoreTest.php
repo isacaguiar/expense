@@ -605,7 +605,7 @@ class ExpenseControllerStoreTest extends TestCase
     }
 
     /**
-     * TASK-399 (docs/feature/20261008-rateio-parcelas-no-backend/): `quotas` passa a ser
+     * TASK-399 (docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/): `quotas` passa a ser
      * opcional em POST /api/expenses — sem ele, o servidor gera as quotas com
      * App\Support\InstallmentSchedule. Quem envia `quotas` segue o caminho antigo.
      */
