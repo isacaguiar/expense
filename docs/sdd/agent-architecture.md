@@ -147,7 +147,7 @@ construído quando um gatilho concreto justifica (`agents-roadmap.md`, "Candidat
    codar, testar, migration local             migration compartilhada/destrutiva
    merge de task na branch da feature         merge em `dev` / merge em `main`
    abrir Pull Request                         deploy · rotacionar/expor segredo
-                                              hard delete · corte de produção do app novo
+                                              hard delete · publicar o app na Google Play
    +-------------------------------*-------------------------------+
                                    ^
                        tabela normativa linha-a-linha:
