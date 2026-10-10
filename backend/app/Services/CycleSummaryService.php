@@ -4,8 +4,10 @@ namespace App\Services;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
+use App\Support\BillingCycle;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -21,6 +23,14 @@ use Illuminate\Support\Collection;
  */
 class CycleSummaryService
 {
+    /**
+     * Quantos ciclos para trás o `focus()` varre à procura de um ciclo
+     * fechado ainda não quitado. Um ciclo pendente há mais de um ano é caso
+     * de exceção — não vale pagar o custo de varrer o histórico inteiro a
+     * cada abertura de grupo.
+     */
+    public const FOCUS_LOOKBACK = 12;
+
     /**
      * Despesas cujo valor conta para um ciclo [start, end]: diretas (date_payment
      * dentro do intervalo) + Fixa projetada mês a mês dentro do intervalo (mesma
@@ -378,5 +388,51 @@ class CycleSummaryService
         }
 
         return true;
+    }
+
+    /**
+     * Em qual competência o app deve abrir o grupo, como `cycles_ago`: o ciclo
+     * **fechado (ou na janela de carência) mais recente que ainda não está
+     * totalmente quitado** (`isFullySettled`), varrendo até `FOCUS_LOOKBACK`
+     * ciclos para trás. Se nenhum tem pendência, devolve `0` — o app abre na
+     * competência vigente (comportamento pré-`20260902`). Ciclo `future` (ou
+     * `open` cuja fronteira ainda não passou) não conta; ciclo selado é pulado.
+     * Um ciclo em carência (`open` mas com `end` no passado) conta: a Home fica
+     * nele durante os dias de carência e não pula quando ele vira `closed` em
+     * `closesAt`. Ver
+     * docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §4 e §10.
+     */
+    public function focus(Group $group): int
+    {
+        for ($ago = 0; $ago <= self::FOCUS_LOOKBACK; $ago++) {
+            $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $ago);
+
+            $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+                ->where('cycle_start', $cycle['start']->toDateString())
+                ->first();
+
+            if ($snapshot && $snapshot->isSealed()) {
+                continue;
+            }
+
+            $cycleIsClosed = $cycle['status'] === 'closed'
+                || ($cycle['status'] === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive());
+
+            // Ciclo na carência: fronteira já passou, mas ainda `open` (fecha só
+            // em `closesAt`). Nunca acontece para `$ago = 0` (o ciclo vigente
+            // nunca tem `end` no passado).
+            $inGrace = $cycle['status'] === 'open'
+                && Carbon::now()->startOfDay()->gt($cycle['end']);
+
+            if (! $cycleIsClosed && ! $inGrace) {
+                continue;
+            }
+
+            if (! $this->isFullySettled($group, $cycle['start'], $cycle['end'])) {
+                return $ago;
+            }
+        }
+
+        return 0;
     }
 }

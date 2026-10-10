@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
 use App\Models\SettlementConfirmation;
 use App\Models\User;
 use App\Services\CycleSummaryService;
@@ -36,6 +37,13 @@ class CycleSummaryServiceTest extends TestCase
         // closing_day nulo → mês calendário: competência de agosto/2026.
         $this->start = Carbon::parse('2026-08-01');
         $this->end = Carbon::parse('2026-08-31');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 
     private function service(): CycleSummaryService
@@ -222,5 +230,122 @@ class CycleSummaryServiceTest extends TestCase
         $this->confirm($group, $debtor, $creditor, 100);
 
         $this->assertTrue($this->service()->isFullySettled($group, $this->start, $this->end));
+    }
+
+    /**
+     * Despesa À Vista só do credor (sem devedor, logo sem acerto) e não paga:
+     * deixa o ciclo pendente por `totals.pending`, que é o que o `focus()` olha.
+     */
+    private function unpaidExpense(Group $group, User $creditor, string $datePayment): Expense
+    {
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => $datePayment,
+            'description' => 'Despesa de teste',
+            'expense_type' => 'IN_CASH',
+            'installments' => 1,
+            'total_value' => 100,
+            'group_id' => $group->id,
+            'user_creator_id' => $creditor->id,
+            'user_payer_id' => $creditor->id,
+            'deleted' => false,
+        ]);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => $datePayment, 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        return $expense;
+    }
+
+    /** @return array{0: Group, 1: User} */
+    private function groupWithCreditor(): array
+    {
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach($creditor->id);
+
+        return [$group, $creditor];
+    }
+
+    public function test_focus_returns_the_most_recent_unsettled_closed_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15'); // outubro é a competência vigente
+
+        [$group, $creditor] = $this->groupWithCreditor();
+        $this->unpaidExpense($group, $creditor, '2026-08-10'); // 2 ciclos atrás
+        $this->unpaidExpense($group, $creditor, '2026-09-10'); // 1 ciclo atrás
+
+        $this->assertSame(1, $this->service()->focus($group));
+    }
+
+    public function test_focus_counts_a_cycle_that_is_still_in_its_grace_window(): void
+    {
+        // O ciclo de janeiro fecha em 05/02; em 02/02 ainda está `open`, mas já
+        // passou da fronteira, e com conta em aberto a Home deve abrir nele.
+        Carbon::setTestNow('2026-02-02');
+
+        [$group, $creditor] = $this->groupWithCreditor();
+        $this->unpaidExpense($group, $creditor, '2026-01-10');
+
+        $this->assertSame(1, $this->service()->focus($group));
+    }
+
+    public function test_focus_skips_a_sealed_cycle_even_with_unpaid_entries(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor] = $this->groupWithCreditor();
+        $this->unpaidExpense($group, $creditor, '2026-08-10');
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-08-01',
+            'cycle_end' => '2026-08-31',
+            'totals' => ['total' => 100, 'paid' => 100, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'settlements' => [],
+            'settled_at' => now(),
+        ]);
+
+        $this->assertSame(0, $this->service()->focus($group));
+    }
+
+    public function test_focus_is_zero_when_nothing_is_pending(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group] = $this->groupWithCreditor();
+
+        $this->assertSame(0, $this->service()->focus($group));
+    }
+
+    public function test_focus_does_not_treat_the_open_current_cycle_as_pending(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor] = $this->groupWithCreditor();
+        $this->unpaidExpense($group, $creditor, '2026-10-10'); // vigente, aberto
+
+        // O resultado é 0 pelo fallback, não por pendência: o vigente aberto não conta.
+        $this->assertSame(0, $this->service()->focus($group));
+    }
+
+    public function test_focus_reaches_exactly_twelve_cycles_back(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor] = $this->groupWithCreditor();
+        $this->unpaidExpense($group, $creditor, '2025-10-10'); // outubro/2025: 12 ciclos atrás
+
+        $this->assertSame(12, $this->service()->focus($group));
+    }
+
+    public function test_focus_does_not_look_past_twelve_cycles_back(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor] = $this->groupWithCreditor();
+        $this->unpaidExpense($group, $creditor, '2025-09-10'); // setembro/2025: 13 ciclos atrás
+
+        $this->assertSame(0, $this->service()->focus($group));
     }
 }
