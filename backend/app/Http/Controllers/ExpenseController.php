@@ -267,29 +267,34 @@ class ExpenseController extends Controller
             $newQuotas = $this->regeneratedQuotas($expense, $data);
         }
 
-        $expense->update(Arr::except($data, ['payers', 'quotas']));
+        // Uma transação só: apagar e recriar as quotas é a parte que pode falhar no
+        // meio, e a despesa não pode ficar com a edição aplicada e as quotas
+        // parciais (mesmo padrão do store()).
+        DB::transaction(function () use ($expense, $data, $newQuotas) {
+            $expense->update(Arr::except($data, ['payers', 'quotas']));
 
-        if (array_key_exists('payers', $data)) {
-            $expense->payers()->sync($data['payers']);
-        }
-
-        if ($newQuotas !== null) {
-            // Seguro: só alcançado depois de confirmar acima que nenhuma quota
-            // está paga. ex_quotas não tem coluna de soft delete — são linhas
-            // geradas a partir de expense_type/installments/total_value, não
-            // uma entidade de negócio própria (Constitution §1.5 é sobre
-            // grupo/despesa).
-            $expense->quotas()->delete();
-
-            foreach ($newQuotas as $quota) {
-                $expense->quotas()->create([
-                    'date_expected' => $quota['date_expected'],
-                    'number' => $quota['number'],
-                    'paid' => false,
-                    'value_quota' => $quota['value_quota'],
-                ]);
+            if (array_key_exists('payers', $data)) {
+                $expense->payers()->sync($data['payers']);
             }
-        }
+
+            if ($newQuotas !== null) {
+                // Seguro: só alcançado depois de confirmar acima que nenhuma quota
+                // está paga. ex_quotas não tem coluna de soft delete — são linhas
+                // geradas a partir de expense_type/installments/total_value, não
+                // uma entidade de negócio própria (Constitution §1.5 é sobre
+                // grupo/despesa).
+                $expense->quotas()->delete();
+
+                foreach ($newQuotas as $quota) {
+                    $expense->quotas()->create([
+                        'date_expected' => $quota['date_expected'],
+                        'number' => $quota['number'],
+                        'paid' => false,
+                        'value_quota' => $quota['value_quota'],
+                    ]);
+                }
+            }
+        });
 
         $fresh = $expense->fresh(['payers', 'quotas']);
         $this->hydrateQuotaExpense($fresh);

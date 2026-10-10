@@ -16,7 +16,7 @@ IDs a partir de TASK-397: o maior em `dev` é TASK-396 (feature `20261004-metric
 | TASK-402 | Devolver `value_per_person` por quota em `GET /api/expenses/{id}` | backend | plan.md §5 | nenhum | Concluída |
 | TASK-403 | Revisar a feature com `security-reviewer` e `pr-readiness-checker` e rodar a suíte completa do backend | backend | plan.md §6 | antes do merge | Pendente |
 | TASK-404 | Recusar com 422 o rateio cuja última parcela passaria do ano 9999 (achado A1 da revisão de segurança da TASK-403) | backend | plan.md §1 a §4 | nenhum | Concluída |
-| TASK-405 | Gravar o `update()` de despesa numa transação, para uma falha no meio não deixar a despesa com quotas parciais (achado A1 da revisão de segurança da TASK-403) | backend | plan.md §3, §4 | nenhum | Pendente |
+| TASK-405 | Gravar o `update()` de despesa numa transação, para uma falha no meio não deixar a despesa com quotas parciais (achado A1 da revisão de segurança da TASK-403) | backend | plan.md §3, §4 | nenhum | Concluída |
 
 Ordem: TASK-397 → 398 → 399 → 400 → 401 → 402 → 404 → 405 → 403 (plan.md §8). As TASK-404 e TASK-405 nasceram da primeira rodada de revisão da TASK-403 (o `security-reviewer` apontou o achado A1; a reprodução contra o banco descartável mostrou corrupção silenciosa das datas, não um 500) e rodam antes de a TASK-403 fechar. TASK-397 sustenta 399, 400 e 401; TASK-401 depende da 400; TASK-402 é independente das demais, e fica depois só para manter o caminho de criação e edição na frente.
 
