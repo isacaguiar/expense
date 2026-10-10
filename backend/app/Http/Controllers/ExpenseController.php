@@ -156,7 +156,9 @@ class ExpenseController extends Controller
             // Parcelada — Fixa fica de fora dos dois lados, ver abaixo).
             // docs/feature/concluidas/202608/20260826-editar-tipo-despesa/plan.md §1.
             'expense_type' => 'sometimes|required|in:IN_CASH,IN_INSTALLMENTS',
-            'installments' => 'sometimes|required|integer|min:2',
+            // Teto de parcelas só quando o servidor gera as quotas (sem `quotas`
+            // no payload), como no store().
+            'installments' => ['sometimes', 'required', 'integer', 'min:2', Rule::when(! $request->has('quotas'), ['max:'.InstallmentSchedule::MAX_INSTALLMENTS])],
             'quotas' => 'sometimes|required|array|min:1',
             'quotas.*.date_expected' => 'required_with:quotas|date',
             'quotas.*.number' => 'required_with:quotas|integer',
@@ -198,20 +200,33 @@ class ExpenseController extends Controller
             $finalTotalValue = round((float) ($data['total_value'] ?? $expense->total_value), 2);
 
             if ($data['expense_type'] === 'IN_INSTALLMENTS') {
-                if (! array_key_exists('installments', $data) || ! array_key_exists('quotas', $data)) {
-                    return response()->json(['error' => 'Informe installments e quotas para parcelar a despesa.'], 422);
+                $hasQuotas = array_key_exists('quotas', $data);
+
+                if (! array_key_exists('installments', $data)) {
+                    return response()->json(['error' => $hasQuotas
+                        ? 'Informe installments e quotas para parcelar a despesa.'
+                        : 'Informe installments para parcelar a despesa.'], 422);
                 }
 
-                if (count($data['quotas']) !== (int) $data['installments']) {
-                    return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
-                }
+                if ($hasQuotas) {
+                    if (count($data['quotas']) !== (int) $data['installments']) {
+                        return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
+                    }
 
-                $quotasSum = round(array_sum(array_column($data['quotas'], 'value_quota')), 2);
-                if (abs($quotasSum - $finalTotalValue) > 0.01) {
-                    return response()->json(['error' => 'A soma das quotas deve ser igual a total_value.'], 422);
-                }
+                    $quotasSum = round(array_sum(array_column($data['quotas'], 'value_quota')), 2);
+                    if (abs($quotasSum - $finalTotalValue) > 0.01) {
+                        return response()->json(['error' => 'A soma das quotas deve ser igual a total_value.'], 422);
+                    }
 
-                $newQuotas = $data['quotas'];
+                    $newQuotas = $data['quotas'];
+                } else {
+                    // Sem `quotas`, o servidor rateia o total final na data final.
+                    $newQuotas = InstallmentSchedule::build(
+                        $finalTotalValue,
+                        (int) $data['installments'],
+                        $data['date_payment'] ?? $expense->date_payment->toDateString()
+                    );
+                }
             } else {
                 $data['installments'] = 1;
                 $newQuotas = [[
