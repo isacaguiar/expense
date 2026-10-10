@@ -97,3 +97,13 @@ Há dependência técnica: o **item 1** (`InstallmentSchedule`) é pré-requisit
 4. Regeneração na edição (item 4), que depende do item 3;
 5. `show()` com `value_per_person` (item 5);
 6. Revisão final: `security-reviewer`, `pr-readiness-checker` e a suíte completa do backend (item 6).
+
+## 9. Complementos da revisão da TASK-403
+
+A primeira rodada do `security-reviewer` apontou o achado A1 e gerou as TASK-404 e TASK-405. O código ficou com três complementos que as seções acima não descrevem:
+
+1. **Guarda de ano 9999 (TASK-404).** `InstallmentSchedule` ganha `MAX_YEAR` (9999) e `fits(startDate, installments)`. A coluna `date` do MySQL não comporta mais que isso, e um rateio que passava dele gravava datas erradas em silêncio (`10000-01-31` virava `2000-01-31`), sem erro. `build()` continua puro; quem recusa é o controller.
+2. **`generateQuotas()` (TASK-404).** Helper privado do `ExpenseController` que chama `fits()` e lança `ValidationException` em `date_payment` (422) antes de `build()`. Os três pontos de geração passam por ele: `store()` (§2), a troca de tipo no `update()` (§3) e `regeneratedQuotas()` (§4). O rateio de uma parcela só (À Vista e Fixa) não muda.
+3. **Transação no `update()` (TASK-405).** Despesa, pagadores e recriação das quotas são gravados num `DB::transaction`, no padrão do `store()`. O bloco de apagar e recriar de §3 "segue igual" por dentro dela, e a decisão de recriar passa a ser `$newQuotas !== null` (troca de tipo ou regeneração).
+
+Achados da mesma revisão que ficaram fora desta feature e foram para o backlog: item 077 (o `update()` não confere se a nova data cai numa competência fechada) e item 078 (corrida entre `pay()` e a edição, que pode apagar a quota paga).
