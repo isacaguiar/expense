@@ -1,7 +1,7 @@
 # Corrida entre o pagamento e a edição de uma despesa pode apagar a quota paga
 
 ID: 078
-Origem: docs/feature/20261008-rateio-parcelas-no-backend/ (achado A2 da revisão de segurança da TASK-403); `backend/app/Http/Controllers/ExpenseController.php` (`update()` e `pay()`)
+Origem: docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/ (achado A2 da revisão de segurança da TASK-403); `backend/app/Http/Controllers/ExpenseController.php` (`update()` e `pay()`)
 Criado em: 2026-10-09
 Prioridade: MEDIA
 Status: Aberto

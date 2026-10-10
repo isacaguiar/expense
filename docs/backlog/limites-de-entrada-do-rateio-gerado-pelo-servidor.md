@@ -1,7 +1,7 @@
 # Limites de entrada que o rateio gerado pelo servidor ainda não impõe
 
 ID: 079
-Origem: docs/feature/20261008-rateio-parcelas-no-backend/ (achados A5 e A6 da 2ª rodada da revisão de segurança da TASK-403, mais os informativos já conhecidos); `backend/app/Support/InstallmentSchedule.php` e `backend/app/Http/Controllers/ExpenseController.php`
+Origem: docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/ (achados A5 e A6 da 2ª rodada da revisão de segurança da TASK-403, mais os informativos já conhecidos); `backend/app/Support/InstallmentSchedule.php` e `backend/app/Http/Controllers/ExpenseController.php`
 Criado em: 2026-10-09
 Prioridade: BAIXA
 Status: Aberto

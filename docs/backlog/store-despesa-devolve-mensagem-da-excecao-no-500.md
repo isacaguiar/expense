@@ -1,7 +1,7 @@
 # `POST /api/expenses` devolve a mensagem da exceção no 500
 
 ID: 080
-Origem: docs/feature/20261008-rateio-parcelas-no-backend/ (observação pré-existente da revisão de segurança da TASK-403); `backend/app/Http/Controllers/ExpenseController.php` (`store()`, no `catch`)
+Origem: docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/ (observação pré-existente da revisão de segurança da TASK-403); `backend/app/Http/Controllers/ExpenseController.php` (`store()`, no `catch`)
 Criado em: 2026-10-09
 Prioridade: MEDIA
 Status: Aberto

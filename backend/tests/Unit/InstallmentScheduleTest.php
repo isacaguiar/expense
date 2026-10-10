@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
  * Rateio de parcelas no backend. Os vetores são os mesmos que a conferência de
  * paridade usa contra `frontend/src/utils/installments.ts` (TASK-398): resto na
  * última parcela, em centavos, e meses somados SEMPRE a partir da data inicial,
- * com clamp de fim de mês. Ver docs/feature/20261008-rateio-parcelas-no-backend/plan.md §1.
+ * com clamp de fim de mês. Ver docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/plan.md §1.
  */
 class InstallmentScheduleTest extends TestCase
 {
