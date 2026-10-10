@@ -1201,4 +1201,38 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
         $this->assertSame([$creator->id], $expense->payers()->pluck('ex_users.id')->all());
         $this->assertSame($idsBefore, $this->quotaIds($expense));
     }
+
+    /**
+     * TASK-403 (achado A4 da revisão de segurança): a autorização vem antes de
+     * qualquer geração ou escrita. Os testes antigos de não-membro mandavam só
+     * `description`; estes mandam os campos que disparam a regeneração das quotas.
+     */
+    public function test_non_member_cannot_regenerate_the_quotas_of_an_expense(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+        $outsider = User::factory()->create();
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($outsider))
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 999, 'date_payment' => '2026-08-20', 'installments' => 5]);
+
+        $response->assertStatus(404);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 200, 'date_payment' => '2026-08-15', 'installments' => 2]);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+    }
+
+    public function test_member_who_is_not_creator_nor_payer_cannot_regenerate_the_quotas_of_an_expense(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+        $member = User::factory()->create();
+        Group::find($expense->group_id)->members()->attach($member->id);
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 999, 'date_payment' => '2026-08-20', 'installments' => 5]);
+
+        $response->assertStatus(403);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 200, 'date_payment' => '2026-08-15', 'installments' => 2]);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+    }
 }
