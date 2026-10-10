@@ -247,7 +247,7 @@ class ExpenseController extends Controller
                     $newQuotas = $data['quotas'];
                 } else {
                     // Sem `quotas`, o servidor rateia o total final na data final.
-                    $newQuotas = InstallmentSchedule::build(
+                    $newQuotas = $this->generateQuotas(
                         $finalTotalValue,
                         (int) $data['installments'],
                         $data['date_payment'] ?? $expense->date_payment->toDateString()
@@ -298,6 +298,24 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Rateio gerado pelo servidor (InstallmentSchedule::build). Recusa com 422 o que
+     * passaria do ano 9999: a coluna `date` não comporta, e o MySQL gravaria datas
+     * erradas em silêncio em vez de falhar.
+     *
+     * @return list<array{number: int, date_expected: string, value_quota: float}>
+     */
+    private function generateQuotas(float|int|string $total, int $installments, string $startDate): array
+    {
+        if (! InstallmentSchedule::fits($startDate, $installments)) {
+            throw ValidationException::withMessages([
+                'date_payment' => 'A última parcela passaria do ano '.InstallmentSchedule::MAX_YEAR.'. Use uma data de pagamento anterior ou menos parcelas.',
+            ]);
+        }
+
+        return InstallmentSchedule::build($total, $installments, $startDate);
+    }
+
+    /**
      * Quotas que o servidor refaz quando valor, data ou nº de parcelas de uma
      * despesa não-fixa e sem parcela paga mudam sem troca de tipo; `null` se
      * nada precisa ser refeito. Reenviar os valores já gravados não conta como
@@ -334,7 +352,7 @@ class ExpenseController extends Controller
             ]);
         }
 
-        return InstallmentSchedule::build(
+        return $this->generateQuotas(
             $data['total_value'] ?? $expense->total_value,
             $installments,
             Carbon::parse($data['date_payment'] ?? $expense->date_payment)->toDateString()
@@ -453,7 +471,7 @@ class ExpenseController extends Controller
         // "ausente" de "presente e inválido": `quotas: []` segue dando 422 acima.
         $quotas = $request->has('quotas')
             ? $request->input('quotas')
-            : InstallmentSchedule::build(
+            : $this->generateQuotas(
                 $request->total_value,
                 $request->expense_type === 'IN_INSTALLMENTS' ? (int) $request->installments : 1,
                 $request->date_payment

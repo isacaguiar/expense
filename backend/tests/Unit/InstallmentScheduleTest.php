@@ -141,4 +141,23 @@ class InstallmentScheduleTest extends TestCase
     {
         $this->assertSame(120, InstallmentSchedule::MAX_INSTALLMENTS);
     }
+
+    /**
+     * TASK-404: a coluna `date` do MySQL vai até 9999-12-31; um rateio cuja última
+     * parcela passa disso grava datas erradas em silêncio (2000-01-31, ...), então
+     * os controllers perguntam antes se o rateio cabe.
+     */
+    public function test_a_schedule_fits_when_its_last_installment_is_not_after_the_year_9999(): void
+    {
+        $this->assertTrue(InstallmentSchedule::fits('9999-12-31', 1));
+        $this->assertTrue(InstallmentSchedule::fits('9999-01-31', 12));
+        $this->assertTrue(InstallmentSchedule::fits('2026-08-15', 120));
+    }
+
+    public function test_a_schedule_does_not_fit_when_its_last_installment_passes_the_year_9999(): void
+    {
+        $this->assertFalse(InstallmentSchedule::fits('9999-12-31', 2));
+        $this->assertFalse(InstallmentSchedule::fits('9999-01-31', 13));
+        $this->assertFalse(InstallmentSchedule::fits('9999-06-15', 120));
+    }
 }
