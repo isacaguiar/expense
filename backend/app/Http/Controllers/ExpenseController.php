@@ -8,6 +8,7 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
+use App\Support\InstallmentSchedule;
 use App\Support\Notifier;
 use App\Support\ProofStorage;
 use App\Support\WhatsApp\WhatsAppNotifier;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ExpenseController extends Controller
 {
@@ -118,6 +120,7 @@ class ExpenseController extends Controller
         $expense = $this->findExpenseForMember($id);
         $expense->load(['payers', 'quotas']);
         $this->hydrateQuotaExpense($expense);
+        $this->appendValuePerPerson($expense);
 
         return response()->json($expense);
     }
@@ -133,6 +136,27 @@ class ExpenseController extends Controller
         if ($expense->relationLoaded('quotas')) {
             $expense->quotas->each(fn (Quota $quota) => $quota->setRelation('expense', $expense));
         }
+    }
+
+    /**
+     * Acrescenta `value_per_person` a cada Quota já carregada: a mesma conta do
+     * `valuePerPerson` de computeCycleSummary() — round(valor ÷ max(pagadores,
+     * 1), 2) — para o cliente não repetir a regra. Atributo local do `show()`
+     * (e não acessor de Quota) porque aparece só nesta resposta; usa só as
+     * relações em memória, então não faz consulta por quota.
+     */
+    private function appendValuePerPerson(Expense $expense): void
+    {
+        if (! $expense->relationLoaded('quotas') || ! $expense->relationLoaded('payers')) {
+            return;
+        }
+
+        $divisor = max($expense->payers->count(), 1);
+
+        $expense->quotas->each(fn (Quota $quota) => $quota->setAttribute(
+            'value_per_person',
+            round((float) $quota->value_quota / $divisor, 2)
+        ));
     }
 
     public function update(Request $request, $id)
@@ -155,7 +179,9 @@ class ExpenseController extends Controller
             // Parcelada — Fixa fica de fora dos dois lados, ver abaixo).
             // docs/feature/concluidas/202608/20260826-editar-tipo-despesa/plan.md §1.
             'expense_type' => 'sometimes|required|in:IN_CASH,IN_INSTALLMENTS',
-            'installments' => 'sometimes|required|integer|min:2',
+            // Teto de parcelas só quando o servidor gera as quotas (sem `quotas`
+            // no payload), como no store().
+            'installments' => ['sometimes', 'required', 'integer', 'min:2', Rule::when(! $request->has('quotas'), ['max:'.InstallmentSchedule::MAX_INSTALLMENTS])],
             'quotas' => 'sometimes|required|array|min:1',
             'quotas.*.date_expected' => 'required_with:quotas|date',
             'quotas.*.number' => 'required_with:quotas|integer',
@@ -172,6 +198,9 @@ class ExpenseController extends Controller
         if ($expense->expense_type === 'FIXED' && $changingType) {
             return response()->json(['error' => 'Não é possível mudar o tipo de uma despesa fixa.'], 422);
         }
+
+        $anyQuotaPaid = false;
+        $newQuotas = null;
 
         // FIXED fica de fora: seu total_value é o valor do template pra
         // ocorrências futuras/ainda não materializadas — uma ocorrência já
@@ -197,20 +226,33 @@ class ExpenseController extends Controller
             $finalTotalValue = round((float) ($data['total_value'] ?? $expense->total_value), 2);
 
             if ($data['expense_type'] === 'IN_INSTALLMENTS') {
-                if (! array_key_exists('installments', $data) || ! array_key_exists('quotas', $data)) {
-                    return response()->json(['error' => 'Informe installments e quotas para parcelar a despesa.'], 422);
+                $hasQuotas = array_key_exists('quotas', $data);
+
+                if (! array_key_exists('installments', $data)) {
+                    return response()->json(['error' => $hasQuotas
+                        ? 'Informe installments e quotas para parcelar a despesa.'
+                        : 'Informe installments para parcelar a despesa.'], 422);
                 }
 
-                if (count($data['quotas']) !== (int) $data['installments']) {
-                    return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
-                }
+                if ($hasQuotas) {
+                    if (count($data['quotas']) !== (int) $data['installments']) {
+                        return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
+                    }
 
-                $quotasSum = round(array_sum(array_column($data['quotas'], 'value_quota')), 2);
-                if (abs($quotasSum - $finalTotalValue) > 0.01) {
-                    return response()->json(['error' => 'A soma das quotas deve ser igual a total_value.'], 422);
-                }
+                    $quotasSum = round(array_sum(array_column($data['quotas'], 'value_quota')), 2);
+                    if (abs($quotasSum - $finalTotalValue) > 0.01) {
+                        return response()->json(['error' => 'A soma das quotas deve ser igual a total_value.'], 422);
+                    }
 
-                $newQuotas = $data['quotas'];
+                    $newQuotas = $data['quotas'];
+                } else {
+                    // Sem `quotas`, o servidor rateia o total final na data final.
+                    $newQuotas = $this->generateQuotas(
+                        $finalTotalValue,
+                        (int) $data['installments'],
+                        $data['date_payment'] ?? $expense->date_payment->toDateString()
+                    );
+                }
             } else {
                 $data['installments'] = 1;
                 $newQuotas = [[
@@ -219,36 +261,107 @@ class ExpenseController extends Controller
                     'value_quota' => $finalTotalValue,
                 ]];
             }
+        } elseif ($expense->expense_type !== 'FIXED' && ! $anyQuotaPaid) {
+            // Sem troca de tipo, as quotas só são refeitas se valor, data ou nº
+            // de parcelas mudaram; a decisão e o rateio ficam no helper.
+            $newQuotas = $this->regeneratedQuotas($expense, $data);
         }
 
-        $expense->update(Arr::except($data, ['payers', 'quotas']));
+        // Uma transação só: apagar e recriar as quotas é a parte que pode falhar no
+        // meio, e a despesa não pode ficar com a edição aplicada e as quotas
+        // parciais (mesmo padrão do store()).
+        DB::transaction(function () use ($expense, $data, $newQuotas) {
+            $expense->update(Arr::except($data, ['payers', 'quotas']));
 
-        if (array_key_exists('payers', $data)) {
-            $expense->payers()->sync($data['payers']);
-        }
-
-        if ($changingType) {
-            // Seguro: só alcançado depois de confirmar acima que nenhuma quota
-            // está paga. ex_quotas não tem coluna de soft delete — são linhas
-            // geradas a partir de expense_type/installments/total_value, não
-            // uma entidade de negócio própria (Constitution §1.5 é sobre
-            // grupo/despesa).
-            $expense->quotas()->delete();
-
-            foreach ($newQuotas as $quota) {
-                $expense->quotas()->create([
-                    'date_expected' => $quota['date_expected'],
-                    'number' => $quota['number'],
-                    'paid' => false,
-                    'value_quota' => $quota['value_quota'],
-                ]);
+            if (array_key_exists('payers', $data)) {
+                $expense->payers()->sync($data['payers']);
             }
-        }
+
+            if ($newQuotas !== null) {
+                // Seguro: só alcançado depois de confirmar acima que nenhuma quota
+                // está paga. ex_quotas não tem coluna de soft delete — são linhas
+                // geradas a partir de expense_type/installments/total_value, não
+                // uma entidade de negócio própria (Constitution §1.5 é sobre
+                // grupo/despesa).
+                $expense->quotas()->delete();
+
+                foreach ($newQuotas as $quota) {
+                    $expense->quotas()->create([
+                        'date_expected' => $quota['date_expected'],
+                        'number' => $quota['number'],
+                        'paid' => false,
+                        'value_quota' => $quota['value_quota'],
+                    ]);
+                }
+            }
+        });
 
         $fresh = $expense->fresh(['payers', 'quotas']);
         $this->hydrateQuotaExpense($fresh);
 
         return response()->json($fresh);
+    }
+
+    /**
+     * Rateio gerado pelo servidor (InstallmentSchedule::build). Recusa com 422 o que
+     * passaria do ano 9999: a coluna `date` não comporta, e o MySQL gravaria datas
+     * erradas em silêncio em vez de falhar.
+     *
+     * @return list<array{number: int, date_expected: string, value_quota: float}>
+     */
+    private function generateQuotas(float|int|string $total, int $installments, string $startDate): array
+    {
+        if (! InstallmentSchedule::fits($startDate, $installments)) {
+            throw ValidationException::withMessages([
+                'date_payment' => 'A última parcela passaria do ano '.InstallmentSchedule::MAX_YEAR.'. Use uma data de pagamento anterior ou menos parcelas.',
+            ]);
+        }
+
+        return InstallmentSchedule::build($total, $installments, $startDate);
+    }
+
+    /**
+     * Quotas que o servidor refaz quando valor, data ou nº de parcelas de uma
+     * despesa não-fixa e sem parcela paga mudam sem troca de tipo; `null` se
+     * nada precisa ser refeito. Reenviar os valores já gravados não conta como
+     * mudança — evita recriar as quotas (e trocar seus IDs) à toa. À Vista tem
+     * uma quota; Parcelada é rateada em InstallmentSchedule com o total, o nº de
+     * parcelas e a data finais (payload ou o que já está gravado).
+     *
+     * @return list<array{number: int, date_expected: string, value_quota: float}>|null
+     */
+    private function regeneratedQuotas(Expense $expense, array $data): ?array
+    {
+        $cents = fn ($value) => (int) round(round((float) $value, 2) * 100);
+        $isInstallments = $expense->expense_type === 'IN_INSTALLMENTS';
+
+        $changed = (array_key_exists('total_value', $data)
+                && $cents($data['total_value']) !== $cents($expense->total_value))
+            || (array_key_exists('date_payment', $data)
+                && Carbon::parse($data['date_payment'])->toDateString() !== $expense->date_payment->toDateString())
+            || ($isInstallments
+                && array_key_exists('installments', $data)
+                && (int) $data['installments'] !== (int) $expense->installments);
+
+        if (! $changed) {
+            return null;
+        }
+
+        $installments = $isInstallments ? (int) ($data['installments'] ?? $expense->installments) : 1;
+
+        // O teto de campo de `installments` só vê o payload; uma despesa legada
+        // acima do teto, com valor ou data editados, cai aqui.
+        if ($installments > InstallmentSchedule::MAX_INSTALLMENTS) {
+            throw ValidationException::withMessages([
+                'installments' => 'O número de parcelas não pode ser maior que '.InstallmentSchedule::MAX_INSTALLMENTS.'.',
+            ]);
+        }
+
+        return $this->generateQuotas(
+            $data['total_value'] ?? $expense->total_value,
+            $installments,
+            Carbon::parse($data['date_payment'] ?? $expense->date_payment)->toDateString()
+        );
     }
 
     public function destroy($id)
@@ -333,17 +446,41 @@ class ExpenseController extends Controller
             'date_payment' => 'required|date',
             'description' => 'required|string|max:255',
             'expense_type' => 'required|in:IN_CASH,IN_INSTALLMENTS,FIXED',
-            'installments' => 'required|integer|min:1',
+            'installments' => [
+                'required',
+                'integer',
+                'min:1',
+                // Sem `quotas`, é o servidor quem gera as parcelas: entre 2 e o teto, para
+                // que um payload pequeno não peça linhas sem limite. Com `quotas` enviadas,
+                // nada muda (docs/feature/20261008-rateio-parcelas-no-backend/specify.md R7).
+                Rule::when(
+                    ! $request->has('quotas') && $request->expense_type === 'IN_INSTALLMENTS',
+                    ['between:2,'.InstallmentSchedule::MAX_INSTALLMENTS]
+                ),
+            ],
             'total_value' => 'required|numeric|min:0',
             'user_creator_id' => 'required|exists:ex_users,id',
             'user_payer_id' => ['required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $request->group_id)],
             'payers' => 'required|array|min:1',
             'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $request->group_id),
-            'quotas' => 'required|array|min:1',
+            'quotas' => 'sometimes|array|min:1',
             'quotas.*.date_expected' => 'required|date',
             'quotas.*.number' => 'required|integer',
             'quotas.*.value_quota' => 'required|numeric|min:0',
         ]);
+
+        // `quotas` é opcional: quem envia (o web hoje) vale como sempre; sem ele, o
+        // servidor gera as parcelas com o mesmo rateio do web — À Vista e Fixa têm uma
+        // só. As regras abaixo (competência fechada, retroativa, `born_paid`) rodam
+        // sobre `$quotas`, seja qual for a origem. `has` (e não `filled`) separa
+        // "ausente" de "presente e inválido": `quotas: []` segue dando 422 acima.
+        $quotas = $request->has('quotas')
+            ? $request->input('quotas')
+            : $this->generateQuotas(
+                $request->total_value,
+                $request->expense_type === 'IN_INSTALLMENTS' ? (int) $request->installments : 1,
+                $request->date_payment
+            );
 
         if ($request->expense_type === 'IN_INSTALLMENTS') {
             // Parcelada retroativa: a trava de competência fechada não olha o
@@ -352,7 +489,7 @@ class ExpenseController extends Controller
             // já fechada (por data), a despesa só tocaria histórico e é
             // recusada. Ver docs/feature/concluidas/202609/20260903-despesa-parcelada-retroativa/
             // plan.md §1.
-            $allQuotasClosed = collect($request->quotas)->every(
+            $allQuotasClosed = collect($quotas)->every(
                 fn ($quota) => BillingCycle::statusFor(
                     $group->closing_day,
                     Carbon::parse($quota['date_expected']),
@@ -377,17 +514,17 @@ class ExpenseController extends Controller
                 return response()->json(['error' => 'Despesa fixa deve ter installments=1.'], 422);
             }
 
-            if (count($request->quotas) !== 1) {
+            if (count($quotas) !== 1) {
                 return response()->json(['error' => 'Despesa fixa deve ter exatamente 1 quota.'], 422);
             }
         }
 
         if ($request->expense_type === 'IN_INSTALLMENTS') {
-            if (count($request->quotas) !== (int) $request->installments) {
+            if (count($quotas) !== (int) $request->installments) {
                 return response()->json(['error' => 'A quantidade de quotas deve ser igual a installments.'], 422);
             }
 
-            $quotasSum = round(array_sum(array_column($request->quotas, 'value_quota')), 2);
+            $quotasSum = round(array_sum(array_column($quotas, 'value_quota')), 2);
             $totalValue = round((float) $request->total_value, 2);
 
             if (abs($quotasSum - $totalValue) > 0.01) {
@@ -417,7 +554,7 @@ class ExpenseController extends Controller
             // Quotas
             $bornPaidCount = 0;
 
-            foreach ($request->quotas as $quotaData) {
+            foreach ($quotas as $quotaData) {
                 // Regra geral: a despesa nasce PENDENTE — o cliente não decide o
                 // status inicial, mesmo enviando 'paid' no payload.
                 //

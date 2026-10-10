@@ -75,7 +75,6 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 066 | [metricas-aquisicao-ativacao.md](metricas-aquisicao-ativacao.md) | Medir aquisição, cadastro e ativação por canal | conversa-divulgacao-gratuita | 2026-10-04 | MEDIA | Promovido para TASK-383 |
 | 067 | [site-consentimento-reaceite-nao-reenvia-granted.md](site-consentimento-reaceite-nao-reenvia-granted.md) | Banner de consentimento do site não reenvia `granted` ao aceitar de novo na mesma página | metricas-aquisicao-ativacao | 2026-10-04 | BAIXA | Aberto |
 | 069 | [consentimento-revogar-nao-apaga-cookies-ga.md](consentimento-revogar-nao-apaga-cookies-ga.md) | Revogar o consentimento não apaga os cookies `_ga*` do navegador | metricas-aquisicao-ativacao (TASK-395) | 2026-10-04 | BAIXA | Aberto |
-| 070 | [rateio-parcelas-no-backend.md](rateio-parcelas-no-backend.md) | Rateio de parcelas no backend (`quotas` opcional, regeneração na edição, `value_per_person`). 1º da trilha 070 → 071 → 074 | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
 | 071 | [web-usar-rateio-do-backend.md](web-usar-rateio-do-backend.md) | Web passa a usar o contrato novo e remove o rateio de parcelas do cliente. Depende do 070 em produção | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
 | 072 | [exclusao-de-conta.md](exclusao-de-conta.md) | Exclusão de conta (backend, web e página pública), exigência da Play e da LGPD. Antes do release do app | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
 | 073 | [versao-minima-api-atualizacao-forcada.md](versao-minima-api-atualizacao-forcada.md) | Versão mínima da API / atualização forçada. Antes do release do app | app na Google Play (análise de 2026-10-06) | 2026-10-06 | MEDIA | Aberto |
@@ -93,6 +92,7 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 
 | ID | Arquivo | Título | Resolvido em | Feature | Tasks |
 |---|---|---|---|---|---|
+| 070 | [concluidos/rateio-parcelas-no-backend.md](concluidos/rateio-parcelas-no-backend.md) | Rateio de parcelas no backend (`quotas` opcional, regeneração na edição, `value_per_person`) | 2026-10-09 | 20261008-rateio-parcelas-no-backend (PR #213) | TASK-397 a TASK-405 |
 | 068 | [concluidos/cadastro-fetch-sem-accept-json-redireciona-422.md](concluidos/cadastro-fetch-sem-accept-json-redireciona-422.md) | Cadastro: erro de validação (422) vira redirecionamento bloqueado por CORS e a tela mostra "verifique sua conexão" | 2026-10-06 | bugfix 20261006-cadastro-fetch-sem-accept-json (PR #206) | — |
 | 014 | [concluidos/login-social-google.md](concluidos/login-social-google.md) | Implementar login social via Google (OAuth) | novo-layout-tela-login | 2026-09-23 | 20260821-login-social-google | TASK-357 a TASK-370 |
 | 040 | [concluidos/expense-view-edicao-campo-data-vazio.md](concluidos/expense-view-edicao-campo-data-vazio.md) | Modo de edição da página da despesa abre com o campo Data vazio | expense-view-tipo-e-pagadores | 2026-09-22 | 20260922-expense-view-edicao-data-vazio | TASK-347, TASK-348 |

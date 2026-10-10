@@ -603,4 +603,273 @@ class ExpenseControllerStoreTest extends TestCase
             ->assertJsonPath('cycle.start', '2026-09-01')
             ->assertJsonPath('totals.pending', 100);
     }
+
+    /**
+     * TASK-399 (docs/feature/20261008-rateio-parcelas-no-backend/): `quotas` passa a ser
+     * opcional em POST /api/expenses — sem ele, o servidor gera as quotas com
+     * App\Support\InstallmentSchedule. Quem envia `quotas` segue o caminho antigo.
+     */
+    private function payloadWithoutQuotas(Group $group, User $payer, array $overrides = []): array
+    {
+        $payload = $this->payloadFor($group, $payer, $overrides);
+        unset($payload['quotas']);
+
+        return $payload;
+    }
+
+    /**
+     * @return list<array{number: int, date: string, value: string, paid: bool, born_paid: bool}>
+     */
+    private function quotaRows(int $expenseId): array
+    {
+        return \App\Models\Quota::where('expense_id', $expenseId)
+            ->orderBy('number')
+            ->get()
+            ->map(fn ($q) => [
+                'number' => $q->number,
+                'date' => $q->date_expected->toDateString(),
+                'value' => (string) $q->value_quota,
+                'paid' => $q->paid,
+                'born_paid' => $q->born_paid,
+            ])
+            ->all();
+    }
+
+    private function memberWithGroup(): array
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        return [$member, $group];
+    }
+
+    public function test_in_cash_expense_without_quotas_gets_a_single_quota_generated_by_the_server(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member));
+
+        $response->assertStatus(201);
+        $this->assertSame(
+            [['number' => 1, 'date' => '2026-08-15', 'value' => '100.00', 'paid' => false, 'born_paid' => false]],
+            $this->quotaRows($response->json('expense_id'))
+        );
+    }
+
+    public function test_fixed_expense_without_quotas_gets_a_single_quota_generated_by_the_server(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, ['expense_type' => 'FIXED']));
+
+        $response->assertStatus(201);
+        $this->assertSame(
+            [['number' => 1, 'date' => '2026-08-15', 'value' => '100.00', 'paid' => false, 'born_paid' => false]],
+            $this->quotaRows($response->json('expense_id'))
+        );
+    }
+
+    public function test_fixed_expense_without_quotas_still_rejects_installments_different_from_one(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, [
+                'expense_type' => 'FIXED',
+                'installments' => 3,
+            ]));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_installments_expense_without_quotas_is_split_by_the_server_with_the_remainder_on_the_last(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 3,
+                'total_value' => 100,
+            ]));
+
+        $response->assertStatus(201);
+        $this->assertSame([
+            ['number' => 1, 'date' => '2026-08-15', 'value' => '33.33', 'paid' => false, 'born_paid' => false],
+            ['number' => 2, 'date' => '2026-09-15', 'value' => '33.33', 'paid' => false, 'born_paid' => false],
+            ['number' => 3, 'date' => '2026-10-15', 'value' => '33.34', 'paid' => false, 'born_paid' => false],
+        ], $this->quotaRows($response->json('expense_id')));
+    }
+
+    public function test_generated_quotas_are_identical_to_the_ones_the_client_would_send(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+        $base = [
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 7,
+            'total_value' => 1000.01,
+            'date_payment' => '2026-08-31',
+        ];
+
+        // O que o web monta hoje (utils/installments.ts) para 1000,01 em 7 a partir
+        // de 31/08: seis de 142,85, a última de 142,91, e as datas com clamp de mês curto.
+        $clientQuotas = [];
+        foreach (['2026-08-31', '2026-09-30', '2026-10-31', '2026-11-30', '2026-12-31', '2027-01-31', '2027-02-28'] as $i => $date) {
+            $clientQuotas[] = ['date_expected' => $date, 'number' => $i + 1, 'paid' => false, 'value_quota' => $i === 6 ? 142.91 : 142.85];
+        }
+
+        $withQuotas = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, $base + ['quotas' => $clientQuotas]));
+        $withoutQuotas = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, $base));
+
+        $withQuotas->assertStatus(201);
+        $withoutQuotas->assertStatus(201);
+        $this->assertCount(7, $this->quotaRows($withoutQuotas->json('expense_id')));
+        $this->assertSame(
+            $this->quotaRows($withQuotas->json('expense_id')),
+            $this->quotaRows($withoutQuotas->json('expense_id'))
+        );
+    }
+
+    public function test_installments_expense_without_quotas_rejects_a_single_installment(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 1,
+            ]));
+
+        $response->assertStatus(422)->assertJsonValidationErrors('installments');
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_installments_expense_without_quotas_rejects_more_than_one_hundred_and_twenty_installments(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 121,
+                'total_value' => 1210,
+            ]));
+
+        $response->assertStatus(422)->assertJsonValidationErrors('installments');
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_installments_expense_without_quotas_accepts_exactly_one_hundred_and_twenty_installments(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 120,
+                'total_value' => 1200,
+            ]));
+
+        $response->assertStatus(201);
+        $this->assertCount(120, $this->quotaRows($response->json('expense_id')));
+    }
+
+    public function test_the_installments_limit_does_not_apply_when_the_client_sends_its_own_quotas(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $quotas = [];
+        for ($i = 1; $i <= 121; $i++) {
+            $quotas[] = ['date_expected' => Carbon::parse('2026-08-15')->addMonthsNoOverflow($i - 1)->toDateString(), 'number' => $i, 'paid' => false, 'value_quota' => 1];
+        }
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadFor($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 121,
+                'total_value' => 121,
+                'quotas' => $quotas,
+            ]));
+
+        $response->assertStatus(201);
+        $this->assertCount(121, $this->quotaRows($response->json('expense_id')));
+    }
+
+    public function test_empty_or_null_quotas_are_still_rejected(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        foreach ([[], null] as $quotas) {
+            $response = $this->withToken($this->tokenFor($member))
+                ->postJson('/api/expenses', $this->payloadFor($group, $member, ['quotas' => $quotas]));
+
+            $response->assertStatus(422);
+        }
+
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_in_cash_expense_without_quotas_in_a_closed_cycle_is_rejected(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, ['date_payment' => '2026-07-10']));
+
+        $response->assertStatus(422);
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
+
+    public function test_retroactive_installments_expense_without_quotas_marks_past_quotas_born_paid(): void
+    {
+        // Mesmo cenário de test_installments_expense_starting_in_a_closed_cycle_is_created_with_past_quotas_paid,
+        // mas com as quotas geradas pelo servidor: jun/jul/ago fechados, set aberto, out/nov futuros.
+        Carbon::setTestNow('2026-09-20');
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, [
+                'date_payment' => '2026-06-05',
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 6,
+                'total_value' => 600,
+            ]));
+
+        $response->assertStatus(201);
+        $this->assertSame([
+            ['number' => 1, 'date' => '2026-06-05', 'value' => '100.00', 'paid' => true, 'born_paid' => true],
+            ['number' => 2, 'date' => '2026-07-05', 'value' => '100.00', 'paid' => true, 'born_paid' => true],
+            ['number' => 3, 'date' => '2026-08-05', 'value' => '100.00', 'paid' => true, 'born_paid' => true],
+            ['number' => 4, 'date' => '2026-09-05', 'value' => '100.00', 'paid' => false, 'born_paid' => false],
+            ['number' => 5, 'date' => '2026-10-05', 'value' => '100.00', 'paid' => false, 'born_paid' => false],
+            ['number' => 6, 'date' => '2026-11-05', 'value' => '100.00', 'paid' => false, 'born_paid' => false],
+        ], $this->quotaRows($response->json('expense_id')));
+    }
+
+    /**
+     * TASK-404: o rateio gerado pelo servidor que passaria do ano 9999 (limite da
+     * coluna `date`) é recusado com 422 em vez de gravar datas erradas.
+     */
+    public function test_installments_expense_without_quotas_is_rejected_when_the_schedule_passes_the_year_9999(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 2,
+                'total_value' => 200,
+                'date_payment' => '9999-12-31',
+            ]));
+
+        $response->assertStatus(422)->assertJsonValidationErrors('date_payment');
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
 }
