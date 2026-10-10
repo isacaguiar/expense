@@ -12,7 +12,7 @@ IDs a partir de TASK-397: o maior em `dev` é TASK-396 (feature `20261004-metric
 | TASK-398 | Conferir a paridade do `InstallmentSchedule` com `frontend/src/utils/installments.ts` nos mesmos vetores e registrar o resultado | backend | plan.md §1 | nenhum | Concluída |
 | TASK-399 | Tornar `quotas` opcional em `POST /api/expenses`, gerando as parcelas no servidor, com teto de 120 parcelas | backend | plan.md §2 | nenhum | Concluída |
 | TASK-400 | Gerar as parcelas no servidor ao trocar para parcelada em `PUT /api/expenses/{id}` sem `quotas`, com o mesmo teto | backend | plan.md §3 | nenhum | Concluída |
-| TASK-401 | Regenerar as quotas na edição quando valor, data ou nº de parcelas mudam numa despesa não-fixa sem parcela paga | backend | plan.md §4 | nenhum | Pendente |
+| TASK-401 | Regenerar as quotas na edição quando valor, data ou nº de parcelas mudam numa despesa não-fixa sem parcela paga | backend | plan.md §4 | nenhum | Concluída |
 | TASK-402 | Devolver `value_per_person` por quota em `GET /api/expenses/{id}` | backend | plan.md §5 | nenhum | Pendente |
 | TASK-403 | Revisar a feature com `security-reviewer` e `pr-readiness-checker` e rodar a suíte completa do backend | backend | plan.md §6 | antes do merge | Pendente |
 

@@ -687,4 +687,227 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
             $this->quotaRows($expense->id)
         );
     }
+
+    /**
+     * TASK-401 (docs/feature/20261008-rateio-parcelas-no-backend/): editar valor,
+     * data ou nº de parcelas de uma despesa não-fixa sem parcela paga refaz as
+     * quotas no servidor, sem precisar mandar `expense_type` nem `quotas`.
+     *
+     * @param  list<array{date_expected: string, value_quota: float|int}>  $rows
+     * @return array{0: User, 1: Expense}
+     */
+    private function installmentsExpenseWithQuotas(array $rows, array $overrides = []): array
+    {
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creator->id);
+        $expense = $this->createExpense($group, $creator, $creator, array_merge([
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => count($rows),
+            'total_value' => array_sum(array_column($rows, 'value_quota')),
+        ], $overrides));
+
+        foreach ($rows as $i => $row) {
+            $expense->quotas()->create($row + ['number' => $i + 1, 'paid' => false]);
+        }
+
+        return [$creator, $expense];
+    }
+
+    private function twoInstallmentsOfOneHundred(): array
+    {
+        return $this->installmentsExpenseWithQuotas([
+            ['date_expected' => '2026-08-15', 'value_quota' => 100],
+            ['date_expected' => '2026-09-15', 'value_quota' => 100],
+        ]);
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function quotaIds(Expense $expense): array
+    {
+        return $expense->quotas()->orderBy('number')->pluck('id')->all();
+    }
+
+    public function test_update_of_only_the_total_value_regenerates_the_single_quota_of_an_in_cash_expense(): void
+    {
+        [$creator, $expense] = $this->inCashExpenseWithOneQuota(['total_value' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 150]);
+
+        $response->assertStatus(200);
+        $response->assertJsonCount(1, 'quotas');
+        $this->assertSame(
+            [['number' => 1, 'date' => '2026-08-15', 'value' => '150.00', 'paid' => false]],
+            $this->quotaRows($expense->id)
+        );
+    }
+
+    public function test_update_of_only_the_date_moves_the_quota_of_an_in_cash_expense(): void
+    {
+        [$creator, $expense] = $this->inCashExpenseWithOneQuota(['total_value' => 100]);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['date_payment' => '2026-08-20']);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'date_payment' => '2026-08-20']);
+        $this->assertSame(
+            [['number' => 1, 'date' => '2026-08-20', 'value' => '100.00', 'paid' => false]],
+            $this->quotaRows($expense->id)
+        );
+    }
+
+    public function test_update_of_only_the_total_value_resplits_an_unpaid_installments_expense(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 300]);
+
+        $response->assertStatus(200);
+        $this->assertSame([
+            ['number' => 1, 'date' => '2026-08-15', 'value' => '150.00', 'paid' => false],
+            ['number' => 2, 'date' => '2026-09-15', 'value' => '150.00', 'paid' => false],
+        ], $this->quotaRows($expense->id));
+    }
+
+    public function test_update_of_only_the_installments_count_resplits_an_unpaid_installments_expense(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['installments' => 4]);
+
+        $response->assertStatus(200);
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'installments' => 4]);
+        $this->assertSame([
+            ['number' => 1, 'date' => '2026-08-15', 'value' => '50.00', 'paid' => false],
+            ['number' => 2, 'date' => '2026-09-15', 'value' => '50.00', 'paid' => false],
+            ['number' => 3, 'date' => '2026-10-15', 'value' => '50.00', 'paid' => false],
+            ['number' => 4, 'date' => '2026-11-15', 'value' => '50.00', 'paid' => false],
+        ], $this->quotaRows($expense->id));
+    }
+
+    public function test_update_of_only_the_date_recomputes_the_dates_of_an_unpaid_installments_expense(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['date_payment' => '2026-08-20']);
+
+        $response->assertStatus(200);
+        $this->assertSame([
+            ['number' => 1, 'date' => '2026-08-20', 'value' => '100.00', 'paid' => false],
+            ['number' => 2, 'date' => '2026-09-20', 'value' => '100.00', 'paid' => false],
+        ], $this->quotaRows($expense->id));
+    }
+
+    public function test_update_that_resends_the_stored_values_keeps_the_same_quotas(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", [
+                'total_value' => '200.00',
+                'date_payment' => '2026-08-15',
+                'installments' => 2,
+            ]);
+
+        $response->assertStatus(200);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+    }
+
+    public function test_update_of_only_the_description_keeps_the_same_quotas(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['description' => 'Descrição nova']);
+
+        $response->assertStatus(200);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+    }
+
+    public function test_update_of_the_total_value_of_a_fixed_expense_leaves_its_quotas_alone(): void
+    {
+        $creator = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creator->id);
+        $expense = $this->createExpense($group, $creator, $creator, [
+            'expense_type' => 'FIXED',
+            'date_payment' => '2026-06-05',
+            'total_value' => 300,
+        ]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 300]);
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 350, 'date_payment' => '2026-06-10']);
+
+        $response->assertStatus(200);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+        $this->assertSame(
+            [['number' => 1, 'date' => '2026-06-05', 'value' => '300.00', 'paid' => false]],
+            $this->quotaRows($expense->id)
+        );
+    }
+
+    public function test_update_of_the_date_of_a_paid_expense_does_not_regenerate_its_quotas(): void
+    {
+        [$creator, $expense] = $this->inCashExpenseWithOneQuota(['total_value' => 100]);
+        $expense->quotas()->update(['paid' => true]);
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['date_payment' => '2026-08-20']);
+
+        $response->assertStatus(200);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+        $this->assertSame(
+            [['number' => 1, 'date' => '2026-08-15', 'value' => '100.00', 'paid' => true]],
+            $this->quotaRows($expense->id)
+        );
+    }
+
+    public function test_update_of_only_the_installments_count_rejects_more_than_one_hundred_and_twenty(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['installments' => 121]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('installments');
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'installments' => 2]);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+    }
+
+    public function test_update_that_would_regenerate_a_legacy_expense_with_more_than_one_hundred_and_twenty_installments_is_rejected(): void
+    {
+        $rows = [];
+        for ($i = 1; $i <= 121; $i++) {
+            $rows[] = ['date_expected' => Carbon::parse('2026-08-15')->addMonthsNoOverflow($i - 1)->toDateString(), 'value_quota' => 1];
+        }
+        [$creator, $expense] = $this->installmentsExpenseWithQuotas($rows);
+        $idsBefore = $this->quotaIds($expense);
+
+        $rejected = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['total_value' => 242]);
+
+        $rejected->assertStatus(422)->assertJsonValidationErrors('installments');
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'total_value' => 121]);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+
+        // Editar só a descrição não dispara a regeneração e continua permitido.
+        $accepted = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['description' => 'Descrição nova']);
+
+        $accepted->assertStatus(200);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+    }
 }
