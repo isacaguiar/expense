@@ -83,6 +83,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 075 | [pagamento-individual-por-despesa.md](pagamento-individual-por-despesa.md) | Pagamento individual por despesa (pagamento por participante): cada devedor paga a própria parte, e ela sai do pagamento total do ciclo. Depois do 070; antes do app 074 | conversa de 2026-10-09 (construção paga à vista) | 2026-10-09 | ALTA | Aberto |
 | 076 | [quitacao-antecipada-despesa-parcelada.md](quitacao-antecipada-despesa-parcelada.md) | Quitação antecipada de despesa parcelada: o devedor paga de uma vez o total que tem em aberto. Depende do 075 | conversa de 2026-10-09 (construção paga à vista) | 2026-10-09 | ALTA | Aberto |
 | 077 | [update-despesa-nao-confere-competencia-fechada-da-nova-data.md](update-despesa-nao-confere-competencia-fechada-da-nova-data.md) | `update()` de despesa não confere se a nova data cai numa competência fechada. Provável BFF | rateio-parcelas-no-backend (TASK-401) | 2026-10-09 | MEDIA | Aberto |
+| 078 | [corrida-entre-pagamento-e-edicao-de-despesa.md](corrida-entre-pagamento-e-edicao-de-despesa.md) | Corrida entre o pagamento e a edição de uma despesa pode apagar a quota paga. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
 
 ## Itens concluídos
 
