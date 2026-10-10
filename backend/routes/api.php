@@ -8,6 +8,7 @@ use App\Http\Controllers\GroupExpenseReportController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PixController;
 use App\Http\Controllers\PreRegisterController;
 use App\Http\Controllers\ProofDownloadController;
@@ -33,6 +34,7 @@ Route::post('/pre-register/resend', [PreRegisterController::class, 'resend'])->m
 
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/me/overview', [OverviewController::class, 'show']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [AuthController::class, 'dashboard']);
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
