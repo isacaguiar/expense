@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Expense;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
+use App\Models\Notification;
 use App\Models\SettlementConfirmation;
 use App\Models\User;
 use App\Services\CycleSummaryService;
@@ -53,15 +54,15 @@ class CycleSummaryServiceTest extends TestCase
 
     /**
      * Despesa À Vista de $creditor, dividida entre $creditor e os $debtors,
-     * com a Quota de agosto marcada como paga ou não.
+     * com a Quota (de agosto, salvo `$date`) marcada como paga ou não.
      *
      * @param  array<int, User>  $debtors
      */
-    private function expenseBetween(Group $group, User $creditor, array $debtors, float $total, bool $paid = true): Expense
+    private function expenseBetween(Group $group, User $creditor, array $debtors, float $total, bool $paid = true, string $date = '2026-08-10'): Expense
     {
         $expense = Expense::create([
             'create_date' => now(),
-            'date_payment' => '2026-08-10',
+            'date_payment' => $date,
             'description' => 'Despesa de teste',
             'expense_type' => 'IN_CASH',
             'installments' => 1,
@@ -73,7 +74,7 @@ class CycleSummaryServiceTest extends TestCase
         ]);
         $expense->payers()->sync(array_merge([$creditor->id], array_map(fn (User $user) => $user->id, $debtors)));
         $expense->quotas()->create([
-            'date_expected' => '2026-08-10',
+            'date_expected' => $date,
             'number' => 1,
             'paid' => $paid,
             'value_quota' => $total,
@@ -84,10 +85,15 @@ class CycleSummaryServiceTest extends TestCase
 
     private function confirm(Group $group, User $debtor, User $creditor, float $amount): SettlementConfirmation
     {
+        return $this->confirmFor($group, $debtor, $creditor, $amount, $this->start->toDateString(), $this->end->toDateString());
+    }
+
+    private function confirmFor(Group $group, User $debtor, User $creditor, float $amount, string $cycleStart, string $cycleEnd): SettlementConfirmation
+    {
         return SettlementConfirmation::create([
             'group_id' => $group->id,
-            'cycle_start' => $this->start->toDateString(),
-            'cycle_end' => $this->end->toDateString(),
+            'cycle_start' => $cycleStart,
+            'cycle_end' => $cycleEnd,
             'from_user_id' => $debtor->id,
             'to_user_id' => $creditor->id,
             'amount' => $amount,
@@ -347,5 +353,199 @@ class CycleSummaryServiceTest extends TestCase
         $this->unpaidExpense($group, $creditor, '2025-09-10'); // setembro/2025: 13 ciclos atrás
 
         $this->assertSame(0, $this->service()->focus($group));
+    }
+
+    // --- view(): a escolha de fonte de summary(), sem a selagem preguiçosa -------
+
+    public function test_view_serves_the_snapshot_of_a_sealed_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15'); // setembro é 1 ciclo atrás e já fechou por data
+
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-09-01',
+            'cycle_end' => '2026-09-30',
+            // Valores que o cálculo ao vivo nunca produziria (não há despesa nenhuma):
+            // se vierem, é porque a fonte foi mesmo o snapshot.
+            'totals' => ['total' => 777.0, 'paid' => 777.0, 'pending' => 0.0],
+            'expenses' => [],
+            'balances' => [],
+            'settlements' => [['from_user_id' => $debtor->id, 'to_user_id' => $creditor->id, 'amount' => 50.0]],
+            'settled_at' => now(),
+        ]);
+        $this->confirmFor($group, $debtor, $creditor, 50, '2026-09-01', '2026-09-30');
+
+        $view = $this->service()->view($group, 1);
+
+        $this->assertTrue($view['sealed']);
+        $this->assertSame('closed', $view['cycle']['status']);
+        $this->assertTrue($view['cycle']['settled']);
+        $this->assertFalse($view['cycle']['in_grace']);
+        $this->assertSame('2026-10-05', $view['cycle']['closes_at']);
+        $this->assertEquals(777.0, $view['summary']['totals']['total']);
+        $this->assertNotNull($view['summary']['settlements'][0]['confirmedAt']);
+        $this->assertNotNull($view['summary']['settlements'][0]['confirmedProofUrl']);
+    }
+
+    public function test_view_computes_live_a_closed_cycle_that_is_not_sealed(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200, false, '2026-09-10');
+
+        $view = $this->service()->view($group, 1);
+
+        $this->assertFalse($view['sealed']);
+        $this->assertSame('closed', $view['cycle']['status']);
+        $this->assertFalse($view['cycle']['settled']);
+        $this->assertFalse($view['cycle']['in_grace']);
+        $this->assertSame('2026-09-01', $view['cycle']['start']);
+        $this->assertSame('2026-09-30', $view['cycle']['end']);
+        $this->assertSame('2026-10-05', $view['cycle']['closes_at']);
+        $this->assertEquals(200.0, $view['summary']['totals']['pending']);
+        $this->assertCount(1, $view['summary']['settlements']);
+        $this->assertNull($view['summary']['settlements'][0]['confirmedAt']);
+    }
+
+    public function test_view_marks_an_active_manual_closing_of_the_current_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200, false, '2026-10-10');
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-10-01',
+            'cycle_end' => '2026-10-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $view = $this->service()->view($group, 0);
+
+        $this->assertSame('closed_manually', $view['cycle']['status']);
+        $this->assertFalse($view['cycle']['settled']);
+        $this->assertFalse($view['sealed']);
+        // Ao vivo, não o snapshot manual vazio: a despesa de outubro aparece.
+        $this->assertCount(1, $view['summary']['expenses']);
+    }
+
+    public function test_view_treats_a_reopened_manual_closing_as_open(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group] = $this->groupWithPair();
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-10-01',
+            'cycle_end' => '2026-10-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now()->subMinute(),
+            'reopened_at' => now(),
+        ]);
+
+        $this->assertSame('open', $this->service()->view($group, 0)['cycle']['status']);
+    }
+
+    public function test_view_computes_live_the_open_current_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200, false, '2026-10-10');
+
+        $view = $this->service()->view($group, 0);
+
+        $this->assertFalse($view['sealed']);
+        $this->assertSame('open', $view['cycle']['status']);
+        $this->assertFalse($view['cycle']['settled']);
+        $this->assertFalse($view['cycle']['in_grace']);
+        $this->assertSame('2026-11-05', $view['cycle']['closes_at']);
+        $this->assertEquals(200.0, $view['summary']['totals']['total']);
+    }
+
+    public function test_view_flags_a_cycle_whose_boundary_passed_but_is_still_open_as_in_grace(): void
+    {
+        // O ciclo de janeiro tem fronteira em 31/01 e só fecha em 05/02.
+        Carbon::setTestNow('2026-02-02');
+
+        [$group] = $this->groupWithPair();
+
+        $view = $this->service()->view($group, 1);
+
+        $this->assertSame('open', $view['cycle']['status']);
+        $this->assertTrue($view['cycle']['in_grace']);
+        $this->assertSame('2026-01-31', $view['cycle']['end']);
+        $this->assertSame('2026-02-05', $view['cycle']['closes_at']);
+    }
+
+    public function test_view_does_not_seal_a_settled_cycle_but_the_summary_endpoint_does(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        // Setembro fechado por data, todo pago e com o único acerto confirmado,
+        // mas sem snapshot: o caso "quitado e não selado" do plan.md §0.1.
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200, true, '2026-09-10');
+        $this->confirmFor($group, $debtor, $creditor, 100, '2026-09-01', '2026-09-30');
+
+        $snapshotsBefore = GroupCycleSnapshot::count();
+        $notificationsBefore = Notification::count();
+
+        $view = $this->service()->view($group, 1);
+
+        // view() lê e não grava: nem snapshot, nem notificação "ciclo quitado".
+        $this->assertFalse($view['cycle']['settled']);
+        $this->assertFalse($view['sealed']);
+        $this->assertSame($snapshotsBefore, GroupCycleSnapshot::count());
+        $this->assertSame($notificationsBefore, Notification::count());
+
+        // Controle: a mesma situação lida por GET /summary sela o ciclo. É a
+        // diferença deliberada entre as duas leituras.
+        $this->withToken(auth('api')->login($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")
+            ->assertOk()
+            ->assertJsonPath('cycle.settled', true);
+
+        $this->assertSame($snapshotsBefore + 1, GroupCycleSnapshot::count());
+    }
+
+    public function test_view_matches_the_summary_endpoint_for_a_closed_pending_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        $creditor = User::factory()->create();
+        $debtorA = User::factory()->create();
+        $debtorB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach([$creditor->id, $debtorA->id, $debtorB->id]);
+
+        $this->expenseBetween($group, $creditor, [$debtorA, $debtorB], 300, false, '2026-09-10');
+        $this->confirmFor($group, $debtorA, $creditor, 100, '2026-09-01', '2026-09-30');
+
+        $http = $this->withToken(auth('api')->login($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")
+            ->assertOk()
+            ->json();
+
+        $view = $this->service()->view($group, 1);
+
+        foreach (['start', 'end', 'closes_at', 'status', 'settled'] as $key) {
+            $this->assertSame($http['cycle'][$key], $view['cycle'][$key], "cycle.{$key}");
+        }
+        $this->assertEquals($http['totals'], $view['summary']['totals']);
+
+        $pick = fn (array $settlements) => array_map(
+            fn (array $s) => [$s['from_user_id'], $s['to_user_id'], $s['amount'], $s['confirmedAt']],
+            $settlements
+        );
+        $this->assertEquals($pick($http['settlements']), $pick($view['summary']['settlements']));
+        $this->assertCount(2, $view['summary']['settlements']);
     }
 }

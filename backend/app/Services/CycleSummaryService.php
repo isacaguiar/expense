@@ -435,4 +435,74 @@ class CycleSummaryService
 
         return 0;
     }
+
+    /**
+     * O ciclo `$cyclesAgo` de um grupo como o `summary()` o serviria — ciclo,
+     * totais, despesas, saldos e acertos com as confirmações — **sem a selagem
+     * preguiçosa**: quem só quer ler (a visão pessoal do Painel) não pode gravar
+     * snapshot nem disparar `Notifier::cycleSettled` por causa de um GET.
+     *
+     * A escolha da fonte é a de `ExpenseController::summary()`:
+     * - ciclo selado → a foto imutável do snapshot (`status` `closed`, `settled`);
+     * - fechado por data, ou por fechamento manual ainda ativo, e não selado →
+     *   cálculo ao vivo (`closed`, ou `closed_manually` no manual);
+     * - demais → cálculo ao vivo (`open`, ou `future`).
+     * A única diferença deliberada é não selar: `summary()` sela, na leitura, um
+     * ciclo fechado que já esteja todo quitado. `in_grace` é novo: a fronteira
+     * já passou e o ciclo ainda está `open` (a carência de `BillingCycle`).
+     *
+     * @return array{
+     *     cycle: array{start: string, end: string, closes_at: string, status: string, settled: bool, in_grace: bool},
+     *     summary: array{totals: array, expenses: array, balances: array, settlements: array},
+     *     sealed: bool
+     * }
+     */
+    public function view(Group $group, int $cyclesAgo): array
+    {
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $cyclesAgo);
+        $start = $cycle['start'];
+        $end = $cycle['end'];
+        $status = $cycle['status'];
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', $start->toDateString())
+            ->first();
+        $sealed = (bool) ($snapshot && $snapshot->isSealed());
+
+        $inGrace = false;
+
+        if ($sealed) {
+            // Ciclo totalmente quitado → foto imutável.
+            $status = 'closed';
+            $summary = [
+                'totals' => $snapshot->totals,
+                'expenses' => $snapshot->expenses,
+                'balances' => $snapshot->balances,
+                'settlements' => $snapshot->settlements,
+            ];
+        } else {
+            $inGrace = $status === 'open' && Carbon::now()->startOfDay()->gt($end);
+
+            if ($status === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive()) {
+                $status = 'closed_manually';
+            }
+
+            $summary = $this->compute($group, $start, $end);
+        }
+
+        $summary['settlements'] = $this->withConfirmations($group->id, $start, $summary['settlements']);
+
+        return [
+            'cycle' => [
+                'start' => $start->toDateString(),
+                'end' => $end->toDateString(),
+                'closes_at' => BillingCycle::closesAt($end)->toDateString(),
+                'status' => $status,
+                'settled' => $sealed,
+                'in_grace' => $inGrace,
+            ],
+            'summary' => $summary,
+            'sealed' => $sealed,
+        ];
+    }
 }

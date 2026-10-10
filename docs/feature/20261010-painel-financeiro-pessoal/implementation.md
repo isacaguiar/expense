@@ -22,7 +22,8 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
 | TASK-409 | Concluída (commit `5e9c517c24` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário para iniciar e para commitar | Ver §3 | Mutação derruba só os testes novos: o caso "pendente" do teste existente é mascarado pelo acerto sem comprovante (§3) |
-| TASK-410 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-410`) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §4 | A fronteira de 12 ciclos do `focus()` não tinha nenhum teste; só os novos a pegam (§4) |
+| TASK-410 | Concluída (commit `d6411f26c2`, merge `9542dbeef4` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §4 | A fronteira de 12 ciclos do `focus()` não tinha nenhum teste; só os novos a pegam (§4) |
+| TASK-411 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-411`) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §5 | `ExpenseController` não foi tocado; a ausência de deriva em relação a `summary()` é provada por teste de reconciliação (§5) |
 
 ## 3. Evidências da TASK-409
 
@@ -64,3 +65,27 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-410`, criada da branch d
 | Nenhum teste existente editado | `git status --short` | `M` apenas em `ExpenseController.php`, `CycleSummaryService.php` e `CycleSummaryServiceTest.php` (arquivo criado na TASK-409); `FocusCycleTest.php` intacto |
 
 **Achado (cobertura).** Nenhum teste anterior fixava o limite de varredura: `FocusCycleTest` não tem caso de 12 ou 13 ciclos atrás, então trocar `<=` por `<` no laço passaria despercebido. Os dois testes novos (`focus reaches exactly twelve cycles back` e `focus does not look past twelve cycles back`) fixam a fronteira. As datas foram conferidas contra `BillingCycle::cycleFor` (com `closing_day` nulo e agora em 15/10/2026, 12 ciclos atrás é outubro/2025 e 13 é setembro/2025).
+
+## 5. Evidências da TASK-411
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-411`, criada da branch da feature (`9542dbeef4`). Mesmo ambiente (MySQL descartável na 3308).
+
+`CycleSummaryService::view(Group, int $cyclesAgo)` devolve `{cycle{start,end,closes_at,status,settled,in_grace}, summary{totals,expenses,balances,settlements}, sealed}`. É **código novo**, não movimento: espelha a escolha de fonte de `ExpenseController::summary()` (`:673-709`) menos a selagem preguiçosa. `summary()` **não foi refatorado** (plan.md §1.2); a ausência de deriva é provada por teste.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Ponto de partida | `php artisan test` na TASK-410 | 473 verdes (2937 asserções) |
+| **RED** | `php artisan test --no-ansi --filter=test_view` | `Tests: 8 failed`, todos `Call to undefined method App\Services\CycleSummaryService::view()` |
+| **GREEN** | mesmo comando | `Tests: 8 passed (49 assertions)` |
+| Ramos de fonte e de status | testes `test_view_*` | selado → snapshot (valores `777.0` que o cálculo ao vivo nunca produziria), `closed`, `settled` verdadeiro; fechado por data e não selado → ao vivo, `closed`, `settled` falso; fechamento manual ativo → `closed_manually` (e ao vivo: a despesa de outubro aparece, não o snapshot vazio); fechamento manual reaberto → `open`; vigente → `open`, `in_grace` falso, `closes_at` `2026-11-05`; fronteira passada e ainda `open` (em 02/02, janeiro) → `in_grace` verdadeiro, `closes_at` `2026-02-05` |
+| Confirmações nos acertos | idem | `confirmedAt` e `confirmedProofUrl` presentes no ramo do snapshot; `null` no ao vivo sem confirmação |
+| **Não grava** | `test_view_does_not_seal_a_settled_cycle_but_the_summary_endpoint_does` | Num ciclo de setembro todo pago e com o acerto confirmado, sem snapshot: depois de `view()` o `GroupCycleSnapshot::count()` e o `Notification::count()` ficam iguais e `settled` é falso. **Controle:** `GET /summary?cycles_ago=1` no mesmo cenário devolve `cycle.settled = true` e o `count()` de snapshots sobe 1: prova a diferença deliberada |
+| **Reconciliação** com `summary()` | `test_view_matches_the_summary_endpoint_for_a_closed_pending_cycle` | `cycle.start/end/closes_at/status/settled` iguais (`assertSame`), `totals` iguais e os 2 acertos (de/para/valor/`confirmedAt`) iguais, com um confirmado e outro não |
+| **Mutação 1** (critério) | `$status = 'closed_manually'` → `'closed'` em `view()` | `Tests: 1 failed, 7 passed`: cai só `view marks an active manual closing of the current cycle`. Revertida |
+| **Mutação 2** (propriedade central) | injetar um `GroupCycleSnapshot::updateOrCreate(...)` no fim de `view()` | `Tests: 1 failed, 7 passed`: cai só `view does not seal a settled cycle but the summary endpoint does`. Linha removida e conferida por `Grep` (nenhum `updateOrCreate` no serviço) |
+| Depois de reverter | `--filter='test_view\|test_focus\|CycleIsFullySettledTest'` | `Tests: 20 passed (61 assertions)` |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 167 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 481 passed (2986 assertions)`: 473 + 8 testes e 2937 + 49 asserções |
+| Arquivos alterados | `git status --short` | `M app/Services/CycleSummaryService.php` e `M tests/Feature/CycleSummaryServiceTest.php` (teste criado na TASK-409). `ExpenseController.php` e os demais testes intactos |
+
+**Para a próxima task.** `view()` já devolve os acertos com as confirmações e o `in_grace`; a `PersonalOverviewService` (TASK-412) parte de `focus()` + `view()` e acrescenta `cycles_ago`, que o `view()` não carrega de propósito. Os helpers `expenseBetween(…, $date)` e `confirmFor(…)` do teste foram generalizados com parâmetro opcional, sem alterar nenhum teste anterior.

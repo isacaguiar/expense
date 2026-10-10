@@ -10,7 +10,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 |---|---|---|---|---|---|
 | TASK-409 | Extrair `App\Services\CycleSummaryService` (`entries`, `compute`, `withConfirmations`, `isFullySettled`) do `ExpenseController`, sem mudar comportamento | backend | plan.md §0.1, §0.2 | nenhum | Concluída |
 | TASK-410 | Mover o laço do `focusCycle` para `CycleSummaryService::focus()` (com `FOCUS_LOOKBACK`) e fazer o controller delegar | backend | plan.md §0.2, §1.2 | nenhum | Concluída |
-| TASK-411 | Criar `CycleSummaryService::view()`, a escolha de fonte de `summary()` sem a selagem preguiçosa, com `in_grace` | backend | plan.md §1.2 | nenhum | Pendente |
+| TASK-411 | Criar `CycleSummaryService::view()`, a escolha de fonte de `summary()` sem a selagem preguiçosa, com `in_grace` | backend | plan.md §1.2 | nenhum | Concluída |
 | TASK-412 | Criar `PersonalOverviewService` com a derivação por usuário (`to_pay`, `to_receive`, `owe`, `receive`, `my_items`, `has_open`, ordenação) | backend | plan.md §1.3 | nenhum | Pendente |
 | TASK-413 | Criar `OverviewController` e a rota `GET /api/me/overview` sob `jwt.auth`, com o escopo do usuário na consulta | backend | plan.md §1.1, §1.4 | nenhum | Pendente |
 | TASK-414 | Revisar o endpoint com o agent `security-reviewer` e rodar a suíte completa do backend | backend | plan.md §1.4, §6 | nenhum | Pendente |
