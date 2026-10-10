@@ -84,6 +84,8 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 076 | [quitacao-antecipada-despesa-parcelada.md](quitacao-antecipada-despesa-parcelada.md) | Quitação antecipada de despesa parcelada: o devedor paga de uma vez o total que tem em aberto. Depende do 075 | conversa de 2026-10-09 (construção paga à vista) | 2026-10-09 | ALTA | Aberto |
 | 077 | [update-despesa-nao-confere-competencia-fechada-da-nova-data.md](update-despesa-nao-confere-competencia-fechada-da-nova-data.md) | `update()` de despesa não confere se a nova data cai numa competência fechada. Provável BFF | rateio-parcelas-no-backend (TASK-401) | 2026-10-09 | MEDIA | Aberto |
 | 078 | [corrida-entre-pagamento-e-edicao-de-despesa.md](corrida-entre-pagamento-e-edicao-de-despesa.md) | Corrida entre o pagamento e a edição de uma despesa pode apagar a quota paga. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
+| 079 | [limites-de-entrada-do-rateio-gerado-pelo-servidor.md](limites-de-entrada-do-rateio-gerado-pelo-servidor.md) | Limites de entrada que o rateio gerado pelo servidor ainda não impõe: data mínima, `total_value`, tetos de `quotas` e `installments` | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | BAIXA | Aberto |
+| 080 | [store-despesa-devolve-mensagem-da-excecao-no-500.md](store-despesa-devolve-mensagem-da-excecao-no-500.md) | `POST /api/expenses` devolve a mensagem da exceção (`details`) no 500. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
 
 ## Itens concluídos
 
