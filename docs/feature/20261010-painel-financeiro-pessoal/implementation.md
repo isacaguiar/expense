@@ -24,7 +24,8 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-409 | Concluída (commit `5e9c517c24` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário para iniciar e para commitar | Ver §3 | Mutação derruba só os testes novos: o caso "pendente" do teste existente é mascarado pelo acerto sem comprovante (§3) |
 | TASK-410 | Concluída (commit `d6411f26c2`, merge `9542dbeef4` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §4 | A fronteira de 12 ciclos do `focus()` não tinha nenhum teste; só os novos a pegam (§4) |
 | TASK-411 | Concluída (commit `8ac9908b89`, merge `682f5ad95c` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §5 | `ExpenseController` não foi tocado; a ausência de deriva em relação a `summary()` é provada por teste de reconciliação (§5) |
-| TASK-412 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-412`) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §6 | Os 16 testes passaram de primeira; a prova de que testam algo são 4 mutações, cada uma derrubando testes (§6) |
+| TASK-412 | Concluída (commit `fe37b7150f`, merge `a1af961668` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §6 | Os 16 testes passaram de primeira; a prova de que testam algo são 4 mutações, cada uma derrubando testes (§6) |
+| TASK-413 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-413`) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §7 | Primeira superfície HTTP da feature; segurança provada por 2 mutações (escopo de membro e posição da rota fora do `jwt.auth`) |
 
 ## 3. Evidências da TASK-409
 
@@ -125,3 +126,30 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-412`, criada da branch d
 - Participante que não casa com nenhum membro do grupo (membro removido) vira `Desconhecido`, em vez de derrubar a visão.
 - A ordenação por nome usa `Str::ascii` + `strcasecmp` (sem acento, sem caixa), para "Álvaro" não ir depois de "Bruno".
 - O custo é o de `focus()` + `view()` por grupo (típico 1 a 3 cálculos de ciclo); a medição fica para a TASK-423.
+
+## 7. Evidências da TASK-413
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-413`, criada da branch da feature (`a1af961668`). Mesmo ambiente (MySQL descartável na 3308).
+
+Entrega: `App\Http\Controllers\OverviewController` (fino: injeta `PersonalOverviewService` e devolve `forUser(auth('api')->user())`) e a rota `GET /api/me/overview` dentro do grupo `jwt.auth`, logo abaixo de `/me` em `routes/api.php`. O diff da rota é só o `use` e uma linha.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Ponto de partida | `php artisan test` na TASK-412 | 497 verdes (3104 asserções) |
+| **RED** | `php artisan test --no-ansi --filter=OverviewControllerTest` | `Tests: 7 failed (7 assertions)`: `Expected response status code [200] but received 404` (5), `[401] but received 404` (1) e a rota ausente do registro (1) |
+| **GREEN** | mesmo comando | `Tests: 7 passed (96 assertions)` |
+| Autenticação | `test_requires_authentication` | Sem token: 401 |
+| Estrutura | `test_returns_the_documented_structure` | 200 com `user{id,name}` e, por grupo, `group`, `cycle` (com `cycles_ago`), `owe`, `receive`, `to_pay[].to_user{id,name,email,pix,avatar_url}`, `my_items[]` (`creditor`, `installment`, `can_pay`, `can_unpay` …), `pending_items_count`, `has_open` (`assertJsonStructure`) |
+| Sem grupos | `test_a_user_without_groups_gets_an_empty_list` | 200 e `assertExactJson({user:{…}, groups:[]})` |
+| Escopo | `test_never_shows_the_group_of_someone_else` | Com um grupo alheio (outro dono, outros membros, despesa de 500): só o meu grupo vem, o `id` do alheio não aparece em `group.id` e **nada dele vaza no corpo**: nem o nome do grupo, nem o e-mail de quem está nele |
+| Sem efeito colateral + controle | `test_reading_the_overview_writes_nothing_even_where_the_summary_endpoint_would_seal` | Setembro todo pago, acerto confirmado, sem snapshot. Depois de `GET /me/overview` como devedor e como credor, `GroupCycleSnapshot::count()` e `Notification::count()` ficam iguais. **Controle:** `GET /summary?cycles_ago=1` no mesmo cenário devolve `cycle.settled = true` e o `count()` sobe 1 (o teste não passa por vazio) |
+| Reconciliação com `summary` | `test_matches_the_summary_endpoint_for_the_cycle_it_chose` | Para o `cycles_ago` que o overview escolheu: `cycle.start/end/closes_at/status/settled` iguais (`assertSame`); o acerto do devedor (valor e `confirmedAt`) igual; como credor, os 2 acertos a receber (devedor, valor, confirmado ou não) iguais |
+| Middleware real da rota | `php artisan route:list --path=api/me/overview -v --no-ansi` | `GET\|HEAD api/me/overview … OverviewController@show` com `api` e `Tymon\JWTAuth\Http\Middleware\Authenticate` (o alias `jwt.auth` resolvido) |
+| Middleware por teste | `test_the_route_sits_behind_the_jwt_auth_middleware` | A rota está registrada e `gatherMiddleware()` contém `jwt.auth` |
+| **Mutação 1** (critério) | tirar o `whereHas('members', …)` da consulta de grupos do `PersonalOverviewService` | `2 failed, 21 passed`: caem `never shows the group of someone else` (HTTP) e `a deleted group and a group of someone else never appear` (serviço). Revertida; `git diff --stat` voltou a mostrar só `routes/api.php` |
+| **Mutação 2** (segurança da rota) | mover a rota para **fora** do `Route::middleware('jwt.auth')->group` | `2 failed, 5 passed`: caem `requires authentication` e `the route sits behind the jwt auth middleware`. Revertida; `git diff -U1 routes/api.php` mostra só o `use` e a linha dentro do grupo |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 504 passed (3200 assertions)`: 497 + 7 testes e 3104 + 96 asserções |
+| Arquivos | `git status --short` | `M routes/api.php` e dois arquivos novos (`OverviewController.php`, `OverviewControllerTest.php`) |
+
+**Para a TASK-414.** A revisão do agent `security-reviewer` deve cobrir o `OverviewController`, o `PersonalOverviewService` e a rota. Pontos que já sei que ele vai olhar e que estão cobertos por teste: o escopo por membro na consulta (mutação 1), o 401 e o `jwt.auth` (mutação 2), o corpo sem dados de grupo alheio, e o e-mail e o Pix só do credor. Pontos que dependem de decisão e vale ele opinar: (a) `to_user.email` e `to_user.pix` já são expostos a membros pelo `gross-debts`; (b) o endpoint não tem `throttle` próprio (o limiter global de 60/min vale, como nas demais rotas autenticadas); (c) o custo cresce com o número de grupos e a medição é a da TASK-423.
