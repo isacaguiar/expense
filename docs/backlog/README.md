@@ -85,6 +85,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 078 | [corrida-entre-pagamento-e-edicao-de-despesa.md](corrida-entre-pagamento-e-edicao-de-despesa.md) | Corrida entre o pagamento e a edição de uma despesa pode apagar a quota paga. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
 | 079 | [limites-de-entrada-do-rateio-gerado-pelo-servidor.md](limites-de-entrada-do-rateio-gerado-pelo-servidor.md) | Limites de entrada que o rateio gerado pelo servidor ainda não impõe: data mínima, `total_value`, tetos de `quotas` e `installments` | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | BAIXA | Aberto |
 | 080 | [store-despesa-devolve-mensagem-da-excecao-no-500.md](store-despesa-devolve-mensagem-da-excecao-no-500.md) | `POST /api/expenses` devolve a mensagem da exceção (`details`) no 500. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
+| 081 | [accept-invite-teste-timer-vaza-entre-testes.md](accept-invite-teste-timer-vaza-entre-testes.md) | Teste do `AcceptInvitePage` falha de vez em quando: o redirecionamento de 2s vaza para o teste seguinte | filtros-credor-devedores-status-despesas (TASK-407) | 2026-10-10 | MEDIA | Aberto |
 
 ## Itens concluídos
 
