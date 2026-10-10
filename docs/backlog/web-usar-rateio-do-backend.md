@@ -1,7 +1,7 @@
 # Web passa a usar o contrato novo e remove o rateio de parcelas do cliente
 
 ID: 071
-Origem: item 070 (`rateio-parcelas-no-backend.md`); `frontend/src/utils/installments.ts`
+Origem: item 070 (`concluidos/rateio-parcelas-no-backend.md`); `frontend/src/utils/installments.ts`
 Criado em: 2026-10-06
 Prioridade: ALTA
 Status: Aberto

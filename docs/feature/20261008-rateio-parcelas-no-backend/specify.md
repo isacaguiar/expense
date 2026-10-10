@@ -1,6 +1,6 @@
 # Specify — Rateio de parcelas no backend
 
-> Feature: o backend passa a gerar as quotas de uma despesa (rateio em centavos, resto na última parcela, meses com clamp de fim de mês), tornando `quotas` opcional em `POST /api/expenses` e `PUT /api/expenses/{id}`, e a devolver `value_per_person` por quota em `GET /api/expenses/{id}`. Promovida do item 070 do backlog (`docs/backlog/rateio-parcelas-no-backend.md`); é o primeiro da trilha 070 → 071 → 074 do app na Google Play (`docs/sdd/decisions/ADR-010-app-movel-em-flutter.md`).
+> Feature: o backend passa a gerar as quotas de uma despesa (rateio em centavos, resto na última parcela, meses com clamp de fim de mês), tornando `quotas` opcional em `POST /api/expenses` e `PUT /api/expenses/{id}`, e a devolver `value_per_person` por quota em `GET /api/expenses/{id}`. Promovida do item 070 do backlog (`docs/backlog/concluidos/rateio-parcelas-no-backend.md`); é o primeiro da trilha 070 → 071 → 074 do app na Google Play (`docs/sdd/decisions/ADR-010-app-movel-em-flutter.md`).
 
 Versão: 1.0 · Criado em: 20261008
 
