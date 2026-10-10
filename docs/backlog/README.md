@@ -79,7 +79,9 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 071 | [web-usar-rateio-do-backend.md](web-usar-rateio-do-backend.md) | Web passa a usar o contrato novo e remove o rateio de parcelas do cliente. Depende do 070 em produção | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
 | 072 | [exclusao-de-conta.md](exclusao-de-conta.md) | Exclusão de conta (backend, web e página pública), exigência da Play e da LGPD. Antes do release do app | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
 | 073 | [versao-minima-api-atualizacao-forcada.md](versao-minima-api-atualizacao-forcada.md) | Versão mínima da API / atualização forçada. Antes do release do app | app na Google Play (análise de 2026-10-06) | 2026-10-06 | MEDIA | Aberto |
-| 074 | [app-flutter-google-play.md](app-flutter-google-play.md) | App Flutter do Shared Expense na Google Play. Depende do 070 e do 071 em produção e do ADR-010 | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
+| 074 | [app-flutter-google-play.md](app-flutter-google-play.md) | App Flutter do Shared Expense na Google Play. Depende do 070, do 071 e do 075 em produção e do ADR-010 | app na Google Play (análise de 2026-10-06) | 2026-10-06 | ALTA | Aberto |
+| 075 | [pagamento-individual-por-despesa.md](pagamento-individual-por-despesa.md) | Pagamento individual por despesa (pagamento por participante): cada devedor paga a própria parte, e ela sai do pagamento total do ciclo. Depois do 070; antes do app 074 | conversa de 2026-10-09 (construção paga à vista) | 2026-10-09 | ALTA | Aberto |
+| 076 | [quitacao-antecipada-despesa-parcelada.md](quitacao-antecipada-despesa-parcelada.md) | Quitação antecipada de despesa parcelada: o devedor paga de uma vez o total que tem em aberto. Depende do 075 | conversa de 2026-10-09 (construção paga à vista) | 2026-10-09 | ALTA | Aberto |
 
 ## Itens concluídos
 
