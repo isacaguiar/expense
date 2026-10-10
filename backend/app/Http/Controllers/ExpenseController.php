@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class ExpenseController extends Controller
 {
@@ -176,6 +177,9 @@ class ExpenseController extends Controller
             return response()->json(['error' => 'Não é possível mudar o tipo de uma despesa fixa.'], 422);
         }
 
+        $anyQuotaPaid = false;
+        $newQuotas = null;
+
         // FIXED fica de fora: seu total_value é o valor do template pra
         // ocorrências futuras/ainda não materializadas — uma ocorrência já
         // paga já tem Quota própria congelada (materializeFixedOccurrenceQuota)
@@ -235,6 +239,10 @@ class ExpenseController extends Controller
                     'value_quota' => $finalTotalValue,
                 ]];
             }
+        } elseif ($expense->expense_type !== 'FIXED' && ! $anyQuotaPaid) {
+            // Sem troca de tipo, as quotas só são refeitas se valor, data ou nº
+            // de parcelas mudaram; a decisão e o rateio ficam no helper.
+            $newQuotas = $this->regeneratedQuotas($expense, $data);
         }
 
         $expense->update(Arr::except($data, ['payers', 'quotas']));
@@ -243,7 +251,7 @@ class ExpenseController extends Controller
             $expense->payers()->sync($data['payers']);
         }
 
-        if ($changingType) {
+        if ($newQuotas !== null) {
             // Seguro: só alcançado depois de confirmar acima que nenhuma quota
             // está paga. ex_quotas não tem coluna de soft delete — são linhas
             // geradas a partir de expense_type/installments/total_value, não
@@ -265,6 +273,50 @@ class ExpenseController extends Controller
         $this->hydrateQuotaExpense($fresh);
 
         return response()->json($fresh);
+    }
+
+    /**
+     * Quotas que o servidor refaz quando valor, data ou nº de parcelas de uma
+     * despesa não-fixa e sem parcela paga mudam sem troca de tipo; `null` se
+     * nada precisa ser refeito. Reenviar os valores já gravados não conta como
+     * mudança — evita recriar as quotas (e trocar seus IDs) à toa. À Vista tem
+     * uma quota; Parcelada é rateada em InstallmentSchedule com o total, o nº de
+     * parcelas e a data finais (payload ou o que já está gravado).
+     *
+     * @return list<array{number: int, date_expected: string, value_quota: float}>|null
+     */
+    private function regeneratedQuotas(Expense $expense, array $data): ?array
+    {
+        $cents = fn ($value) => (int) round(round((float) $value, 2) * 100);
+        $isInstallments = $expense->expense_type === 'IN_INSTALLMENTS';
+
+        $changed = (array_key_exists('total_value', $data)
+                && $cents($data['total_value']) !== $cents($expense->total_value))
+            || (array_key_exists('date_payment', $data)
+                && Carbon::parse($data['date_payment'])->toDateString() !== $expense->date_payment->toDateString())
+            || ($isInstallments
+                && array_key_exists('installments', $data)
+                && (int) $data['installments'] !== (int) $expense->installments);
+
+        if (! $changed) {
+            return null;
+        }
+
+        $installments = $isInstallments ? (int) ($data['installments'] ?? $expense->installments) : 1;
+
+        // O teto de campo de `installments` só vê o payload; uma despesa legada
+        // acima do teto, com valor ou data editados, cai aqui.
+        if ($installments > InstallmentSchedule::MAX_INSTALLMENTS) {
+            throw ValidationException::withMessages([
+                'installments' => 'O número de parcelas não pode ser maior que '.InstallmentSchedule::MAX_INSTALLMENTS.'.',
+            ]);
+        }
+
+        return InstallmentSchedule::build(
+            $data['total_value'] ?? $expense->total_value,
+            $installments,
+            Carbon::parse($data['date_payment'] ?? $expense->date_payment)->toDateString()
+        );
     }
 
     public function destroy($id)
