@@ -15,8 +15,10 @@ IDs a partir de TASK-397: o maior em `dev` é TASK-396 (feature `20261004-metric
 | TASK-401 | Regenerar as quotas na edição quando valor, data ou nº de parcelas mudam numa despesa não-fixa sem parcela paga | backend | plan.md §4 | nenhum | Concluída |
 | TASK-402 | Devolver `value_per_person` por quota em `GET /api/expenses/{id}` | backend | plan.md §5 | nenhum | Concluída |
 | TASK-403 | Revisar a feature com `security-reviewer` e `pr-readiness-checker` e rodar a suíte completa do backend | backend | plan.md §6 | antes do merge | Pendente |
+| TASK-404 | Recusar com 422 o rateio cuja última parcela passaria do ano 9999 (achado A1 da revisão de segurança da TASK-403) | backend | plan.md §1 a §4 | nenhum | Pendente |
+| TASK-405 | Gravar o `update()` de despesa numa transação, para uma falha no meio não deixar a despesa com quotas parciais (achado A1 da revisão de segurança da TASK-403) | backend | plan.md §3, §4 | nenhum | Pendente |
 
-Ordem: TASK-397 → 398 → 399 → 400 → 401 → 402 → 403 (plan.md §8). TASK-397 sustenta 399, 400 e 401; TASK-401 depende da 400; TASK-402 é independente das demais, e fica depois só para manter o caminho de criação e edição na frente.
+Ordem: TASK-397 → 398 → 399 → 400 → 401 → 402 → 404 → 405 → 403 (plan.md §8). As TASK-404 e TASK-405 nasceram da primeira rodada de revisão da TASK-403 (o `security-reviewer` apontou o achado A1; a reprodução contra o banco descartável mostrou corrupção silenciosa das datas, não um 500) e rodam antes de a TASK-403 fechar. TASK-397 sustenta 399, 400 e 401; TASK-401 depende da 400; TASK-402 é independente das demais, e fica depois só para manter o caminho de criação e edição na frente.
 
 ## Critérios de aceite
 
@@ -55,4 +57,11 @@ Ordem: TASK-397 → 398 → 399 → 400 → 401 → 402 → 403 (plan.md §8). T
   - os campos já existentes da resposta não mudam (o teste atual de `show` passa sem edição);
   - o número de consultas SQL de `show` é o mesmo com 1 e com 10 quotas (sem N+1).
   Pint limpo. Mutação: trocar `round(…, 2)` por `floor` e tirar o `max(…, 1)` do divisor derrubam, cada um, pelo menos um teste. O resultado da varredura do arredondamento (11.687 de 1.600.008 combinações, 0,73%, sempre 1 centavo) é copiado para `implementation.md`.
+- **TASK-404**: o `PUT /api/expenses/{id}` com `date_payment` `9999-12-31` e `installments` 120 devolvia 200 e gravava as quotas 2 a 120 com datas erradas (`2000-01-31`, `2000-02-29`, …), porque o rateio passa do ano 9999 e a coluna `date` não comporta. Testes passam:
+  - `InstallmentScheduleTest`: `fits(inicio, parcelas)` devolve verdadeiro para (`9999-12-31`, 1) e (`9999-01-31`, 12) e falso para (`9999-12-31`, 2) e (`9999-01-31`, 13);
+  - `POST /api/expenses` de Parcelada com 2 parcelas, `date_payment` `9999-12-31` e sem `quotas` → 422 com `errors.date_payment` e nada gravado;
+  - `PUT` que troca para parcelada sem `quotas` com a mesma data → 422; `PUT` só com `date_payment` `9999-12-31` numa Parcelada de 2 parcelas sem parcela paga → 422; nos dois a despesa e as quotas ficam como estavam;
+  - limite aceito: `PUT` com `date_payment` `9999-01-31` em 12 parcelas → 200 e a última quota em `9999-12-31`.
+  Os testes existentes passam sem edição; Pint limpo. Mutação: remover a guarda derruba os testes de 422.
+- **TASK-405**: teste em que a segunda criação de `Quota` falha durante a regeneração (e na troca de tipo) → resposta 500, e a despesa (campos), os pagadores e as quotas (IDs, valores e datas) ficam iguais aos de antes da requisição. Os testes existentes passam sem edição; Pint limpo. Mutação: tirar a `DB::transaction` derruba o teste.
 - **TASK-403**: (a) o agent `security-reviewer` roda sobre as mudanças de `backend/app/Http/Controllers/ExpenseController.php` e não deixa achado crítico ou alto pendente, confirmando que a autorização não mudou e que o teto de parcelas barra a amplificação; (b) o agent `pr-readiness-checker` não aponta pendência; (c) `cd backend && ./vendor/bin/pint --test` limpo e `php artisan test` verde na **suíte completa**, contra um MySQL descartável (nunca o MySQL compartilhado de outro projeto na porta 3306); (d) `git diff origin/dev -- backend/tests` mostra só linhas **adicionadas** nos quatro arquivos que já usavam `quotas` (nenhuma asserção antiga removida ou alterada). Comandos e resultados reais em `implementation.md`.
