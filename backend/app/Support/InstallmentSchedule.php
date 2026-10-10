@@ -26,6 +26,22 @@ class InstallmentSchedule
     public const MAX_INSTALLMENTS = 120;
 
     /**
+     * Último ano que a coluna `date` do MySQL comporta. Um rateio cuja última
+     * parcela passa dele grava datas erradas em silêncio (10000-01-31 vira
+     * 2000-01-31), por isso os controllers conferem `fits()` antes de `build()`.
+     */
+    public const MAX_YEAR = 9999;
+
+    /**
+     * Se a última de `$installments` parcelas, a partir de `$startDate`, ainda cabe
+     * na coluna `date`.
+     */
+    public static function fits(string $startDate, int $installments): bool
+    {
+        return Carbon::parse($startDate)->addMonthsNoOverflow(max($installments, 1) - 1)->year <= self::MAX_YEAR;
+    }
+
+    /**
      * @param  float|int|string  $totalValue  Valor total da despesa.
      * @param  int  $installments  Quantidade de parcelas (>= 1).
      * @param  string  $startDate  Data da primeira parcela (`Y-m-d`).

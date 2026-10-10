@@ -852,4 +852,24 @@ class ExpenseControllerStoreTest extends TestCase
             ['number' => 6, 'date' => '2026-11-05', 'value' => '100.00', 'paid' => false, 'born_paid' => false],
         ], $this->quotaRows($response->json('expense_id')));
     }
+
+    /**
+     * TASK-404: o rateio gerado pelo servidor que passaria do ano 9999 (limite da
+     * coluna `date`) é recusado com 422 em vez de gravar datas erradas.
+     */
+    public function test_installments_expense_without_quotas_is_rejected_when_the_schedule_passes_the_year_9999(): void
+    {
+        [$member, $group] = $this->memberWithGroup();
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->postJson('/api/expenses', $this->payloadWithoutQuotas($group, $member, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 2,
+                'total_value' => 200,
+                'date_payment' => '9999-12-31',
+            ]));
+
+        $response->assertStatus(422)->assertJsonValidationErrors('date_payment');
+        $this->assertDatabaseMissing('ex_expenses', ['group_id' => $group->id]);
+    }
 }

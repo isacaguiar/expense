@@ -1051,4 +1051,61 @@ class ExpenseControllerShowUpdateDestroyTest extends TestCase
 
         $this->assertSame($queries($viewerOne, $expenseOne), $queries($viewerTen, $expenseTen));
     }
+
+    /**
+     * TASK-404: o update() também recusa o rateio gerado que passaria do ano 9999
+     * (achado A1 da revisão de segurança): antes, o PUT devolvia 200 e gravava as
+     * quotas 2 a 120 com datas erradas (2000-01-31, 2000-02-29, ...).
+     */
+    public function test_update_to_installments_without_quotas_is_rejected_when_the_schedule_passes_the_year_9999(): void
+    {
+        [$creator, $expense] = $this->inCashExpenseWithOneQuota();
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 2,
+                'date_payment' => '9999-12-31',
+            ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('date_payment');
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'expense_type' => 'IN_CASH', 'date_payment' => '2026-08-15']);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+    }
+
+    public function test_update_of_only_the_date_is_rejected_when_the_regenerated_schedule_passes_the_year_9999(): void
+    {
+        [$creator, $expense] = $this->twoInstallmentsOfOneHundred();
+        $idsBefore = $this->quotaIds($expense);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['date_payment' => '9999-12-31']);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('date_payment');
+        $this->assertDatabaseHas('ex_expenses', ['id' => $expense->id, 'date_payment' => '2026-08-15']);
+        $this->assertSame($idsBefore, $this->quotaIds($expense));
+        $this->assertSame([
+            ['number' => 1, 'date' => '2026-08-15', 'value' => '100.00', 'paid' => false],
+            ['number' => 2, 'date' => '2026-09-15', 'value' => '100.00', 'paid' => false],
+        ], $this->quotaRows($expense->id));
+    }
+
+    public function test_update_accepts_a_schedule_whose_last_installment_is_exactly_the_last_valid_date(): void
+    {
+        $rows = [];
+        for ($i = 0; $i < 12; $i++) {
+            $rows[] = ['date_expected' => Carbon::parse('2026-08-15')->addMonthsNoOverflow($i)->toDateString(), 'value_quota' => 10];
+        }
+        [$creator, $expense] = $this->installmentsExpenseWithQuotas($rows);
+
+        $response = $this->withToken($this->tokenFor($creator))
+            ->putJson("/api/expenses/{$expense->id}", ['date_payment' => '9999-01-31']);
+
+        $response->assertStatus(200);
+        $quotas = $this->quotaRows($expense->id);
+        $this->assertCount(12, $quotas);
+        $this->assertSame('9999-01-31', $quotas[0]['date']);
+        $this->assertSame('9999-12-31', $quotas[11]['date']);
+    }
 }
