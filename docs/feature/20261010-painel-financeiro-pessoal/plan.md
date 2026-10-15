@@ -190,7 +190,7 @@ A numeração `TASK-xxx` do `tasks.md` precisa ser reconfirmada contra `03-tasks
 |---|---|
 | A extração mexe no núcleo do cálculo de ciclo | Só movimento de código; suíte inteira como prova; diff revisado linha a linha; wrappers privados mantêm os testes de reflexão |
 | `view()` divergir de `summary()` com o tempo | `summary()` não muda agora; teste de reconciliação overview × summary |
-| Custo com muitos grupos (até ~14 `compute` por grupo no pior caso) | Medir na validação local; se preciso, limitar ou paginar num item de backlog. O limite de 3 vale só para grupos criados, não para participar |
+| Custo com muitos grupos (até ~14 `compute` por grupo no pior caso) | **Medido na TASK-414** (local, MySQL em Docker): grupo vazio ≈ 54 consultas e 20 grupos vazios ≈ 1.082 consultas e 2,8 s; grupo com pendência recente 18 consultas (o foco para cedo). O caso caro é o grupo parado ou sem dados. Mitigação: TASK-427 (`focus()` sem calcular ciclos anteriores à primeira despesa, snapshots numa só consulta), TASK-428 (teto de grupos, decisão D9) e TASK-429 (throttle por usuário, D10). O limite de 3 vale só para grupos criados, não para participar |
 | Snapshot antigo sem `participantDetails` | Resolver por nome pelos membros; teste dedicado |
 | Refatorar `Payments.tsx` (a tela do bug de `cycles_ago`) | `Payments.test.tsx` já fixa o `cycles_ago`; extração sem mudar asserção |
 | Dois sentidos de "devedor" (painel × filtros de Despesas) | Rótulos distintos e nota no `implementation.md` |
