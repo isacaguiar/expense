@@ -10,7 +10,7 @@ IDs a partir de TASK-406: o maior em qualquer branch do repositório é TASK-405
 |---|---|---|---|---|---|
 | TASK-406 | Criar o helper puro `expenseFilters.ts` (opções de Credor/Devedores e `filterExpenses`) com testes unitários | frontend | plan.md §1 e §4 | nenhum | Concluída |
 | TASK-407 | Acrescentar os filtros Credor, Devedores e Status ao `ExpenseManager` usando o helper, com testes de tela | frontend | plan.md §2, §3 e §4 | nenhum | Concluída |
-| TASK-408 | Validar os filtros localmente na stack isolada e registrar o resultado | frontend | plan.md §5 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
+| TASK-408 | Validar os filtros localmente na stack isolada e registrar o resultado | frontend | plan.md §5 | antes do merge (o usuário valida localmente antes do push e do PR) | Concluída (validada pelo usuário no celular, 2026-10-10) |
 
 Dependência: TASK-407 usa o helper de TASK-406; TASK-408 roda sobre a branch da feature já com as duas integradas (plan.md §6). Fluxo de branch conforme `docs/sdd/04-implementation.md` §1: TASK-406 direto em `frontend/20261010-filtros-credor-devedores-status-despesas`; TASK-407 em `…-TASK-407`, integrada na branch da feature com `git merge --no-ff`, sem PR.
 
