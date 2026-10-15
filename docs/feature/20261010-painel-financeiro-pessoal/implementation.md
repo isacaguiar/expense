@@ -25,7 +25,8 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-410 | Concluída (commit `d6411f26c2`, merge `9542dbeef4` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §4 | A fronteira de 12 ciclos do `focus()` não tinha nenhum teste; só os novos a pegam (§4) |
 | TASK-411 | Concluída (commit `8ac9908b89`, merge `682f5ad95c` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §5 | `ExpenseController` não foi tocado; a ausência de deriva em relação a `summary()` é provada por teste de reconciliação (§5) |
 | TASK-412 | Concluída (commit `fe37b7150f`, merge `a1af961668` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §6 | Os 16 testes passaram de primeira; a prova de que testam algo são 4 mutações, cada uma derrubando testes (§6) |
-| TASK-413 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-413`) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §7 | Primeira superfície HTTP da feature; segurança provada por 2 mutações (escopo de membro e posição da rota fora do `jwt.auth`) |
+| TASK-413 | Concluída (commit `23128fdaba`, merge `bd948dd167` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §7 | Primeira superfície HTTP da feature; segurança provada por 2 mutações (escopo de membro e posição da rota fora do `jwt.auth`) |
+| TASK-414 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-414`) | 2026-10-14 | Claude (IA), com aprovação do usuário; revisão pelo agent `security-reviewer` | Ver §8 | **Aprovado com ressalvas.** Sem IDOR nem vazamento no diff; gerou as TASK-427 a 432 e um achado crítico **fora do diff** (X1, reproduzido) que exige decisão do usuário |
 
 ## 3. Evidências da TASK-409
 
@@ -153,3 +154,50 @@ Entrega: `App\Http\Controllers\OverviewController` (fino: injeta `PersonalOvervi
 | Arquivos | `git status --short` | `M routes/api.php` e dois arquivos novos (`OverviewController.php`, `OverviewControllerTest.php`) |
 
 **Para a TASK-414.** A revisão do agent `security-reviewer` deve cobrir o `OverviewController`, o `PersonalOverviewService` e a rota. Pontos que já sei que ele vai olhar e que estão cobertos por teste: o escopo por membro na consulta (mutação 1), o 401 e o `jwt.auth` (mutação 2), o corpo sem dados de grupo alheio, e o e-mail e o Pix só do credor. Pontos que dependem de decisão e vale ele opinar: (a) `to_user.email` e `to_user.pix` já são expostos a membros pelo `gross-debts`; (b) o endpoint não tem `throttle` próprio (o limiter global de 60/min vale, como nas demais rotas autenticadas); (c) o custo cresce com o número de grupos e a medição é a da TASK-423.
+
+## 8. Evidências da TASK-414 (revisão de segurança)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-414`, criada da branch da feature (`bd948dd167`). Sem mudança de código: a task é a revisão, a suíte e o registro dos achados.
+
+**Execução da revisão.** Agent `security-reviewer`, sobre `OverviewController`, `PersonalOverviewService`, `CycleSummaryService` (o que o endpoint usa), a rota e os dois testes, com sete perguntas explícitas. A primeira tentativa caiu por limite de uso da sessão (HTTP 429, sem relatório); a segunda concluiu (58 chamadas de ferramenta, ~9 min). **O agent não conseguiu rodar os testes** (o container MySQL de teste estava parado: `PDOException 2002`, 48 falhas com 0 asserções), então a suíte desta task foi rodada por mim, depois de reiniciar o `mysql-painel-test`. As mutações das TASK-412 e 413 também não foram reproduzidas por ele; o julgamento dele sobre os testes vem da leitura das asserções.
+
+**Resultado: aprovado com ressalvas.** Nenhum IDOR, vazamento entre grupos, escrita nem log sensível em `GET /api/me/overview`. O `route:list` dele confirma os middlewares `api` e `Tymon\JWTAuth\Http\Middleware\Authenticate`.
+
+### Achados e disposição
+
+| ID | Severidade | Achado | Disposição |
+|---|---|---|---|
+| S1 | média | Custo por chamada sem teto, linear em grupos × ciclos; com `store` adicionando usuário sem consentimento e sem `destroy`, um atacante pode forçar a vítima a muitos grupos vazios | **Medido por mim (abaixo) e confirmado.** TASK-427 (otimização), TASK-428 (teto, decisão D9) |
+| S2 | baixa | O throttle global (60/min) roda antes do `jwt.auth` e provavelmente chaveia por IP; é compartilhado com o polling do sino | TASK-429 (decisão D10) |
+| S3 | baixa | Snapshot legado resolve participante por nome (`pluck('id','name')`, o último vence): nomes iguais podem atribuir o item à pessoa errada (só exibição; valores e flags vêm de ids) | TASK-430 |
+| S4 | informativo | `auth('api')->user()` nulo vira 500 numa corrida entre middleware e controller (o `jwt.auth` já dá 401 para usuário removido) | TASK-431 |
+| S5 | informativo | `cycles_ago` sem teto nas ações `pay`, `unpay` e `settlements/confirm`; um painel aberto na virada do ciclo guarda um `cycles_ago` que passa a apontar outro ciclo | Fora do diff. Backlog (TASK-425): aceitar `cycle_start` absoluto, que o payload já devolve |
+| S6 | informativo | E-mail e Pix do credor saem mesmo quando o acerto já está confirmado ou não pode ser confirmado | Decisão D11 (recomendação: manter). Minimização no backlog (TASK-425) |
+| S7 | informativo | Lacunas de teste: as asserções de e-mail alheio em `OverviewControllerTest:185-187` não podem falhar (o usuário não entra em nenhum acerto do grupo alheio); faltam ex-membro, credor que saiu, token de usuário removido | TASK-432 (e testes de nome duplicado na TASK-430). Consistente com a minha mutação 1 da TASK-413, que caiu por `assertJsonCount`, não pelas asserções de e-mail |
+| **X1** | **crítica (fora do diff)** | `GET /api/groups/{groupId}/members` (`GroupMemberController::index`) **não checa se quem chama é membro** | **Reproduzido por mim (abaixo).** Não corrigido aqui: `CLAUDE.md` e `06-context-backend.md` mandam não corrigir de passagem. Registrado como item de backlog ALTA (TASK-425) e levado ao usuário para decisão imediata |
+| X2 | média (fora do diff) | `GroupMemberController::destroy` não existe, embora a rota `DELETE /groups/{groupId}/members/{userId}` exista (já listado na Constitution §2.4); `store` adiciona usuário existente sem consentimento e ele não consegue sair | Backlog ALTA, junto do X1 (TASK-425) |
+| X3 | baixa (fora do diff) | `Log::info('User authenticated:', ['user' => auth()->user()])` em `GroupController::store` grava e-mail, Pix e WhatsApp no log | Backlog BAIXA (TASK-425) |
+
+### Respostas aos sete pontos
+
+1. **E-mail e Pix do credor: aceitável.** O credor já é visível a todo membro por `gross-debts`, e `gerarPix` aceita qualquer usuário com grupo em comum. Só vale para grupos do próprio usuário e só o credor de acertos em que ele é o devedor; credor que não é mais membro sai como "Desconhecido" com `email` e `pix` nulos. Ressalvas: S6 e, principalmente, X1.
+2. **Throttle: risco real, mas baixo; ação recomendada** (S2, TASK-429), junto da defesa de verdade (S1).
+3. **Amplificação: risco real moderado** (S1). Não há N+1 clássico dentro de um grupo (`members`, `payer`, `payers` e `quotas` usam eager load); o custo é linear em grupos × ciclos e o `focus()` faz 1 consulta de snapshot por iteração.
+4. **IDOR e escopo: nenhum caminho de vazamento.** O escopo é a própria consulta; `compute` filtra por `group_id`; `my_items` só entra se o usuário é credor ou participante. Ex-membro vaza só um `id` numérico sem importância; colisão de nomes é só de exibição (S3); `avatar_url` é URL assinada de 30 minutos, do mesmo tipo já presente em `summary` e `/members` (ADR-005), e `confirmed_proof_url` só sai para as duas partes do acerto.
+5. **Ações: confirmado.** `pay`, `unpay` e `confirmSettlement` não leem `can_*` nem dado de exibição do payload: `findExpenseForMember` dá 404 a não membro, `pay`/`unpay` dão 403 se `auth()->id() !== user_payer_id`, `confirmSettlement` valida `to_user_id` e recalcula o acerto no servidor. `cycles_ago` é validado como inteiro `>= 0` sem teto (S5). A extração para `CycleSummaryService` não removeu checagem alguma.
+6. **Log e erro: sem vazamento** nos três arquivos (nenhum `Log::`, nenhum `findOrFail`); erro vira 500 genérico com `APP_DEBUG=false`. Usuário nulo: S4.
+7. **Outros riscos: nenhum além dos acima.** Não há entrada do cliente (nem query string) nem SQL cru; `person()` escolhe os campos de `User` explicitamente; o GET não tem efeito colateral.
+
+### Verificações independentes (minhas, porque o agent não rodou código)
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| **X1 existe** | Leitura de `GroupMemberController.php:17-26` e sonda descartável (um usuário **de fora** chama `GET /api/groups/{id}/members` de um grupo alheio, em `jwt.auth`) | `status=200`. Chaves devolvidas: `id, invited_by, name, email, avatar_url, pix, whatsapp, notify_whatsapp, email_verified_at, role, created_at, updated_at, pivot`. O `email` e o `pix` do dono do grupo vieram no corpo. Basta enumerar ids numéricos. A sonda foi apagada (`git status` só mostra `.env.testing`) |
+| X1 é desconhecido | `grep` em `docs/` | O spec de segurança arquivado (`20260817-seguranca-api`) corrigiu `GroupController@show/update/destroy` e o `store` de membros e registra que o `index` "expõe `email` e `pix`" (`20260825-pagamentos-grid-pix/specify.md` §2.3), mas **nunca** aponta a falta da checagem de membro no `index`. Não encontrei menção a ele em `00-constitution.md` (a seção §5.3, citada como lista de achados conhecidos, não tem conteúdo localizável nesta versão do arquivo). Os testes de `GroupMemberControllerTest` cobrem só o `store` (membro adiciona, não membro recebe 404, grupo excluído recebe 404); não há teste do `index` |
+| X2 existe | Leitura de `GroupMemberController.php` e `routes/api.php:54-58` | O controller só tem `index`, `store` e `authorizeMembership`; a rota `DELETE /{userId}` aponta para `destroy` |
+| **S1 medido** | Sonda descartável com `DB::enableQueryLog()` em `PersonalOverviewService::forUser` (MySQL em Docker local) | 1 grupo vazio: **56 consultas, 159 ms**. 5 grupos vazios: **272, 625 ms**. 20 grupos vazios: **1.082, 2.835 ms**. 1 grupo com pendência recente em setembro: **18 consultas, 129 ms** (o foco para cedo). A estimativa do agent (~54) se confirma. O caso caro é o grupo parado ou sem dados |
+| Sonda removida | `git status --short` | Só `?? .env.testing` |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` (depois de `docker start mysql-painel-test`) | `Tests: 504 passed (3200 assertions)`, 52,59 s: o mesmo da TASK-413 (nenhum código mudou) |
+
+**Próximo passo.** Decidir D9, D10 e D11 (`specify.md` §5) e a condução do X1/X2 (item de backlog ALTA já previsto na TASK-425; a Triagem do BFF o escala para feature por ser autorização e dado sensível). As TASK-427 a 432 saem desta revisão.

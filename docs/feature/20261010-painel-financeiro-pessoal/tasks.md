@@ -13,7 +13,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-411 | Criar `CycleSummaryService::view()`, a escolha de fonte de `summary()` sem a selagem preguiçosa, com `in_grace` | backend | plan.md §1.2 | nenhum | Concluída |
 | TASK-412 | Criar `PersonalOverviewService` com a derivação por usuário (`to_pay`, `to_receive`, `owe`, `receive`, `my_items`, `has_open`, ordenação) | backend | plan.md §1.3 | nenhum | Concluída |
 | TASK-413 | Criar `OverviewController` e a rota `GET /api/me/overview` sob `jwt.auth`, com o escopo do usuário na consulta | backend | plan.md §1.1, §1.4 | nenhum | Concluída |
-| TASK-414 | Revisar o endpoint com o agent `security-reviewer` e rodar a suíte completa do backend | backend | plan.md §1.4, §6 | nenhum | Pendente |
+| TASK-414 | Revisar o endpoint com o agent `security-reviewer` e rodar a suíte completa do backend | backend | plan.md §1.4, §6 | nenhum | Concluída |
 | TASK-415 | Extrair `ProofUploadDialog` de `Payments.tsx` | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-416 | Extrair `useConfirmSettlement` de `Payments.tsx` | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-417 | Criar `types/overview.ts` e `useMyOverview` | frontend | plan.md §2 | nenhum | Pendente |
@@ -26,8 +26,14 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-424 | Rodar a revisão final (backend e frontend): `pr-readiness-checker`, suítes completas e checklist do `04-implementation.md` §1 item 5 | backend | plan.md §6 | antes do merge | Pendente |
 | TASK-425 | Registrar em `docs/backlog/` os achados tangenciais da feature | doc | plan.md §9 | nenhum | Pendente |
 | TASK-426 | Atualizar o plan de `20261006-relatorios-acompanhamento-fechamento` para usar `CycleSummaryService` e as linhas atuais | doc | plan.md §0.4 | nenhum | Pendente |
+| TASK-427 | Reduzir o custo de `GET /me/overview`: `focus()` sem calcular ciclos anteriores à primeira despesa do grupo e snapshots lidos numa só consulta, sem mudar o resultado | backend | plan.md §1.2, §8 | nenhum | Pendente |
+| TASK-428 | Limitar o número de grupos do overview e sinalizar com `truncated` (decisão D9) | backend | plan.md §1.1, §8 | nenhum | Pendente |
+| TASK-429 | Aplicar throttle por usuário na rota `GET /me/overview` (decisão D10) | backend | plan.md §1.4 | nenhum | Pendente |
+| TASK-430 | Falhar fechado quando o nome de um participante de snapshot legado é ambíguo entre os membros do grupo | backend | plan.md §1.3 | nenhum | Pendente |
+| TASK-431 | Responder 401 quando o usuário do token deixa de existir entre o middleware e o controller | backend | plan.md §1.4 | nenhum | Pendente |
+| TASK-432 | Fechar as lacunas de teste do overview apontadas pela revisão: ex-membro, credor que saiu do grupo e vazamento de e-mail de grupo alheio | backend | plan.md §1.4, §6 | nenhum | Pendente |
 
-Ordem: TASK-409 → 410 → 411 → 412 → 413 → 414 (backend, plan.md §7 passos 1 a 3). Em seguida TASK-415 → 416 → 417 → 418 → 419 → 420 → 421 → 422 (frontend, passos 4 a 6). As TASK-415 e 416 não dependem do backend e poderiam rodar antes; ficam depois para integrar o contrato real a partir da TASK-417. Fecham TASK-423 (validação local) → 424 (revisão final) → 425 → 426. Se a validação ou a revisão apontar defeito, ele vira task nova, não amplia a task em andamento.
+Ordem: TASK-409 → 410 → 411 → 412 → 413 → 414 (backend, plan.md §7 passos 1 a 3). Em seguida TASK-415 → 416 → 417 → 418 → 419 → 420 → 421 → 422 (frontend, passos 4 a 6). As TASK-415 e 416 não dependem do backend e poderiam rodar antes; ficam depois para integrar o contrato real a partir da TASK-417. Fecham TASK-423 (validação local) → 424 (revisão final) → 425 → 426. A revisão da TASK-414 gerou as TASK-427 a 432 (backend), que rodam logo depois dela e antes de a TASK-423 validar tudo: TASK-427 → 428 → 429 → 430 → 431 → 432. As TASK-428 e 429 dependem das decisões D9 e D10 do `specify.md` §5; se forem recusadas, ficam Canceladas. Se a validação ou a revisão apontar defeito, ele vira task nova, não amplia a task em andamento.
 
 Fluxo de branch conforme `docs/sdd/04-implementation.md` §1: a TASK-409 nasce direto na branch da feature `feature/20261010-painel-financeiro-pessoal`, criada a partir da `dev` atualizada (tipo `feature` porque a feature cruza backend e frontend; há precedente em `dev`). As seguintes saem dela como `backend/20261010-painel-financeiro-pessoal-TASK-4xx` ou `frontend/20261010-painel-financeiro-pessoal-TASK-4xx` e voltam com `git merge --no-ff`, sem PR. **Não usar** a branch atual do checkout (`frontend/20261010-filtros-credor-devedores-status-despesas`, com trabalho sem commit de outra feature). Um único PR contra `dev` no fim.
 
@@ -125,8 +131,32 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
     - destino do botão "Informar pagamento" de `GroupGrossDebtsPanel` depois do Painel (decisão);
     - `GET /api/dashboard` é stub com nome enganoso, e `Navbar.tsx`/`InternalLayout.tsx` são código morto (BAIXA);
     - incluir `GET /api/me/overview` no escopo v1 do app Flutter (nota ao item 074);
-    - status individual por parte em `my_items[]` quando a 075 chegar (nota aditiva).
+    - status individual por parte em `my_items[]` quando a 075 chegar (nota aditiva);
+    - **X1 (crítico, urgente), da revisão da TASK-414:** `GET /api/groups/{groupId}/members` (`GroupMemberController::index`) não checa se quem chama é membro. Reproduzido: um usuário de fora recebe 200 com `email`, `pix`, `whatsapp`, `role` e `invited_by` de cada membro. Prioridade ALTA. É defeito de comportamento existente com gatilho de autorização, então a Triagem do `/novo-bug` o escala para feature (`docs/bugfix/README.md`). Não corrigir dentro desta feature;
+    - **X2, da revisão:** `GroupMemberController::destroy` não existe, embora a rota `DELETE /groups/{groupId}/members/{userId}` exista (já listado na Constitution §2.4). Junto: `store` adiciona usuário já existente sem consentimento dele, e quem foi adicionado não consegue sair. Prioridade ALTA, junto do X1;
+    - **X3, da revisão:** `Log::info('User authenticated:', ['user' => auth()->user()])` em `GroupController::store` grava e-mail, Pix e WhatsApp no log (BAIXA);
+    - **S5, da revisão:** `cycles_ago` sem teto em `pay`, `unpay` e `settlements/confirm`, e a alternativa de aceitar `cycle_start` absoluto, que o payload já devolve (BAIXA);
+    - **S6, da revisão** (se a D11 mantiver como está): minimizar o contato do credor no overview e trocar o lookup de `GET /pix/generate` de e-mail para `user_id` (BAIXA).
   - `docs/backlog/README.md` com o índice atualizado.
 - **TASK-426**:
   - `docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md` atualizado: as referências de linha do `ExpenseController` conferidas contra o arquivo atual (`grep -n` de cada método citado), o §0.3 passa a usar `CycleSummaryService::summaryIsFullySettled` em vez de extrair dentro do controller, e `ClosingBreakdown` segue como classe pura em `App\Support`.
   - Nenhuma decisão do specify dele muda; o specify é relido e só é editado se algo ficar contraditório.
+- **TASK-427** (achado S1; medido na TASK-414: grupo vazio ≈ 54 consultas, 20 grupos vazios ≈ 1.082 consultas e 2,8 s):
+  - `CycleSummaryService::focus()` não calcula nem consulta snapshot de ciclo que termina antes da primeira data em que o grupo pode ter entrada (a menor entre `date_payment` das despesas não deletadas e `date_expected` das parcelas); os snapshots dos ciclos candidatos vêm de **uma** consulta (`whereIn`), não uma por iteração.
+  - **O resultado não muda:** `FocusCycleTest` e os testes `test_focus_*` de `CycleSummaryServiceTest` passam **sem edição**. Um teste novo de equivalência compara `focus()` com uma implementação de referência por força bruta (o laço antigo, escrito no próprio teste) em: grupo vazio; despesa só em setembro; parcelada que começa meses antes; despesa Fixa; ciclo selado no meio; despesa excluída (`deleted`) que não deve contar.
+  - **Orçamento de consultas fixado por teste:** com `DB::getQueryLog()`, `forUser` de um usuário com 1 grupo vazio e com 20 grupos vazios fica abaixo de um teto medido na task (ponto de partida: 56 e 1.082), com folga de 20%. O teto e as contagens antes e depois vão para o `implementation.md`.
+  - Mutação: remover o curto-circuito derruba o teste de orçamento; trocar a comparação de datas (`<` por `<=`) derruba o de equivalência. Suíte verde e Pint limpo.
+- **TASK-428** (decisão D9; Cancelada se recusada):
+  - `forUser` devolve no máximo 50 grupos e a raiz ganha `truncated` (`true` só quando havia mais). A ordem (`has_open` primeiro, depois nome) vale **antes** do corte, então os grupos com pendência não são os cortados. Campo aditivo; `specify.md` §2.1 e `plan.md` §1.1 atualizados.
+  - Testes: 50 grupos → 50 e `truncated` falso; 51 → 50 e `truncated` verdadeiro, com o grupo sem pendência fora; o grupo com pendência sobrevive ao corte. Mutação: trocar o teto por 51 derruba o de 51 grupos. `OverviewControllerTest` passa a conferir `truncated` na estrutura.
+- **TASK-429** (decisão D10; Cancelada se recusada):
+  - Limiter nomeado (30/min) por `auth('api')->id()`, aplicado à rota depois do `jwt.auth`. Teste: a 31ª chamada do mesmo usuário em um minuto devolve 429; outro usuário no mesmo IP não é afetado; as demais rotas não mudam.
+  - O `route:list` mostra o `throttle` na rota. Mutação: tirar o middleware derruba o teste do 429.
+- **TASK-430** (achado S3):
+  - Com dois membros de mesmo nome no grupo, um item de snapshot legado (sem `participantDetails`) **não é atribuído a nenhum dos dois por nome**; com nome único continua resolvendo (teste existente `test_items_of_an_old_snapshot_…` segue verde sem edição).
+  - Mutação: voltar ao `pluck('id','name')` com "o último vence" derruba o teste novo.
+- **TASK-431** (achado S4):
+  - `OverviewController::show` faz `abort_unless($user, 401)` antes de chamar o serviço. Teste: chamar o controller sem usuário autenticado lança `HttpException` 401 (não `TypeError`). Mutação: remover o `abort_unless` derruba o teste.
+- **TASK-432** (achado S7):
+  - Testes novos em `OverviewControllerTest`/`PersonalOverviewServiceTest`: (a) **ex-membro:** usuário que aparece em `payers` de despesa de um grupo mas não é mais membro não vê esse grupo; (b) **credor que saiu:** `to_user` vem com `name` "Desconhecido" e `email` e `pix` nulos; (c) a asserção de que e-mail alheio não vaza passa a usar um grupo alheio em que o usuário consta em `payers` sem ser membro (hoje ela não consegue falhar); (d) token de usuário removido devolve 401.
+  - Cada teste novo falha se a proteção correspondente for removida (mutação por teste, registrada no `implementation.md`).
