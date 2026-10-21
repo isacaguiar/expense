@@ -194,7 +194,7 @@ A numeração `TASK-xxx` do `tasks.md` precisa ser reconfirmada contra `03-tasks
 | A extração mexe no núcleo do cálculo de ciclo | Só movimento de código; suíte inteira como prova; diff revisado linha a linha; wrappers privados mantêm os testes de reflexão |
 | `view()` divergir de `summary()` com o tempo | `summary()` não muda agora; teste de reconciliação overview × summary |
 | Custo com muitos grupos (até ~14 `compute` por grupo no pior caso) | **Medido na TASK-414** (local, MySQL em Docker): grupo vazio ≈ 54 consultas e 20 grupos vazios ≈ 1.082 consultas e 2,8 s; grupo com pendência recente 18 consultas (o foco para cedo). O caso caro é o grupo parado ou sem dados. **TASK-427 feita** (`focus()` sem calcular ciclos anteriores à primeira entrada possível, snapshots numa só consulta): grupo vazio 8 consultas e 36 ms, 20 grupos vazios 122 consultas e ~410 ms, 50 grupos vazios 302 consultas e ~1 s; grupo com pendência recente 19 (+1). Falta o teto de grupos (TASK-428, decisão D9) e o throttle por usuário (TASK-429, D10). O limite de 3 vale só para grupos criados, não para participar |
-| Snapshot antigo sem `participantDetails` | Resolver por nome pelos membros; teste dedicado |
+| Snapshot antigo sem `participantDetails` | Resolver por nome pelos membros; teste dedicado. Nome repetido entre membros não resolve ninguém (TASK-430): o item não vai para nenhum dos homônimos, e o credor continua identificado por `userPayerId` |
 | Refatorar `Payments.tsx` (a tela do bug de `cycles_ago`) | `Payments.test.tsx` já fixa o `cycles_ago`; extração sem mudar asserção |
 | Dois sentidos de "devedor" (painel × filtros de Despesas) | Rótulos distintos e nota no `implementation.md` |
 

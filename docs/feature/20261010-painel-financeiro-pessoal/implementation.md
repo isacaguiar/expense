@@ -30,6 +30,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-427 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-427`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §9 | Grupo vazio caiu de 56 para 8 consultas e 20 grupos vazios de 1.082 para 122 (2,8 s → ~0,4 s); 5 mutações, cada uma derrubando o teste esperado |
 | TASK-428 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-428`) | 2026-10-21 | Claude (IA), com aprovação do usuário (D9 reconfirmada depois de discutir alternativas, §10) | Ver §10 | Teto de 50 grupos com `truncated`, cortado antes de calcular: 60 grupos custam o mesmo que 50 (302 consultas). 3 testes de contrato da raiz atualizados para o campo novo |
 | TASK-429 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-429`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §11 | Um teste derrubou a premissa do critério: o Laravel executa o throttle **antes** do `jwt.auth`. O limiter passou a ignorar chamadas sem usuário válido. 4 mutações |
+| TASK-430 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-430`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §12 | Nome ambíguo em snapshot antigo não é atribuído a ninguém; o teste do nome único passou sem edição. 3 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -316,3 +317,27 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-429`, a partir de `55bc7
 | M2 | Chavear por IP mesmo com usuário | Derrubou o do outro usuário no mesmo IP (429 em vez de 200) |
 | M3 | Sem usuário, contar por IP em vez de `Limit::none()` (o desenho original) | Derrubou os dois de chamadas sem token e com token inválido (429 em vez de 401) |
 | M4 | Limite de 31 em vez de 30 (aplicada junto com a M3; as falhas se separam pela causa) | Derrubou a 31ª chamada (200 em vez de 429) |
+
+## 12. Evidências da TASK-430 (nome ambíguo em snapshot antigo, achado S3)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-430`, a partir de `aa6b7db37e`. Suíte antes: 520 testes.
+
+**O que mudou.** Só `PersonalOverviewService::itemsOf()`. Snapshot antigo não tem `participantDetails`, então os participantes são resolvidos pelo nome entre os membros do grupo. Antes, `pluck('id', 'name')` dava o nome repetido ao **último** membro com aquele nome: um homônimo podia receber o item (e a "parte dele") de outra pessoa. Agora o mapa só tem nomes únicos (`groupBy('name')` → só grupos de tamanho 1): um nome repetido não resolve ninguém, e o item não vai para nenhum dos homônimos. O credor não muda, porque é identificado pelo `userPayerId`, não pelo nome.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `php artisan test --filter="old_snapshot\|ambiguous_name"` antes da correção | O teste novo falhou (o homônimo recebia o item); o do nome único passou |
+| Nome ambíguo | `test_an_ambiguous_name_in_an_old_snapshot_is_attributed_to_nobody` (credor, devedor e um homônimo do devedor no grupo) | Devedor e homônimo sem item; o credor segue vendo o item como `creditor` |
+| Nome único, sem edição | `test_items_of_an_old_snapshot_without_participant_details_resolve_the_user_by_name` | Passou sem edição |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 521 passed (3381 assertions)`, 179,44 s (520 + 1 novo) |
+
+**Mutações** (cada uma revertida):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Voltar a `pluck('id', 'name')` ("o último vence", o critério da task) | Derrubou o teste novo: o homônimo, último a entrar no grupo, recebeu o item |
+| M2 | Agrupar sem filtrar ("o primeiro vence") | Derrubou o teste novo: o devedor recebeu o item |
+| M3 | Filtro invertido (só nomes repetidos) | Derrubou os dois: o do nome único (`actual size 0 matches expected size 1`) e o novo |
+
+A suíte desta vez levou 179 s, contra 106 s na anterior, sem teste novo pesado. A diferença é do ambiente (MySQL em Docker na mesma máquina), não do código.

@@ -167,7 +167,13 @@ class PersonalOverviewService
      */
     private function itemsOf(array $expenses, Group $group, int $userId): array
     {
-        $idsByName = $group->members->pluck('id', 'name');
+        // Para snapshot antigo, que só tem nomes. Nome repetido entre membros não
+        // identifica ninguém: fica de fora do mapa, e o item não vai para nenhum
+        // dos homônimos (falha fechado; `pluck('id', 'name')` daria ao último).
+        $idsByName = $group->members
+            ->groupBy('name')
+            ->filter(fn (Collection $sameName) => $sameName->count() === 1)
+            ->map(fn (Collection $sameName) => $sameName->first()->id);
         $items = [];
 
         foreach ($expenses as $expense) {
