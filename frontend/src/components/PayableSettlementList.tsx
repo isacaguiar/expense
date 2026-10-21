@@ -85,7 +85,14 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
             </Box>
 
             {note && (
-              <Typography data-testid="settlement-note" variant="caption" color="text.secondary" display="block" mt={1}>
+              <Typography
+                data-testid="settlement-note"
+                variant="caption"
+                color="text.secondary"
+                display="block"
+                mt={1}
+                sx={{ overflowWrap: 'anywhere' }}
+              >
                 {note}
               </Typography>
             )}

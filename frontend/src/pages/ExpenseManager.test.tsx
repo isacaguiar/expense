@@ -33,6 +33,7 @@ type SummaryExpenseFixture = {
   valuePerPerson?: number;
   paid?: boolean;
   paymentProofUrl?: string | null;
+  paymentNote?: string | null;
   payerName?: string | null;
   participants?: string[];
   participantDetails?: { id: number; name: string; avatarUrl: string | null }[];
@@ -179,6 +180,117 @@ describe('ExpenseManager - listagem em cards', () => {
       'href',
       '/api/groups/1/proofs/quota/9?signature=stub'
     );
+  });
+
+  describe('descrição do pagamento no modal de detalhes', () => {
+    const renderManager = () =>
+      render(
+        <MemoryRouter>
+          <ExpenseManager />
+        </MemoryRouter>
+      );
+
+    it('shows the note of a paid expense, with no proof link when it was paid with text only', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        {
+          id: 30,
+          description: 'Condomínio',
+          value: 500,
+          date: '2026-08-02',
+          payerName: 'Isac',
+          paid: true,
+          paymentProofUrl: null,
+          paymentNote: 'Pago em dinheiro, recibo 123',
+        },
+      ]);
+      renderManager();
+
+      await screen.findByText('Condomínio');
+      // Sem foto, a lista não mostra o ícone de comprovante.
+      expect(screen.queryByRole('link', { name: 'Ver comprovante' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Descrição do pagamento: Pago em dinheiro, recibo 123')).toBeInTheDocument();
+      expect(within(dialog).queryByRole('link', { name: 'Ver comprovante' })).not.toBeInTheDocument();
+    });
+
+    it('shows both the proof link and the note when the payment has a photo and a text', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        {
+          id: 31,
+          description: 'Internet',
+          value: 120,
+          date: '2026-08-03',
+          payerName: 'Isac',
+          paid: true,
+          paymentProofUrl: '/api/groups/1/proofs/quota/31?signature=stub',
+          paymentNote: 'Pix agendado',
+        },
+      ]);
+      renderManager();
+
+      await screen.findByText('Internet');
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByRole('link', { name: 'Ver comprovante' })).toBeInTheDocument();
+      expect(within(dialog).getByText('Descrição do pagamento: Pix agendado')).toBeInTheDocument();
+    });
+
+    it('shows no note block for a paid expense without a note', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        { id: 32, description: 'Luz', value: 90, date: '2026-08-04', payerName: 'Isac', paid: true, paymentNote: null },
+      ]);
+      renderManager();
+
+      await screen.findByText('Luz');
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).queryByText(/Descrição do pagamento:/)).not.toBeInTheDocument();
+    });
+
+    it('shows no note block for a pending expense even if the payload carries a stale note', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        { id: 33, description: 'Gás', value: 80, date: '2026-08-05', payerName: 'Isac', paid: false, paymentNote: 'sobra' },
+      ]);
+      renderManager();
+
+      await screen.findByText('Gás');
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).queryByText(/Descrição do pagamento:/)).not.toBeInTheDocument();
+    });
+
+    it('renders markup in the note as plain text', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        {
+          id: 34,
+          description: 'Água',
+          value: 60,
+          date: '2026-08-06',
+          payerName: 'Isac',
+          paid: true,
+          paymentNote: '<b>negrito</b>',
+        },
+      ]);
+      renderManager();
+
+      await screen.findByText('Água');
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Descrição do pagamento: <b>negrito</b>')).toBeInTheDocument();
+      expect(dialog.querySelector('b')).toBeNull();
+    });
   });
 
   it('filters by description on the client side', async () => {

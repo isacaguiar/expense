@@ -259,7 +259,7 @@ const Payments: React.FC = () => {
                         )}
 
                         {exp.paid && exp.paymentNote && (
-                          <Typography variant="body2" color="text.secondary" mt={1}>
+                          <Typography variant="body2" color="text.secondary" mt={1} sx={{ overflowWrap: 'anywhere' }}>
                             Descrição do pagamento: {exp.paymentNote}
                           </Typography>
                         )}
