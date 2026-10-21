@@ -394,6 +394,59 @@ class SettlementConfirmationControllerTest extends TestCase
         $this->assertNull($settlements[0]['confirmedAt']);
     }
 
+    public function test_summary_exposes_the_confirmed_note_on_the_matching_settlement(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'descricao' => 'Pix agendado para sexta',
+            ])->assertStatus(200);
+
+        $settlements = $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->assertStatus(200)
+            ->json('settlements');
+
+        $this->assertCount(1, $settlements);
+        $this->assertArrayHasKey('confirmedNote', $settlements[0]);
+        $this->assertSame('Pix agendado para sexta', $settlements[0]['confirmedNote']);
+    }
+
+    public function test_summary_confirmed_note_is_null_when_confirmed_without_description(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ])->assertStatus(200);
+
+        $settlements = $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->json('settlements');
+
+        $this->assertNotNull($settlements[0]['confirmedProofUrl']);
+        $this->assertArrayHasKey('confirmedNote', $settlements[0]);
+        $this->assertNull($settlements[0]['confirmedNote']);
+    }
+
+    public function test_summary_confirmed_note_is_null_when_nobody_confirmed_yet(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $settlements = $this->withToken($this->tokenFor($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary")
+            ->json('settlements');
+
+        $this->assertCount(1, $settlements);
+        $this->assertArrayHasKey('confirmedNote', $settlements[0]);
+        $this->assertNull($settlements[0]['confirmedNote']);
+    }
+
     private function enableWhatsApp(): void
     {
         config()->set('services.whatsapp', [
