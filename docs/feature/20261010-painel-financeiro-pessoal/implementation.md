@@ -33,6 +33,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-430 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-430`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §12 | Nome ambíguo em snapshot antigo não é atribuído a ninguém; o teste do nome único passou sem edição. 3 mutações |
 | TASK-431 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-431`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §13 | `abort_unless($user, 401)` no controller; sem ele, `TypeError` (500). 2 mutações |
 | TASK-432 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-432`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §14 | Só testes: 3 novos e 1 editado. Antes deles, um escopo "membro **ou** participante" passava nos 38 testes do overview |
+| TASK-415 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-415`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §15 | `Payments.test.tsx` verde sem edição; o teste de reabertura pegou um caso real (reabrir durante a animação de saída reaproveitava o arquivo anterior). 3 mutações. Critério de grep corrigido |
 
 ## 3. Evidências da TASK-409
 
@@ -394,3 +395,35 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-432`, a partir de `edf37
 As duas camadas da (d) se cobrem: só remover as duas gera o 500. É a defesa em profundidade que a TASK-431 acrescentou; o teste da TASK-431 (controller chamado sem usuário) é o que trava a camada do controller isoladamente.
 
 **Fim do lote de backend da revisão.** TASK-427 a 432 concluídas. As mudanças que tocaram rota, middleware e controller depois da revisão da TASK-414 foram a TASK-429 (`RouteServiceProvider` e `routes/api.php`) e a TASK-431 (`OverviewController`). Elas cabem na revisão final da TASK-424.
+
+## 15. Evidências da TASK-415 (`ProofUploadDialog`)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-415`, a partir de `2699be6384`. Primeira task de frontend.
+
+**Ambiente.** O worktree não tinha `frontend/node_modules`. Os `package.json` e `package-lock.json` do worktree e do checkout principal têm o mesmo SHA-1 (`889034e9…` e `4035723c…`), então copiei o `node_modules` do checkout principal com `robocopy /E /MT:16` (139 MB, 287 s, código de saída 1 = arquivos copiados sem erro), como foi feito com o `vendor` do backend (§1, desvio 4). `node_modules/` é ignorado pelo git. Node v25.2.0.
+
+**O que mudou.** `src/components/ProofUploadDialog.tsx` (novo): título, texto, rótulo do botão de seleção e ícone por props; `busy` trava "Cancelar" e "Confirmar"; `error` aparece num `Alert`; "Confirmar" só habilita com arquivo e chama `onConfirm(file)`. `Payments.tsx` usa o componente nos dois diálogos (marcar despesa como paga e enviar comprovante do acerto) e perdeu os dois `useState` de arquivo, o `useRef` e os imports de `Dialog*`. O POST do acerto continua em `Payments.tsx` (a extração dele é a TASK-416).
+
+**Um caso que o teste pegou.** A primeira versão confiava em o `Dialog` desmontar o conteúdo ao fechar para zerar o arquivo. O teste de reabertura falhou: reabrir durante a animação de saída reaproveita o conteúdo ainda montado, e o arquivo anterior volta. O componente passou a contar as aberturas e usar a contagem como `key` do formulário (o padrão do React de ajustar estado a partir da renderização anterior, sem efeito). Em `Payments.tsx` antigo o reset era explícito no `open…Dialog`, então o comportamento ficou igual.
+
+**Comportamento preservado de propósito.** Cheguei a fazer o fundo do diálogo não fechar com `busy`, mas o `Payments.tsx` antigo fechava, e esta task é só refatoração: desfeito.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Linha de base | `npx vitest run src/pages/Payments.test.tsx`; `npx tsc --noEmit` | 8 passed; `tsc` sem saída |
+| Vermelho antes | `npx vitest run src/components/ProofUploadDialog.test.tsx` sem o componente | Falhou (módulo inexistente) |
+| Componente | `ProofUploadDialog.test.tsx` (8 testes): props visíveis; `accept="image/*"` e `capture="environment"`; "Confirmar" desabilitado até escolher e `onConfirm` com o `File`; "Cancelar" chama `onClose`; `Alert` com e sem erro; `busy` trava os dois botões; reabrir começa vazio | 8 passed |
+| `Payments` sem edição | `npx vitest run src/pages/Payments.test.tsx src/components/ProofUploadDialog.test.tsx` | 16 passed (8 + 8), `Payments.test.tsx` intocado |
+| Critério de grep (corrigido) | `grep -nE '<Dialog\|type="file"' src/pages/Payments.tsx` | Vazio. O grep literal da task (`Selecionar foto\|Selecionar comprovante`) acha as duas strings nas linhas 317 e 338, como props; contradizia o critério "rótulos vêm por props" e foi corrigido em `tasks.md` |
+| Tipos | `npx tsc --noEmit` | Sem erro, sem `any` |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 46 passed`, `Tests 346 passed` (338 + 8 novos), 230,64 s |
+
+**Mutações** (revertidas):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | "Confirmar" habilitado sem arquivo (`disabled={busy}`) | Derrubou 4: 2 do componente e 2 de `Payments` (os que conferem o botão desabilitado antes da foto) |
+| M2 | Formulário sem a `key` de reabertura | Derrubou "starts empty again every time it is reopened" |
+| M3 | "Cancelar" sem `disabled={busy}` (aplicada junto com a M2; falhas separáveis) | Derrubou "disables both buttons while busy" |
+
+**Verificação visual:** não feita nesta task. O diálogo só aparece em `Payments`, que exige login, backend e banco; a marcação é a mesma de antes (mesmos componentes MUI, textos e ícones). A conferência no navegador fica para a validação local da TASK-423, na stack isolada.

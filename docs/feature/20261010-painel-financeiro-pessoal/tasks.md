@@ -14,7 +14,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-412 | Criar `PersonalOverviewService` com a derivação por usuário (`to_pay`, `to_receive`, `owe`, `receive`, `my_items`, `has_open`, ordenação) | backend | plan.md §1.3 | nenhum | Concluída |
 | TASK-413 | Criar `OverviewController` e a rota `GET /api/me/overview` sob `jwt.auth`, com o escopo do usuário na consulta | backend | plan.md §1.1, §1.4 | nenhum | Concluída |
 | TASK-414 | Revisar o endpoint com o agent `security-reviewer` e rodar a suíte completa do backend | backend | plan.md §1.4, §6 | nenhum | Concluída |
-| TASK-415 | Extrair `ProofUploadDialog` de `Payments.tsx` | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-415 | Extrair `ProofUploadDialog` de `Payments.tsx` | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-416 | Extrair `useConfirmSettlement` de `Payments.tsx` | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-417 | Criar `types/overview.ts` e `useMyOverview` | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-418 | Criar `ReceivableList` ("Você recebe") | frontend | plan.md §2 | nenhum | Pendente |
@@ -85,6 +85,7 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
   - `npx vitest run src/pages/Payments.test.tsx` verde **sem edição** (8 testes).
   - `ProofUploadDialog.test.tsx`: "Confirmar" desabilitado até escolher arquivo; ao confirmar chama `onConfirm` com o `File`; `error` mostrado num `Alert`; `busy` desabilita os dois botões; título, texto, rótulo do botão de seleção e ícone vêm por props.
   - Mutação: habilitar "Confirmar" sem arquivo derruba o teste. `npx tsc --noEmit` sem erro e sem `any`.
+  - **Corrigido na execução (§15 do `implementation.md`):** o grep literal acima contradiz o critério de que os rótulos vêm por props (as duas strings passam a ser props em `Payments.tsx`). A verificação vale como `grep -nE '<Dialog|type="file"' src/pages/Payments.tsx` vazio: nenhum diálogo nem campo de arquivo inline sobrou na página.
 - **TASK-416**:
   - `src/hooks/useConfirmSettlement.ts` existe e `Payments.tsx` o usa; `Payments.test.tsx` verde **sem edição**, inclusive o teste que fixa `cycles_ago`.
   - `useConfirmSettlement.test.tsx`: o `POST /api/groups/{id}/settlements/confirm` leva `FormData` com `to_user_id`, `comprovante` e `cycles_ago` igual ao argumento (testar com `1` e `2`), cabeçalho `Authorization: Bearer <token>`; sucesso chama `onSuccess`; erro usa `response.data.error` e, sem ele, "Falha ao enviar o comprovante."; `submitting` verdadeiro durante a chamada.
