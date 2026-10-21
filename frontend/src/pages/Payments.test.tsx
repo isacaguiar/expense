@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
@@ -26,6 +26,7 @@ type SummaryExpenseFixture = {
   valuePerPerson?: number;
   paid?: boolean;
   paymentProofUrl?: string | null;
+  paymentNote?: string | null;
   payerName?: string | null;
   participants?: string[];
   isFixed?: boolean;
@@ -144,7 +145,7 @@ describe('Payments', () => {
     expect(screen.queryByRole('button', { name: 'Confirmar pagamento' })).not.toBeInTheDocument();
   });
 
-  it('requires a photo before the confirm dialog can be submitted, then posts multipart to /pay', async () => {
+  it('keeps Confirmar disabled until a photo or a note is given, then posts multipart to /pay', async () => {
     const user = userEvent.setup();
 
     mockGetResponses([
@@ -184,6 +185,141 @@ describe('Payments', () => {
     expect((body as FormData).get('comprovante')).toBe(file);
 
     expect(await screen.findByText('Pagamento confirmado.')).toBeInTheDocument();
+  });
+
+  // Decisão D2 da feature comprovante-ao-marcar-paga: o popup do credor passou
+  // a aceitar "foto OU descrição" (antes, foto obrigatória), igual ao de Despesas.
+  it('lets the creditor confirm with only a note and posts it as JSON', async () => {
+    const user = userEvent.setup();
+
+    mockGetResponses([
+      { id: 14, description: 'Água', date: '2026-08-10', value: 150, userPayerId: CURRENT_USER_ID },
+    ]);
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Confirmar pagamento' }));
+
+    const dialog = await screen.findByRole('dialog');
+    const confirmButton = within(dialog).getByRole('button', { name: 'Confirmar' });
+    expect(confirmButton).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText('Descrição'), 'Pago em dinheiro, recibo 123');
+    expect(confirmButton).toBeEnabled();
+    await user.click(confirmButton);
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/expenses/14/pay');
+    expect(body).toEqual({ cycles_ago: 0, descricao: 'Pago em dinheiro, recibo 123' });
+    expect(await screen.findByText('Pagamento confirmado.')).toBeInTheDocument();
+  });
+
+  it('posts the photo and the note together in the multipart body', async () => {
+    const user = userEvent.setup();
+
+    mockGetResponses([
+      { id: 15, description: 'Luz', date: '2026-08-10', value: 150, userPayerId: CURRENT_USER_ID },
+    ]);
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Confirmar pagamento' }));
+
+    const dialog = await screen.findByRole('dialog');
+    const file = new File(['foto'], 'comprovante.png', { type: 'image/png' });
+    await user.upload(dialog.querySelector('input[type="file"]') as HTMLInputElement, file);
+    await user.type(within(dialog).getByLabelText('Descrição'), 'Pix agendado para sexta');
+    await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+    expect(body.get('comprovante')).toBe(file);
+    expect(body.get('descricao')).toBe('Pix agendado para sexta');
+    expect(body.get('cycles_ago')).toBe('0');
+  });
+
+  it('shows the payment note on the card of a paid expense, with or without a photo', async () => {
+    mockGetResponses([
+      {
+        id: 16,
+        description: 'Só texto',
+        date: '2026-08-10',
+        value: 100,
+        paid: true,
+        paymentNote: 'Pago em dinheiro',
+        paymentProofUrl: null,
+        userPayerId: 999,
+      },
+      {
+        id: 17,
+        description: 'Foto e texto',
+        date: '2026-08-11',
+        value: 100,
+        paid: true,
+        paymentNote: 'Pix agendado',
+        paymentProofUrl: 'http://api/proofs/1',
+        userPayerId: 999,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Só texto');
+
+    expect(screen.getByText('Descrição do pagamento: Pago em dinheiro')).toBeInTheDocument();
+    expect(screen.getByText('Descrição do pagamento: Pix agendado')).toBeInTheDocument();
+    // O link só existe quando há foto.
+    expect(screen.getAllByRole('link', { name: 'Ver comprovante' })).toHaveLength(1);
+  });
+
+  it('shows no payment note line when the expense has none, and renders markup as plain text', async () => {
+    mockGetResponses([
+      { id: 18, description: 'Sem nota', date: '2026-08-10', value: 100, paid: true, paymentNote: null, userPayerId: 999 },
+      { id: 19, description: 'Nota com tag', date: '2026-08-11', value: 100, paid: true, paymentNote: '<b>negrito</b>', userPayerId: 999 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Sem nota');
+
+    expect(screen.getAllByText(/Descrição do pagamento:/)).toHaveLength(1);
+    expect(screen.getByText('Descrição do pagamento: <b>negrito</b>')).toBeInTheDocument();
+    expect(document.querySelector('b')).toBeNull();
+  });
+
+  it('does not show a note line for a pending expense', async () => {
+    mockGetResponses([
+      { id: 20, description: 'Conta de luz', date: '2026-08-10', value: 100, paid: false, paymentNote: null, userPayerId: 999 },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Conta de luz');
+    expect(screen.getByText('Pendente')).toBeInTheDocument();
+    expect(screen.queryByText(/Descrição do pagamento:/)).not.toBeInTheDocument();
   });
 
   it('shows "Desfazer pagamento" for a paid expense and calls POST .../unpay', async () => {
