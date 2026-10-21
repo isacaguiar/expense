@@ -23,6 +23,7 @@ import UndoIcon from '@mui/icons-material/Undo';
 import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
+import { useConfirmSettlement } from '../hooks/useConfirmSettlement';
 import PayableSettlementList from '../components/PayableSettlementList';
 import PixPaymentDialog from '../components/PixPaymentDialog';
 import ProofUploadDialog from '../components/ProofUploadDialog';
@@ -123,46 +124,30 @@ const Payments: React.FC = () => {
   // distinto de confirmar uma despesa (isso continua com o credor, acima).
   // Ver docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/plan.md §6.
   const [confirmSettlementTarget, setConfirmSettlementTarget] = useState<SummarySettlement | null>(null);
-  const [confirmingSettlement, setConfirmingSettlement] = useState<boolean>(false);
-  const [settlementConfirmError, setSettlementConfirmError] = useState<string | null>(null);
   const [settlementConfirmSuccess, setSettlementConfirmSuccess] = useState<boolean>(false);
-
-  const openConfirmSettlementDialog = (settlement: SummarySettlement) => {
-    setConfirmSettlementTarget(settlement);
-    setSettlementConfirmError(null);
-  };
 
   const closeConfirmSettlementDialog = () => setConfirmSettlementTarget(null);
 
+  const {
+    submitting: confirmingSettlement,
+    error: settlementConfirmError,
+    clearError: clearSettlementConfirmError,
+    confirm: confirmSettlement
+  } = useConfirmSettlement(groupId, () => {
+    setSettlementConfirmSuccess(true);
+    closeConfirmSettlementDialog();
+    reload();
+  });
+
+  const openConfirmSettlementDialog = (settlement: SummarySettlement) => {
+    setConfirmSettlementTarget(settlement);
+    clearSettlementConfirmError();
+  };
+
+  // `cyclesAgo` é o ciclo que está na tela (o mesmo que `handlePay`/`handleUnpay` mandam).
   const confirmSettlementPayment = (file: File) => {
-    if (!confirmSettlementTarget || !groupId) return;
-
-    setConfirmingSettlement(true);
-    setSettlementConfirmError(null);
-
-    const token = localStorage.getItem('accessToken');
-    const form = new FormData();
-    form.append('to_user_id', String(confirmSettlementTarget.to_user_id));
-    form.append('comprovante', file);
-    // Sem isto o backend assume o ciclo corrente (aberto) e recusa o acerto de um
-    // ciclo anterior já fechado: "só pode ser confirmado depois que a competência
-    // é fechada". Mesmo parâmetro que `handlePay`/`handleUnpay` já mandam.
-    form.append('cycles_ago', String(cyclesAgo));
-
-    axios
-      .post(`${API_BASE_URL}/api/groups/${groupId}/settlements/confirm`, form, {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
-      })
-      .then(() => {
-        setSettlementConfirmSuccess(true);
-        closeConfirmSettlementDialog();
-        reload();
-      })
-      .catch(err => {
-        console.error('Erro ao confirmar pagamento do settlement:', err);
-        setSettlementConfirmError(err.response?.data?.error ?? 'Falha ao enviar o comprovante.');
-      })
-      .finally(() => setConfirmingSettlement(false));
+    if (!confirmSettlementTarget) return;
+    confirmSettlement(confirmSettlementTarget.to_user_id, file, cyclesAgo);
   };
 
   const expenses = summary?.expenses ?? [];

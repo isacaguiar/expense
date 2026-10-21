@@ -34,6 +34,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-431 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-431`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §13 | `abort_unless($user, 401)` no controller; sem ele, `TypeError` (500). 2 mutações |
 | TASK-432 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-432`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §14 | Só testes: 3 novos e 1 editado. Antes deles, um escopo "membro **ou** participante" passava nos 38 testes do overview |
 | TASK-415 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-415`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §15 | `Payments.test.tsx` verde sem edição; o teste de reabertura pegou um caso real (reabrir durante a animação de saída reaproveitava o arquivo anterior). 3 mutações. Critério de grep corrigido |
+| TASK-416 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-416`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §16 | `cycles_ago` virou argumento obrigatório de `confirm`; omiti-lo derruba 2 testes do hook e 2 de `Payments`. 3 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -427,3 +428,28 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-415`, a partir de `2699
 | M3 | "Cancelar" sem `disabled={busy}` (aplicada junto com a M2; falhas separáveis) | Derrubou "disables both buttons while busy" |
 
 **Verificação visual:** não feita nesta task. O diálogo só aparece em `Payments`, que exige login, backend e banco; a marcação é a mesma de antes (mesmos componentes MUI, textos e ícones). A conferência no navegador fica para a validação local da TASK-423, na stack isolada.
+
+## 16. Evidências da TASK-416 (`useConfirmSettlement`)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-416`, a partir de `4d47205533`. Suíte antes: 346 testes.
+
+**O que mudou.** `src/hooks/useConfirmSettlement.ts` (novo): `useConfirmSettlement(groupId, onSuccess)` devolve `{ submitting, error, clearError, confirm(toUserId, proof, cyclesAgo) }` e faz o `POST /api/groups/{id}/settlements/confirm` multipart com `to_user_id`, `comprovante` e `cycles_ago`, com `Authorization: Bearer`. O `cyclesAgo` é argumento de `confirm`, não do hook: quem chama tem de dizer, a cada envio, qual competência acerta (a classe de bug de 2026-10-06). `Payments.tsx` perdeu o POST inline e dois `useState`, e passa o `cyclesAgo` da tela; a ordem dos efeitos no sucesso (mensagem, fechar o diálogo, recarregar e só então `submitting` falso) ficou a mesma.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `npx vitest run src/hooks/useConfirmSettlement.test.tsx` sem o hook | Falhou (módulo inexistente) |
+| Hook | `useConfirmSettlement.test.tsx` (7 testes): `FormData` com `to_user_id`, `comprovante` e `cycles_ago` 1 e 2 (`it.each`) e cabeçalho `Bearer`; `submitting` verdadeiro durante a chamada e `onSuccess` no sucesso; mensagem da API no erro; "Falha ao enviar o comprovante." sem ela; `clearError` e limpeza antes de nova tentativa; sem grupo, nada é enviado | 7 passed |
+| `Payments` sem edição | `npx vitest run src/pages/Payments.test.tsx src/hooks/useConfirmSettlement.test.tsx` | 15 passed (8 + 7); inclui o teste que fixa `cycles_ago = 1` |
+| Sem POST inline | `grep -n "settlements/confirm\|FormData" src/pages/Payments.tsx` | Vazio |
+| Tipos | `npx tsc --noEmit` | Sem erro, sem `any` |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 47 passed`, `Tests 353 passed` (346 + 7 novos), 175,38 s |
+
+**Mutações** (revertidas):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Omitir `cycles_ago` do `FormData` (o critério da task) | Derrubou 4: os 2 do `it.each` do hook e os 2 de `Payments` que conferem `cycles_ago` (`'0'` e `'1'`) |
+| M2 | `Payments` passar `0` fixo em vez do `cyclesAgo` da tela | Derrubou o teste de regressão de `Payments` ("sends the cycles_ago of the cycle on screen…") |
+| M3 | O hook não limpar o erro ao tentar de novo (aplicada junto com a M2; falhas separáveis) | Derrubou "clears the error on demand and before a new attempt" |
+
+**Verificação visual:** não se aplica (só lógica de envio; a marcação da tela não mudou). O fluxo completo no navegador fica para a TASK-423.
