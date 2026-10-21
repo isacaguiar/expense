@@ -114,6 +114,7 @@ Para cada grupo, sobre o `summary` do `view()`:
 - Escopo **na consulta**: `Group::where('deleted', 0)->whereHas('members', fn ($q) => $q->where('user_id', auth()->id()))`, o mesmo filtro de `GroupController::index` (`:19-21`). Não há grupo alheio para filtrar depois.
 - Nada de `authorizeGroupMembership` por grupo (já escopado), mas teste explícito de que o grupo de outro usuário nunca aparece (Constitution §1 item 6, §6.5).
 - Rodar o agent `security-reviewer` na rota nova (dado financeiro, e-mail e Pix do credor já visíveis a membros).
+- Throttle próprio (TASK-429, decisão D10): `RateLimiter::for('overview')` em `RouteServiceProvider`, 30/min por usuário, e `->middleware('throttle:overview')` na rota. O `ThrottleRequests` roda **antes** do `jwt.auth` (o `middlewarePriority` do Kernel o ordena e o middleware do Tymon não está na lista), então o limiter resolve o usuário do token sozinho e devolve `Limit::none()` quando não há usuário válido: chamada sem token não consome o limite de ninguém e recebe o 401 do `jwt.auth`. Não acrescenta consulta (o guard reaproveita o usuário).
 
 ## 2. specify §2.2 — Página "Painel" (`frontend/src`)
 

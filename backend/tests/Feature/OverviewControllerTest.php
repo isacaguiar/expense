@@ -119,6 +119,65 @@ class OverviewControllerTest extends TestCase
         $this->assertContains('jwt.auth', $route->gatherMiddleware());
     }
 
+    // --- throttle por usuário (TASK-429, decisão D10) --------------------------
+    // O limiter global `api` (60/min) chaveia por IP (guard padrão `web`). O da
+    // rota é 30/min por usuário. Atenção: o Laravel executa o ThrottleRequests
+    // ANTES do jwt.auth (middlewarePriority), não importa a ordem declarada; por
+    // isso a proteção contra contar chamada sem token está no próprio limiter, e
+    // quem a prova é o teste de chamadas não autenticadas, não a ordem da rota.
+    // Com "agora" congelado, a janela de 1 minuto não vira durante o teste.
+
+    public function test_the_route_declares_the_per_user_throttle(): void
+    {
+        $route = collect(Route::getRoutes()->getRoutes())
+            ->first(fn ($route) => $route->uri() === 'api/me/overview' && in_array('GET', $route->methods(), true));
+
+        $this->assertContains('throttle:overview', $route->gatherMiddleware());
+    }
+
+    public function test_the_31st_call_of_the_same_user_within_a_minute_gets_429(): void
+    {
+        foreach (range(1, 30) as $call) {
+            $this->overviewAs($this->debtor)->assertOk();
+        }
+
+        $this->overviewAs($this->debtor)->assertStatus(429);
+    }
+
+    public function test_another_user_on_the_same_ip_is_not_affected(): void
+    {
+        foreach (range(1, 31) as $call) {
+            $this->overviewAs($this->debtor);
+        }
+
+        $this->overviewAs($this->creditor)->assertOk();
+    }
+
+    public function test_unauthenticated_calls_do_not_consume_the_overview_limit(): void
+    {
+        // Se o throttle da rota viesse antes do jwt.auth, a 31ª chamada sem
+        // token seria 429 (chave por IP); com ele depois, é sempre 401.
+        foreach (range(1, 31) as $call) {
+            $this->getJson('/api/me/overview')->assertStatus(401);
+        }
+    }
+
+    public function test_calls_with_an_invalid_token_do_not_consume_the_overview_limit(): void
+    {
+        // Teste separado do anterior: juntos passariam de 60 chamadas do mesmo
+        // IP e bateriam no limiter global `api`, não no da rota.
+        foreach (range(1, 31) as $call) {
+            $this->withToken('token-invalido')->getJson('/api/me/overview')->assertStatus(401);
+        }
+    }
+
+    public function test_other_routes_are_not_bound_by_the_overview_limit(): void
+    {
+        foreach (range(1, 31) as $call) {
+            $this->withToken(auth('api')->login($this->debtor))->getJson('/api/me')->assertOk();
+        }
+    }
+
     public function test_returns_the_documented_structure(): void
     {
         $group = $this->group('Residencial', $this->creditor, $this->debtor);

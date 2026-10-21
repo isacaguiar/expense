@@ -28,7 +28,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-426 | Atualizar o plan de `20261006-relatorios-acompanhamento-fechamento` para usar `CycleSummaryService` e as linhas atuais | doc | plan.md §0.4 | nenhum | Pendente |
 | TASK-427 | Reduzir o custo de `GET /me/overview`: `focus()` sem calcular ciclos anteriores à primeira despesa do grupo e snapshots lidos numa só consulta, sem mudar o resultado | backend | plan.md §1.2, §8 | nenhum | Concluída |
 | TASK-428 | Limitar o número de grupos do overview e sinalizar com `truncated` (decisão D9) | backend | plan.md §1.1, §8 | nenhum | Concluída |
-| TASK-429 | Aplicar throttle por usuário na rota `GET /me/overview` (decisão D10) | backend | plan.md §1.4 | nenhum | Pendente |
+| TASK-429 | Aplicar throttle por usuário na rota `GET /me/overview` (decisão D10) | backend | plan.md §1.4 | nenhum | Concluída |
 | TASK-430 | Falhar fechado quando o nome de um participante de snapshot legado é ambíguo entre os membros do grupo | backend | plan.md §1.3 | nenhum | Pendente |
 | TASK-431 | Responder 401 quando o usuário do token deixa de existir entre o middleware e o controller | backend | plan.md §1.4 | nenhum | Pendente |
 | TASK-432 | Fechar as lacunas de teste do overview apontadas pela revisão: ex-membro, credor que saiu do grupo e vazamento de e-mail de grupo alheio | backend | plan.md §1.4, §6 | nenhum | Pendente |
@@ -138,6 +138,7 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
     - **X3, da revisão:** `Log::info('User authenticated:', ['user' => auth()->user()])` em `GroupController::store` grava e-mail, Pix e WhatsApp no log (BAIXA). **Já existe como item 060** (achado do `security-reviewer` na TASK-353); não criar outro;
     - **S5, da revisão:** `cycles_ago` sem teto em `pay`, `unpay` e `settlements/confirm`, e a alternativa de aceitar `cycle_start` absoluto, que o payload já devolve (BAIXA);
     - **S6, da revisão** (D11 decidida em 2026-10-21: manter o contato como está): minimizar o contato do credor no overview e trocar o lookup de `GET /pix/generate` de e-mail para `user_id` (BAIXA).
+    - **Da TASK-429:** o middleware `jwt.auth` (Tymon) não está no `middlewarePriority` do Kernel, então `ThrottleRequests` e `SubstituteBindings` rodam **antes** da autenticação em toda rota protegida, qualquer que seja a ordem declarada. Hoje não há binding implícito de model nas rotas (só `{groupId}` cru), então não vaza nada; mas um `throttle:` futuro chaveado por usuário, ou um binding implícito, herdariam o problema. Avaliar incluir o middleware no `middlewarePriority` (muda a ordem de todas as rotas) (BAIXA).
   - `docs/backlog/README.md` com o índice atualizado.
 - **TASK-426**:
   - `docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md` atualizado: as referências de linha do `ExpenseController` conferidas contra o arquivo atual (`grep -n` de cada método citado), o §0.3 passa a usar `CycleSummaryService::summaryIsFullySettled` em vez de extrair dentro do controller, e `ClosingBreakdown` segue como classe pura em `App\Support`.
@@ -152,6 +153,7 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
   - Testes: 50 grupos → 50 e `truncated` falso; 51 → 50 e `truncated` verdadeiro, com o grupo de maior id fora; **o orçamento de consultas (TASK-427) com 60 grupos vazios é igual ao de 50** (prova que o corte é antes do cálculo); a ordem por pendência se mantém dentro dos 50. Mutação: trocar o teto por 51 derruba o de 51 grupos; mover o corte para depois do cálculo derruba o de orçamento. `OverviewControllerTest` passa a conferir `truncated` na estrutura.
 - **TASK-429** (decisão D10, adotada em 2026-10-21):
   - Limiter nomeado (30/min) por `auth('api')->id()`, aplicado à rota depois do `jwt.auth`. Teste: a 31ª chamada do mesmo usuário em um minuto devolve 429; outro usuário no mesmo IP não é afetado; as demais rotas não mudam.
+  - **Corrigido na execução (§11 do `implementation.md`):** "depois do `jwt.auth`" não é possível só declarando a ordem. O Laravel executa o `ThrottleRequests` antes do middleware do Tymon (`middlewarePriority`), qualquer que seja a ordem na rota. O critério passa a ser de comportamento: chamada sem token ou com token inválido nunca consome o limite (31 chamadas seguidas devolvem sempre 401), garantido pelo próprio limiter (`Limit::none()` sem usuário).
   - O `route:list` mostra o `throttle` na rota. Mutação: tirar o middleware derruba o teste do 429.
 - **TASK-430** (achado S3):
   - Com dois membros de mesmo nome no grupo, um item de snapshot legado (sem `participantDetails`) **não é atribuído a nenhum dos dois por nome**; com nome único continua resolvendo (teste existente `test_items_of_an_old_snapshot_…` segue verde sem edição).
