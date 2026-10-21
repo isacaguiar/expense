@@ -1,7 +1,7 @@
 # AcceptInvitePage não cancela o redirecionamento de 2s quando a página sai da tela
 
 ID: 082
-Origem: docs/feature/20261021-estabilizar-teste-accept-invite/specify.md §5 (proposta 2 do item 081, deixada de fora); `frontend/src/pages/AcceptInvitePage.tsx:85`
+Origem: docs/feature/concluidas/202610/20261021-estabilizar-teste-accept-invite/specify.md §5 (proposta 2 do item 081, deixada de fora); `frontend/src/pages/AcceptInvitePage.tsx:85`
 Criado em: 2026-10-21
 Prioridade: BAIXA
 Status: Aberto
