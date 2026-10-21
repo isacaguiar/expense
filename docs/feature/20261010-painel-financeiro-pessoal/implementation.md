@@ -37,6 +37,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-416 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-416`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §16 | `cycles_ago` virou argumento obrigatório de `confirm`; omiti-lo derruba 2 testes do hook e 2 de `Payments`. 3 mutações |
 | TASK-417 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-417`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §17 | Tipos do contrato e fixtures tipadas sem cast (renomear um campo no tipo quebra o `tsc` na fixture). `reload` não volta ao spinner. 3 mutações |
 | TASK-418 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-418`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §18 | Lista só de acompanhamento, sem botão. 3 mutações |
+| TASK-419 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-419`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §19 | Botões só pelas flags do servidor; recalcular a permissão no cliente derruba o teste de regressão. 3 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -504,3 +505,28 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-418`, a partir de `4b55
 | M3 | Valor em `en-US` | Derrubou os 2 testes de valor ("R$ 120,00" e "R$ 1.234,50" não encontrados) |
 
 **Verificação visual:** ainda não há rota que mostre o componente (a página é a TASK-421 e a rota a TASK-422). A conferência no navegador, inclusive em largura de celular, fica para a TASK-423.
+
+## 19. Evidências da TASK-419 (`MyItemsList`, "Seus itens")
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-419`, a partir de `a1917232a8`. Suíte antes: 362 testes.
+
+**O que mudou.** `src/components/MyItemsList.tsx` (novo): uma linha por despesa do ciclo em foco (`Card` em `Stack`), com descrição, data no formato de `Payments` ("10 de set."), "Parcela n/N" só em Parcelada (num `span` próprio), chip "Paga"/"Pendente" com as cores de `Payments`. O devedor vê "Sua parte R$ …", "Total da despesa R$ …" e "Credor: …"; o credor vê "Você pagou R$ …". "Marcar como paga" (ícone de câmera: a foto é pedida pelo `ProofUploadDialog` do cartão, TASK-420) e "Desfazer" aparecem **só** por `can_pay`/`can_unpay`; o componente só avisa `onPay(expenseId)`/`onUnpay(expenseId)`, e `busyExpenseId` trava os botões do item em andamento. Lista vazia: "Nenhum item seu neste ciclo.".
+
+**Um ajuste que o teste pegou.** Na primeira versão "Parcela 2/6" saía no mesmo nó de texto da data ("10 de set. · Parcela 2/6"), e o teste não a achava como texto próprio. Ficou num `span`.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `npx vitest run src/components/MyItemsList.test.tsx` sem o componente | Falhou (módulo inexistente) |
+| Componente | `MyItemsList.test.tsx` (9 testes): visão do devedor (parte, total, credor, data); visão do credor ("Você pagou", sem parte nem credor); "Parcela 2/6" só com `installment`; Paga/Pendente; "Marcar como paga" só com `can_pay` → `onPay(51)`; "Desfazer" só com `can_unpay` → `onUnpay(51)`; **regressão:** `role: 'creditor'`, `paid: false`, `can_pay: false` → nenhum botão; `busyExpenseId` trava só o item dele; lista vazia | 9 passed |
+| Tipos | `npx tsc --noEmit` | Sem erro, sem `any` |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 50 passed`, `Tests 371 passed` (362 + 9 novos), 168,52 s |
+
+**Mutações** (revertidas; `grep` confirmou `onPay`/`onUnpay`, `busy` e `can_pay` de volta):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | O cliente deduzir a permissão (`can_pay \|\| (role === 'creditor' && !paid)`), o critério da task | Derrubou só o teste de regressão da regra no servidor |
+| M2 | "Marcar como paga" chamar `onUnpay` | Derrubou "offers Marcar como paga only when the server says can_pay…" |
+| M3 | `busy` sempre falso (aplicada junto com a M2; falhas separáveis) | Derrubou "disables the buttons of the item being saved" |
+
+**Verificação visual:** ainda sem rota (TASK-421/422); fica para a TASK-423.
