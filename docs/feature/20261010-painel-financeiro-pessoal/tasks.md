@@ -18,7 +18,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-416 | Extrair `useConfirmSettlement` de `Payments.tsx` | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-417 | Criar `types/overview.ts` e `useMyOverview` | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-418 | Criar `ReceivableList` ("Você recebe") | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-419 | Criar `MyItemsList` ("Seus itens") com as ações guiadas pelas flags do servidor | frontend | plan.md §2, §3 | nenhum | Pendente |
+| TASK-419 | Criar `MyItemsList` ("Seus itens") com as ações guiadas pelas flags do servidor | frontend | plan.md §2, §3 | nenhum | Concluída |
 | TASK-420 | Criar `GroupPositionCard` com totais, selos, "Você paga" (Pix e comprovante) e as ações de marcar e desfazer | frontend | plan.md §2, §3, §4 | nenhum | Pendente |
 | TASK-421 | Criar a página `MyPanel` | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-422 | Registrar a rota `/painel` e o item "Painel" nos dois menus | frontend | plan.md §2 | nenhum | Pendente |
