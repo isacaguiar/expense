@@ -19,7 +19,7 @@ IDs a partir de TASK-433: o maior em qualquer branch do repositório é TASK-432
 | TASK-441 | Trocar o popup do devedor em Pagamentos pelo `PaymentProofDialog`, enviar `descricao` e exibir `confirmedNote` | frontend | plan.md §8, §9 e §11 | nenhum | Concluída |
 | TASK-442 | Exibir a descrição do pagamento no modal de detalhes de Despesas | frontend | plan.md §9 e §11 | nenhum | Concluída |
 | TASK-443 | Exibir a descrição do pagamento em `ExpenseView` | frontend | plan.md §9 e §11 | nenhum | Concluída |
-| TASK-444 | Atualizar `MANUAL.md` com o popup e o campo de descrição | doc | plan.md §10 | nenhum | Pendente |
+| TASK-444 | Atualizar `MANUAL.md` com o popup e o campo de descrição | doc | plan.md §10 | nenhum | Concluída |
 | TASK-445 | Registrar em `docs/backlog/` o item "anexar ou editar comprovante e descrição depois de paga" | doc | plan.md §10 | nenhum | Pendente |
 | TASK-446 | Rodar o checklist pré-PR completo na branch da feature integrada | backend | plan.md §11 e §13 | nenhum | Pendente |
 | TASK-447 | Validar o fluxo localmente na stack isolada e registrar o resultado | frontend | plan.md §13 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |

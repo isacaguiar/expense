@@ -50,7 +50,11 @@ fechar.
 ![Lista de despesas do ciclo](manual-assets/05-despesas.jpg)
 Todas as despesas do ciclo, com **Tipo**, **Valor**, **Credor** (quem pagou) e
 **Status** (Paga / Pendente). Dá para buscar, filtrar por **Fixas/Variáveis**,
-editar, excluir e **marcar como paga**. **Fechar mês** congela os números do
+editar, excluir e **marcar como paga**. Ao clicar em **marcar como paga** (o ✓ da
+linha), abre um popup: anexe uma **foto do comprovante**, escreva uma **descrição**
+do pagamento (por exemplo "pago em dinheiro" ou "Pix agendado", até 500
+caracteres) ou os dois. É preciso informar pelo menos um deles para confirmar.
+A descrição aparece nos **detalhes** da despesa. **Fechar mês** congela os números do
 período.
 
 ### Nova despesa
@@ -63,9 +67,11 @@ igualmente entre elas.
 ### Pagamentos
 ![Tela de pagamentos](manual-assets/07-pagamentos.jpg)
 Onde as contas são acertadas. Em **Despesas do ciclo**, o credor confirma o
-pagamento anexando um comprovante. Em **Valores a pagar**, quem deve usa **Pagar
-com Pix** (abre o QR Code / copia-e-cola do credor) e **Enviar comprovante** para
-registrar o pagamento.
+pagamento no mesmo popup da tela Despesas: foto do comprovante, descrição ou os
+dois. Em **Valores a pagar**, quem deve usa **Pagar com Pix** (abre o QR Code /
+copia-e-cola do credor) e **Enviar comprovante** para registrar o pagamento; aqui
+a **foto é obrigatória** e a **descrição é opcional**. Reenviar o comprovante
+substitui a foto e a descrição anteriores.
 
 ### Relatórios
 ![Histórico de ciclos fechados](manual-assets/08-relatorios.jpg)
