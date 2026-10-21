@@ -156,7 +156,8 @@ class PersonalOverviewServiceTest extends TestCase
 
         $result = $this->service()->forUser($this->debtor);
 
-        $this->assertSame(['user', 'groups'], array_keys($result));
+        $this->assertSame(['user', 'groups', 'truncated'], array_keys($result));
+        $this->assertFalse($result['truncated']);
         $this->assertSame(['id' => $this->debtor->id, 'name' => 'Beto Devedor'], $result['user']);
 
         $item = $result['groups'][0];
@@ -542,6 +543,68 @@ class PersonalOverviewServiceTest extends TestCase
         // Medido: 19 (eram 18; a consulta da primeira data custa uma e poupa nada
         // aqui, onde o foco para cedo). Guarda o caso comum contra regressão.
         $this->assertLessThanOrEqual(23, $queries, "1 grupo com pendência: {$queries} consultas");
+    }
+
+    // --- teto de grupos (TASK-428, decisão D9) ---------------------------------
+    // No máximo 50 grupos, os de menor id, cortados ANTES de calcular: é isso
+    // que limita o custo. A ordem "em aberto primeiro" vale dentro dos 50.
+    // Os números são literais de propósito: o teto é contrato (specify §2.1).
+
+    /** @return array<int, Group> */
+    private function emptyGroups(int $count, string $prefix = 'Vazio'): array
+    {
+        return array_map(fn (int $number) => $this->group("{$prefix} {$number}", $this->debtor), range(1, $count));
+    }
+
+    public function test_fifty_groups_all_come_back_and_are_not_truncated(): void
+    {
+        $this->emptyGroups(50);
+
+        $result = $this->service()->forUser($this->debtor);
+
+        $this->assertCount(50, $result['groups']);
+        $this->assertFalse($result['truncated']);
+    }
+
+    public function test_the_fifty_first_group_is_cut_and_the_result_is_truncated(): void
+    {
+        $groups = $this->emptyGroups(51);
+        $newest = end($groups);
+
+        $result = $this->service()->forUser($this->debtor);
+        $ids = array_map(fn (array $item) => $item['group']['id'], $result['groups']);
+
+        $this->assertCount(50, $result['groups']);
+        $this->assertTrue($result['truncated']);
+        // Ficam os 50 mais antigos: o de maior id é o cortado.
+        $this->assertNotContains($newest->id, $ids);
+        $this->assertEqualsCanonicalizing(array_map(fn (Group $group) => $group->id, array_slice($groups, 0, 50)), $ids);
+    }
+
+    public function test_the_cut_happens_before_computing_so_extra_groups_cost_nothing(): void
+    {
+        $this->emptyGroups(50);
+        $withFifty = $this->queriesOf(fn () => $this->service()->forUser($this->debtor));
+
+        $this->emptyGroups(10, 'Extra');
+        $withSixty = $this->queriesOf(fn () => $this->service()->forUser($this->debtor));
+
+        $this->assertSame($withFifty, $withSixty, 'os 10 grupos além do teto não podem ser calculados');
+    }
+
+    public function test_groups_with_something_open_still_come_first_within_the_fifty(): void
+    {
+        $this->emptyGroups(49, 'A');
+        $pending = $this->group('Z pendente', $this->creditor, $this->debtor); // 50º: entra
+        $this->expense($pending, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        $this->group('Z cortado', $this->debtor); // 51º: fica de fora
+
+        $result = $this->service()->forUser($this->debtor);
+
+        $this->assertTrue($result['truncated']);
+        $this->assertSame('Z pendente', $result['groups'][0]['group']['name']);
+        $this->assertTrue($result['groups'][0]['has_open']);
+        $this->assertNotContains('Z cortado', array_map(fn (array $item) => $item['group']['name'], $result['groups']));
     }
 
     public function test_a_user_without_groups_gets_an_empty_list(): void

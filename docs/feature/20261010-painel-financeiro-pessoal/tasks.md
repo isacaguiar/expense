@@ -27,7 +27,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-425 | Registrar em `docs/backlog/` os achados tangenciais da feature | doc | plan.md §9 | nenhum | Pendente |
 | TASK-426 | Atualizar o plan de `20261006-relatorios-acompanhamento-fechamento` para usar `CycleSummaryService` e as linhas atuais | doc | plan.md §0.4 | nenhum | Pendente |
 | TASK-427 | Reduzir o custo de `GET /me/overview`: `focus()` sem calcular ciclos anteriores à primeira despesa do grupo e snapshots lidos numa só consulta, sem mudar o resultado | backend | plan.md §1.2, §8 | nenhum | Concluída |
-| TASK-428 | Limitar o número de grupos do overview e sinalizar com `truncated` (decisão D9) | backend | plan.md §1.1, §8 | nenhum | Pendente |
+| TASK-428 | Limitar o número de grupos do overview e sinalizar com `truncated` (decisão D9) | backend | plan.md §1.1, §8 | nenhum | Concluída |
 | TASK-429 | Aplicar throttle por usuário na rota `GET /me/overview` (decisão D10) | backend | plan.md §1.4 | nenhum | Pendente |
 | TASK-430 | Falhar fechado quando o nome de um participante de snapshot legado é ambíguo entre os membros do grupo | backend | plan.md §1.3 | nenhum | Pendente |
 | TASK-431 | Responder 401 quando o usuário do token deixa de existir entre o middleware e o controller | backend | plan.md §1.4 | nenhum | Pendente |
@@ -108,6 +108,7 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
   - Mutação: trocar o `cycles_ago` por `'0'` fixo derruba os testes de comprovante, de marcar e de desfazer. `tsc` sem erro.
 - **TASK-421**:
   - `MyPanel.test.tsx`: loading, erro, vazio ("Você ainda não participa de nenhum grupo."), cartões na **ordem que o servidor mandou**, `reload` do hook passado como `onChanged` dos cartões, e mensagens de sucesso ("Comprovante enviado." e "Pagamento confirmado.") em `Snackbar`. A página está dentro de `DespesasThemeScope`.
+  - Com `truncated: true` (TASK-428), um `Alert` informativo acima dos cartões: "Você participa de mais de 50 grupos. Aqui aparecem os 50 mais antigos; os demais estão em Meus Grupos."; com `false`, nenhum aviso.
 - **TASK-422**:
   - `App.tsx` tem `<Route path="/painel" …>` dentro do bloco `SimpleShellLayout`; `simpleNavItems.ts` e `groupNavItems` (`GroupSidebar.tsx`) têm "Painel" como **primeiro** item, com `to: '/painel'`.
   - `SimpleShellLayout.test.tsx` e `GroupShellLayout.test.tsx` ganham a asserção do link `/painel`, e as asserções que já existiam passam sem edição. O cabeçalho mostra "Painel" quando a rota é `/painel`. Verificar `Sidebar.test.tsx`, `MobileNavDrawer.test.tsx` e `App.test.tsx`.
