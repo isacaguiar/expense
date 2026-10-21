@@ -207,6 +207,8 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-414`, criada da branch d
 | D9 | **B, com desenho corrigido** | TASK-428 mantida. Ao responder a dúvida do usuário sobre o que cresce, reli o critério original e achei um erro meu: ordenar por pendência *antes* do corte exigia calcular todos os grupos, então o teto não limitava o custo. O corte passou a ser na consulta, antes de calcular (50 grupos de menor `ex_groups.id`, 51ª linha só para sinalizar `truncated`). Teste de orçamento com 60 grupos prova a posição do corte |
 | D10 | **B** (30/min por usuário na rota) | TASK-429 mantida |
 | D11 | **A** (manter o contato do credor) | Minimização (S6) fica só no backlog da TASK-425 |
-| X1/X2 | **Backlog, tratar depois do Painel** | Sem Triagem agora e sem task nesta feature. A TASK-425 registra como ALTA. **O dado segue exposto em produção até esse tratamento**, ciente o usuário |
+| X1/X2 | **Backlog, tratar depois do Painel** | Sem Triagem agora e sem task nesta feature. Registrados em 2026-10-21 como `docs/backlog/` 082 (X1) e 083 (X2), ambos ALTA. **O dado segue exposto em produção até esse tratamento**, ciente o usuário |
+
+Ressalva à premissa do S1/D9, achada ao escrever o item 083: o reviewer e eu tratamos o abuso como "adicionar a vítima a quantos grupos quiser", mas `GroupController::MAX_GROUPS_CREATED_PER_USER = 3` limita os grupos que **cada conta cria**; levar uma vítima a N grupos exige ~N/3 contas com e-mail verificado. O vetor é mais caro que o descrito, o custo medido não muda, e o teto da D9 segue como defesa em profundidade. O X3 já existe como item 060 e não foi duplicado.
 
 **Próximo passo.** Executar TASK-427 → 432 (backend) e depois o frontend, conforme a ordem de `tasks.md`.

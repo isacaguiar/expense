@@ -117,6 +117,8 @@ Fechadas na revisão deste specify: o usuário aprovou o documento em 2026-10-10
 
 D9 a D11 nasceram da revisão de segurança da TASK-414 (`implementation.md` §8). Em 2026-10-21 o usuário decidiu a **D10 (B)**, a **D11 (A)** e a **D9 (B, desenho corrigido)**, que passam a ser **adotadas**.
 
+Ressalva à justificativa da D9, descoberta ao criar o item de backlog 083: cada conta cria no máximo 3 grupos (`GroupController::MAX_GROUPS_CREATED_PER_USER`), então forçar uma vítima a N grupos exige cerca de N/3 contas com e-mail verificado. O abuso é mais caro do que a tabela sugere, mas não existe teto de grupos em que alguém **participa**, e o custo medido (2,8 s para 20 grupos vazios) vale por si. O teto continua como defesa em profundidade, de baixo custo (uma consulta com `limit`).
+
 Correção do desenho da D9, feita antes de adotá-la: o critério original da TASK-428 aplicava a ordem "pendência primeiro" antes do corte, o que exige calcular todos os grupos e não limita o custo. O teto vale **na consulta de grupos, antes de calcular**: entram os 50 grupos de menor `ex_groups.id` (a tabela `ex_groups_members` não tem data de entrada, e grupos criados depois para encher a lista são os que ficam de fora); a ordem `has_open` primeiro, depois nome, vale só dentro desses 50. `truncated` é `true` quando havia mais de 50.
 
 Fora das D1 a D11, o usuário decidiu em 2026-10-21 que o **X1/X2** (`GroupMemberController`: `index` sem checagem de membro, `destroy` ausente e inclusão sem consentimento) **não entra nesta feature nem tem Triagem agora**: é registrado em `docs/backlog/` pela TASK-425 e tratado depois do Painel.

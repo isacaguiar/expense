@@ -85,6 +85,8 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 078 | [corrida-entre-pagamento-e-edicao-de-despesa.md](corrida-entre-pagamento-e-edicao-de-despesa.md) | Corrida entre o pagamento e a edição de uma despesa pode apagar a quota paga. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
 | 079 | [limites-de-entrada-do-rateio-gerado-pelo-servidor.md](limites-de-entrada-do-rateio-gerado-pelo-servidor.md) | Limites de entrada que o rateio gerado pelo servidor ainda não impõe: data mínima, `total_value`, tetos de `quotas` e `installments` | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | BAIXA | Aberto |
 | 080 | [store-despesa-devolve-mensagem-da-excecao-no-500.md](store-despesa-devolve-mensagem-da-excecao-no-500.md) | `POST /api/expenses` devolve a mensagem da exceção (`details`) no 500. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
+| 082 | [group-members-index-sem-checagem-de-membro.md](group-members-index-sem-checagem-de-membro.md) | `GET /api/groups/{groupId}/members` não confere se quem chama é membro: qualquer usuário autenticado lê e-mail, Pix e WhatsApp dos membros de qualquer grupo. Reproduzido. Triagem escala a feature | painel-financeiro-pessoal (TASK-414, achado X1) | 2026-10-21 | ALTA | Aberto |
+| 083 | [membro-adicionado-sem-consentimento-e-sem-como-sair-do-grupo.md](membro-adicionado-sem-consentimento-e-sem-como-sair-do-grupo.md) | Usuário é adicionado a um grupo sem consentimento e não tem como sair (`GroupMemberController::destroy` não existe, TASK-017 do `03-tasks.md`) | painel-financeiro-pessoal (TASK-414, achados X2 e S1) | 2026-10-21 | ALTA | Aberto |
 
 ## Itens concluídos
 
