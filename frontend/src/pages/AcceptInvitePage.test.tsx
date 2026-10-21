@@ -192,6 +192,9 @@ describe('AcceptInvitePage com mode="reset" (recuperação de senha)', () => {
       }
     );
     expect(await screen.findByText(/Senha redefinida com sucesso/)).toBeInTheDocument();
+
+    // Drena o redirecionamento agendado para 2s (mesmo motivo do teste de convite acima).
+    await vi.waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/'), { timeout: 3000 });
   });
 
   it('shows the recovery alert (not the invite one) when email or token is missing', () => {
