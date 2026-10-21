@@ -8,7 +8,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-409 | Esperar o redirecionamento no teste de sucesso do convite (`AcceptInvitePage.test.tsx:96`) | frontend | plan.md §1, §2 e §3 (passos 1, 2 e 4) | nenhum | Pendente |
+| TASK-409 | Esperar o redirecionamento no teste de sucesso do convite (`AcceptInvitePage.test.tsx:96`) | frontend | plan.md §1, §2 e §3 (passos 1, 2 e 4) | nenhum | Concluída |
 | TASK-410 | Esperar o redirecionamento no teste de sucesso do reset (`AcceptInvitePage.test.tsx:171`) e rodar a verificação final | frontend | plan.md §1, §3 (passos 3 a 5) e §4 | nenhum (merge da feature em `dev` é gate humano) | Pendente |
 
 Dependência: as duas tasks mexem no mesmo arquivo e TASK-410 parte da TASK-409 já integrada (só ordem de merge; tecnicamente os dois testes são independentes, plan.md §5). Fluxo de branch conforme `docs/sdd/04-implementation.md` §1: TASK-409 direto em `frontend/20261021-estabilizar-teste-accept-invite`; TASK-410 em `…-TASK-410`, integrada na branch da feature com `git merge --no-ff`, sem PR por task.

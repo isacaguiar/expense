@@ -113,6 +113,10 @@ describe('AcceptInvitePage', () => {
       }
     );
     expect(await screen.findByText(/Senha definida com sucesso/)).toBeInTheDocument();
+
+    // Drena o redirecionamento agendado para 2s: sem isso o timer vaza para o teste seguinte
+    // (que confere `navigate` não chamado) e o derruba quando a máquina está carregada.
+    await vi.waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/'), { timeout: 3000 });
   });
 
   it('shows the backend error message when the token is invalid or expired', async () => {
