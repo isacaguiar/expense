@@ -12,7 +12,7 @@ IDs a partir de TASK-433: o maior em qualquer branch do repositório é TASK-432
 | TASK-434 | Aceitar `descricao` em `pay()` e apagá-la em `unpay()`, com testes PHPUnit | backend | plan.md §2 e §11 | nenhum | Concluída |
 | TASK-435 | Aceitar `descricao` em `confirmSettlement()` e gravá-la em `note`, com testes PHPUnit | backend | plan.md §3 e §11 | nenhum | Concluída |
 | TASK-436 | Expor `paymentNote` nas despesas e `confirmedNote` nos acertos do summary, com testes PHPUnit | backend | plan.md §4 e §11 | nenhum | Concluída |
-| TASK-437 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §12 | nenhum | Pendente |
+| TASK-437 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §12 | nenhum | Concluída |
 | TASK-438 | Criar o componente `PaymentProofDialog` (foto + descrição, regra por `requirePhoto`) com testes | frontend | plan.md §6 e §11 | nenhum | Concluída |
 | TASK-439 | Exigir foto ou texto no tipo de `handlePay` e fazer o ✓ de Despesas abrir o popup | frontend | plan.md §5, §7 e §11 | nenhum | Pendente |
 | TASK-440 | Trocar o popup do credor em Pagamentos pelo `PaymentProofDialog` e exibir `paymentNote` no cartão | frontend | plan.md §8, §9 e §11 | nenhum | Pendente |
@@ -23,6 +23,7 @@ IDs a partir de TASK-433: o maior em qualquer branch do repositório é TASK-432
 | TASK-445 | Registrar em `docs/backlog/` o item "anexar ou editar comprovante e descrição depois de paga" | doc | plan.md §10 | nenhum | Pendente |
 | TASK-446 | Rodar o checklist pré-PR completo na branch da feature integrada | backend | plan.md §11 e §13 | nenhum | Pendente |
 | TASK-447 | Validar o fluxo localmente na stack isolada e registrar o resultado | frontend | plan.md §13 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
+| TASK-448 | Gravar a `descricao` "0" em `pay()` (achado do `security-reviewer` na TASK-437) e cobrir `descricao` em formato de array | backend | plan.md §2, §11 e §12 | nenhum | Pendente |
 
 Notas de composição:
 
@@ -44,6 +45,7 @@ todas ── 446 ── 447
 ```
 
 - TASK-436 depende de 434 e 435: os testes de summary precisam que `pay` e `confirmSettlement` gravem a nota.
+- TASK-448 nasceu na revisão da TASK-437 e executa logo depois dela, antes de TASK-439; depende de 434 e 435.
 - Backend (433 a 437) e `PaymentProofDialog` (438) são independentes entre si, mas executo na ordem da tabela para manter um branch por vez. Os testes de frontend usam mocks, então não esperam o backend; a conferência ponta a ponta é TASK-447.
 - Fluxo de branch conforme `docs/sdd/04-implementation.md` §1: TASK-433 direto em `feature/20261021-comprovante-ao-marcar-paga` (já criada); as demais em `<tipo>/20261021-comprovante-ao-marcar-paga-TASK-0xx` a partir da branch da feature, integradas com `git merge --no-ff`, sem PR. Um único PR da branch da feature contra `dev` no fim.
 
@@ -106,3 +108,8 @@ todas ── 446 ── 447
   - `curl -X POST .../api/expenses/{id}/pay` sem corpo continua respondendo 200 (compatibilidade, D1), registrado.
   - Stack isolada encerrada ao final: processos do backend e do Vite derrubados, `docker rm -f mysql-expense-test`, `backend/.env.testing` apagado (não é ignorado pelo git), portas 3307/8001/3001 liberadas.
   - O usuário confirma por escrito que validou localmente. Sem essa confirmação, **não há push nem PR**.
+- **TASK-448** (nasceu na TASK-437; é a única task fora da ordem numérica: executa logo depois dela e antes de TASK-439):
+  - Teste novo em `ExpenseControllerPayTest` que falha antes da correção: `pay` com `descricao` igual a `"0"` responde 200 **e** grava `payment_note = "0"`. Hoje o `if (! empty($data['descricao']))` (`ExpenseController.php:1077`) descarta o valor porque `empty("0")` é verdadeiro em PHP, e o credor quitaria sem nenhuma prova; `confirmSettlement` (`?? null`) já grava `"0"`, então os dois endpoints ficam consistentes depois da correção.
+  - Teste novo em `SettlementConfirmationControllerTest` que grava `descricao` igual a `"0"` em `note` (guarda de regressão; já passa antes).
+  - Testes novos de `descricao` em formato de array (`descricao[]=x`, em multipart e em JSON) → 422 com erro em `descricao` e nada gravado, em `pay` e em `confirmSettlement`.
+  - `cd backend && php artisan test --filter="ExpenseControllerPayTest|SettlementConfirmationControllerTest"` verde e `./vendor/bin/pint --test` limpo. A correção usa `filled($data['descricao'] ?? null)` (ou equivalente) e não altera a validação.
