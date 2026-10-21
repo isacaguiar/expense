@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Expense;
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
 use App\Models\SettlementConfirmation;
 use App\Models\User;
 use Carbon\Carbon;
@@ -146,6 +147,184 @@ class ExpenseControllerSummaryTest extends TestCase
             $entry['paymentProofUrl']
         );
         $this->assertStringContainsString('signature=', $entry['paymentProofUrl']);
+    }
+
+    // --- Descrição do pagamento (docs/feature/20261021-comprovante-ao-marcar-paga, plan.md §4) ---
+
+    public function test_paid_in_cash_entry_exposes_payment_note_even_without_a_photo(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 100]);
+        $expense->payers()->sync([$payer->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-08-05', 'number' => 1, 'paid' => true,
+            'value_quota' => 100, 'payment_note' => 'Pago em dinheiro, recibo 123',
+        ]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $response->assertStatus(200);
+        $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
+        $this->assertArrayHasKey('paymentNote', $entry);
+        $this->assertSame('Pago em dinheiro, recibo 123', $entry['paymentNote']);
+        $this->assertNull($entry['paymentProofUrl']);
+    }
+
+    public function test_unpaid_entry_has_a_null_payment_note(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-08-05', 'total_value' => 100]);
+        $expense->payers()->sync([$payer->id]);
+        $expense->quotas()->create(['date_expected' => '2026-08-05', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
+        $this->assertArrayHasKey('paymentNote', $entry);
+        $this->assertNull($entry['paymentNote']);
+    }
+
+    public function test_installment_entry_exposes_the_payment_note_of_the_quota_in_the_cycle(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'closing_day' => 15]);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-07-20',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 3,
+            'total_value' => 900,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-07-20', 'number' => 1, 'paid' => true, 'value_quota' => 300, 'payment_note' => 'Parcela de julho']);
+        $expense->quotas()->create(['date_expected' => '2026-08-20', 'number' => 2, 'paid' => true, 'value_quota' => 300, 'payment_note' => 'Parcela de agosto']);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
+        $this->assertSame('Parcela de agosto', $entry['paymentNote']);
+    }
+
+    public function test_materialized_fixed_occurrence_exposes_its_payment_note(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'closing_day' => 15]);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 500,
+        ]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 500]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-09-05', 'number' => 1, 'paid' => true,
+            'value_quota' => 350, 'payment_note' => 'Débito automático',
+        ]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
+        $this->assertSame('Débito automático', $entry['paymentNote']);
+    }
+
+    public function test_projected_fixed_occurrence_without_a_quota_has_a_null_payment_note(): void
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste', 'closing_day' => 15]);
+        $group->members()->attach($payer->id);
+
+        $expense = $this->createExpense($group, $payer, [
+            'date_payment' => '2026-06-05',
+            'expense_type' => 'FIXED',
+            'total_value' => 500,
+        ]);
+        $expense->payers()->sync([$payer->id]);
+        $expense->quotas()->create(['date_expected' => '2026-06-05', 'number' => 1, 'paid' => false, 'value_quota' => 500]);
+
+        $response = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary");
+
+        $entry = collect($response->json('expenses'))->firstWhere('id', $expense->id);
+        $this->assertArrayHasKey('paymentNote', $entry);
+        $this->assertNull($entry['paymentNote']);
+    }
+
+    public function test_sealed_cycle_snapshot_keeps_the_payment_note_and_an_old_snapshot_without_it_still_loads(): void
+    {
+        // Junho fecha por data, está pago e o acerto está confirmado → sela na
+        // 1ª leitura, e o snapshot já nasce com `paymentNote` (plan.md §4, R8).
+        Carbon::setTestNow('2026-08-19');
+
+        $payer = User::factory()->create();
+        $participant = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$payer->id, $participant->id]);
+
+        $expense = $this->createExpense($group, $payer, ['date_payment' => '2026-06-10', 'total_value' => 200]);
+        $expense->payers()->sync([$payer->id, $participant->id]);
+        $expense->quotas()->create([
+            'date_expected' => '2026-06-10', 'number' => 1, 'paid' => true,
+            'value_quota' => 200, 'payment_note' => 'Pago em dinheiro',
+        ]);
+
+        SettlementConfirmation::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-06-01',
+            'cycle_end' => '2026-06-30',
+            'from_user_id' => $participant->id,
+            'to_user_id' => $payer->id,
+            'amount' => 100,
+            'proof_path' => 'comprovantes/'.$group->id.'/x.jpg',
+            'note' => 'Pix agendado',
+            'confirmed_at' => Carbon::now(),
+        ]);
+
+        $first = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=2");
+        $first->assertStatus(200)->assertJsonPath('cycle.settled', true);
+        $this->assertSame('Pago em dinheiro', collect($first->json('expenses'))->firstWhere('id', $expense->id)['paymentNote']);
+
+        // Simula um snapshot antigo (selado antes desta feature): sem `paymentNote`.
+        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)->where('cycle_start', '2026-06-01')->firstOrFail();
+        $snapshot->expenses = collect($snapshot->expenses)->map(function ($entry) {
+            unset($entry['paymentNote']);
+
+            return $entry;
+        })->all();
+        $snapshot->save();
+
+        $second = $this->withToken($this->tokenFor($payer))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=2");
+
+        $second->assertStatus(200)->assertJsonPath('cycle.settled', true);
+        $this->assertArrayNotHasKey('paymentNote', collect($second->json('expenses'))->firstWhere('id', $expense->id));
+        // `confirmedNote` é decorado ao vivo, mesmo com o ciclo servido do snapshot.
+        $this->assertSame('Pix agendado', $second->json('settlements.0.confirmedNote'));
     }
 
     public function test_future_cycle_without_expenses_returns_zero_totals(): void
