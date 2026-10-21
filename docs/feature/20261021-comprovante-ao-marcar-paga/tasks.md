@@ -9,7 +9,7 @@ IDs a partir de TASK-433: o maior em qualquer branch do repositório é TASK-432
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-433 | Criar as migrations `payment_note` (em `ex_quotas`) e `note` (em `ex_settlement_confirmations`) e liberá-las no `$fillable` dos dois modelos | backend | plan.md §1 | antes do deploy/migration em produção | Concluída |
-| TASK-434 | Aceitar `descricao` em `pay()` e apagá-la em `unpay()`, com testes PHPUnit | backend | plan.md §2 e §11 | nenhum | Pendente |
+| TASK-434 | Aceitar `descricao` em `pay()` e apagá-la em `unpay()`, com testes PHPUnit | backend | plan.md §2 e §11 | nenhum | Concluída |
 | TASK-435 | Aceitar `descricao` em `confirmSettlement()` e gravá-la em `note`, com testes PHPUnit | backend | plan.md §3 e §11 | nenhum | Pendente |
 | TASK-436 | Expor `paymentNote` nas despesas e `confirmedNote` nos acertos do summary, com testes PHPUnit | backend | plan.md §4 e §11 | nenhum | Pendente |
 | TASK-437 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §12 | nenhum | Pendente |
