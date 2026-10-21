@@ -397,6 +397,44 @@ class PersonalOverviewServiceTest extends TestCase
         $this->assertEquals(50.0, $items[0]['my_share']);
     }
 
+    public function test_an_ambiguous_name_in_an_old_snapshot_is_attributed_to_nobody(): void
+    {
+        // TASK-430 (achado S3): dois membros com o mesmo nome. Pelo nome não dá
+        // para saber qual dos dois participou, então nenhum dos dois recebe o
+        // item (falha fechado), em vez de "o último vence".
+        $homonym = User::factory()->create(['name' => 'Beto Devedor', 'email' => 'outro-beto@example.test']);
+        $group = $this->group('Grupo', $this->creditor, $this->debtor, $homonym);
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-10-01',
+            'cycle_end' => '2026-10-31',
+            'totals' => ['total' => 100.0, 'paid' => 100.0, 'pending' => 0.0],
+            'expenses' => [[
+                'id' => 9002,
+                'description' => 'Snapshot ambíguo',
+                'date' => '2026-10-05',
+                'value' => 100.0,
+                'paid' => true,
+                'payerName' => 'Ana Credora',
+                'participants' => ['Ana Credora', 'Beto Devedor'],
+                'isFixed' => false,
+                'userPayerId' => $this->creditor->id,
+                'userCreatorId' => $this->creditor->id,
+            ]],
+            'balances' => [],
+            'settlements' => [],
+            'settled_at' => now(),
+        ]);
+
+        $this->assertSame([], $this->onlyGroup($this->debtor)['my_items']);
+        $this->assertSame([], $this->onlyGroup($homonym)['my_items']);
+
+        // O credor é identificado pelo id (`userPayerId`), não pelo nome: segue vendo o item.
+        $creditorItems = $this->onlyGroup($this->creditor)['my_items'];
+        $this->assertCount(1, $creditorItems);
+        $this->assertSame('creditor', $creditorItems[0]['role']);
+    }
+
     // --- can_confirm por status ---------------------------------------------------
 
     public function test_can_confirm_is_true_in_an_active_manual_closing_and_false_in_the_open_current_cycle(): void

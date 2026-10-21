@@ -29,7 +29,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-427 | Reduzir o custo de `GET /me/overview`: `focus()` sem calcular ciclos anteriores à primeira despesa do grupo e snapshots lidos numa só consulta, sem mudar o resultado | backend | plan.md §1.2, §8 | nenhum | Concluída |
 | TASK-428 | Limitar o número de grupos do overview e sinalizar com `truncated` (decisão D9) | backend | plan.md §1.1, §8 | nenhum | Concluída |
 | TASK-429 | Aplicar throttle por usuário na rota `GET /me/overview` (decisão D10) | backend | plan.md §1.4 | nenhum | Concluída |
-| TASK-430 | Falhar fechado quando o nome de um participante de snapshot legado é ambíguo entre os membros do grupo | backend | plan.md §1.3 | nenhum | Pendente |
+| TASK-430 | Falhar fechado quando o nome de um participante de snapshot legado é ambíguo entre os membros do grupo | backend | plan.md §1.3 | nenhum | Concluída |
 | TASK-431 | Responder 401 quando o usuário do token deixa de existir entre o middleware e o controller | backend | plan.md §1.4 | nenhum | Pendente |
 | TASK-432 | Fechar as lacunas de teste do overview apontadas pela revisão: ex-membro, credor que saiu do grupo e vazamento de e-mail de grupo alheio | backend | plan.md §1.4, §6 | nenhum | Pendente |
 
