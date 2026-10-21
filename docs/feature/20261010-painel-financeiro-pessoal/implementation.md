@@ -36,6 +36,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-415 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-415`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §15 | `Payments.test.tsx` verde sem edição; o teste de reabertura pegou um caso real (reabrir durante a animação de saída reaproveitava o arquivo anterior). 3 mutações. Critério de grep corrigido |
 | TASK-416 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-416`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §16 | `cycles_ago` virou argumento obrigatório de `confirm`; omiti-lo derruba 2 testes do hook e 2 de `Payments`. 3 mutações |
 | TASK-417 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-417`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §17 | Tipos do contrato e fixtures tipadas sem cast (renomear um campo no tipo quebra o `tsc` na fixture). `reload` não volta ao spinner. 3 mutações |
+| TASK-418 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-418`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §18 | Lista só de acompanhamento, sem botão. 3 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -480,3 +481,26 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-417`, a partir de `75d1
 | M3 | `setLoading(true)` a cada carga (aplicada junto com a M2; falhas separáveis) | Derrubou "fetches again on reload and keeps the screen while it does" |
 
 **Verificação visual:** não se aplica (sem tela; a página é a TASK-421).
+
+## 18. Evidências da TASK-418 (`ReceivableList`, "Você recebe")
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-418`, a partir de `4b55224cb6`. Suíte antes: 357 testes.
+
+**O que mudou.** `src/components/ReceivableList.tsx` (novo): uma linha por devedor (`Card` em `Stack`, sem `Table`, como `PayableSettlementList`), com avatar, nome e valor em pt-BR em verde; embaixo, o chip "Comprovante enviado" (verde, link para `confirmed_proof_url` em nova aba, mesmo visual do `PayableSettlementList`) quando há `confirmed_at`, ou "Aguardando pagamento" (laranja) quando não há. Lista vazia: "Ninguém te deve neste ciclo.". Sem botão: quem age é o devedor. Mantém a ordem do servidor. O formatador de dinheiro é local, como em todos os componentes (`src/utils` não tem um compartilhado).
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `npx vitest run src/components/ReceivableList.test.tsx` sem o componente | Falhou (módulo inexistente) |
+| Componente | `ReceivableList.test.tsx` (5 testes): devedor, "R$ 120,00" e link do comprovante com `target="_blank"` e `rel="noreferrer"`; "Aguardando pagamento" e "R$ 1.234,50" sem link; ordem do servidor; lista vazia; nenhum botão | 5 passed |
+| Tipos | `npx tsc --noEmit` | Sem erro, sem `any` |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 49 passed`, `Tests 362 passed` (357 + 5 novos), 191,28 s |
+
+**Mutações** (cada uma revertida; `grep` confirmou `pt-BR`, `_blank` e `!== null` de volta):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Status invertido (`confirmed_at === null`) | Derrubou os 2 testes de status |
+| M2 | Link do comprovante sem `target="_blank"` | Derrubou o teste do comprovante (`Expected the element to have attribute`) |
+| M3 | Valor em `en-US` | Derrubou os 2 testes de valor ("R$ 120,00" e "R$ 1.234,50" não encontrados) |
+
+**Verificação visual:** ainda não há rota que mostre o componente (a página é a TASK-421 e a rota a TASK-422). A conferência no navegador, inclusive em largura de celular, fica para a TASK-423.
