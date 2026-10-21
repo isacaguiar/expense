@@ -840,6 +840,12 @@ const ExpenseManager: React.FC = () => {
                   Ver comprovante
                 </MuiLink>
               )}
+
+              {detailExpense.paid && detailExpense.paymentNote && (
+                <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+                  Descrição do pagamento: {detailExpense.paymentNote}
+                </Typography>
+              )}
             </Box>
           )}
         </DialogContent>
