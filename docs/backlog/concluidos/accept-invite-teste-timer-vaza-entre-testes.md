@@ -4,7 +4,7 @@ ID: 081
 Origem: docs/feature/concluidas/202610/20261010-filtros-credor-devedores-status-despesas/ (TASK-407; achado ao rodar a suíte completa do frontend); `frontend/src/pages/AcceptInvitePage.tsx:85` e `frontend/src/pages/AcceptInvitePage.test.tsx`
 Criado em: 2026-10-10
 Prioridade: MEDIA
-Status: Promovido para TASK-409 (docs/feature/20261021-estabilizar-teste-accept-invite/; a proposta 2, limpar o timer no componente, ficou fora dessa feature)
+Status: Promovido para TASK-409 (docs/feature/concluidas/202610/20261021-estabilizar-teste-accept-invite/; a proposta 2, limpar o timer no componente, ficou fora dessa feature)
 
 ## Descrição
 `AcceptInvitePage.tsx:85` agenda `setTimeout(() => navigate('/'), 2000)` depois do sucesso. O teste `submits email/token/password to POST /api/invitations/verify and shows a success message` (linha 96) termina assim que a mensagem de sucesso aparece e deixa esse timer pendurado. O teste seguinte, `shows the backend error message when the token is invalid or expired` (linha 118), termina com `expect(mockNavigate).not.toHaveBeenCalled()`. Se ele demora mais de 2s, o timer do teste anterior dispara dentro dele e a asserção falha com `expected "vi.fn()" to not be called at all, but actually been called 1 times`.
