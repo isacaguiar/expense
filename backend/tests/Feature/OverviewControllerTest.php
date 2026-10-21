@@ -131,8 +131,10 @@ class OverviewControllerTest extends TestCase
             ->assertJsonCount(1, 'groups')
             ->assertJsonPath('groups.0.group.name', 'Residencial')
             ->assertJsonPath('groups.0.cycle.cycles_ago', 1)
+            ->assertJsonPath('truncated', false)
             ->assertJsonStructure([
                 'user' => ['id', 'name'],
+                'truncated',
                 'groups' => ['*' => [
                     'group' => ['id', 'name'],
                     'cycle' => ['start', 'end', 'closes_at', 'status', 'settled', 'in_grace', 'cycles_ago'],
@@ -160,7 +162,7 @@ class OverviewControllerTest extends TestCase
 
         $this->overviewAs($lonely)
             ->assertOk()
-            ->assertExactJson(['user' => ['id' => $lonely->id, 'name' => 'Sem grupo'], 'groups' => []]);
+            ->assertExactJson(['user' => ['id' => $lonely->id, 'name' => 'Sem grupo'], 'groups' => [], 'truncated' => false]);
     }
 
     public function test_never_shows_the_group_of_someone_else(): void

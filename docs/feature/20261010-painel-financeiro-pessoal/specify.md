@@ -35,6 +35,7 @@ Nome ajustável no `plan.md`. Somente leitura, sob `jwt.auth`.
   - **os itens do ciclo de que participa**: despesa, data, valor da despesa, **parte dele** (valor por pessoa), credor, Paga ou Pendente, parcela (n de N), seu papel (`debtor` ou `creditor`) e `can_pay`/`can_unpay` (verdadeiros só quando ele é o credor);
   - `has_open` (há valor em aberto ou item pendente) e a contagem de itens pendentes.
 - Ordenação: grupos com pendência primeiro, depois por nome.
+- **Teto de 50 grupos** (decisão D9): quando o usuário participa de mais de 50, entram os 50 mais antigos (menor `id`), escolhidos antes de calcular, e a raiz traz `truncated: true`; nos demais casos, `truncated: false`. A ordenação acima vale dentro dos 50.
 - **Nunca grava**: não sela ciclo, não cria snapshot e não dispara notificação (diferente do ramo preguiçoso de `summary()`).
 - Todas as flags (`can_confirm`, `can_pay`, `can_unpay`) e o `cycles_ago` vêm calculados do servidor, com as mesmas regras de `confirmSettlement`, `pay` e `unpay`.
 - O contrato é único para o web e para o app Flutter.

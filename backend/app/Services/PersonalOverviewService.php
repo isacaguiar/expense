@@ -21,21 +21,35 @@ use Illuminate\Support\Str;
  */
 class PersonalOverviewService
 {
+    /**
+     * Teto de grupos calculados por chamada (decisão D9 do specify): o custo é
+     * linear no número de grupos, e ninguém controla em quantos grupos é
+     * colocado (item 083 do backlog). Com o teto, o pior caso fica fixo.
+     */
+    public const MAX_GROUPS = 50;
+
     public function __construct(private readonly CycleSummaryService $cycles) {}
 
     /**
-     * @return array{user: array{id: int, name: string}, groups: array<int, array<string, mixed>>}
+     * @return array{user: array{id: int, name: string}, groups: array<int, array<string, mixed>>, truncated: bool}
      */
     public function forUser(User $user): array
     {
         // O escopo é a própria consulta: só grupos não deletados em que o
-        // usuário é membro (mesmo filtro de GroupController::index).
+        // usuário é membro (mesmo filtro de GroupController::index). O teto é
+        // aplicado aqui, ANTES de calcular, ou não limitaria custo nenhum: ficam
+        // os grupos mais antigos (menor id), e grupos criados depois para encher
+        // a lista são os que saem. A linha a mais só diz se houve corte.
         $groups = Group::where('deleted', 0)
             ->whereHas('members', fn ($query) => $query->where('user_id', $user->id))
+            ->orderBy('id')
+            ->limit(self::MAX_GROUPS + 1)
             ->with('members')
             ->get();
 
-        $items = $groups->map(fn (Group $group) => $this->forGroup($group, $user))->all();
+        $truncated = $groups->count() > self::MAX_GROUPS;
+
+        $items = $groups->take(self::MAX_GROUPS)->map(fn (Group $group) => $this->forGroup($group, $user))->all();
 
         // Com algo em aberto primeiro, depois por nome (sem acento, sem caixa).
         usort($items, fn (array $a, array $b) => ($b['has_open'] <=> $a['has_open'])
@@ -44,6 +58,7 @@ class PersonalOverviewService
         return [
             'user' => ['id' => $user->id, 'name' => $user->name],
             'groups' => $items,
+            'truncated' => $truncated,
         ];
     }
 

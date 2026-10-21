@@ -51,7 +51,8 @@ O plan de `20261006-relatorios-acompanhamento-fechamento` prevê extrair só `su
 ### 1.1 Rota e resposta
 
 - `routes/api.php`, junto de `/me` (`:35`), dentro de `jwt.auth`: `Route::get('/me/overview', [OverviewController::class, 'show']);`
-- Raiz: `{ "user": {id,name}, "groups": [ ... ] }`. O `user` evita uma chamada extra a `/api/me` só para saber quem é o usuário (o `PayableSettlementList` precisa do id).
+- Raiz: `{ "user": {id,name}, "groups": [ ... ], "truncated": false }`. O `user` evita uma chamada extra a `/api/me` só para saber quem é o usuário (o `PayableSettlementList` precisa do id).
+- `truncated` (aditivo, TASK-428, decisão D9): `PersonalOverviewService::MAX_GROUPS = 50`. A consulta de grupos ordena por `id` e lê 51 linhas (`limit`); calcula só as 50 primeiras e `truncated` é `true` quando a 51ª existe. O corte é na consulta, antes de `focus`/`view`, para limitar o custo; a ordenação por pendência e nome vale dentro dos 50. O cliente mostra um aviso quando `truncated` é `true` (TASK-421).
 
 ```json
 {
@@ -73,7 +74,8 @@ O plan de `20261006-relatorios-acompanhamento-fechamento` prevê extrair só `su
                    "can_pay": false, "can_unpay": false }],
     "pending_items_count": 3,
     "has_open": true
-  }]
+  }],
+  "truncated": false
 }
 ```
 

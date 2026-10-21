@@ -28,6 +28,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-413 | Concluída (commit `23128fdaba`, merge `bd948dd167` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §7 | Primeira superfície HTTP da feature; segurança provada por 2 mutações (escopo de membro e posição da rota fora do `jwt.auth`) |
 | TASK-414 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-414`) | 2026-10-14 | Claude (IA), com aprovação do usuário; revisão pelo agent `security-reviewer` | Ver §8 | **Aprovado com ressalvas.** Sem IDOR nem vazamento no diff; gerou as TASK-427 a 432 e um achado crítico **fora do diff** (X1, reproduzido) que exige decisão do usuário |
 | TASK-427 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-427`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §9 | Grupo vazio caiu de 56 para 8 consultas e 20 grupos vazios de 1.082 para 122 (2,8 s → ~0,4 s); 5 mutações, cada uma derrubando o teste esperado |
+| TASK-428 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-428`) | 2026-10-21 | Claude (IA), com aprovação do usuário (D9 reconfirmada depois de discutir alternativas, §10) | Ver §10 | Teto de 50 grupos com `truncated`, cortado antes de calcular: 60 grupos custam o mesmo que 50 (302 consultas). 3 testes de contrato da raiz atualizados para o campo novo |
 
 ## 3. Evidências da TASK-409
 
@@ -255,3 +256,31 @@ Por grupo vazio sobram 6 consultas (a primeira data, o snapshot do ciclo vigente
 | M5 | Voltar a uma consulta de snapshot por ciclo | Derrubou o teste de consulta única |
 
 **Efeito colateral a registrar.** O caso comum (grupo com pendência recente) ganhou 1 consulta (18 → 19), porque a primeira data precisa de uma consulta nova. É o preço de tornar barato o caso caro; o teto de 23 protege contra regressão dele.
+
+## 10. Evidências da TASK-428 (teto de grupos, decisão D9)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-428`, a partir de `5e63e34fb5`. Suíte antes: 510 testes.
+
+**A decisão, reconfirmada.** Antes de começar, o usuário pediu uma explicação mais simples do motivo do teto e perguntou se não seria melhor carregar os dados por grupo. Comparamos três formas: (A) uma chamada com tudo, (B) lista primeiro e detalhe ao abrir o cartão, (C) uma chamada por grupo em paralelo. O custo está em descobrir se há algo em aberto em cada grupo, o que o painel precisa de todos os grupos para mostrar o alerta e a ordem; os detalhes saem do mesmo cálculo sem consulta extra. A B esconderia o que está em aberto, e a C faria o mesmo trabalho em N chamadas, estourando o throttle de 30/min (D10) com mais de 30 grupos e pesando na rede do celular. O usuário manteve a A com o teto. Se um dia houver necessidade, "carregar mais" pode usar o `truncated` sem mudar o contrato.
+
+**O que mudou.** `PersonalOverviewService::MAX_GROUPS = 50`. A consulta de grupos ganhou `orderBy('id')` e `limit(51)`; só os 50 primeiros são calculados, e a raiz ganhou `truncated` (`true` quando a 51ª linha existe). A ordenação por pendência e nome continua, dentro dos 50. `specify.md` §2.1 e `plan.md` §1.1 atualizados; a TASK-421 ganhou o critério do aviso na tela.
+
+**Testes existentes editados (contrato da raiz, campo aditivo):** `PersonalOverviewServiceTest::test_the_root_identifies_the_user_and_each_group_has_the_documented_shape` (chaves da raiz), `OverviewControllerTest::test_returns_the_documented_structure` (estrutura e `truncated` falso) e `OverviewControllerTest::test_a_user_without_groups_gets_an_empty_list` (`assertExactJson`). Os três documentam o formato exato e por isso mudam com qualquer campo novo.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `php artisan test --filter="PersonalOverviewServiceTest\|OverviewControllerTest"` sem a implementação | 7 falhas: os 4 testes novos e os 3 de contrato |
+| 50 grupos | `test_fifty_groups_all_come_back_and_are_not_truncated` | 50 grupos, `truncated` falso |
+| 51 grupos | `test_the_fifty_first_group_is_cut_and_the_result_is_truncated` | 50 grupos, `truncated` verdadeiro, o de maior id fora e os 50 mais antigos dentro |
+| Corte antes do cálculo | `test_the_cut_happens_before_computing_so_extra_groups_cost_nothing` | 50 grupos e 60 grupos custam o mesmo número de consultas (302) |
+| Ordem dentro dos 50 | `test_groups_with_something_open_still_come_first_within_the_fifty` | O 50º grupo, com pendência, vem primeiro; o 51º não aparece |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 514 passed (3248 assertions)`, 75,67 s (510 + 4 novos) |
+
+**Mutações** (cada uma revertida; o `git diff` final do serviço só tem o teto):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | `MAX_GROUPS = 51` | Derrubou 3: 51 grupos (`actual size 51 matches expected size 50`), corte antes do cálculo (308 ≠ 302) e ordem dentro dos 50 (`truncated` falso) |
+| M2 | Calcular todos e cortar depois (`map(...)->take(50)` sem `limit`) | Derrubou só o de custo: 362 consultas com 60 grupos contra 302 com 50. Os demais passam, e é por isso que o teste de custo existe |
+| M3 | `orderByDesc('id')` (ficar com os mais novos) | Derrubou 2: o de 51 grupos (o mais novo apareceu) e o da ordem ("Z cortado" apareceu) |
