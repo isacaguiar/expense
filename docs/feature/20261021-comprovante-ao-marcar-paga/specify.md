@@ -34,7 +34,7 @@ Busca em `backend/app`, `backend/routes` e `frontend/src` (sem testes). O único
 | 3 | "Enviar comprovante" (devedor) em Valores a pagar | `frontend/src/pages/Payments.tsx:367-401`; endpoint `confirmSettlement` | Não (foto obrigatória) | Ganha o campo de descrição; foto segue obrigatória |
 | 4 | Chamada direta à API | `POST /api/expenses/{id}/pay` (`backend/routes/api.php:60`); `comprovante` é `nullable` (`ExpenseController.php:1046`) | **Sim, qualquer cliente HTTP** | **Mantido permissivo** (D1) |
 | 5 | Parcela retroativa que nasce quitada | `ExpenseController::store`, `:566-585` (`born_paid`, `paid_by = user_payer_id`) | Sim, automático na criação | **Fora de escopo** |
-| 6 | Reenvio de `pay()` numa quota já paga | `pay()` aceita (`$wasPaid`), mas a UI não expõe: `canPay` exige `!exp.paid` (`usePaymentActions.ts:53-56`) | Só via API | Sem mudança; backlog |
+| 6 | Reenvio de `pay()` numa quota já paga | `pay()` aceita (`$wasPaid`), mas a UI não expõe: `canPay` exige `!exp.paid` (`usePaymentActions.ts:60-61`) | Só via API | Sem mudança; backlog |
 
 Conclusão: na interface web, só o item 1 quita sem popup. Nenhum outro componente (`ExpenseView`, `CycleDetailPanel`, `Dashboard`, `Reports`) chama `/pay`. O item 4 é a única brecha restante e é deliberada.
 
