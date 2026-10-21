@@ -1167,7 +1167,8 @@ class ExpenseController extends Controller
      * líquido que deve a `to_user_id` num ciclo — conceito distinto de
      * `pay()`/`unpay()`, que confirmam uma despesa específica do lado do
      * credor. O comprovante aqui é obrigatório (é o conteúdo da ação, não
-     * um anexo opcional como em `pay()`).
+     * um anexo opcional como em `pay()`). A descrição (`descricao`, até 500
+     * caracteres) é opcional e vai para `note`; reenviar substitui foto e nota.
      *
      * Desde a feature `20260902-pagamento-ciclo-fechado`, o acerto do devedor
      * só é aceito quando a competência-alvo está **fechada** (`closed` por data
@@ -1187,6 +1188,8 @@ class ExpenseController extends Controller
         $data = $request->validate([
             'to_user_id' => 'required|integer|exists:ex_users,id',
             'comprovante' => 'required|image|max:5120',
+            // Opcional; trim e "" → null vêm dos middlewares globais.
+            'descricao' => 'nullable|string|max:500',
             'cycles_ago' => 'nullable|integer|min:0',
         ]);
 
@@ -1232,6 +1235,9 @@ class ExpenseController extends Controller
             'cycle_end' => $cycle['end']->toDateString(),
             'amount' => $settlement['amount'],
             'proof_path' => $path,
+            // Reenvio substitui o comprovante inteiro: sem `descricao` a nota
+            // anterior é limpa, igual à foto que é trocada.
+            'note' => $data['descricao'] ?? null,
             'confirmed_at' => Carbon::now(),
         ]);
 

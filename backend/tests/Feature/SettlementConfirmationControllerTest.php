@@ -542,4 +542,157 @@ class SettlementConfirmationControllerTest extends TestCase
             ->withArgs(fn ($message) => str_contains($message, 'falha'))
             ->atLeast()->once();
     }
+
+    // --- Descrição do acerto (docs/feature/20261021-comprovante-ao-marcar-paga) ---
+
+    /**
+     * Grupo com um acerto real do devedor para o credor, competência de
+     * agosto/2026 fechada e relógio fixado dentro dela.
+     *
+     * @return array{0: User, 1: User, 2: Group}
+     */
+    private function settlementFixture(): array
+    {
+        Storage::fake('local');
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $debtor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$creditor->id, $debtor->id]);
+
+        $this->createSettlementBetween($group, $creditor, $debtor, 200);
+
+        return [$debtor, $creditor, $group];
+    }
+
+    private function confirmationFor(Group $group, User $debtor, User $creditor): ?SettlementConfirmation
+    {
+        return SettlementConfirmation::where('group_id', $group->id)
+            ->where('from_user_id', $debtor->id)
+            ->where('to_user_id', $creditor->id)
+            ->first();
+    }
+
+    public function test_confirm_stores_the_descricao_in_note(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'descricao' => 'Pix agendado para sexta',
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('note', 'Pix agendado para sexta');
+
+        $this->assertSame('Pix agendado para sexta', $this->confirmationFor($group, $debtor, $creditor)->note);
+    }
+
+    public function test_confirm_without_descricao_stores_a_null_note(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('note', null);
+
+        $this->assertNull($this->confirmationFor($group, $debtor, $creditor)->note);
+    }
+
+    public function test_resending_without_descricao_clears_the_previous_note(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+        $token = $this->tokenFor($debtor);
+
+        $this->withToken($token)
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('primeiro.jpg'),
+            ])->assertStatus(200);
+
+        // Nota gravada direto no banco: o teste não depende de a 1ª chamada
+        // já persistir a descrição para ter o que limpar.
+        $this->confirmationFor($group, $debtor, $creditor)->update(['note' => 'Primeira descrição']);
+
+        $this->withToken($token)
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('segundo.jpg'),
+            ])->assertStatus(200);
+
+        $this->assertNull($this->confirmationFor($group, $debtor, $creditor)->note);
+    }
+
+    public function test_resending_with_another_descricao_replaces_the_note(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+        $token = $this->tokenFor($debtor);
+
+        $this->withToken($token)
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('primeiro.jpg'),
+                'descricao' => 'Primeira descrição',
+            ])->assertStatus(200);
+
+        $this->withToken($token)
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('segundo.jpg'),
+                'descricao' => 'Segunda descrição',
+            ])->assertStatus(200);
+
+        $this->assertSame('Segunda descrição', $this->confirmationFor($group, $debtor, $creditor)->note);
+    }
+
+    public function test_confirm_rejects_descricao_longer_than_500_characters(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'descricao' => str_repeat('a', 501),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('descricao');
+
+        $this->assertNull($this->confirmationFor($group, $debtor, $creditor));
+    }
+
+    public function test_confirm_still_requires_the_photo_even_with_descricao(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'descricao' => 'Só texto não basta para o devedor',
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('comprovante');
+
+        $this->assertNull($this->confirmationFor($group, $debtor, $creditor));
+    }
+
+    public function test_confirm_stores_a_whitespace_only_descricao_as_null(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'descricao' => '    ',
+            ])->assertStatus(200);
+
+        $this->assertNull($this->confirmationFor($group, $debtor, $creditor)->note);
+    }
 }
