@@ -200,4 +200,13 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-414`, criada da branch d
 | Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
 | **Suíte inteira** | `php artisan test --no-ansi` (depois de `docker start mysql-painel-test`) | `Tests: 504 passed (3200 assertions)`, 52,59 s: o mesmo da TASK-413 (nenhum código mudou) |
 
-**Próximo passo.** Decidir D9, D10 e D11 (`specify.md` §5) e a condução do X1/X2 (item de backlog ALTA já previsto na TASK-425; a Triagem do BFF o escala para feature por ser autorização e dado sensível). As TASK-427 a 432 saem desta revisão.
+### Decisões do usuário depois da revisão (2026-10-21)
+
+| Item | Decisão | Efeito |
+|---|---|---|
+| D9 | **B, com desenho corrigido** | TASK-428 mantida. Ao responder a dúvida do usuário sobre o que cresce, reli o critério original e achei um erro meu: ordenar por pendência *antes* do corte exigia calcular todos os grupos, então o teto não limitava o custo. O corte passou a ser na consulta, antes de calcular (50 grupos de menor `ex_groups.id`, 51ª linha só para sinalizar `truncated`). Teste de orçamento com 60 grupos prova a posição do corte |
+| D10 | **B** (30/min por usuário na rota) | TASK-429 mantida |
+| D11 | **A** (manter o contato do credor) | Minimização (S6) fica só no backlog da TASK-425 |
+| X1/X2 | **Backlog, tratar depois do Painel** | Sem Triagem agora e sem task nesta feature. A TASK-425 registra como ALTA. **O dado segue exposto em produção até esse tratamento**, ciente o usuário |
+
+**Próximo passo.** Executar TASK-427 → 432 (backend) e depois o frontend, conforme a ordem de `tasks.md`.
