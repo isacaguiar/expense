@@ -32,6 +32,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-429 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-429`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §11 | Um teste derrubou a premissa do critério: o Laravel executa o throttle **antes** do `jwt.auth`. O limiter passou a ignorar chamadas sem usuário válido. 4 mutações |
 | TASK-430 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-430`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §12 | Nome ambíguo em snapshot antigo não é atribuído a ninguém; o teste do nome único passou sem edição. 3 mutações |
 | TASK-431 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-431`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §13 | `abort_unless($user, 401)` no controller; sem ele, `TypeError` (500). 2 mutações |
+| TASK-432 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-432`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §14 | Só testes: 3 novos e 1 editado. Antes deles, um escopo "membro **ou** participante" passava nos 38 testes do overview |
 
 ## 3. Evidências da TASK-409
 
@@ -364,3 +365,32 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-431`, a partir de `81be0
 | M2 | `abort_unless($user, 403)` | `Failed asserting that 403 is identical to 401` |
 
 O caso pelo HTTP (token de uma conta removida, do começo ao fim da requisição) é a lacuna (d) da TASK-432.
+
+## 14. Evidências da TASK-432 (lacunas de teste da revisão, achado S7)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-432`, a partir de `edf3755ac7`. Suíte antes: 522 testes. **Nenhum código de produção mudou**: só testes.
+
+**A lacuna, provada antes de escrever os testes.** Troquei o escopo de `forUser` por "membro **ou** participante de alguma despesa do grupo" (`orWhereHas('expenses.payers', …)`) e rodei `PersonalOverviewServiceTest` e `OverviewControllerTest`: **38 de 38 passaram**, inclusive `test_never_shows_the_group_of_someone_else`. Ou seja, nada travava a diferença entre ser membro e só aparecer numa despesa.
+
+| Lacuna | Teste | O que prova |
+|---|---|---|
+| (a) ex-membro | `PersonalOverviewServiceTest::test_an_ex_member_who_still_appears_in_an_expense_does_not_see_the_group` (novo) | Quem saiu do grupo, mas segue em `payers` de uma despesa, não vê o grupo |
+| (b) credor que saiu | `PersonalOverviewServiceTest::test_a_creditor_who_left_the_group_shows_as_unknown_and_without_contact` (novo) | O acerto continua (R$ 50,00), mas `to_user` vem `{id, "Desconhecido", email null, pix null, avatar null}` |
+| (c) e-mail alheio | `OverviewControllerTest::test_never_shows_the_group_of_someone_else` (**editado**) | O usuário passou a constar em `payers` da despesa do grupo alheio sem ser membro; o teste agora falha se o escopo aceitar participação |
+| (d) conta removida | `OverviewControllerTest::test_a_token_of_a_removed_account_gets_401` (novo) | Token válido e no prazo de uma conta apagada recebe 401 pelo HTTP |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 525 passed (3387 assertions)`, 79,22 s (522 + 3 novos) |
+
+**Mutações** (uma por proteção, cada uma revertida; `git diff` final só tem os dois arquivos de teste):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| Ma/Mc | Escopo "membro **ou** participante" em `forUser` | Derrubou (a) (`actual size 2 matches expected size 1`) e (c) (`response count matched the expected 1`). (b) e (d) passaram: protegem outra coisa |
+| Mb | `person()` buscar o credor fora dos membros (`?? User::find($userId)`) | Derrubou só (b): nome e contato do credor que saiu apareceram |
+| Md1 | Tirar só o `jwt.auth` da rota (`withoutMiddleware`) | (d) **continuou 401**: a checagem da TASK-431 no controller cobre |
+| Md2 | Tirar o `jwt.auth` **e** a checagem do controller | Derrubou (d): `500` em vez de `401` |
+| Md3 | Manter o `jwt.auth` e tirar só a checagem do controller | (d) continuou 401: o `jwt.auth` cobre sozinho |
+
+As duas camadas da (d) se cobrem: só remover as duas gera o 500. É a defesa em profundidade que a TASK-431 acrescentou; o teste da TASK-431 (controller chamado sem usuário) é o que trava a camada do controller isoladamente.
+
+**Fim do lote de backend da revisão.** TASK-427 a 432 concluídas. As mudanças que tocaram rota, middleware e controller depois da revisão da TASK-414 foram a TASK-429 (`RouteServiceProvider` e `routes/api.php`) e a TASK-431 (`OverviewController`). Elas cabem na revisão final da TASK-424.
