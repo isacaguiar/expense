@@ -23,7 +23,7 @@ IDs a partir de TASK-433: o maior em qualquer branch do repositório é TASK-432
 | TASK-445 | Registrar em `docs/backlog/` o item "anexar ou editar comprovante e descrição depois de paga" | doc | plan.md §10 | nenhum | Pendente |
 | TASK-446 | Rodar o checklist pré-PR completo na branch da feature integrada | backend | plan.md §11 e §13 | nenhum | Pendente |
 | TASK-447 | Validar o fluxo localmente na stack isolada e registrar o resultado | frontend | plan.md §13 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
-| TASK-448 | Gravar a `descricao` "0" em `pay()` (achado do `security-reviewer` na TASK-437) e cobrir `descricao` em formato de array | backend | plan.md §2, §11 e §12 | nenhum | Pendente |
+| TASK-448 | Gravar a `descricao` "0" em `pay()` (achado do `security-reviewer` na TASK-437) e cobrir `descricao` em formato de array | backend | plan.md §2, §11 e §12 | nenhum | Concluída |
 
 Notas de composição:
 

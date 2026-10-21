@@ -1074,7 +1074,9 @@ class ExpenseController extends Controller
             $update['payment_proof_path'] = ProofStorage::store($request->file('comprovante'), $expense->group_id);
         }
 
-        if (! empty($data['descricao'])) {
+        // `filled()`, não `empty()`: `empty("0")` é verdadeiro e descartaria a
+        // descrição "0" (válida) sem erro.
+        if (filled($data['descricao'] ?? null)) {
             $update['payment_note'] = $data['descricao'];
         }
 
