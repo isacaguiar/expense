@@ -1029,10 +1029,15 @@ class ExpenseController extends Controller
      * Ao quitar a última pendência da competência, sela o ciclo
      * (`sealCycleIfSettled`): a partir daí ele vira histórico imutável.
      *
-     * Comprovante (`comprovante`) é opcional no contrato da API: o fluxo
-     * antigo de `ExpenseManager` chama este endpoint sem corpo e precisa
-     * continuar funcionando; a Tela de Pagamentos é quem exige a foto,
-     * do lado do cliente, antes de chamar isto.
+     * Comprovante (`comprovante`, foto) e descrição (`descricao`, texto livre
+     * de até 500 caracteres) são ambos opcionais no contrato da API. A regra
+     * "foto OU descrição" é da interface web (`PaymentProofDialog`), que não
+     * deixa confirmar sem um dos dois; o servidor segue permissivo porque
+     * exigir isto aqui seria mudança breaking de contrato em produção
+     * (`00-constitution.md` §4.1) — decisão D1 em
+     * `docs/feature/20261021-comprovante-ao-marcar-paga/specify.md` §3.3.
+     * Um novo `pay()` sem `descricao` não apaga a nota que já existe; só
+     * `unpay()` limpa.
      */
     public function pay($expenseId, Request $request)
     {
@@ -1044,6 +1049,9 @@ class ExpenseController extends Controller
 
         $data = $request->validate([
             'comprovante' => 'nullable|image|max:5120',
+            // Trim e "" → null vêm dos middlewares globais (TrimStrings e
+            // ConvertEmptyStringsToNull, `Http/Kernel.php`); `max` conta caracteres.
+            'descricao' => 'nullable|string|max:500',
             'cycles_ago' => 'nullable|integer|min:0',
         ]);
 
@@ -1064,6 +1072,10 @@ class ExpenseController extends Controller
 
         if (! empty($data['comprovante'])) {
             $update['payment_proof_path'] = ProofStorage::store($request->file('comprovante'), $expense->group_id);
+        }
+
+        if (! empty($data['descricao'])) {
+            $update['payment_note'] = $data['descricao'];
         }
 
         $wasPaid = (bool) $quota->paid;
@@ -1108,8 +1120,9 @@ class ExpenseController extends Controller
      * Se o `unpay` quebra a quitação total de um ciclo já selado, dessela
      * (`unsealIfBroken`): o ciclo volta a ser recalculado ao vivo.
      *
-     * Se a quota tinha comprovante, apaga o arquivo do disco — um pagamento
-     * desfeito não deve manter "prova" de um estado que não vale mais.
+     * Se a quota tinha comprovante, apaga o arquivo do disco, e a descrição
+     * (`payment_note`) é limpa junto — um pagamento desfeito não deve manter
+     * "prova" nem observação de um estado que não vale mais.
      */
     public function unpay($expenseId, Request $request)
     {
@@ -1141,6 +1154,7 @@ class ExpenseController extends Controller
             'paid_at' => null,
             'paid_by' => null,
             'payment_proof_path' => null,
+            'payment_note' => null,
         ]);
 
         $this->unsealIfBroken($group, $group->id, $cycle['start'], $cycle['end']);
