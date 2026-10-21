@@ -35,6 +35,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-432 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-432`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §14 | Só testes: 3 novos e 1 editado. Antes deles, um escopo "membro **ou** participante" passava nos 38 testes do overview |
 | TASK-415 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-415`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §15 | `Payments.test.tsx` verde sem edição; o teste de reabertura pegou um caso real (reabrir durante a animação de saída reaproveitava o arquivo anterior). 3 mutações. Critério de grep corrigido |
 | TASK-416 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-416`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §16 | `cycles_ago` virou argumento obrigatório de `confirm`; omiti-lo derruba 2 testes do hook e 2 de `Payments`. 3 mutações |
+| TASK-417 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-417`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §17 | Tipos do contrato e fixtures tipadas sem cast (renomear um campo no tipo quebra o `tsc` na fixture). `reload` não volta ao spinner. 3 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -453,3 +454,29 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-416`, a partir de `4d47
 | M3 | O hook não limpar o erro ao tentar de novo (aplicada junto com a M2; falhas separáveis) | Derrubou "clears the error on demand and before a new attempt" |
 
 **Verificação visual:** não se aplica (só lógica de envio; a marcação da tela não mudou). O fluxo completo no navegador fica para a TASK-423.
+
+## 17. Evidências da TASK-417 (`types/overview.ts` e `useMyOverview`)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-417`, a partir de `75d1b75039`. Suíte antes: 353 testes.
+
+**O que mudou.**
+- `src/types/overview.ts` (novo): `MyOverview`, `OverviewGroup`, `OverviewCycle`, `OverviewTotals`, `OverviewPayable`, `OverviewReceivable`, `OverviewCreditor`, `OverviewDebtor`, `OverviewItem`, em snake_case, como o `plan.md` §1.1 e o `PersonalOverviewService`. Os nulos seguem o backend: `email`/`pix` do credor nulos quando ele saiu do grupo (TASK-432 b); `creditor.id`/`name` do item nulos só em snapshot antigo; `installment` nulo fora de Parcelada. `status` reaproveita `CycleStatus` de `useGroupCycle`. Inclui o `truncated` da TASK-428.
+- `src/types/overview.fixtures.ts` (novo): `overviewGroupFixture()` e `myOverviewFixture()`, tipadas **sem cast**, para os testes das TASK-418 a 421 (o mesmo exemplo do `plan.md` §1.1). Não tem `.test.` no nome, então o Vitest não o roda, e nenhum código de produção o importa.
+- `src/hooks/useMyOverview.ts` (novo): `{ data, loading, error, reload }`. `GET /api/me/overview` com `Authorization: Bearer`; 401 → `navigate('/', { replace: true })`, como `useGroupCycleHistory`; outro erro → "Falha ao carregar o painel.". **Escolha de desenho:** `loading` vale só para a primeira carga; um `reload` (depois de cada ação no painel) mantém os cartões na tela até os dados novos chegarem, em vez de piscar o spinner. Resposta de um `reload` mais velho é descartada.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `npx vitest run src/hooks/useMyOverview.test.tsx` sem o hook | Falhou (módulo inexistente) |
+| Hook | `useMyOverview.test.tsx` (4 testes): URL e cabeçalho `Bearer`, `loading` e `data`; 401 navega para `/` com `replace`; outro erro dá a mensagem; `reload` chama de novo, sem voltar a `loading`, e troca os dados | 4 passed |
+| Fixture tipada | `npx tsc --noEmit` | Sem erro, sem cast e sem `any` |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 48 passed`, `Tests 357 passed` (353 + 4 novos), 167,08 s |
+
+**Mutações** (revertidas):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Renomear `in_grace` para `inGrace` no tipo | `tsc` falhou na fixture: `TS2561 … 'in_grace' does not exist in type 'OverviewCycle'. Did you mean to write 'inGrace'?` |
+| M2 | Tirar o desvio do 401 | Derrubou "sends the user back to the login on 401" |
+| M3 | `setLoading(true)` a cada carga (aplicada junto com a M2; falhas separáveis) | Derrubou "fetches again on reload and keeps the screen while it does" |
+
+**Verificação visual:** não se aplica (sem tela; a página é a TASK-421).
