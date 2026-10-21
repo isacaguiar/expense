@@ -127,6 +127,17 @@ class OverviewControllerTest extends TestCase
         }
     }
 
+    public function test_a_token_of_a_removed_account_gets_401(): void
+    {
+        // TASK-432, lacuna d: o token continua assinado e no prazo, mas a conta não existe mais.
+        $gone = User::factory()->create();
+        $token = auth('api')->login($gone);
+        auth('api')->forgetUser();
+        $gone->delete();
+
+        $this->withToken($token)->getJson('/api/me/overview')->assertStatus(401);
+    }
+
     public function test_the_route_sits_behind_the_jwt_auth_middleware(): void
     {
         $route = collect(Route::getRoutes()->getRoutes())
@@ -249,7 +260,10 @@ class OverviewControllerTest extends TestCase
         $stranger = User::factory()->create(['name' => 'Estranho Alheio', 'email' => 'estranho@example.test']);
         $other = User::factory()->create(['name' => 'Outro Alheio', 'email' => 'outro@example.test']);
         $foreign = $this->group('Grupo alheio', $stranger, $other);
-        $this->septemberExpense($foreign, $stranger, [$other], 500);
+        // O usuário consta como participante de uma despesa do grupo alheio sem
+        // ser membro dele (TASK-432, lacuna c): só o escopo por **membro** o
+        // esconde. Sem isso, um escopo por participação passaria neste teste.
+        $this->septemberExpense($foreign, $stranger, [$other, $this->debtor], 500);
 
         $response = $this->overviewAs($this->debtor)->assertOk();
 

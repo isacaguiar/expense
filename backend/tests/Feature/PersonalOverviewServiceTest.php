@@ -543,6 +543,38 @@ class PersonalOverviewServiceTest extends TestCase
         $this->assertNotContains($notMine->id, array_map(fn (array $item) => $item['group']['id'], $groups));
     }
 
+    // --- quem saiu do grupo (TASK-432, lacunas a e b da revisão) ----------------
+
+    public function test_an_ex_member_who_still_appears_in_an_expense_does_not_see_the_group(): void
+    {
+        $this->pairGroup('Meu grupo');
+        $left = $this->pairGroup('Grupo que deixei');
+        $this->expense($left, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        // Saiu do grupo, mas segue em `payers` da despesa de setembro.
+        $left->members()->detach($this->debtor->id);
+
+        $names = array_map(fn (array $item) => $item['group']['name'], $this->service()->forUser($this->debtor)['groups']);
+
+        $this->assertSame(['Meu grupo'], $names);
+    }
+
+    public function test_a_creditor_who_left_the_group_shows_as_unknown_and_without_contact(): void
+    {
+        $group = $this->pairGroup();
+        $this->expense($group, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        // O credor saiu: o acerto continua existindo, mas o contato dele não é
+        // mais de um membro, então não sai (nem nome, nem e-mail, nem Pix).
+        $group->members()->detach($this->creditor->id);
+
+        $row = $this->onlyGroup($this->debtor)['to_pay'][0];
+
+        $this->assertSame(
+            ['id' => $this->creditor->id, 'name' => 'Desconhecido', 'email' => null, 'pix' => null, 'avatar_url' => null],
+            $row['to_user']
+        );
+        $this->assertEquals(50.0, $row['amount']);
+    }
+
     // --- orçamento de consultas (TASK-427, achado S1 da revisão de segurança) ----
     // Antes da otimização: 1 grupo vazio = 56 consultas; 20 grupos vazios = 1.082;
     // 1 grupo com pendência recente = 18. Os tetos abaixo são o valor medido
