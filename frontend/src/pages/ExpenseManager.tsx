@@ -129,7 +129,7 @@ const ExpenseManager: React.FC = () => {
   }, []);
 
   // Busca e filtros — client-side, sobre os dados da competência já carregada
-  // (docs/feature/20261010-filtros-credor-devedores-status-despesas/plan.md §2).
+  // (docs/feature/concluidas/202610/20261010-filtros-credor-devedores-status-despesas/plan.md §2).
   const [search, setSearch] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');

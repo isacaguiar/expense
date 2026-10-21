@@ -1,7 +1,7 @@
 # Teste do AcceptInvitePage falha de vez em quando: o redirecionamento de 2s vaza para o teste seguinte
 
 ID: 081
-Origem: docs/feature/20261010-filtros-credor-devedores-status-despesas/ (TASK-407; achado ao rodar a suíte completa do frontend); `frontend/src/pages/AcceptInvitePage.tsx:85` e `frontend/src/pages/AcceptInvitePage.test.tsx`
+Origem: docs/feature/concluidas/202610/20261010-filtros-credor-devedores-status-despesas/ (TASK-407; achado ao rodar a suíte completa do frontend); `frontend/src/pages/AcceptInvitePage.tsx:85` e `frontend/src/pages/AcceptInvitePage.test.tsx`
 Criado em: 2026-10-10
 Prioridade: MEDIA
 Status: Aberto
