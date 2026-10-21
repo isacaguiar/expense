@@ -85,7 +85,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 078 | [corrida-entre-pagamento-e-edicao-de-despesa.md](corrida-entre-pagamento-e-edicao-de-despesa.md) | Corrida entre o pagamento e a edição de uma despesa pode apagar a quota paga. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
 | 079 | [limites-de-entrada-do-rateio-gerado-pelo-servidor.md](limites-de-entrada-do-rateio-gerado-pelo-servidor.md) | Limites de entrada que o rateio gerado pelo servidor ainda não impõe: data mínima, `total_value`, tetos de `quotas` e `installments` | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | BAIXA | Aberto |
 | 080 | [store-despesa-devolve-mensagem-da-excecao-no-500.md](store-despesa-devolve-mensagem-da-excecao-no-500.md) | `POST /api/expenses` devolve a mensagem da exceção (`details`) no 500. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
-| 081 | [accept-invite-teste-timer-vaza-entre-testes.md](accept-invite-teste-timer-vaza-entre-testes.md) | Teste do `AcceptInvitePage` falha de vez em quando: o redirecionamento de 2s vaza para o teste seguinte | filtros-credor-devedores-status-despesas (TASK-407) | 2026-10-10 | MEDIA | Promovido para TASK-409 |
+| 082 | [accept-invite-limpar-timer-do-redirecionamento.md](accept-invite-limpar-timer-do-redirecionamento.md) | `AcceptInvitePage` não cancela o redirecionamento de 2s quando a página sai da tela: guardar o id do `setTimeout` e limpá-lo no cleanup. Proposta 2 do item 081 | estabilizar-teste-accept-invite (item 081) | 2026-10-21 | BAIXA | Aberto |
 
 ## Itens concluídos
 
@@ -127,3 +127,4 @@ Itens cuja feature de promoção (`/promover-backlog`) já teve todas as tasks e
 | 020 | [sistema-notificacoes-frontend.md](concluidos/sistema-notificacoes-frontend.md) | Implementar sistema de notificações | 2026-09-03 | notificacoes-in-app | TASK-260 … TASK-267 |
 | 021 | [avatar-foto-usuario.md](concluidos/avatar-foto-usuario.md) | Suportar foto de perfil do usuário | 2026-09-03 | notificacoes-in-app (agrupado com 020) | TASK-268, TASK-269, TASK-270 |
 | 041 | [site-footer-logo-novemax-link.md](concluidos/site-footer-logo-novemax-link.md) | Trocar link de e-mail do rodapé do site pelo logo da Novemax | 2026-09-19 | logo-novemax-rodape-site | TASK-292, TASK-293 |
+| 081 | [accept-invite-teste-timer-vaza-entre-testes.md](concluidos/accept-invite-teste-timer-vaza-entre-testes.md) | Teste do `AcceptInvitePage` falha de vez em quando: o redirecionamento de 2s vaza para o teste seguinte | 2026-10-21 | estabilizar-teste-accept-invite | TASK-409, TASK-410 |

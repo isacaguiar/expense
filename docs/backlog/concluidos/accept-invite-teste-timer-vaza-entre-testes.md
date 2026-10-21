@@ -21,3 +21,12 @@ Falha intermitente em CI e na suíte local: ninguém sabe se o vermelho é regre
 2. Opcional, no componente: guardar o id do `setTimeout` e limpá-lo no cleanup de um `useEffect`, para não navegar depois de a página sair da tela.
 
 Tipo sugerido: frontend
+
+## Resolução
+
+Concluído em: 2026-10-21
+Feature: docs/feature/concluidas/202610/20261021-estabilizar-teste-accept-invite/
+Tasks: TASK-409, TASK-410
+PRs: https://github.com/isacaguiar/expense/pull/220
+
+Nota: foi feita a proposta 1 (esperar o redirecionamento com `vi.waitFor`), nos dois testes de sucesso que não esperavam (convite, `:96`, e reset, `:171`). A causa foi reproduzida de forma determinística, com um atraso de 2,3 s no teste seguinte: vermelho antes, 9 de 9 depois. A proposta 2 (cancelar o timer no cleanup do componente) ficou de fora por escolha do usuário e virou o item 082. Entre `vi.waitFor` e fake timers, a medição mostrou que o `waitFor` custa cerca de 2 s a mais por teste; trocar tudo para fake timers só vale se esse tempo incomodar (`plan.md` §2 da feature tem os números).

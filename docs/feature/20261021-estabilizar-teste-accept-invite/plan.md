@@ -30,7 +30,7 @@ Na rodada de referência, `não mede a redefinição de senha como cadastro` (`:
   `await vi.waitFor(() => expect(mockNavigate).toHaveBeenCalledWith('/'), { timeout: 3000 });`
   É a correção que o item 081 pede e a que impede a falha observada.
 - **Teste do reset, `:171-191`** (`submits to the same POST…`): a mesma linha, depois do `findByText(/Senha redefinida com sucesso/)` (D1 = A). Sem falha hoje, mas é o mesmo vazamento, para o `:193`.
-- **Por que não mexer no componente:** escolha do usuário (R1). Cancelar o timer no `useEffect` impediria o vazamento na origem, mas muda código de uma página de autenticação, o que exigiria o `security-reviewer` e não é o pedido. Fica registrado como item de backlog no fechamento (specify §5).
+- **Por que não mexer no componente:** escolha do usuário (R1). Cancelar o timer no `useEffect` impediria o vazamento na origem, mas muda código de produção de uma página do fluxo de convite e de redefinição de senha, o que pede revisão mais cuidadosa, e não é o pedido. (O agent `security-reviewer` é só para backend, então não é ele o gate aqui.) Fica registrado como item de backlog no fechamento (specify §5).
 - **Asserções existentes (R3):** nada é removido nem afrouxado. O `expect(mockNavigate).not.toHaveBeenCalled()` do `:131` continua. As mudanças só **acrescentam** uma asserção a cada um dos dois testes (agora eles também provam que o redirecionamento acontece).
 
 ## 2. Técnica: `vi.waitFor` ou fake timers (D2)
