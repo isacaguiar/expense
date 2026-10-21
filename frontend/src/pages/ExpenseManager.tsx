@@ -52,6 +52,7 @@ import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import SummarySidePanel from '../components/SummarySidePanel';
 import CycleClosingAlert from '../components/CycleClosingAlert';
+import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import UserAvatar from '../components/UserAvatar';
@@ -177,6 +178,16 @@ const ExpenseManager: React.FC = () => {
     handlePay,
     handleUnpay
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
+
+  // O ✓ "Marcar como paga" não paga direto: abre o popup de comprovante (foto
+  // ou descrição) — docs/feature/20261021-comprovante-ao-marcar-paga.
+  const [payTargetId, setPayTargetId] = useState<number | null>(null);
+
+  const confirmPayment = ({ file, note }: PaymentProofValue) => {
+    if (payTargetId === null) return;
+    handlePay(payTargetId, file ? { proof: file, note } : { note });
+    setPayTargetId(null);
+  };
 
   // Fechar/reabrir a competência vigente
   const [closingMonth, setClosingMonth] = useState<boolean>(false);
@@ -468,7 +479,7 @@ const ExpenseManager: React.FC = () => {
             aria-label="Marcar como paga"
             size="small"
             disabled={payingExpenseId === exp.id}
-            onClick={() => handlePay(exp.id)}
+            onClick={() => setPayTargetId(exp.id)}
           >
             <CheckCircleOutlineIcon fontSize="small" />
           </IconButton>
@@ -836,6 +847,17 @@ const ExpenseManager: React.FC = () => {
           <Button onClick={() => setDetailExpenseId(null)}>Fechar</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Popup de comprovante ao marcar como paga: foto OU descrição */}
+      <PaymentProofDialog
+        open={payTargetId !== null}
+        title="Confirmar pagamento"
+        description="Anexe uma foto do comprovante ou descreva o pagamento."
+        photoLabel="Selecionar foto"
+        requirePhoto={false}
+        onClose={() => setPayTargetId(null)}
+        onConfirm={confirmPayment}
+      />
 
       {/* Diálogo de remoção de despesa Fixa */}
       <Dialog
