@@ -3,6 +3,13 @@ import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import type { Summary, SummaryExpense } from './useGroupCycle';
 
+/**
+ * O que acompanha um pagamento: foto do comprovante, descrição em texto, ou os
+ * dois. O tipo exige **pelo menos um** (docs/feature/20261021-comprovante-ao-marcar-paga,
+ * specify R1): `handlePay(id)` sem detalhes, o antigo clique sem popup, não compila.
+ */
+export type PaymentDetails = { proof: File; note?: string } | { proof?: File; note: string };
+
 type UsePaymentActionsResult = {
   payingExpenseId: number | null;
   payError: string | null;
@@ -14,18 +21,18 @@ type UsePaymentActionsResult = {
   isCreditor: (exp: SummaryExpense) => boolean;
   canPay: (exp: SummaryExpense) => boolean;
   canUnpay: (exp: SummaryExpense) => boolean;
-  handlePay: (expenseId: number, proof?: File) => void;
+  handlePay: (expenseId: number, details: PaymentDetails) => void;
   handleUnpay: (expenseId: number) => void;
 };
 
 /**
  * Ações de "marcar como paga"/"desfazer pagamento" (`POST .../pay`,
- * `POST .../unpay`), compartilhadas entre `ExpenseManager.tsx` (um clique,
- * sem comprovante) e `Payments.tsx` (exige foto antes de confirmar, ver
- * `docs/feature/concluidas/202608/20260822-criacao-tela-pagamentos/plan.md` §6) — mesma regra
- * de habilitação e mesmos endpoints nos dois lugares, só a UX em torno de
- * `handlePay` muda por tela (comprovante é opcional no parâmetro `proof`
- * porque a API também trata a foto como opcional, ver `plan.md` §2).
+ * `POST .../unpay`), compartilhadas entre `ExpenseManager.tsx` e
+ * `Payments.tsx` — mesma regra de habilitação e mesmos endpoints nos dois
+ * lugares. Nas duas telas o ✓ abre o `PaymentProofDialog`, que só deixa
+ * confirmar com foto ou descrição; o tipo `PaymentDetails` repete essa
+ * exigência na compilação. A API segue aceitando `pay` sem corpo (decisão D1
+ * da feature, por compatibilidade), mas esta tela nunca o chama assim.
  *
  * O credor marca/desmarca pagamento em qualquer estado de ciclo exceto
  * `future` (a `Quota` ainda não existe) — inclusive em ciclo `closed` ou já
@@ -61,19 +68,22 @@ export function usePaymentActions(
   );
 
   const handlePay = useCallback(
-    (expenseId: number, proof?: File) => {
+    (expenseId: number, details: PaymentDetails) => {
       setPayingExpenseId(expenseId);
       setPayError(null);
 
       const token = localStorage.getItem('accessToken');
+      const { proof } = details;
+      const note = details.note?.trim();
       const body = proof
         ? (() => {
             const form = new FormData();
             form.append('comprovante', proof);
             form.append('cycles_ago', String(cyclesAgo));
+            if (note) form.append('descricao', note);
             return form;
           })()
-        : { cycles_ago: cyclesAgo };
+        : { cycles_ago: cyclesAgo, ...(note ? { descricao: note } : {}) };
 
       axios
         .post(`${API_BASE_URL}/api/expenses/${expenseId}/pay`, body, {

@@ -106,7 +106,7 @@ const Payments: React.FC = () => {
 
   const confirmPayment = () => {
     if (confirmExpenseId === null || !selectedFile) return;
-    handlePay(confirmExpenseId, selectedFile);
+    handlePay(confirmExpenseId, { proof: selectedFile });
     closeConfirmDialog();
   };
 
