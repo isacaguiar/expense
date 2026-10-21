@@ -474,6 +474,113 @@ describe('Payments', () => {
     expect(await screen.findByText('Comprovante enviado.')).toBeInTheDocument();
   });
 
+  describe('popup do devedor (acerto) com descrição', () => {
+    const debtorSetup = () => {
+      mockGetResponses(
+        [],
+        {
+          balances: [
+            { user_id: CURRENT_USER_ID, name: 'Isac', balance: -50 },
+            { user_id: 999, name: 'Maria', balance: 50 },
+          ],
+          settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+          cycle: { status: 'closed' },
+        },
+        [{ id: 999, name: 'Maria', email: 'maria@example.com', pix: 'maria@pix.com' }]
+      );
+
+      render(
+        <MemoryRouter>
+          <Payments />
+        </MemoryRouter>
+      );
+    };
+
+    const openDebtorDialog = async (user: ReturnType<typeof userEvent.setup>) => {
+      await user.click(await screen.findByRole('button', { name: 'Enviar comprovante' }));
+      return screen.findByRole('dialog');
+    };
+
+    it('keeps the photo mandatory: a note alone does not enable Confirmar', async () => {
+      const user = userEvent.setup();
+      debtorSetup();
+
+      const dialog = await openDebtorDialog(user);
+      await user.type(within(dialog).getByLabelText('Descrição (opcional)'), 'Pix agendado para sexta');
+
+      expect(within(dialog).getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+      expect(axios.post).not.toHaveBeenCalled();
+    });
+
+    it('sends the note as descricao together with the photo and cycles_ago', async () => {
+      const user = userEvent.setup();
+      debtorSetup();
+      vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+      const dialog = await openDebtorDialog(user);
+      const file = new File(['foto'], 'pix.png', { type: 'image/png' });
+      await user.upload(dialog.querySelector('input[type="file"]') as HTMLInputElement, file);
+      await user.type(within(dialog).getByLabelText('Descrição (opcional)'), 'Pix agendado para sexta');
+      await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+      expect(body.get('comprovante')).toBe(file);
+      expect(body.get('descricao')).toBe('Pix agendado para sexta');
+      expect(body.get('to_user_id')).toBe('999');
+      expect(body.get('cycles_ago')).toBe('0');
+      expect(await screen.findByText('Comprovante enviado.')).toBeInTheDocument();
+    });
+
+    it('does not send descricao when the note is left blank', async () => {
+      const user = userEvent.setup();
+      debtorSetup();
+      vi.mocked(axios.post).mockResolvedValue({ data: {} });
+
+      const dialog = await openDebtorDialog(user);
+      await user.upload(
+        dialog.querySelector('input[type="file"]') as HTMLInputElement,
+        new File(['foto'], 'pix.png', { type: 'image/png' })
+      );
+      await user.type(within(dialog).getByLabelText('Descrição (opcional)'), '   ');
+      await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      expect((vi.mocked(axios.post).mock.calls[0][1] as FormData).has('descricao')).toBe(false);
+    });
+
+    it('shows the server error inside the popup and keeps it open', async () => {
+      const user = userEvent.setup();
+      debtorSetup();
+      vi.mocked(axios.post).mockRejectedValue({
+        response: { data: { error: 'O acerto só pode ser confirmado depois que a competência é fechada.' } },
+      });
+
+      const dialog = await openDebtorDialog(user);
+      await user.upload(
+        dialog.querySelector('input[type="file"]') as HTMLInputElement,
+        new File(['foto'], 'pix.png', { type: 'image/png' })
+      );
+      await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+      expect(
+        await within(dialog).findByText('O acerto só pode ser confirmado depois que a competência é fechada.')
+      ).toBeInTheDocument();
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('closes without sending anything when cancelled', async () => {
+      const user = userEvent.setup();
+      debtorSetup();
+
+      const dialog = await openDebtorDialog(user);
+      await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(axios.post).not.toHaveBeenCalled();
+    });
+  });
+
   // Regressão: o envio do comprovante do acerto não mandava `cycles_ago`, então o
   // backend avaliava o ciclo CORRENTE (aberto) em vez do que está na tela e
   // respondia 422 "O acerto só pode ser confirmado depois que a competência é
