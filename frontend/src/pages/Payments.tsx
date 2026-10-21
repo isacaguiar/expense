@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -29,6 +29,7 @@ import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import PayableSettlementList from '../components/PayableSettlementList';
+import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
 import UserAvatar from '../components/UserAvatar';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
@@ -88,26 +89,15 @@ const Payments: React.FC = () => {
     handleUnpay
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
 
-  // Diálogo "Confirmar pagamento": a foto é obrigatória aqui (do lado do
-  // cliente) mesmo com o campo sendo opcional na API — ver plan.md §2/§6.
+  // Popup "Confirmar pagamento" do credor: foto OU descrição, o mesmo
+  // componente do ✓ de Despesas (docs/feature/20261021-comprovante-ao-marcar-paga,
+  // decisão D2 — antes a foto era obrigatória aqui, plan.md §6 da tela de Pagamentos).
   const [confirmExpenseId, setConfirmExpenseId] = useState<number | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const openConfirmDialog = (expenseId: number) => {
-    setConfirmExpenseId(expenseId);
-    setSelectedFile(null);
-  };
-
-  const closeConfirmDialog = () => {
+  const confirmPayment = ({ file, note }: PaymentProofValue) => {
+    if (confirmExpenseId === null) return;
+    handlePay(confirmExpenseId, file ? { proof: file, note } : { note });
     setConfirmExpenseId(null);
-    setSelectedFile(null);
-  };
-
-  const confirmPayment = () => {
-    if (confirmExpenseId === null || !selectedFile) return;
-    handlePay(confirmExpenseId, { proof: selectedFile });
-    closeConfirmDialog();
   };
 
   // Valor a pagar por pessoa: ao clicar num settlement, abre o Pix do credor
@@ -274,6 +264,12 @@ const Payments: React.FC = () => {
                           </Typography>
                         )}
 
+                        {exp.paid && exp.paymentNote && (
+                          <Typography variant="body2" color="text.secondary" mt={1}>
+                            Descrição do pagamento: {exp.paymentNote}
+                          </Typography>
+                        )}
+
                         <Box display="flex" justifyContent="flex-end" mt={2} gap={1}>
                           {canPay(exp) && (
                             <Button
@@ -281,7 +277,7 @@ const Payments: React.FC = () => {
                               variant="contained"
                               startIcon={<PhotoCameraOutlinedIcon />}
                               disabled={payingExpenseId === exp.id}
-                              onClick={() => openConfirmDialog(exp.id)}
+                              onClick={() => setConfirmExpenseId(exp.id)}
                             >
                               Confirmar pagamento
                             </Button>
@@ -327,31 +323,15 @@ const Payments: React.FC = () => {
         </>
       ) : null}
 
-      <Dialog open={confirmExpenseId !== null} onClose={closeConfirmDialog} fullWidth maxWidth="xs">
-        <DialogTitle>Confirmar pagamento</DialogTitle>
-        <DialogContent>
-          <DialogContentText mb={2}>
-            Anexe uma foto do comprovante para confirmar o pagamento.
-          </DialogContentText>
-          <Button variant="outlined" component="label" fullWidth startIcon={<PhotoCameraOutlinedIcon />}>
-            {selectedFile ? selectedFile.name : 'Selecionar foto'}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              hidden
-              onChange={e => setSelectedFile(e.target.files?.[0] ?? null)}
-            />
-          </Button>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeConfirmDialog}>Cancelar</Button>
-          <Button variant="contained" disabled={!selectedFile} onClick={confirmPayment}>
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PaymentProofDialog
+        open={confirmExpenseId !== null}
+        title="Confirmar pagamento"
+        description="Anexe uma foto do comprovante ou descreva o pagamento."
+        photoLabel="Selecionar foto"
+        requirePhoto={false}
+        onClose={() => setConfirmExpenseId(null)}
+        onConfirm={confirmPayment}
+      />
 
       {pixTarget && (
         <PixPaymentDialog

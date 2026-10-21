@@ -15,7 +15,7 @@ IDs a partir de TASK-433: o maior em qualquer branch do repositório é TASK-432
 | TASK-437 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §12 | nenhum | Concluída |
 | TASK-438 | Criar o componente `PaymentProofDialog` (foto + descrição, regra por `requirePhoto`) com testes | frontend | plan.md §6 e §11 | nenhum | Concluída |
 | TASK-439 | Exigir foto ou texto no tipo de `handlePay` e fazer o ✓ de Despesas abrir o popup | frontend | plan.md §5, §7 e §11 | nenhum | Concluída |
-| TASK-440 | Trocar o popup do credor em Pagamentos pelo `PaymentProofDialog` e exibir `paymentNote` no cartão | frontend | plan.md §8, §9 e §11 | nenhum | Pendente |
+| TASK-440 | Trocar o popup do credor em Pagamentos pelo `PaymentProofDialog` e exibir `paymentNote` no cartão | frontend | plan.md §8, §9 e §11 | nenhum | Concluída |
 | TASK-441 | Trocar o popup do devedor em Pagamentos pelo `PaymentProofDialog`, enviar `descricao` e exibir `confirmedNote` | frontend | plan.md §8, §9 e §11 | nenhum | Pendente |
 | TASK-442 | Exibir a descrição do pagamento no modal de detalhes de Despesas | frontend | plan.md §9 e §11 | nenhum | Pendente |
 | TASK-443 | Exibir a descrição do pagamento em `ExpenseView` | frontend | plan.md §9 e §11 | nenhum | Pendente |
