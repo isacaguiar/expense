@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\PersonalOverviewService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -132,6 +133,18 @@ class PersonalOverviewServiceTest extends TestCase
         $this->assertCount(1, $groups);
 
         return $groups[0];
+    }
+
+    /** Quantas consultas SQL `$run` dispara. */
+    private function queriesOf(callable $run): int
+    {
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $run();
+        $count = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        return $count;
     }
 
     // --- raiz e estrutura -----------------------------------------------------
@@ -489,6 +502,46 @@ class PersonalOverviewServiceTest extends TestCase
 
         $this->assertSame(['Meu grupo'], array_map(fn (array $item) => $item['group']['name'], $groups));
         $this->assertNotContains($notMine->id, array_map(fn (array $item) => $item['group']['id'], $groups));
+    }
+
+    // --- orçamento de consultas (TASK-427, achado S1 da revisão de segurança) ----
+    // Antes da otimização: 1 grupo vazio = 56 consultas; 20 grupos vazios = 1.082;
+    // 1 grupo com pendência recente = 18. Os tetos abaixo são o valor medido
+    // depois da TASK-427 com 20% de folga: um teste que falha aqui é uma
+    // regressão de custo, não um número a "ajustar".
+
+    public function test_one_empty_group_stays_within_the_query_budget(): void
+    {
+        $this->group('Vazio', $this->debtor);
+
+        $queries = $this->queriesOf(fn () => $this->service()->forUser($this->debtor));
+
+        // Medido: 8.
+        $this->assertLessThanOrEqual(10, $queries, "1 grupo vazio: {$queries} consultas");
+    }
+
+    public function test_twenty_empty_groups_stay_within_the_query_budget(): void
+    {
+        foreach (range(1, 20) as $number) {
+            $this->group("Vazio {$number}", $this->debtor);
+        }
+
+        $queries = $this->queriesOf(fn () => $this->service()->forUser($this->debtor));
+
+        // Medido: 122 (6 por grupo mais 2 da raiz).
+        $this->assertLessThanOrEqual(147, $queries, "20 grupos vazios: {$queries} consultas");
+    }
+
+    public function test_a_group_with_a_recent_pending_stays_within_the_query_budget(): void
+    {
+        $group = $this->pairGroup();
+        $this->expense($group, $this->creditor, [$this->debtor], 100, '2026-09-10');
+
+        $queries = $this->queriesOf(fn () => $this->service()->forUser($this->debtor));
+
+        // Medido: 19 (eram 18; a consulta da primeira data custa uma e poupa nada
+        // aqui, onde o foco para cedo). Guarda o caso comum contra regressão.
+        $this->assertLessThanOrEqual(23, $queries, "1 grupo com pendência: {$queries} consultas");
     }
 
     public function test_a_user_without_groups_gets_an_empty_list(): void

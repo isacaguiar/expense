@@ -27,6 +27,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-412 | Concluída (commit `fe37b7150f`, merge `a1af961668` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §6 | Os 16 testes passaram de primeira; a prova de que testam algo são 4 mutações, cada uma derrubando testes (§6) |
 | TASK-413 | Concluída (commit `23128fdaba`, merge `bd948dd167` na branch da feature) | 2026-10-10 | Claude (IA), com aprovação do usuário | Ver §7 | Primeira superfície HTTP da feature; segurança provada por 2 mutações (escopo de membro e posição da rota fora do `jwt.auth`) |
 | TASK-414 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-414`) | 2026-10-14 | Claude (IA), com aprovação do usuário; revisão pelo agent `security-reviewer` | Ver §8 | **Aprovado com ressalvas.** Sem IDOR nem vazamento no diff; gerou as TASK-427 a 432 e um achado crítico **fora do diff** (X1, reproduzido) que exige decisão do usuário |
+| TASK-427 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-427`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §9 | Grupo vazio caiu de 56 para 8 consultas e 20 grupos vazios de 1.082 para 122 (2,8 s → ~0,4 s); 5 mutações, cada uma derrubando o teste esperado |
 
 ## 3. Evidências da TASK-409
 
@@ -212,3 +213,45 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-414`, criada da branch d
 Ressalva à premissa do S1/D9, achada ao escrever o item 083: o reviewer e eu tratamos o abuso como "adicionar a vítima a quantos grupos quiser", mas `GroupController::MAX_GROUPS_CREATED_PER_USER = 3` limita os grupos que **cada conta cria**; levar uma vítima a N grupos exige ~N/3 contas com e-mail verificado. O vetor é mais caro que o descrito, o custo medido não muda, e o teto da D9 segue como defesa em profundidade. O X3 já existe como item 060 e não foi duplicado.
 
 **Próximo passo.** Executar TASK-427 → 432 (backend) e depois o frontend, conforme a ordem de `tasks.md`.
+
+## 9. Evidências da TASK-427 (custo do `GET /me/overview`)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-427`, a partir de `357ffde918`. Suíte antes: 504 testes.
+
+**O que mudou.** Só `CycleSummaryService::focus()` e um helper privado novo, `firstPossibleEntryDate()`: a menor entre o `date_payment` das despesas vivas e o `date_expected` das quotas delas. Ciclo que termina antes dessa data não tem entrada, logo é "quitado" e o laço antigo o pularia: agora nem é calculado. Grupo sem despesa viva devolve 0 sem varrer nada. Os snapshots dos ciclos restantes vêm de **uma** consulta (`whereIn`, chaveada por `cycle_start`; há índice único em `(group_id, cycle_start)`, então é equivalente ao `first()` de antes). Nenhum teste existente foi editado.
+
+**Por que o limite inferior é seguro.** À Vista e Fixa entram pelo `date_payment` (a Fixa projetada só para a frente, nunca antes dele); Parcelada entra pelo vencimento da quota, que numa parcela retroativa pode ser **anterior** ao `date_payment` (por isso o `min` das quotas). Despesa `deleted` não gera entrada, então não conta.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Teste vermelho antes | `php artisan test --filter="test_focus_gives_the_same_answer\|test_focus_does_not_scan"` com o `focus()` antigo | A equivalência passou (a referência é o próprio laço antigo); o "não varre" falhou: **50 consultas** para um grupo vazio |
+| Equivalência | `test_focus_gives_the_same_answer_as_the_full_scan_in_every_shape_of_group`: reescreve o laço antigo no teste (`focusByFullScan`) e compara, em 11 formas de grupo, a resposta esperada, a da referência e a do `focus()` | Passou: vazio; só setembro; parcelada que começa meses antes; parcela com vencimento anterior à despesa (retroativa); Fixa com ocorrências congeladas; ciclo selado no meio; despesa excluída; acerto sem confirmação num ciclo antigo; despesa no último e no primeiro dia do ciclo; `closing_day` 15 |
+| Não varre | `test_focus_does_not_scan_cycles_for_a_group_with_nothing_to_scan` (grupo vazio e grupo só com despesa excluída) | No máximo 2 consultas (antes: 50) |
+| Snapshots numa consulta | `test_focus_reads_the_snapshots_of_all_the_scanned_cycles_in_a_single_query` (grupo com despesa paga em janeiro: 10 ciclos varridos) | Exatamente 1 consulta a `ex_group_cycle_snapshots` |
+| Orçamento de consultas | 3 testes em `PersonalOverviewServiceTest`, com `DB::getQueryLog()` | Ver a tabela de medidas abaixo; tetos = medido + 20% |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 510 passed (3234 assertions)`, 69,08 s (504 + 6 novos) |
+
+**Medidas** (sonda descartável, apagada; MySQL em Docker local, "agora" = 15/10/2026):
+
+| Cenário | Antes (TASK-414) | Depois | Teto no teste |
+|---|---|---|---|
+| 1 grupo vazio | 56 consultas, 159 ms | **8 consultas, 36 ms** | 10 |
+| 5 grupos vazios | 272, 625 ms | 32, 104 ms | — |
+| 20 grupos vazios | 1.082, 2.835 ms | **122 consultas, 411 ms** | 147 |
+| 50 grupos vazios | (não medido) | 302, 1.021 ms | — |
+| 1 grupo com pendência recente | 18, 129 ms | **19** (+1: a consulta da primeira data) | 23 |
+
+Por grupo vazio sobram 6 consultas (a primeira data, o snapshot do ciclo vigente, as três de entradas e a das confirmações) mais 2 da raiz (grupos e membros). O custo por grupo não depende mais da idade do grupo, só do que ele tem: o piso é o `view()` do ciclo escolhido. Com 50 grupos o pior caso fica em ~300 consultas e ~1 s, o que a TASK-428 passa a limitar por construção.
+
+**Mutações** (cada uma revertida em seguida; `git diff` final só tem o código e os testes da task):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Remover o curto-circuito (`$firstEntryDate = Carbon::parse('2000-01-01')`) | Derrubou 3: o "não varre" e os dois orçamentos (1 e 20 grupos vazios) |
+| M2 | `<` por `<=` na comparação de datas | Derrubou a equivalência: `Failed asserting that 0 is identical to 2` (despesa no último dia do ciclo) |
+| M3 | Ignorar as quotas na primeira data | Derrubou a equivalência: `0 is identical to 4` (parcela retroativa) |
+| M4 | Contar despesa `deleted` na primeira data | Derrubou o "não varre": 25 consultas em vez de no máximo 2 |
+| M5 | Voltar a uma consulta de snapshot por ciclo | Derrubou o teste de consulta única |
+
+**Efeito colateral a registrar.** O caso comum (grupo com pendência recente) ganhou 1 consulta (18 → 19), porque a primeira data precisa de uma consulta nova. É o preço de tornar barato o caso caro; o teto de 23 protege contra regressão dele.

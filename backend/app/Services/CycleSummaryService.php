@@ -401,15 +401,43 @@ class CycleSummaryService
      * nele durante os dias de carência e não pula quando ele vira `closed` em
      * `closesAt`. Ver
      * docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §4 e §10.
+     *
+     * Custo: um ciclo que termina antes da primeira data em que o grupo pode ter
+     * entrada (`firstPossibleEntryDate`) não tem entrada alguma, logo é
+     * "quitado" e o laço o pularia — então nem é calculado, e os snapshots dos
+     * demais vêm numa só consulta. O resultado é o mesmo da varredura completa
+     * (docs/feature/20261010-painel-financeiro-pessoal/tasks.md, TASK-427).
      */
     public function focus(Group $group): int
     {
+        $firstEntryDate = $this->firstPossibleEntryDate($group);
+
+        // Sem despesa viva não há entrada em ciclo nenhum.
+        if ($firstEntryDate === null) {
+            return 0;
+        }
+
+        $cycles = [];
+
         for ($ago = 0; $ago <= self::FOCUS_LOOKBACK; $ago++) {
             $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $ago);
 
-            $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
-                ->where('cycle_start', $cycle['start']->toDateString())
-                ->first();
+            // Os ciclos recuam no tempo: se este já termina antes da primeira
+            // entrada possível, os seguintes também.
+            if ($cycle['end']->toDateString() < $firstEntryDate->toDateString()) {
+                break;
+            }
+
+            $cycles[$ago] = $cycle;
+        }
+
+        $snapshots = GroupCycleSnapshot::where('group_id', $group->id)
+            ->whereIn('cycle_start', array_map(fn (array $cycle) => $cycle['start']->toDateString(), $cycles))
+            ->get()
+            ->keyBy(fn (GroupCycleSnapshot $snapshot) => $snapshot->cycle_start->toDateString());
+
+        foreach ($cycles as $ago => $cycle) {
+            $snapshot = $snapshots->get($cycle['start']->toDateString());
 
             if ($snapshot && $snapshot->isSealed()) {
                 continue;
@@ -434,6 +462,38 @@ class CycleSummaryService
         }
 
         return 0;
+    }
+
+    /**
+     * A primeira data em que o grupo pode ter uma entrada de ciclo (`entries`):
+     * a menor entre o `date_payment` das despesas vivas e o `date_expected` das
+     * quotas delas. Toda entrada cai nessa data ou depois — À Vista e Fixa a
+     * partir do `date_payment`, Fixa projetada só para a frente, e Parcelada
+     * pelo vencimento da quota, que numa parcela retroativa pode ser anterior
+     * ao `date_payment`. `null` quando o grupo não tem despesa viva.
+     */
+    private function firstPossibleEntryDate(Group $group): ?Carbon
+    {
+        $firstExpense = Expense::where('group_id', $group->id)
+            ->where('deleted', false)
+            ->min('date_payment');
+
+        // Quota de despesa viva implica despesa viva: uma consulta a menos.
+        if ($firstExpense === null) {
+            return null;
+        }
+
+        $firstQuota = Quota::whereHas('expense', function ($query) use ($group) {
+            $query->where('group_id', $group->id)->where('deleted', false);
+        })->min('date_expected');
+
+        $first = Carbon::parse($firstExpense)->startOfDay();
+
+        if ($firstQuota !== null && Carbon::parse($firstQuota)->startOfDay()->lt($first)) {
+            return Carbon::parse($firstQuota)->startOfDay();
+        }
+
+        return $first;
     }
 
     /**
