@@ -748,4 +748,34 @@ class SettlementConfirmationControllerTest extends TestCase
 
         $this->assertNull($this->confirmationFor($group, $debtor, $creditor)->note);
     }
+
+    public function test_confirm_stores_a_descricao_that_is_the_string_zero(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'descricao' => '0',
+            ])->assertStatus(200);
+
+        $this->assertSame('0', $this->confirmationFor($group, $debtor, $creditor)->note);
+    }
+
+    public function test_confirm_rejects_descricao_sent_as_an_array(): void
+    {
+        [$debtor, $creditor, $group] = $this->settlementFixture();
+
+        $this->withToken($this->tokenFor($debtor))
+            ->post("/api/groups/{$group->id}/settlements/confirm", [
+                'to_user_id' => $creditor->id,
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'descricao' => ['x'],
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('descricao');
+
+        $this->assertNull($this->confirmationFor($group, $debtor, $creditor));
+    }
 }

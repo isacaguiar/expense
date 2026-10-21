@@ -956,4 +956,43 @@ class ExpenseControllerPayTest extends TestCase
         $this->assertNull($quota->payment_proof_path);
         Storage::disk('local')->assertMissing($path);
     }
+
+    public function test_pay_stores_a_descricao_that_is_the_string_zero(): void
+    {
+        // `empty("0")` é verdadeiro em PHP: com o teste antigo a nota "0" era
+        // descartada e o pagamento seguia 200 sem nenhuma prova. Achado do
+        // security-reviewer na TASK-437.
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => '0'])
+            ->assertStatus(200)
+            ->assertJsonPath('payment_note', '0');
+
+        $this->assertSame('0', Quota::where('expense_id', $expense->id)->firstOrFail()->payment_note);
+    }
+
+    public function test_pay_rejects_descricao_sent_as_an_array_in_json(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => ['x']])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('descricao');
+
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false, 'payment_note' => null]);
+    }
+
+    public function test_pay_rejects_descricao_sent_as_an_array_in_multipart(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", ['descricao' => ['x']], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('descricao');
+
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false, 'payment_note' => null]);
+    }
 }
