@@ -29,6 +29,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-414 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-414`) | 2026-10-14 | Claude (IA), com aprovação do usuário; revisão pelo agent `security-reviewer` | Ver §8 | **Aprovado com ressalvas.** Sem IDOR nem vazamento no diff; gerou as TASK-427 a 432 e um achado crítico **fora do diff** (X1, reproduzido) que exige decisão do usuário |
 | TASK-427 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-427`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §9 | Grupo vazio caiu de 56 para 8 consultas e 20 grupos vazios de 1.082 para 122 (2,8 s → ~0,4 s); 5 mutações, cada uma derrubando o teste esperado |
 | TASK-428 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-428`) | 2026-10-21 | Claude (IA), com aprovação do usuário (D9 reconfirmada depois de discutir alternativas, §10) | Ver §10 | Teto de 50 grupos com `truncated`, cortado antes de calcular: 60 grupos custam o mesmo que 50 (302 consultas). 3 testes de contrato da raiz atualizados para o campo novo |
+| TASK-429 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-429`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §11 | Um teste derrubou a premissa do critério: o Laravel executa o throttle **antes** do `jwt.auth`. O limiter passou a ignorar chamadas sem usuário válido. 4 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -284,3 +285,34 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-428`, a partir de `5e63e
 | M1 | `MAX_GROUPS = 51` | Derrubou 3: 51 grupos (`actual size 51 matches expected size 50`), corte antes do cálculo (308 ≠ 302) e ordem dentro dos 50 (`truncated` falso) |
 | M2 | Calcular todos e cortar depois (`map(...)->take(50)` sem `limit`) | Derrubou só o de custo: 362 consultas com 60 grupos contra 302 com 50. Os demais passam, e é por isso que o teste de custo existe |
 | M3 | `orderByDesc('id')` (ficar com os mais novos) | Derrubou 2: o de 51 grupos (o mais novo apareceu) e o da ordem ("Z cortado" apareceu) |
+
+## 11. Evidências da TASK-429 (throttle por usuário, decisão D10)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-429`, a partir de `55bc72023c`. Suíte antes: 514 testes.
+
+**O que mudou.** `RouteServiceProvider` ganhou o limiter nomeado `overview` (30/min por usuário), e a rota `GET /me/overview` ganhou `->middleware('throttle:overview')`. O S2 da revisão dizia que o limiter global `api` "provavelmente" chaveia por IP: **confirmado**. O guard padrão é `web` (`config/auth.php`) e o grupo `api` não tem sessão, então `$request->user()` é nulo e a chave cai no IP.
+
+**A premissa que o teste derrubou.** O critério pedia o throttle "depois do `jwt.auth`". Declarei assim na rota, e o teste de chamadas sem token, que passava antes da implementação, **passou a falhar**: a 31ª chamada sem token recebia 429 em vez de 401. A ordem efetiva, lida com `app('router')->gatherRouteMiddleware($route)`, é `ThrottleRequests:api` → `ThrottleRequests:overview` → `SubstituteBindings` → `Tymon\JWTAuth\Http\Middleware\Authenticate`. O `middlewarePriority` do Kernel põe `ThrottleRequests` à frente de `SubstituteBindings`, e o middleware do Tymon não está na lista (não implementa `AuthenticatesRequests`), então o throttle sobe para antes da autenticação. Pôr o Tymon na lista mudaria a ordem de **todas** as rotas protegidas, o que está fora do escopo. A correção ficou no próprio limiter: ele resolve o usuário do token (`$request->user('api')`) e devolve `Limit::none()` quando não há usuário válido. Assim, chamada sem token ou com token inválido não gasta o limite de ninguém e recebe o 401 do `jwt.auth`. O critério da TASK-429 em `tasks.md` foi corrigido para o comportamento, e o achado geral (throttle e bindings antes da autenticação em toda rota protegida) foi para a lista da TASK-425 (BAIXA).
+
+**Custo.** Sonda descartável (apagada) com `DB::enableQueryLog()` numa chamada HTTP: 3 consultas com o throttle e 3 sem ele (2 buscas de usuário nos dois casos). O limiter não acrescenta consulta, porque o guard `api` reaproveita o usuário que resolveu.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `php artisan test --filter=OverviewControllerTest` sem a implementação | 2 falhas: a rota declara o throttle e a 31ª chamada devolve 429 |
+| Rota declara o throttle | `test_the_route_declares_the_per_user_throttle` | `throttle:overview` em `gatherMiddleware()`; `route:list -v` mostra `ThrottleRequests:overview` na rota |
+| 31ª chamada | `test_the_31st_call_of_the_same_user_within_a_minute_gets_429` | 30 chamadas 200, a 31ª 429 |
+| Outro usuário, mesmo IP | `test_another_user_on_the_same_ip_is_not_affected` | 200 depois de o primeiro estourar |
+| Sem token | `test_unauthenticated_calls_do_not_consume_the_overview_limit` | 31 chamadas, todas 401 |
+| Token inválido | `test_calls_with_an_invalid_token_do_not_consume_the_overview_limit` | 31 chamadas, todas 401. Separado do anterior: juntos passariam de 60 chamadas do mesmo IP e bateriam no limiter global (foi o que aconteceu na primeira versão, com os dois laços no mesmo teste) |
+| Outras rotas | `test_other_routes_are_not_bound_by_the_overview_limit` | 31 chamadas a `GET /api/me`, todas 200 |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 520 passed (3374 assertions)`, 106,60 s (514 + 6 novos) |
+
+**Mutações** (cada uma revertida; o diff final só tem o limiter, a rota e os testes):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Tirar `->middleware('throttle:overview')` da rota | Derrubou 2: a declaração na rota e a 31ª chamada (200 em vez de 429) |
+| M2 | Chavear por IP mesmo com usuário | Derrubou o do outro usuário no mesmo IP (429 em vez de 200) |
+| M3 | Sem usuário, contar por IP em vez de `Limit::none()` (o desenho original) | Derrubou os dois de chamadas sem token e com token inválido (429 em vez de 401) |
+| M4 | Limite de 31 em vez de 30 (aplicada junto com a M3; as falhas se separam pela causa) | Derrubou a 31ª chamada (200 em vez de 429) |

@@ -34,7 +34,7 @@ Route::post('/pre-register/resend', [PreRegisterController::class, 'resend'])->m
 
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
-    Route::get('/me/overview', [OverviewController::class, 'show']);
+    Route::get('/me/overview', [OverviewController::class, 'show'])->middleware('throttle:overview');
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [AuthController::class, 'dashboard']);
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
