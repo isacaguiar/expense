@@ -49,6 +49,49 @@ describe('PayableSettlementList', () => {
     expect(screen.getByText('Ciclo encerrado.')).toBeInTheDocument();
   });
 
+  it('shows the confirmed note under the "Comprovante enviado" chip', () => {
+    renderList({
+      settlements: [
+        { ...settlements[0], confirmedProofUrl: 'http://api/proofs/9', confirmedNote: 'Pix agendado para sexta', confirmedAt: '2026-08-20T10:00:00-03:00' },
+      ],
+    });
+    expect(screen.getByText('Comprovante enviado')).toBeInTheDocument();
+    expect(screen.getByText('Pix agendado para sexta')).toBeInTheDocument();
+    expect(screen.getByTestId('settlement-note')).toHaveTextContent('Pix agendado para sexta');
+  });
+
+  it('shows no note line when the confirmation has none or nobody confirmed yet', () => {
+    const { rerender } = renderList({
+      settlements: [
+        { ...settlements[0], confirmedProofUrl: 'http://api/proofs/9', confirmedNote: null, confirmedAt: '2026-08-20T10:00:00-03:00' },
+      ],
+    });
+    expect(screen.queryByTestId('settlement-note')).not.toBeInTheDocument();
+
+    rerender(
+      <PayableSettlementList
+        settlements={[{ ...settlements[0], confirmedNote: 'não deve aparecer sem comprovante' }]}
+        balances={balances}
+        currentUserId={1}
+        canConfirm
+        cycleSettled={false}
+        onPayWithPix={noop}
+        onSendProof={noop}
+      />
+    );
+    expect(screen.queryByTestId('settlement-note')).not.toBeInTheDocument();
+  });
+
+  it('renders markup in the note as plain text', () => {
+    renderList({
+      settlements: [
+        { ...settlements[0], confirmedProofUrl: 'http://api/proofs/9', confirmedNote: '<b>negrito</b>', confirmedAt: '2026-08-20T10:00:00-03:00' },
+      ],
+    });
+    expect(screen.getByText('<b>negrito</b>')).toBeInTheDocument();
+    expect(document.querySelector('b')).toBeNull();
+  });
+
   it('shows no debtor UI at all for a non-debtor', () => {
     renderList({ currentUserId: 2, canConfirm: false });
     expect(screen.queryByRole('button', { name: /Pagar com Pix/ })).not.toBeInTheDocument();

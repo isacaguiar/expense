@@ -7,11 +7,6 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Grid,
   IconButton,
   Snackbar,
@@ -23,7 +18,6 @@ import { useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
 import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
@@ -125,24 +119,23 @@ const Payments: React.FC = () => {
   // distinto de confirmar uma despesa (isso continua com o credor, acima).
   // Ver docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/plan.md §6.
   const [confirmSettlementTarget, setConfirmSettlementTarget] = useState<SummarySettlement | null>(null);
-  const [selectedSettlementFile, setSelectedSettlementFile] = useState<File | null>(null);
   const [confirmingSettlement, setConfirmingSettlement] = useState<boolean>(false);
   const [settlementConfirmError, setSettlementConfirmError] = useState<string | null>(null);
   const [settlementConfirmSuccess, setSettlementConfirmSuccess] = useState<boolean>(false);
 
   const openConfirmSettlementDialog = (settlement: SummarySettlement) => {
     setConfirmSettlementTarget(settlement);
-    setSelectedSettlementFile(null);
     setSettlementConfirmError(null);
   };
 
   const closeConfirmSettlementDialog = () => {
     setConfirmSettlementTarget(null);
-    setSelectedSettlementFile(null);
   };
 
-  const confirmSettlementPayment = () => {
-    if (!confirmSettlementTarget || !selectedSettlementFile || !groupId) return;
+  // Aqui a foto continua obrigatória (o backend exige `comprovante`); a
+  // descrição é só um complemento opcional (specify R2).
+  const confirmSettlementPayment = ({ file, note }: PaymentProofValue) => {
+    if (!confirmSettlementTarget || !file || !groupId) return;
 
     setConfirmingSettlement(true);
     setSettlementConfirmError(null);
@@ -150,7 +143,8 @@ const Payments: React.FC = () => {
     const token = localStorage.getItem('accessToken');
     const form = new FormData();
     form.append('to_user_id', String(confirmSettlementTarget.to_user_id));
-    form.append('comprovante', selectedSettlementFile);
+    form.append('comprovante', file);
+    if (note) form.append('descricao', note);
     // Sem isto o backend assume o ciclo corrente (aberto) e recusa o acerto de um
     // ciclo anterior já fechado: "só pode ser confirmado depois que a competência
     // é fechada". Mesmo parâmetro que `handlePay`/`handleUnpay` já mandam.
@@ -344,41 +338,17 @@ const Payments: React.FC = () => {
         />
       )}
 
-      <Dialog open={confirmSettlementTarget !== null} onClose={closeConfirmSettlementDialog} fullWidth maxWidth="xs">
-        <DialogTitle>Enviar comprovante do Pix</DialogTitle>
-        <DialogContent>
-          <DialogContentText mb={2}>
-            Anexe o comprovante do seu pagamento via Pix para confirmar.
-          </DialogContentText>
-          <Button variant="outlined" component="label" fullWidth startIcon={<UploadFileOutlinedIcon />}>
-            {selectedSettlementFile ? selectedSettlementFile.name : 'Selecionar comprovante'}
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              hidden
-              onChange={e => setSelectedSettlementFile(e.target.files?.[0] ?? null)}
-            />
-          </Button>
-          {settlementConfirmError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {settlementConfirmError}
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeConfirmSettlementDialog} disabled={confirmingSettlement}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            disabled={!selectedSettlementFile || confirmingSettlement}
-            onClick={confirmSettlementPayment}
-          >
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PaymentProofDialog
+        open={confirmSettlementTarget !== null}
+        title="Enviar comprovante do Pix"
+        description="Anexe o comprovante do seu pagamento via Pix para confirmar."
+        photoLabel="Selecionar comprovante"
+        requirePhoto
+        busy={confirmingSettlement}
+        error={settlementConfirmError}
+        onClose={closeConfirmSettlementDialog}
+        onConfirm={confirmSettlementPayment}
+      />
 
       <Snackbar
         open={paySuccess}
