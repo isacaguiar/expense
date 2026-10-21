@@ -18,6 +18,13 @@ class OverviewController extends Controller
 
     public function show()
     {
-        return response()->json($this->overview->forUser(auth('api')->user()));
+        $user = auth('api')->user();
+
+        // O jwt.auth já barra quem não tem token, mas o usuário é resolvido de
+        // novo aqui: se a conta deixou de existir no meio do caminho, 401 em vez
+        // de um TypeError (500) em `forUser`.
+        abort_unless($user, 401);
+
+        return response()->json($this->overview->forUser($user));
     }
 }
