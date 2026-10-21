@@ -13,7 +13,7 @@ IDs a partir de TASK-433: o maior em qualquer branch do repositório é TASK-432
 | TASK-435 | Aceitar `descricao` em `confirmSettlement()` e gravá-la em `note`, com testes PHPUnit | backend | plan.md §3 e §11 | nenhum | Concluída |
 | TASK-436 | Expor `paymentNote` nas despesas e `confirmedNote` nos acertos do summary, com testes PHPUnit | backend | plan.md §4 e §11 | nenhum | Concluída |
 | TASK-437 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §12 | nenhum | Pendente |
-| TASK-438 | Criar o componente `PaymentProofDialog` (foto + descrição, regra por `requirePhoto`) com testes | frontend | plan.md §6 e §11 | nenhum | Pendente |
+| TASK-438 | Criar o componente `PaymentProofDialog` (foto + descrição, regra por `requirePhoto`) com testes | frontend | plan.md §6 e §11 | nenhum | Concluída |
 | TASK-439 | Exigir foto ou texto no tipo de `handlePay` e fazer o ✓ de Despesas abrir o popup | frontend | plan.md §5, §7 e §11 | nenhum | Pendente |
 | TASK-440 | Trocar o popup do credor em Pagamentos pelo `PaymentProofDialog` e exibir `paymentNote` no cartão | frontend | plan.md §8, §9 e §11 | nenhum | Pendente |
 | TASK-441 | Trocar o popup do devedor em Pagamentos pelo `PaymentProofDialog`, enviar `descricao` e exibir `confirmedNote` | frontend | plan.md §8, §9 e §11 | nenhum | Pendente |
