@@ -31,6 +31,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-428 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-428`) | 2026-10-21 | Claude (IA), com aprovação do usuário (D9 reconfirmada depois de discutir alternativas, §10) | Ver §10 | Teto de 50 grupos com `truncated`, cortado antes de calcular: 60 grupos custam o mesmo que 50 (302 consultas). 3 testes de contrato da raiz atualizados para o campo novo |
 | TASK-429 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-429`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §11 | Um teste derrubou a premissa do critério: o Laravel executa o throttle **antes** do `jwt.auth`. O limiter passou a ignorar chamadas sem usuário válido. 4 mutações |
 | TASK-430 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-430`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §12 | Nome ambíguo em snapshot antigo não é atribuído a ninguém; o teste do nome único passou sem edição. 3 mutações |
+| TASK-431 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-431`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §13 | `abort_unless($user, 401)` no controller; sem ele, `TypeError` (500). 2 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -341,3 +342,25 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-430`, a partir de `aa6b7
 | M3 | Filtro invertido (só nomes repetidos) | Derrubou os dois: o do nome único (`actual size 0 matches expected size 1`) e o novo |
 
 A suíte desta vez levou 179 s, contra 106 s na anterior, sem teste novo pesado. A diferença é do ambiente (MySQL em Docker na mesma máquina), não do código.
+
+## 13. Evidências da TASK-431 (401 sem usuário no controller, achado S4)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-431`, a partir de `81be0c1069`. Suíte antes: 521 testes.
+
+**O que mudou.** `OverviewController::show()` resolve o usuário e faz `abort_unless($user, 401)` antes de chamar o serviço. O `jwt.auth` já barra quem não tem token, mas o controller resolve o usuário de novo pelo guard `api`: se a conta deixa de existir entre o middleware e o controller, `forUser(null)` dava `TypeError` e a resposta seria 500.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes (é também a mutação "remover o `abort_unless`", o critério da task) | `php artisan test --filter=test_the_controller_answers_401` antes da correção | Falhou com `TypeError` |
+| 401 sem usuário | `test_the_controller_answers_401_when_there_is_no_user`: chama o controller direto, sem usuário no guard | `HttpException` com status 401 |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 171 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 522 passed (3382 assertions)`, 122,44 s (521 + 1 novo) |
+
+**Mutações** (revertidas):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Sem o `abort_unless` | `TypeError` (a execução "vermelho antes" acima) |
+| M2 | `abort_unless($user, 403)` | `Failed asserting that 403 is identical to 401` |
+
+O caso pelo HTTP (token de uma conta removida, do começo ao fim da requisição) é a lacuna (d) da TASK-432.

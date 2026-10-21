@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\OverviewController;
 use App\Models\Expense;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
@@ -11,6 +12,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Route;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
 /**
@@ -108,6 +110,21 @@ class OverviewControllerTest extends TestCase
     public function test_requires_authentication(): void
     {
         $this->getJson('/api/me/overview')->assertStatus(401);
+    }
+
+    public function test_the_controller_answers_401_when_there_is_no_user(): void
+    {
+        // TASK-431 (achado S4): o jwt.auth já barra quem não tem token, mas o
+        // controller resolve o usuário de novo; se a conta some no meio do
+        // caminho, a resposta tem de ser 401, não um TypeError (500).
+        auth('api')->forgetUser();
+
+        try {
+            app(OverviewController::class)->show();
+            $this->fail('esperava HttpException 401');
+        } catch (HttpException $exception) {
+            $this->assertSame(401, $exception->getStatusCode());
+        }
     }
 
     public function test_the_route_sits_behind_the_jwt_auth_middleware(): void
