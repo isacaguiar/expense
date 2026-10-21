@@ -24,6 +24,7 @@ class SettlementConfirmation extends Model
         'to_user_id',
         'amount',
         'proof_path',
+        'note',
         'confirmed_at',
     ];
 
