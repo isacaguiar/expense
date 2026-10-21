@@ -26,7 +26,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-424 | Rodar a revisão final (backend e frontend): `pr-readiness-checker`, suítes completas e checklist do `04-implementation.md` §1 item 5 | backend | plan.md §6 | antes do merge | Pendente |
 | TASK-425 | Registrar em `docs/backlog/` os achados tangenciais da feature | doc | plan.md §9 | nenhum | Pendente |
 | TASK-426 | Atualizar o plan de `20261006-relatorios-acompanhamento-fechamento` para usar `CycleSummaryService` e as linhas atuais | doc | plan.md §0.4 | nenhum | Pendente |
-| TASK-427 | Reduzir o custo de `GET /me/overview`: `focus()` sem calcular ciclos anteriores à primeira despesa do grupo e snapshots lidos numa só consulta, sem mudar o resultado | backend | plan.md §1.2, §8 | nenhum | Pendente |
+| TASK-427 | Reduzir o custo de `GET /me/overview`: `focus()` sem calcular ciclos anteriores à primeira despesa do grupo e snapshots lidos numa só consulta, sem mudar o resultado | backend | plan.md §1.2, §8 | nenhum | Concluída |
 | TASK-428 | Limitar o número de grupos do overview e sinalizar com `truncated` (decisão D9) | backend | plan.md §1.1, §8 | nenhum | Pendente |
 | TASK-429 | Aplicar throttle por usuário na rota `GET /me/overview` (decisão D10) | backend | plan.md §1.4 | nenhum | Pendente |
 | TASK-430 | Falhar fechado quando o nome de um participante de snapshot legado é ambíguo entre os membros do grupo | backend | plan.md §1.3 | nenhum | Pendente |

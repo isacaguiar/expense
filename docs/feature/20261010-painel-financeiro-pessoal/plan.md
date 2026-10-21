@@ -89,7 +89,7 @@ O plan de `20261006-relatorios-acompanhamento-fechamento` prevê extrair só `su
   - demais → `compute` ao vivo.
   Devolve `{cycle{start,end,closes_at,status,settled,in_grace}, summary{totals,expenses,balances,settlements}, sealed}`.
 - **Risco de deriva** entre `view()` e `summary()`: `summary()` **não é refatorado** nesta feature (menos risco), e um teste de reconciliação compara `cycle`, `totals` e `settlements` do overview com a resposta de `summary?cycles_ago=N` do mesmo ciclo (§6).
-- **Custo:** por grupo, `focus` calcula cada ciclo fechado/em carência candidato até achar pendência (o vigente aberto é pulado sem calcular) e `view` recalcula o escolhido: tipicamente 1 a 3 `compute` por grupo. Sem otimização prematura; a validação local mede com vários grupos e ciclos (§6).
+- **Custo:** por grupo, `focus` calcula cada ciclo fechado/em carência candidato até achar pendência (o vigente aberto é pulado sem calcular) e `view` recalcula o escolhido: tipicamente 1 a 3 `compute` por grupo. A TASK-427 acrescentou o curto-circuito dos ciclos anteriores à primeira entrada possível do grupo (a menor entre `date_payment` das despesas vivas e `date_expected` das quotas); a validação local mede com vários grupos e ciclos (§6).
 
 ### 1.3 Derivação por usuário (`PersonalOverviewService`)
 
@@ -190,7 +190,7 @@ A numeração `TASK-xxx` do `tasks.md` precisa ser reconfirmada contra `03-tasks
 |---|---|
 | A extração mexe no núcleo do cálculo de ciclo | Só movimento de código; suíte inteira como prova; diff revisado linha a linha; wrappers privados mantêm os testes de reflexão |
 | `view()` divergir de `summary()` com o tempo | `summary()` não muda agora; teste de reconciliação overview × summary |
-| Custo com muitos grupos (até ~14 `compute` por grupo no pior caso) | **Medido na TASK-414** (local, MySQL em Docker): grupo vazio ≈ 54 consultas e 20 grupos vazios ≈ 1.082 consultas e 2,8 s; grupo com pendência recente 18 consultas (o foco para cedo). O caso caro é o grupo parado ou sem dados. Mitigação: TASK-427 (`focus()` sem calcular ciclos anteriores à primeira despesa, snapshots numa só consulta), TASK-428 (teto de grupos, decisão D9) e TASK-429 (throttle por usuário, D10). O limite de 3 vale só para grupos criados, não para participar |
+| Custo com muitos grupos (até ~14 `compute` por grupo no pior caso) | **Medido na TASK-414** (local, MySQL em Docker): grupo vazio ≈ 54 consultas e 20 grupos vazios ≈ 1.082 consultas e 2,8 s; grupo com pendência recente 18 consultas (o foco para cedo). O caso caro é o grupo parado ou sem dados. **TASK-427 feita** (`focus()` sem calcular ciclos anteriores à primeira entrada possível, snapshots numa só consulta): grupo vazio 8 consultas e 36 ms, 20 grupos vazios 122 consultas e ~410 ms, 50 grupos vazios 302 consultas e ~1 s; grupo com pendência recente 19 (+1). Falta o teto de grupos (TASK-428, decisão D9) e o throttle por usuário (TASK-429, D10). O limite de 3 vale só para grupos criados, não para participar |
 | Snapshot antigo sem `participantDetails` | Resolver por nome pelos membros; teste dedicado |
 | Refatorar `Payments.tsx` (a tela do bug de `cycles_ago`) | `Payments.test.tsx` já fixa o `cycles_ago`; extração sem mudar asserção |
 | Dois sentidos de "devedor" (painel × filtros de Despesas) | Rótulos distintos e nota no `implementation.md` |

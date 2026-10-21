@@ -9,8 +9,10 @@ use App\Models\Notification;
 use App\Models\SettlementConfirmation;
 use App\Models\User;
 use App\Services\CycleSummaryService;
+use App\Support\BillingCycle;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 /**
@@ -353,6 +355,224 @@ class CycleSummaryServiceTest extends TestCase
         $this->unpaidExpense($group, $creditor, '2025-09-10'); // setembro/2025: 13 ciclos atrás
 
         $this->assertSame(0, $this->service()->focus($group));
+    }
+
+    // --- focus(): o curto-circuito dos ciclos anteriores à primeira entrada -----
+    // (TASK-427: não calcular ciclo que não pode ter entrada; o resultado não muda)
+
+    /**
+     * O laço original do `focus()`, sem nenhum curto-circuito: uma consulta de
+     * snapshot e um `isFullySettled` por ciclo, de 0 a `FOCUS_LOOKBACK`. É a
+     * referência contra a qual o `focus()` otimizado tem de dar sempre a mesma
+     * resposta.
+     */
+    private function focusByFullScan(Group $group): int
+    {
+        for ($ago = 0; $ago <= CycleSummaryService::FOCUS_LOOKBACK; $ago++) {
+            $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $ago);
+
+            $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+                ->where('cycle_start', $cycle['start']->toDateString())
+                ->first();
+
+            if ($snapshot && $snapshot->isSealed()) {
+                continue;
+            }
+
+            $cycleIsClosed = $cycle['status'] === 'closed'
+                || ($cycle['status'] === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive());
+            $inGrace = $cycle['status'] === 'open' && Carbon::now()->startOfDay()->gt($cycle['end']);
+
+            if (! $cycleIsClosed && ! $inGrace) {
+                continue;
+            }
+
+            if (! $this->service()->isFullySettled($group, $cycle['start'], $cycle['end'])) {
+                return $ago;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Despesa de `$creditor` só dele (sem devedor), de qualquer tipo, com as
+     * quotas dadas como lista de `[data, paga]` numeradas de 1.
+     *
+     * @param  array<int, array{0: string, 1: bool}>  $quotas
+     */
+    private function typedExpense(Group $group, User $creditor, string $type, string $datePayment, array $quotas, bool $deleted = false): Expense
+    {
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => $datePayment,
+            'description' => 'Despesa de teste',
+            'expense_type' => $type,
+            'installments' => $type === 'IN_INSTALLMENTS' ? count($quotas) : 1,
+            'total_value' => 100,
+            'group_id' => $group->id,
+            'user_creator_id' => $creditor->id,
+            'user_payer_id' => $creditor->id,
+            'deleted' => $deleted,
+        ]);
+        $expense->payers()->attach($creditor->id);
+
+        foreach (array_values($quotas) as $index => [$date, $paid]) {
+            $expense->quotas()->create(['date_expected' => $date, 'number' => $index + 1, 'paid' => $paid, 'value_quota' => 100]);
+        }
+
+        return $expense;
+    }
+
+    public function test_focus_gives_the_same_answer_as_the_full_scan_in_every_shape_of_group(): void
+    {
+        Carbon::setTestNow('2026-10-15'); // outubro (0), setembro (1), agosto (2) … abril (6)
+
+        // nome => [resposta esperada, construtor do grupo]
+        $scenarios = [
+            'grupo vazio' => [0, fn () => $this->groupWithCreditor()[0]],
+
+            'despesa só em setembro' => [1, function () {
+                [$group, $creditor] = $this->groupWithCreditor();
+                $this->unpaidExpense($group, $creditor, '2026-09-10');
+
+                return $group;
+            }],
+
+            'parcelada que começa meses antes' => [6, function () {
+                [$group, $creditor] = $this->groupWithCreditor();
+                $this->typedExpense($group, $creditor, 'IN_INSTALLMENTS', '2026-04-10', [
+                    ['2026-04-10', false], ['2026-05-10', true], ['2026-06-10', true],
+                    ['2026-07-10', true], ['2026-08-10', true], ['2026-09-10', true],
+                ]);
+
+                return $group;
+            }],
+
+            'parcela com vencimento anterior à data da despesa (retroativa)' => [4, function () {
+                [$group, $creditor] = $this->groupWithCreditor();
+                $this->typedExpense($group, $creditor, 'IN_INSTALLMENTS', '2026-09-10', [
+                    ['2026-06-10', false], ['2026-07-10', true], ['2026-08-10', true], ['2026-09-10', true],
+                ]);
+
+                return $group;
+            }],
+
+            'despesa Fixa com ocorrências congeladas' => [5, function () {
+                [$group, $creditor] = $this->groupWithCreditor();
+                $this->typedExpense($group, $creditor, 'FIXED', '2026-05-10', [
+                    ['2026-05-10', false], ['2026-06-10', true], ['2026-07-10', true],
+                    ['2026-08-10', true], ['2026-09-10', true],
+                ]);
+
+                return $group;
+            }],
+
+            'ciclo selado no meio do caminho' => [2, function () {
+                [$group, $creditor] = $this->groupWithCreditor();
+                $this->unpaidExpense($group, $creditor, '2026-08-10');
+                $this->unpaidExpense($group, $creditor, '2026-09-10');
+                GroupCycleSnapshot::create([
+                    'group_id' => $group->id,
+                    'cycle_start' => '2026-09-01',
+                    'cycle_end' => '2026-09-30',
+                    'totals' => ['total' => 100, 'paid' => 100, 'pending' => 0],
+                    'expenses' => [],
+                    'balances' => [],
+                    'settlements' => [],
+                    'settled_at' => now(),
+                ]);
+
+                return $group;
+            }],
+
+            'despesa excluída não conta' => [2, function () {
+                [$group, $creditor] = $this->groupWithCreditor();
+                $this->typedExpense($group, $creditor, 'IN_CASH', '2026-03-10', [['2026-03-10', false]], deleted: true);
+                $this->unpaidExpense($group, $creditor, '2026-08-10');
+
+                return $group;
+            }],
+
+            'acerto sem confirmação num ciclo antigo' => [4, function () {
+                [$group, $creditor, $debtor] = $this->groupWithPair();
+                $this->expenseBetween($group, $creditor, [$debtor], 200, true, '2026-06-10');
+
+                return $group;
+            }],
+
+            'despesa no último dia do ciclo' => [2, function () {
+                [$group, $creditor] = $this->groupWithCreditor();
+                $this->unpaidExpense($group, $creditor, '2026-08-31');
+
+                return $group;
+            }],
+
+            'despesa no primeiro dia do ciclo' => [1, function () {
+                [$group, $creditor] = $this->groupWithCreditor();
+                $this->unpaidExpense($group, $creditor, '2026-09-01');
+
+                return $group;
+            }],
+
+            'fechamento no dia 15' => [1, function () {
+                $creditor = User::factory()->create();
+                $group = Group::create(['name' => 'Grupo', 'closing_day' => 15]);
+                $group->members()->attach($creditor->id);
+                $this->unpaidExpense($group, $creditor, '2026-08-20'); // ciclo 16/08–15/09
+
+                return $group;
+            }],
+        ];
+
+        foreach ($scenarios as $name => [$expected, $build]) {
+            $group = $build();
+
+            $this->assertSame($expected, $this->focusByFullScan($group), "a referência de força bruta mudou em: {$name}");
+            $this->assertSame($expected, $this->service()->focus($group), $name);
+        }
+    }
+
+    public function test_focus_does_not_scan_cycles_for_a_group_with_nothing_to_scan(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$empty] = $this->groupWithCreditor();
+
+        [$onlyDeleted, $creditor] = $this->groupWithCreditor();
+        $this->typedExpense($onlyDeleted, $creditor, 'IN_CASH', '2026-03-10', [['2026-03-10', false]], deleted: true);
+
+        foreach (['grupo vazio' => $empty, 'só despesa excluída' => $onlyDeleted] as $name => $group) {
+            DB::enableQueryLog();
+            DB::flushQueryLog();
+            $this->service()->focus($group);
+            $queries = DB::getQueryLog();
+            DB::disableQueryLog();
+
+            // Sem nenhuma entrada possível não há ciclo a calcular: no máximo as
+            // consultas que descobrem a primeira data (antes: 49 para 12 ciclos).
+            $this->assertLessThanOrEqual(2, count($queries), "{$name} varreu ciclos: ".count($queries).' consultas');
+        }
+    }
+
+    public function test_focus_reads_the_snapshots_of_all_the_scanned_cycles_in_a_single_query(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor] = $this->groupWithCreditor();
+        // Paga e sem devedor: todo ciclo de janeiro a setembro é varrido e nenhum é pendente.
+        $this->typedExpense($group, $creditor, 'IN_CASH', '2026-01-10', [['2026-01-10', true]]);
+
+        DB::enableQueryLog();
+        DB::flushQueryLog();
+        $focus = $this->service()->focus($group);
+        $queries = DB::getQueryLog();
+        DB::disableQueryLog();
+
+        $snapshotQueries = array_filter($queries, fn (array $query) => str_contains($query['query'], 'ex_group_cycle_snapshots'));
+
+        $this->assertSame(0, $focus);
+        $this->assertCount(1, $snapshotQueries, 'uma consulta de snapshot por ciclo varrido');
     }
 
     // --- view(): a escolha de fonte de summary(), sem a selagem preguiçosa -------
