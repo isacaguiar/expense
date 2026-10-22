@@ -32,6 +32,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-430 | Falhar fechado quando o nome de um participante de snapshot legado é ambíguo entre os membros do grupo | backend | plan.md §1.3 | nenhum | Concluída |
 | TASK-431 | Responder 401 quando o usuário do token deixa de existir entre o middleware e o controller | backend | plan.md §1.4 | nenhum | Concluída |
 | TASK-432 | Fechar as lacunas de teste do overview apontadas pela revisão: ex-membro, credor que saiu do grupo e vazamento de e-mail de grupo alheio | backend | plan.md §1.4, §6 | nenhum | Concluída |
+| TASK-433 | Mostrar "Já recebido" no cartão (achado 1 da validação local, `implementation.md` §23) | frontend | plan.md §2 | roda antes da TASK-424 | Concluída |
 
 Ordem: TASK-409 → 410 → 411 → 412 → 413 → 414 (backend, plan.md §7 passos 1 a 3). Em seguida TASK-415 → 416 → 417 → 418 → 419 → 420 → 421 → 422 (frontend, passos 4 a 6). As TASK-415 e 416 não dependem do backend e poderiam rodar antes; ficam depois para integrar o contrato real a partir da TASK-417. Fecham TASK-423 (validação local) → 424 (revisão final) → 425 → 426. A revisão da TASK-414 gerou as TASK-427 a 432 (backend), que rodam logo depois dela e antes de a TASK-423 validar tudo: TASK-427 → 428 → 429 → 430 → 431 → 432. As TASK-428 e 429 dependem das decisões D9 e D10 do `specify.md` §5; se forem recusadas, ficam Canceladas. Se a validação ou a revisão apontar defeito, ele vira task nova, não amplia a task em andamento.
 
@@ -164,3 +165,8 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
 - **TASK-432** (achado S7):
   - Testes novos em `OverviewControllerTest`/`PersonalOverviewServiceTest`: (a) **ex-membro:** usuário que aparece em `payers` de despesa de um grupo mas não é mais membro não vê esse grupo; (b) **credor que saiu:** `to_user` vem com `name` "Desconhecido" e `email` e `pix` nulos; (c) a asserção de que e-mail alheio não vaza passa a usar um grupo alheio em que o usuário consta em `payers` sem ser membro (hoje ela não consegue falhar); (d) token de usuário removido devolve 401.
   - Cada teste novo falha se a proteção correspondente for removida (mutação por teste, registrada no `implementation.md`).
+- **TASK-433** (achado 1 da TASK-423; opção B recomendada, aprovada pelo usuário com "siga" em 2026-10-22):
+  - O cartão ganha um quarto total, **"Já recebido"**, com `receive.confirmed` (o payload já traz; **sem mudança de backend nem de contrato**). Os quatro ficam na ordem "A pagar", "A receber", "Já confirmado", "Já recebido"; em 375 px formam duas colunas, e de `sm` para cima ficam numa linha.
+  - O "Já recebido" conta os **comprovantes já enviados** pelos devedores (`confirmed_at`), não dinheiro conferido: o sistema não tem confirmação de recebimento pelo credor. Fica anotado no `plan.md` §2.
+  - `GroupPositionCard.test.tsx`: "Já recebido" mostra `receive.confirmed` (não `receive.open`) e fica "R$ 0,00" sem comprovantes; os três totais que já existiam seguem iguais, **sem edição das asserções atuais**. Mutação: usar `receive.open` no lugar de `receive.confirmed` derruba o teste.
+  - Conferido no navegador na stack da TASK-423 (o Consórcio mostra "Já recebido R$ 250,00") e em 375 px sem scroll horizontal. `tsc` sem erro e suíte do frontend verde.

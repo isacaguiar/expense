@@ -81,6 +81,36 @@ describe('GroupPositionCard', () => {
       expect(within(screen.getByTestId('total-confirmed')).getByText('R$ 0,00')).toBeInTheDocument();
     });
 
+    // TASK-433 (achado 1 da validação local): quem é credor via "Já confirmado R$ 0,00"
+    // mesmo com comprovantes já enviados por devedores. "Já recebido" é o que os
+    // devedores já comprovaram (`receive.confirmed`), distinto do que ainda falta.
+    it('shows "Já recebido" with the proofs already sent to the user, apart from what is still open', () => {
+      renderCard(
+        group({
+          // 250 já comprovados, 400 ainda a receber (total 650): o "A receber" é só o que falta.
+          receive: { total: 650, confirmed: 250, open: 400 },
+        })
+      );
+
+      expect(within(screen.getByTestId('total-receive')).getByText('R$ 400,00')).toBeInTheDocument();
+      expect(within(screen.getByTestId('total-received')).getByText('Já recebido')).toBeInTheDocument();
+      expect(within(screen.getByTestId('total-received')).getByText('R$ 250,00')).toBeInTheDocument();
+    });
+
+    it('shows "Já recebido" as zero when nobody sent a proof yet, and keeps it apart from "Já confirmado"', () => {
+      const base = group();
+      renderCard(
+        group({
+          owe: { total: 439.23, confirmed: 100, open: 339.23 },
+          receive: { ...base.receive, total: 120, confirmed: 0, open: 120 },
+        })
+      );
+
+      expect(within(screen.getByTestId('total-received')).getByText('R$ 0,00')).toBeInTheDocument();
+      // O que o usuário deve e já comprovou continua no seu próprio total.
+      expect(within(screen.getByTestId('total-confirmed')).getByText('R$ 100,00')).toBeInTheDocument();
+    });
+
     it('says when the cycle closes while it is still in its grace window', () => {
       const base = group();
       renderCard(group({ cycle: { ...base.cycle, status: 'open', in_grace: true, closes_at: '2026-10-05' } }));
