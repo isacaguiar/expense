@@ -995,4 +995,96 @@ class ExpenseControllerPayTest extends TestCase
 
         $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false, 'payment_note' => null]);
     }
+
+    // --- pay() repetido apaga a foto anterior (docs/feature/20261022-editar-comprovante-depois-de-paga, R9) ---
+
+    public function test_first_pay_with_a_photo_stores_exactly_one_file(): void
+    {
+        Storage::fake('local');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('primeira.jpg'),
+            ])->assertStatus(200);
+
+        $this->assertCount(1, Storage::disk('local')->allFiles());
+    }
+
+    public function test_repaying_with_a_new_photo_deletes_the_previous_photo(): void
+    {
+        Storage::fake('local');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+        $token = $this->tokenFor($creditor);
+
+        $this->withToken($token)
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('primeira.jpg'),
+            ])->assertStatus(200);
+
+        $first = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+        Storage::disk('local')->assertExists($first);
+
+        $this->withToken($token)
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('segunda.jpg'),
+            ])->assertStatus(200);
+
+        $second = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+
+        $this->assertNotSame($first, $second);
+        Storage::disk('local')->assertMissing($first);
+        Storage::disk('local')->assertExists($second);
+        $this->assertCount(1, Storage::disk('local')->allFiles());
+    }
+
+    public function test_repaying_without_a_photo_keeps_the_existing_photo(): void
+    {
+        Storage::fake('local');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+        $token = $this->tokenFor($creditor);
+
+        $this->withToken($token)
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('primeira.jpg'),
+            ])->assertStatus(200);
+
+        $first = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+
+        $this->withToken($token)
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => 'só a descrição'])
+            ->assertStatus(200);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertSame($first, $quota->payment_proof_path);
+        Storage::disk('local')->assertExists($first);
+        $this->assertSame('só a descrição', $quota->payment_note);
+    }
+
+    public function test_repaying_with_a_new_photo_also_deletes_a_legacy_photo_from_the_public_disk(): void
+    {
+        // Comprovante anterior à convenção por grupo: path plano, disco `public`
+        // (ProofStorage::resolveDisk). A foto nova vai para o disco `local`.
+        Storage::fake('local');
+        Storage::fake('public');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        Storage::disk('public')->put('comprovantes/legado.jpg', 'img');
+        Quota::where('expense_id', $expense->id)->update([
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'payment_proof_path' => 'comprovantes/legado.jpg',
+        ]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('nova.jpg'),
+            ])->assertStatus(200);
+
+        Storage::disk('public')->assertMissing('comprovantes/legado.jpg');
+        $current = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+        $this->assertStringStartsWith('comprovantes/', $current);
+        Storage::disk('local')->assertExists($current);
+    }
 }

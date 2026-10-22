@@ -8,7 +8,7 @@ IDs a partir de TASK-449: o maior em qualquer branch do repositório é TASK-448
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-449 | Fazer `pay()` repetido apagar a foto anterior, com testes PHPUnit | backend | plan.md §2 e §7 | nenhum | Pendente |
+| TASK-449 | Fazer `pay()` repetido apagar a foto anterior, com testes PHPUnit | backend | plan.md §2 e §7 | nenhum | Concluída |
 | TASK-450 | Criar a rota `POST /expenses/{id}/payment-proof` (editar foto e descrição de despesa paga), com testes PHPUnit | backend | plan.md §1 e §7 | nenhum | Pendente |
 | TASK-451 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §8 | nenhum | Pendente |
 | TASK-452 | Acrescentar `canEditProof` e `handleEditProof` ao `usePaymentActions`, com testes | frontend | plan.md §3 e §7 | nenhum | Pendente |

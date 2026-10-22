@@ -1037,7 +1037,8 @@ class ExpenseController extends Controller
      * (`00-constitution.md` §4.1) — decisão D1 em
      * `docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga/specify.md` §3.3.
      * Um novo `pay()` sem `descricao` não apaga a nota que já existe; só
-     * `unpay()` limpa.
+     * `unpay()` limpa. Um novo `pay()` com foto nova apaga do disco a foto
+     * anterior (depois de o banco apontar para a nova).
      */
     public function pay($expenseId, Request $request)
     {
@@ -1081,8 +1082,19 @@ class ExpenseController extends Controller
         }
 
         $wasPaid = (bool) $quota->paid;
+        $previousProofPath = $quota->payment_proof_path;
 
         $quota->update($update);
+
+        // Foto trocada num `pay()` repetido: o arquivo anterior sai do disco só
+        // depois de o banco apontar para o novo (nunca perde o comprovante se a
+        // gravação falhar). Sem isto o antigo ficava órfão no disco privado
+        // (feature `20261022-editar-comprovante-depois-de-paga`, R9).
+        if (array_key_exists('payment_proof_path', $update)
+            && $previousProofPath
+            && $previousProofPath !== $update['payment_proof_path']) {
+            ProofStorage::delete($previousProofPath);
+        }
 
         $this->sealCycleIfSettled($group, $group->id, $cycle['start'], $cycle['end']);
 
