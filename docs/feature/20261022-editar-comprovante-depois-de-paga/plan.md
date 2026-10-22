@@ -108,7 +108,7 @@ Mesma ordem de R3 (grava, atualiza, só então apaga). Nada mais muda em `pay()`
 
 `frontend/src/components/PaymentProofDialog.tsx`, aditivo e compatível com os usos atuais (Despesas ✓, Pagamentos credor e devedor):
 
-- **Props novas, todas opcionais**: `initialNote?: string` (descrição atual), `currentProofUrl?: string | null` (foto atual) e `confirmLabel?: string` (padrão `"Confirmar"`; a edição passa `"Salvar"`). O modo de edição é implícito: existe `currentProofUrl` ou `initialNote`. Título e texto de ajuda já vêm por prop.
+- **Props novas, todas opcionais**: `initialNote?: string` (descrição atual), `currentProofUrl?: string | null` (foto atual) e `confirmLabel?: string` (padrão `"Confirmar"`; a edição passa `"Salvar"`). O modo de edição é implícito: liga quando `currentProofUrl` **ou** `initialNote` é passada, mesmo vazia ou `null` (`initialNote !== undefined || currentProofUrl !== undefined`). Isso cobre a despesa paga antes do popup existir, que não tem foto nem descrição: a tela passa `initialNote=""` e `currentProofUrl={null}`, e o botão fica desabilitado até haver foto ou texto. Título e texto de ajuda já vêm por prop.
 - **`PaymentProofValue`** passa a `{ file: File | null; note: string; removeProof?: boolean }`. O campo só é preenchido no modo de edição, então as asserções dos testes atuais (`toHaveBeenCalledWith({ file, note })`) não quebram.
 - **Estado**: `removeProof` (zerado ao abrir) e `note` inicializado com `initialNote ?? ''` ao abrir.
 - **Interface** quando há `currentProofUrl`: uma linha "Foto atual" com o link "Ver foto atual" (nova aba) e um checkbox "Remover a foto atual". Marcar o checkbox limpa a foto escolhida; escolher uma foto desmarca o checkbox. Assim o front nunca monta a combinação que o backend recusa.
