@@ -51,7 +51,7 @@ Route::post('/expenses/{expenseId}/payment-proof', [ExpenseController::class, 'u
 6. **Ciclo selado** (D4): `GroupCycleSnapshot::where(group_id, cycle_start)->first()?->isSealed()` responde 422 `{error: 'Esta competência já foi encerrada. Desfaça o pagamento para corrigir o comprovante.'}`, o mesmo padrão de `confirmSettlement` (`:1211`).
 7. **Estado final** (D5): `temFoto = hasFile || ($quota->payment_proof_path && ! remover)` e `novaNota = has('descricao') ? ($data['descricao'] ?? null) : $quota->payment_note`. Se `! temFoto && ! filled($novaNota)`, responde 422 `{error: 'Informe a foto do comprovante ou uma descrição do pagamento.'}`. `filled()`, nunca `empty()`, para não repetir o defeito do `"0"` (TASK-448 da feature anterior).
 
-**Gravação** (R3): guardar o caminho anterior, gravar o arquivo novo (se veio), atualizar a quota e **só depois** apagar o arquivo anterior: Desde a TASK-462, a busca da quota, as verificações de estado e o `update` acontecem dentro de `DB::transaction` com a quota lida por `lockForUpdate`, e o arquivo anterior é apagado **depois do commit**.
+**Gravação** (R3): guardar o caminho anterior, gravar o arquivo novo (se veio), atualizar a quota e **só depois** apagar o arquivo anterior: Desde a TASK-462, a busca da quota, as verificações de estado e o `update` acontecem dentro de `DB::transaction` com a quota lida por `lockForUpdate`, e o arquivo anterior é apagado **depois do commit**. O disco `local` tem `throw => false`: se a gravação falhar, `storeAs` devolve `false`; desde a TASK-463 `ProofStorage::store` aborta com 500 ("Não foi possível gravar o comprovante.") antes de qualquer escrita no banco, o que vale para `pay()`, para esta rota e para `confirmSettlement`.
 
 ```php
 $anterior = $quota->payment_proof_path;

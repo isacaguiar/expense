@@ -13,6 +13,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\FailsToWriteProofs;
 use Tests\TestCase;
 
 /**
@@ -23,6 +24,7 @@ use Tests\TestCase;
 class ExpenseControllerPaymentProofTest extends TestCase
 {
     use DatabaseTransactions;
+    use FailsToWriteProofs;
 
     private const PAID_AT = '2026-08-12 10:00:00';
 
@@ -589,6 +591,40 @@ class ExpenseControllerPaymentProofTest extends TestCase
 
         $this->assertSame([$old], Storage::disk('local')->allFiles());
         $this->assertSame($old, $quota->fresh()->payment_proof_path);
+    }
+
+    // --- Disco que não grava (TASK-463, achado B3 da revisão de segurança) ---
+
+    public function test_a_new_photo_that_the_disk_cannot_write_is_rejected_with_500_and_changes_nothing(): void
+    {
+        $this->failProofWrites();
+        [$creditor, $group, $expense, $quota] = $this->paidExpense(['payment_note' => 'Nota']);
+        $quota->update(['payment_proof_path' => $this->putProof($group)]);
+        $quota = $quota->fresh();
+        $files = Storage::disk('local')->allFiles();
+
+        $this->editMultipart($creditor, $expense, [
+            'comprovante' => UploadedFile::fake()->image('nova.jpg'),
+        ])->assertStatus(500);
+
+        $this->assertNothingChanged($quota, $files);
+    }
+
+    public function test_a_new_photo_that_fails_to_write_with_the_note_cleared_does_not_leave_the_quota_empty(): void
+    {
+        // Sem a guarda, `store` devolvia false, a foto era ignorada e o `update`
+        // gravava só a descrição limpa: a quota ficava sem foto E sem descrição.
+        $this->failProofWrites();
+        [$creditor, , $expense, $quota] = $this->paidExpense(['payment_note' => 'Só texto']);
+        $files = Storage::disk('local')->allFiles();
+
+        $this->editMultipart($creditor, $expense, [
+            'comprovante' => UploadedFile::fake()->image('nova.jpg'),
+            'descricao' => '',
+        ])->assertStatus(500);
+
+        $this->assertNothingChanged($quota, $files);
+        $this->assertSame('Só texto', $quota->fresh()->payment_note);
     }
 
     // --- Corrida entre editar e desfazer (TASK-462, achado B2 da revisão de segurança) ---
