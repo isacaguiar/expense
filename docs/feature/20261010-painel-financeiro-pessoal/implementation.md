@@ -45,6 +45,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-433 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`) | 2026-10-22 | Claude (IA), com aprovação do usuário ("siga", opção B recomendada no achado 1 da TASK-423) | Ver §24 | Quarto total "Já recebido" (`receive.confirmed`), sem mudança de backend; conferido no navegador em desktop e em 375 px. 2 mutações |
 | TASK-449 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-449`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D12) | Ver §26 | Merge da `dev` (54 commits) com 3 conflitos resolvidos; `paymentNote` e `confirmedNote` portados para o `CycleSummaryService`; backend 562 e frontend 489 testes verdes. Um erro meu corrigido: a `dev` usa os IDs de backlog 082 e 084, e os meus viraram 085 e 086. 5 mutações |
 | TASK-450 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D13) | Ver §27 | O Painel usa o `PaymentProofDialog` da `dev` (foto ou descrição); o `ProofUploadDialog` foi removido; o `useConfirmSettlement` manda `descricao`. `MyPanel.test.tsx` passou sem edição. 5 mutações |
+| TASK-451 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-451`; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §28 | Os 4 fluxos novos conferidos no navegador, com a descrição chegando ao banco (`note` e `payment_note`) e saindo no `/summary`; reconciliação 6 de 6. Um falso alarme meu no script de conferência (`??` não distingue campo nulo de ausente) |
 
 ## 3. Evidências da TASK-409
 
@@ -834,3 +835,26 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`, a partir de `eb9e
 | M5 | `requirePhoto` no credor | Derrubou só "marks as paid with only a description, no photo…" |
 
 **Verificação visual:** a tela mudou (agora há o campo "Descrição" nos dois diálogos do Painel). Conferência no navegador e envio real da descrição ao banco (`note` e `payment_note`) são da TASK-451.
+
+## 28. Validação local da TASK-451 (depois do merge da `dev` e da TASK-450)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-451` (**só documentação**), sobre a branch da feature em `0d267e3bc9`, na mesma stack da §23 (frontend 3001, backend 8001, banco `painel_validacao`, com as 2 migrações da `dev` aplicadas). Código integrado: o Vite recarregou o frontend e o backend serviu o `CycleSummaryService` portado.
+
+| # | Item | Como foi conferido | Resultado |
+|---|---|---|---|
+| 1 | Acerto do devedor com descrição (Painel, Residencial, "Reenviar comprovante") | Navegador: só com a descrição, depois com foto e descrição | Só com o texto, **"Confirmar" fica desabilitado** (foto obrigatória; contador 33/500). Com foto e texto habilitou. Aviso "Comprovante enviado.". Banco: confirmação do **ciclo de setembro** com `note='Pix feito pelo app do banco às 9h'` e **arquivo trocado** (nome novo) |
+| 2 | Credor marca como paga **só com descrição** (Painel, Consórcio, Condomínio) | Navegador, sem nenhum arquivo escolhido (`files.length` = 0) | O diálogo diz "Anexe uma foto do comprovante ou descreva o pagamento." e abre desabilitado; só com o texto **habilitou**. Banco: `paga=sim`, sem foto, `nota='Recebido em dinheiro, sem foto'` |
+| 3 | Desfazer limpa a nota | "Desfazer" no mesmo item | Item voltou a "Pendente"; banco: `paga=não`, `nota=NULL` |
+| 4 | Credor marca **só com foto** | Foto sem texto | `paga=sim`, arquivo gravado, `nota=NULL` |
+| 5 | Credor marca com **foto e descrição** | Desfazer e marcar de novo com os dois | Banco: arquivo gravado e `nota='Pix do condomínio com foto'` |
+| 6 | O contrato do `/summary` expõe as notas | Script HTTP na API real | Condomínio: `paymentNote='Pix do condomínio com foto'` e URL do comprovante; acerto 1→2 (Residencial): `confirmedNote='Pix feito pelo app do banco às 9h'`. Sem nota, o campo vem `null` e **presente** |
+| 7 | O mesmo acerto pela tela de Pagamentos da `dev` | `/groups/6/payments` (aberta pelo "Ver ciclos" do Painel): "Reenviar comprovante" com foto e descrição | Banco: `note='Reenviado pela tela de Pagamentos'` e arquivo trocado, no ciclo de setembro |
+| 8 | Reconciliação com o `/summary` | Script HTTP, `cycles_ago` do cartão | **6 de 6 iguais**, de novo, com o código integrado |
+
+**Um falso alarme meu.** A primeira rodada do item 6 mostrou "AUSENTE" em dois campos (a nota do Seguro e a do acerto 3→2). Era o meu script: `$e['paymentNote'] ?? 'AUSENTE'` também dispara quando o valor é `null`, então não distingue campo nulo de campo ausente. Troquei por `array_key_exists`, e a segunda rodada mostrou os campos **presentes** com `NULL`. Antes de concluir qualquer coisa, refiz a conferência em vez de supor um defeito do produto ou aceitar o resultado.
+
+**Sessão.** O JWT desta stack dura 60 minutos, e a pausa por limite de uso passou disso: a primeira recarga caiu no login com 401 (o mesmo redirecionamento que a §23 validou), e outra tentativa logo depois do login também voltou ao login. Entrei de novo e naveguei pelo menu, como na primeira validação, e daí em diante tudo funcionou. Os 47 erros de console do buffer são todos `401 (Unauthorized)` dessas duas situações e do teste deliberado de sessão expirada da §23; **nenhum veio dos fluxos acima**.
+
+**Estado da stack:** continua no ar para o usuário. Dados deixados: Condomínio pago com foto e descrição; Residencial e Oficina com comprovante e descrição; Seguro pago; o resto como na §23.
+
+**Pendências do §23/§25 que continuam abertas:** a confirmação por escrito do usuário de que validou localmente (sem ela não há push nem PR) e o encerramento da stack depois dela. **Arquivos de comprovante desta validação** a apagar no encerramento, em `backend/storage/app/comprovantes/`: os criados hoje nas pastas `1`, `2`, `4` e `6` (a pasta é compartilhada com a suíte PHPUnit, que usa ids altos; apagar por data de criação e só nessas pastas, nunca varrer a raiz).
