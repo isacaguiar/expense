@@ -1177,6 +1177,110 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Edita a foto do comprovante e a descrição de uma despesa JÁ paga, sem
+     * desfazer o pagamento (feature `20261022-editar-comprovante-depois-de-paga`).
+     * Só o credor (`user_payer_id`); `cycles_ago` (>= 0, default 0) escolhe a
+     * competência, como em `pay()`/`unpay()`.
+     *
+     * A edição é parcial: `comprovante` (arquivo) troca a foto,
+     * `remover_comprovante` verdadeiro a remove, e `descricao` presente
+     * (inclusive `null` ou `""`) substitui ou limpa a descrição; o que não vem
+     * fica como está. O estado final precisa ter foto OU descrição (422 senão).
+     * Ao contrário de `pay()`, esta rota é nova e é estrita.
+     *
+     * Não altera `paid`, `paid_at` nem `paid_by` e não notifica ninguém nem
+     * recalcula a selagem do ciclo: o estado de pago não muda. Recusa ciclo
+     * selado (a cópia congelada do ciclo é imutável; para corrigir, o credor
+     * desfaz o pagamento, o que já dessela) e não materializa ocorrência `FIXED`
+     * (uma ocorrência virtual nunca está paga).
+     *
+     * Todas as recusas acontecem ANTES de gravar qualquer arquivo. Na gravação,
+     * o arquivo anterior só sai do disco depois de o banco apontar para o novo;
+     * se o `update` falhar, o arquivo novo é apagado e o antigo permanece.
+     */
+    public function updatePaymentProof($expenseId, Request $request)
+    {
+        $expense = $this->findExpenseForMember($expenseId);
+
+        if (auth()->id() !== $expense->user_payer_id) {
+            abort(403, 'Só o credor pode editar o comprovante desta despesa.');
+        }
+
+        $data = $request->validate([
+            'comprovante' => 'nullable|image|max:5120',
+            // Multipart envia '1'; JSON envia true. A string "true" não passa em `boolean`.
+            'remover_comprovante' => 'nullable|boolean',
+            // Trim e "" → null vêm dos middlewares globais (`Http/Kernel.php`).
+            'descricao' => 'nullable|string|max:500',
+            'cycles_ago' => 'nullable|integer|min:0',
+        ]);
+
+        $remove = $request->boolean('remover_comprovante');
+
+        if ($request->hasFile('comprovante') && $remove) {
+            return response()->json(['error' => 'Não é possível enviar uma foto nova e remover a foto na mesma edição.'], 422);
+        }
+
+        $group = $expense->group;
+        $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
+
+        // Mesma busca de `unpay()`: não materializa `FIXED`.
+        $quota = $expense->quotas()
+            ->whereBetween('date_expected', [$cycle['start']->toDateString(), $cycle['end']->toDateString()])
+            ->first();
+
+        if (! $quota || ! $quota->paid) {
+            return response()->json(['error' => 'Esta despesa não está paga nessa competência.'], 422);
+        }
+
+        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', $cycle['start']->toDateString())
+            ->first();
+
+        if ($snapshot && $snapshot->isSealed()) {
+            return response()->json(['error' => 'Esta competência já foi encerrada. Desfaça o pagamento para corrigir o comprovante.'], 422);
+        }
+
+        $newNote = $request->has('descricao') ? ($data['descricao'] ?? null) : $quota->payment_note;
+        $willHaveProof = $request->hasFile('comprovante') || ($quota->payment_proof_path && ! $remove);
+
+        // `filled()`, não `empty()`: `empty("0")` descartaria a descrição "0".
+        if (! $willHaveProof && ! filled($newNote)) {
+            return response()->json(['error' => 'Informe a foto do comprovante ou uma descrição do pagamento.'], 422);
+        }
+
+        $previousPath = $quota->payment_proof_path;
+        $newPath = $request->hasFile('comprovante')
+            ? ProofStorage::store($request->file('comprovante'), $expense->group_id)
+            : null;
+
+        $update = ['payment_note' => $newNote];
+
+        if ($newPath) {
+            $update['payment_proof_path'] = $newPath;
+        } elseif ($remove) {
+            $update['payment_proof_path'] = null;
+        }
+
+        try {
+            $quota->update($update);
+        } catch (\Throwable $e) {
+            // O banco não apontou para o arquivo novo: não deixa órfão.
+            ProofStorage::delete($newPath);
+
+            throw $e;
+        }
+
+        if (array_key_exists('payment_proof_path', $update)
+            && $previousPath
+            && $previousPath !== $update['payment_proof_path']) {
+            ProofStorage::delete($previousPath);
+        }
+
+        return response()->json($quota->fresh());
+    }
+
+    /**
      * Confirma que o usuário autenticado (devedor) pagou via Pix o valor
      * líquido que deve a `to_user_id` num ciclo — conceito distinto de
      * `pay()`/`unpay()`, que confirmam uma despesa específica do lado do
