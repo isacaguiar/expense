@@ -39,6 +39,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-418 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-418`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §18 | Lista só de acompanhamento, sem botão. 3 mutações |
 | TASK-419 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-419`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §19 | Botões só pelas flags do servidor; recalcular a permissão no cliente derruba o teste de regressão. 3 mutações |
 | TASK-420 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-420`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §20 | O `cycles_ago` do payload vai nas 3 ações; fixar `0` derruba os 3 testes. `usePaymentActions` e `useConfirmSettlement` sem alteração. Snackbars no cartão (desvio do plano). 4 mutações |
+| TASK-421 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-421`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §21 | Página `MyPanel` com estados, ordem do servidor, aviso de corte em 50 e recarga depois de cada ação. Acrescentei "Tentar novamente" e o atalho "Ir para Meus Grupos". 5 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -567,3 +568,37 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-420`, a partir de `f4f4
 | M4 | Selo "Em dia" invertido (aplicada junto com a M3; falhas separáveis) | Derrubou "Em dia" e "warns when there is something to pay…" |
 
 **Verificação visual:** ainda sem rota (TASK-421/422). O cartão em largura de celular e de desktop, conferido contra `assets/images/screen/movel.png` e `desktop.png`, fica para a TASK-423.
+
+## 21. Evidências da TASK-421 (página `MyPanel`)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-421`, a partir de `3e65273dd2`. Suíte antes: 390 testes.
+
+**O que mudou.** `src/pages/MyPanel.tsx` (nova), dentro de `DespesasThemeScope`, usando `useMyOverview` e uma `GroupPositionCard` por grupo:
+- **Carregando:** spinner na primeira carga e na nova tentativa depois de um erro (`data === null && error === null`). Um `reload` com dados na tela **não** volta ao spinner: os cartões ficam, e é isso que mantém vivas as mensagens de sucesso, que moram no cartão (§20).
+- **Erro:** `Alert` com a mensagem do hook e o botão "Tentar novamente" (`reload`). Se um `reload` falhar com dados na tela, o erro aparece acima dos cartões e eles ficam.
+- **Vazio:** "Você ainda não participa de nenhum grupo." e o botão "Ir para Meus Grupos" (`/meus-grupos`).
+- **Lista:** um cartão por grupo, **na ordem que o servidor mandou**, com `currentUser={data.user}` e `onChanged={reload}`.
+- **Corte em 50 (TASK-428):** com `truncated: true`, um `Alert` informativo acima dos cartões.
+
+**Dois acréscimos que não estavam nos critérios**, pequenos e de baixo risco: o botão "Tentar novamente" (um erro de rede é passageiro, e sem o botão a pessoa teria de recarregar a página) e o atalho "Ir para Meus Grupos" no estado vazio (é onde se cria ou aceita um grupo). Cada um tem teste.
+
+**Um ajuste de teste.** O teste da recarga olhava o cartão por `getByRole` logo depois da mensagem de sucesso, mas o diálogo de comprovante ainda terminava a animação de saída, e enquanto ele existe o MUI esconde o resto da página das consultas por papel. Passou a `findByRole`, que espera.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `npx vitest run src/pages/MyPanel.test.tsx` sem a página | Falhou (módulo inexistente) |
+| Página | `MyPanel.test.tsx` (10 testes): spinner na primeira carga; erro e nova tentativa que carrega; vazio com o link; cartões na ordem do servidor e dentro do tema (`DespesasThemeScope` simulado por um marcador); `data.user` como devedor em "Você paga"; aviso com `truncated: true` e sem ele; depois de enviar comprovante, `GET` de novo, cartão na tela, sem spinner e "Comprovante enviado."; depois de marcar como paga, `GET` de novo e "Pagamento confirmado."; ação com erro, sem recarregar | 10 passed |
+| Tipos | `npx tsc --noEmit` | Sem erro, sem `any` |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 52 passed`, `Tests 400 passed` (390 + 10 novos), 255,16 s |
+
+**Mutações** (cada uma revertida; `grep` confirmou `DespesasThemeScope`, `onChanged={reload}`, `data.truncated` e a lista sem `sort`):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Ordenar os grupos por nome no cliente | Derrubou "shows one card per group, in the order the server sent…" |
+| M2 | `onChanged` vazio (os cartões não recarregam) | Derrubou os dois testes de recarga depois de uma ação |
+| M3 | Página sem `DespesasThemeScope` | Derrubou o teste do tema (marcador não encontrado) |
+| M4 | Aviso de 50 grupos sempre renderizado | Derrubou "shows no such warning when the list was not cut" |
+| M5 | Esconder os cartões durante a recarga (spinner a cada `reload`) | Derrubou os dois testes de recarga: sem o cartão montado as mensagens de sucesso somem, o que prova que a decisão de mantê-las no cartão (§20) depende de ele não desmontar |
+
+**Verificação visual:** ainda sem rota (TASK-422). Fica para a TASK-423.
