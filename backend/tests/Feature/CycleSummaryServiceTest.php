@@ -357,6 +357,68 @@ class CycleSummaryServiceTest extends TestCase
         $this->assertSame(0, $this->service()->focus($group));
     }
 
+    // --- descrição do pagamento (feature 20261021 da `dev`, portada na TASK-449) ---
+    // `pay()`/`confirmSettlement()` gravam `payment_note`/`note`; o `summary` as expõe como
+    // `paymentNote`/`confirmedNote`. Esse cálculo mora aqui desde a TASK-409, então o serviço
+    // precisa entregá-las em cada forma de entrada, não só o `ExpenseControllerSummaryTest`.
+
+    public function test_compute_carries_the_payment_note_of_every_kind_of_entry(): void
+    {
+        [$group, $creditor] = $this->groupWithCreditor();
+
+        $cash = $this->typedExpense($group, $creditor, 'IN_CASH', '2026-08-10', [['2026-08-10', true]]);
+        $cash->quotas()->first()->update(['payment_note' => 'nota da à vista']);
+
+        $installments = $this->typedExpense($group, $creditor, 'IN_INSTALLMENTS', '2026-07-10', [
+            ['2026-07-10', true], ['2026-08-10', true],
+        ]);
+        $installments->quotas()->where('number', 2)->first()->update(['payment_note' => 'nota da parcela 2']);
+
+        // Fixa já congelada (materializada) em agosto, e outra só projetada, sem quota.
+        $frozen = $this->typedExpense($group, $creditor, 'FIXED', '2026-06-10', [['2026-08-10', true]]);
+        $frozen->quotas()->first()->update(['payment_note' => 'nota da fixa']);
+        $projected = $this->typedExpense($group, $creditor, 'FIXED', '2026-05-10', []);
+
+        $notes = collect($this->service()->compute($group, $this->start, $this->end)['expenses'])->pluck('paymentNote', 'id');
+
+        $this->assertSame('nota da à vista', $notes[$cash->id]);
+        $this->assertSame('nota da parcela 2', $notes[$installments->id]);
+        $this->assertSame('nota da fixa', $notes[$frozen->id]);
+        $this->assertArrayHasKey($projected->id, $notes->all());
+        $this->assertNull($notes[$projected->id]);
+    }
+
+    public function test_a_payment_without_a_note_has_a_null_payment_note(): void
+    {
+        [$group, $creditor] = $this->groupWithCreditor();
+        $expense = $this->typedExpense($group, $creditor, 'IN_CASH', '2026-08-10', [['2026-08-10', true]]);
+
+        $expenses = $this->service()->compute($group, $this->start, $this->end)['expenses'];
+
+        $this->assertSame($expense->id, $expenses[0]['id']);
+        $this->assertArrayHasKey('paymentNote', $expenses[0]);
+        $this->assertNull($expenses[0]['paymentNote']);
+    }
+
+    public function test_with_confirmations_carries_the_note_of_the_confirmation(): void
+    {
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200);
+        $settlements = $this->service()->compute($group, $this->start, $this->end)['settlements'];
+
+        $before = $this->service()->withConfirmations($group->id, $this->start, $settlements)[0];
+        $this->assertArrayHasKey('confirmedNote', $before);
+        $this->assertNull($before['confirmedNote']);
+
+        $confirmation = $this->confirm($group, $debtor, $creditor, 100);
+        $confirmation->update(['note' => 'Pix de manhã']);
+
+        $after = $this->service()->withConfirmations($group->id, $this->start, $settlements)[0];
+
+        $this->assertSame('Pix de manhã', $after['confirmedNote']);
+        $this->assertNotNull($after['confirmedProofUrl']);
+    }
+
     // --- focus(): o curto-circuito dos ciclos anteriores à primeira entrada -----
     // (TASK-427: não calcular ciclo que não pode ter entrada; o resultado não muda)
 

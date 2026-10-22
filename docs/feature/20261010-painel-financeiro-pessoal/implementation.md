@@ -43,6 +43,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-422 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-422`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §22 | Rota `/painel` e item "Painel" como primeiro dos dois menus. Fim do frontend. Os testes existentes dos layouts passaram sem edição de asserção. 4 mutações |
 | TASK-423 | **Em validação** (roteiro executado; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário para iniciar | Ver §23 | 12 itens conferidos no navegador e por HTTP, todos conforme o esperado; 5 achados para o usuário decidir (o principal: "Já confirmado" não mostra o que o credor já recebeu). Falta a confirmação por escrito do usuário e o encerramento da stack |
 | TASK-433 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`) | 2026-10-22 | Claude (IA), com aprovação do usuário ("siga", opção B recomendada no achado 1 da TASK-423) | Ver §24 | Quarto total "Já recebido" (`receive.confirmed`), sem mudança de backend; conferido no navegador em desktop e em 375 px. 2 mutações |
+| TASK-449 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-449`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D12) | Ver §26 | Merge da `dev` (54 commits) com 3 conflitos resolvidos; `paymentNote` e `confirmedNote` portados para o `CycleSummaryService`; backend 562 e frontend 489 testes verdes. Um erro meu corrigido: a `dev` usa os IDs de backlog 082 e 084, e os meus viraram 085 e 086. 5 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -223,7 +224,7 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-414`, criada da branch d
 | D9 | **B, com desenho corrigido** | TASK-428 mantida. Ao responder a dúvida do usuário sobre o que cresce, reli o critério original e achei um erro meu: ordenar por pendência *antes* do corte exigia calcular todos os grupos, então o teto não limitava o custo. O corte passou a ser na consulta, antes de calcular (50 grupos de menor `ex_groups.id`, 51ª linha só para sinalizar `truncated`). Teste de orçamento com 60 grupos prova a posição do corte |
 | D10 | **B** (30/min por usuário na rota) | TASK-429 mantida |
 | D11 | **A** (manter o contato do credor) | Minimização (S6) fica só no backlog da TASK-425 |
-| X1/X2 | **Backlog, tratar depois do Painel** | Sem Triagem agora e sem task nesta feature. Registrados em 2026-10-21 como `docs/backlog/` 082 (X1) e 083 (X2), ambos ALTA. **O dado segue exposto em produção até esse tratamento**, ciente o usuário |
+| X1/X2 | **Backlog, tratar depois do Painel** | Sem Triagem agora e sem task nesta feature. Registrados em 2026-10-21 como `docs/backlog/` 085 (X1) e 086 (X2), ambos ALTA (nasceram como 082 e 083; renumerados na TASK-449, §26). **O dado segue exposto em produção até esse tratamento**, ciente o usuário |
 
 Ressalva à premissa do S1/D9, achada ao escrever o item 083: o reviewer e eu tratamos o abuso como "adicionar a vítima a quantos grupos quiser", mas `GroupController::MAX_GROUPS_CREATED_PER_USER = 3` limita os grupos que **cada conta cria**; levar uma vítima a N grupos exige ~N/3 contas com e-mail verificado. O vetor é mais caro que o descrito, o custo medido não muda, e o teto da D9 segue como defesa em profundidade. O X3 já existe como item 060 e não foi duplicado.
 
@@ -749,10 +750,52 @@ Achado ao começar a revisão final, antes de rodar qualquer suíte (que seria j
 | `usePaymentActions.handlePay(expenseId, details: PaymentDetails)`, com `{ proof?, note? }` | **Quebra de compilação:** o `GroupPositionCard` chama `handlePay(id, file)` |
 | (`useConfirmSettlement` é nosso e não existe na `dev`) | Não manda `descricao`; o acerto do devedor no Painel perderia a descrição que Pagamentos passa a oferecer |
 | Regra "foto ou descrição" para o credor marcar como paga | A decisão **D7** do `specify.md` ("foto obrigatória, como em Pagamentos") precisa ser relida: Pagamentos mudou |
-| `docs/backlog/README.md`: a `dev` tem o 081; eu tenho 082 e 083 | Conflito de linhas. Conferi que a `dev` **não usa IDs ≥ 082** (`git grep` em `origin/dev`) |
+| `docs/backlog/README.md`: a `dev` tem o 081; eu tenho 082 e 083 | Conflito de linhas. ~~Conferi que a `dev` **não usa IDs ≥ 082**~~ **(afirmação errada: a `dev` usa 082 e 084; ver §26)** (`git grep` em `origin/dev`) |
 
 **Numeração:** a `dev` consumiu as TASK-434 a 448. As tasks novas desta feature devem começar na **TASK-449** (a TASK-433 daqui não colide, mas já ficou para trás do contador global).
 
 **Decisões pendentes do usuário** (D12 a D14, abaixo no `specify.md` §5 quando adotadas): ver a tabela proposta na conversa de 2026-10-22.
 
 **Estado da validação local:** a stack (8001, 3001, banco `painel_validacao`) continua no ar sobre o código **anterior** ao merge. Depois de integrar a `dev`, o roteiro da §23 precisa ser repetido no que mudar (pelo menos o envio de comprovante, o marcar como paga e o `migrate`).
+
+## 26. Evidências da TASK-449 (merge da `dev`)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-449`, a partir de `bc84387b3c`. Decisão D12 (merge, não rebase). Antes: backend 525 e frontend 407 testes.
+
+**O merge.** `git fetch origin dev` de novo (continuavam 54 commits) e `git merge origin/dev`: os mesmos 3 conflitos previstos no §25, sem surpresa. Resolução:
+
+| Arquivo | Resolução |
+|---|---|
+| `backend/app/Http/Controllers/ExpenseController.php` | Duas regiões em conflito, ambas só com métodos que a TASK-409 moveu (`computeCycleSummary` e `attachSettlementConfirmations` numa; `collectCycleEntries` na outra). Removi do marcador inicial ao final, de baixo para cima, por um script que valida os marcadores antes de apagar. O lado da feature estava vazio e a linha `/**` antes de cada marcador abre o docblock do método que **fica**. A diferença do controller contra a versão da feature ficou **só** o que a `dev` mudou em `pay()`, `unpay()` e `confirmSettlement()` (conferido linha a linha) |
+| `backend/app/Services/CycleSummaryService.php` (portado) | `paymentNote` nas **três** entradas de `entries()` e no mapa de `compute()`; `confirmedNote` em `withConfirmations()`; `@return` de `entries()` atualizado. Mesmas linhas e comentários da `dev` |
+| `frontend/src/pages/Payments.tsx` | A versão da `dev` inteira (`git checkout --theirs`), conforme a D13: ela usa o `PaymentProofDialog`, sem nenhuma referência aos meus `ProofUploadDialog` e `useConfirmSettlement`. O que a TASK-415 e a 416 tinham feito ali deixou de existir, e o `Payments.tsx` já não aparece na diferença contra a `dev` |
+| `docs/backlog/README.md` e os 2 itens | Linhas dos dois lados mantidas. **Renumeração (ver abaixo): 082 → 085 e 083 → 086** |
+| `frontend/src/components/GroupPositionCard.tsx` | Único ajuste de código fora dos conflitos: `handlePay(id, { proof: file })`, porque a assinatura da `dev` agora é `handlePay(id, details: PaymentDetails)` e o `tsc` acusou exatamente esse ponto. A troca de diálogo é a TASK-450 |
+
+**Um erro meu, corrigido.** No §25 e na resposta ao usuário eu afirmei que "a `dev` não usa os IDs de backlog 082 e 083". Estava errado: a `dev` usa **081, 082 e 084**. A causa foi um pathspec relativo: com o diretório de trabalho em `frontend/`, `git grep … -- docs/backlog` procurava em `frontend/docs/backlog`, e a busca voltava vazia. (O mesmo vício já tinha produzido um `git diff --stat` vazio mais cedo, que eu notei na hora.) O conflito do índice mostrou a verdade. Com a raiz explícita (`-- :/docs/backlog`) a busca acha os 3. Renumerei os meus itens para **085** (X1, `GET /groups/{id}/members` sem checagem de membro) e **086** (X2, entrada sem consentimento e sem como sair), por ser o próximo ID depois do maior usado (084), e ajustei as referências cruzadas entre os dois e as menções no `tasks.md`, no `specify.md` e neste arquivo. O "1.082 consultas" das medições **não é ID** e ficou como estava.
+
+**Migrações da `dev`** (2, aditivas: `payment_note` em `ex_quotas` e `note` em `ex_settlement_confirmations`, colunas `nullable`): conferido o alvo antes de migrar (`ex-db @ porta 3308`) e aplicadas; aplicadas também no `painel_validacao` (alvo conferido), para a stack da validação.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Sem conflito pendente | `git status` filtrando `UU/AA/DU/UD` e `grep` dos marcadores nos 3 arquivos | Vazio e 0 marcadores |
+| Sintaxe | `php -l` no controller e no serviço | Sem erro |
+| Testes novos | 3 em `CycleSummaryServiceTest`: `paymentNote` nas três formas de entrada (À Vista, parcela do ciclo e Fixa congelada, mais a Fixa só projetada que vem `null`), pagamento sem nota vem `null`, e `confirmedNote` vem da confirmação | Passaram na primeira rodada |
+| Testes da `dev`, sem edição | `ExpenseControllerSummaryTest`, `PaymentNotePersistenceTest`, `SettlementConfirmationControllerTest`, `ExpenseControllerPayTest` | Verdes, sem nenhuma edição |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 174 files` |
+| **Suíte do backend** | `php artisan test --no-ansi` | `Tests: 562 passed (3511 assertions)`, 70,12 s (525 + os da `dev` + 3 novos) |
+| Tipos | `npx tsc --noEmit` | Sem erro (depois do ajuste do `handlePay`) |
+| **Suíte do frontend** | `npx vitest run --maxWorkers=2` | `Test Files 54 passed`, `Tests 489 passed`, 184,91 s |
+| Só o trabalho da feature | `git diff origin/dev --stat -- :/backend :/frontend` | 31 arquivos, sem nenhuma exclusão; os existentes modificados são `ExpenseController` (métodos movidos), `RouteServiceProvider` e `routes/api.php` (throttle), `App.tsx`, os menus e os testes de layout. `Payments.tsx` igual à `dev` |
+
+**Mutações** (cada uma revertida; releio o trecho antes de restaurar):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Entrada À Vista sem `paymentNote` | Derrubou 3: o meu "every kind of entry" e dois da `dev` (um deles o do snapshot) |
+| M2 | Entrada parcelada sem `paymentNote` | Derrubou 2: o meu e o da parcela, da `dev` |
+| M3 | Entrada Fixa congelada sem `paymentNote` | Derrubou 2: o meu e o da Fixa materializada, da `dev` |
+| M4 | O mapa de `compute()` sem `paymentNote` | Derrubou 5, as três formas de entrada e o do snapshot |
+| M5 | `withConfirmations` sem `confirmedNote` | Derrubou 3: o meu, o do snapshot e o do `summary` (`SettlementConfirmationControllerTest`/`ExpenseControllerSummaryTest`) |
+
+**Estado da validação local:** a stack (8001/3001/`painel_validacao`) segue no ar e já tem as migrações, então o backend dela serve a coluna nova; o Vite recarregou o frontend integrado. O que falta repetir no navegador é da TASK-451, depois da TASK-450.

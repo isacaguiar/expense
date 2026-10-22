@@ -37,7 +37,7 @@ class CycleSummaryService
      * regra de corte de recorrência de indexByGroup, adaptada de mês único para
      * intervalo de datas, que pode atravessar dois meses calendário).
      *
-     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool, bornPaid: bool, paymentProofUrl: ?string}>
+     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool, bornPaid: bool, paymentProofUrl: ?string, paymentNote: ?string}>
      */
     public function entries($groupId, Carbon $start, Carbon $end): Collection
     {
@@ -67,6 +67,7 @@ class CycleSummaryService
                 'bornPaid' => (bool) ($quota->born_paid ?? false),
                 'quotaNumber' => $quota->number ?? null,
                 'paymentProofUrl' => $quota->payment_proof_url ?? null,
+                'paymentNote' => $quota->payment_note ?? null,
             ]);
         }
 
@@ -93,6 +94,7 @@ class CycleSummaryService
                 // montar "Parcelada 2/6". Só faz sentido em IN_INSTALLMENTS.
                 'quotaNumber' => $quota->number,
                 'paymentProofUrl' => $quota->payment_proof_url,
+                'paymentNote' => $quota->payment_note,
             ]);
         }
 
@@ -136,6 +138,7 @@ class CycleSummaryService
                         // logo não tem número — e FIXED não tem semântica de "parcela n/N".
                         'quotaNumber' => $quota->number ?? null,
                         'paymentProofUrl' => $quota->payment_proof_url ?? null,
+                        'paymentNote' => $quota->payment_note ?? null,
                     ]);
                 }
 
@@ -170,6 +173,9 @@ class CycleSummaryService
                     'paid' => $entry['paid'],
                     'bornPaid' => $entry['bornPaid'],
                     'paymentProofUrl' => $entry['paymentProofUrl'],
+                    // Aditivo (Constitution §4.1): descrição do pagamento; snapshots
+                    // selados antes da feature 20261021 não trazem este campo.
+                    'paymentNote' => $entry['paymentNote'],
                     'payerName' => $entry['expense']->payer->name ?? null,
                     // Aditivo (Constitution §4.1): sibling de payerName/participants,
                     // não substitui — avatar do credor/participantes pra exibição
@@ -331,6 +337,7 @@ class CycleSummaryService
                 $confirmation = $confirmations->get("{$settlement['from_user_id']}-{$settlement['to_user_id']}");
 
                 $settlement['confirmedProofUrl'] = $confirmation?->proof_url;
+                $settlement['confirmedNote'] = $confirmation?->note;
                 $settlement['confirmedAt'] = $confirmation?->confirmed_at?->toIso8601String();
 
                 return $settlement;
