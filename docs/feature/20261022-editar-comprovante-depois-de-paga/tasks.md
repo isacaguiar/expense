@@ -12,7 +12,7 @@ IDs a partir de TASK-449: o maior em qualquer branch do repositório é TASK-448
 | TASK-450 | Criar a rota `POST /expenses/{id}/payment-proof` (editar foto e descrição de despesa paga), com testes PHPUnit | backend | plan.md §1 e §7 | nenhum | Concluída |
 | TASK-451 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §8 | nenhum | Concluída |
 | TASK-452 | Acrescentar `canEditProof` e `handleEditProof` ao `usePaymentActions`, com testes | frontend | plan.md §3 e §7 | nenhum | Concluída |
-| TASK-453 | Dar ao `PaymentProofDialog` o modo de edição (foto atual, remover foto, descrição pré-preenchida), com testes | frontend | plan.md §4 e §7 | nenhum | Pendente |
+| TASK-453 | Dar ao `PaymentProofDialog` o modo de edição (foto atual, remover foto, descrição pré-preenchida), com testes | frontend | plan.md §4 e §7 | nenhum | Concluída |
 | TASK-454 | Oferecer "Editar comprovante" na tela Despesas (ícone, popup e aviso de sucesso), com testes | frontend | plan.md §5 e §7 | nenhum | Pendente |
 | TASK-455 | Oferecer "Editar comprovante" no cartão da tela Pagamentos, com testes | frontend | plan.md §6 e §7 | nenhum | Pendente |
 | TASK-456 | Atualizar `MANUAL.md` com a edição do comprovante depois de paga | doc | plan.md §9 | nenhum | Pendente |
