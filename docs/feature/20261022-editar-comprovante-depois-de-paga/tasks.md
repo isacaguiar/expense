@@ -10,7 +10,7 @@ IDs a partir de TASK-449: o maior em qualquer branch do repositório é TASK-448
 |---|---|---|---|---|---|
 | TASK-449 | Fazer `pay()` repetido apagar a foto anterior, com testes PHPUnit | backend | plan.md §2 e §7 | nenhum | Concluída |
 | TASK-450 | Criar a rota `POST /expenses/{id}/payment-proof` (editar foto e descrição de despesa paga), com testes PHPUnit | backend | plan.md §1 e §7 | nenhum | Concluída |
-| TASK-451 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §8 | nenhum | Pendente |
+| TASK-451 | Revisar o diff de backend com o agent `security-reviewer` e registrar os achados | backend | plan.md §8 | nenhum | Concluída |
 | TASK-452 | Acrescentar `canEditProof` e `handleEditProof` ao `usePaymentActions`, com testes | frontend | plan.md §3 e §7 | nenhum | Pendente |
 | TASK-453 | Dar ao `PaymentProofDialog` o modo de edição (foto atual, remover foto, descrição pré-preenchida), com testes | frontend | plan.md §4 e §7 | nenhum | Pendente |
 | TASK-454 | Oferecer "Editar comprovante" na tela Despesas (ícone, popup e aviso de sucesso), com testes | frontend | plan.md §5 e §7 | nenhum | Pendente |
@@ -21,6 +21,9 @@ IDs a partir de TASK-449: o maior em qualquer branch do repositório é TASK-448
 | TASK-459 | Registrar em `docs/backlog/` o item "link do comprovante expira em ciclo selado" | doc | plan.md §9 e specify.md §2.5 | nenhum | Pendente |
 | TASK-460 | Rodar o checklist pré-PR completo na branch da feature integrada | backend | plan.md §7 e §12 | nenhum | Pendente |
 | TASK-461 | Validar o fluxo localmente na stack isolada e registrar o resultado | frontend | plan.md §12 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
+| TASK-462 | Fechar a corrida entre editar e desfazer em `updatePaymentProof` (travar a quota e reler o estado dentro de uma transação), com testes PHPUnit | backend | plan.md §1 e §10 (achado B2 da TASK-451) | nenhum | Pendente |
+| TASK-463 | Recusar com 500, antes de qualquer escrita, quando o disco não grava o comprovante (`store` devolve `false`) em `updatePaymentProof` e em `pay()`, com testes PHPUnit | backend | plan.md §1 e §2 (achado B3 da TASK-451) | nenhum | Pendente |
+| TASK-464 | Registrar em `docs/backlog/` o item "endurecer o upload e o download de comprovante" (SVG aceito, extensão do cliente, cabeçalhos do download, caminho interno na resposta, `cycles_ago` sem teto) | doc | plan.md §8 e §9 (achados B1, B4, B5 e B6 da TASK-451) | nenhum | Pendente |
 
 Notas de composição:
 
@@ -32,11 +35,12 @@ Notas de composição:
 
 ```
 449 ── 450 ── 451
+450 ── 462 ── 463   (462 e 463 mexem no mesmo método; nasceram na revisão da TASK-451)
 452 ┐
 453 ┴─ 454 ── 455
 454, 455 ── 456
 [PR #224 mergeado + merge de dev na branch] ── 457 ── 458 (458 também depende de 456)
-459 (independente)
+459, 464 (independentes)
 todas ── 460 ── 461
 ```
 
@@ -96,3 +100,17 @@ todas ── 460 ── 461
   - Roteiro executado na stack isolada (MySQL 3307, backend 8001, Vite 3001; nunca a 3000/8000 do usuário), cada passo conferido na tela **e** no banco, com o que foi observado registrado no `implementation.md`: (1) o credor numa despesa paga só com texto vê o ícone "Editar comprovante" (tabela e cartões a 375px), abre o popup preenchido, anexa uma foto e passa a ver "Ver comprovante" com a descrição preservada e `paid_at`/`paid_by` iguais; (2) trocar a foto apaga a antiga do disco e o link novo baixa `200 image/png`; (3) remover a foto mantendo a descrição, esvaziar a descrição mantendo a foto, e remover a foto com descrição vazia (botão desabilitado); (4) sem alteração o botão fica desabilitado; (5) o mesmo fluxo no cartão de Pagamentos; (6) o devedor (outro usuário) não vê o botão, e uma chamada direta à rota com o token dele responde 403; (7) em ciclo selado o botão não aparece e a chamada direta responde 422; (8) depois de editar, "Desfazer pagamento" apaga a foto nova; (9) sem erros novos no console e sem scroll horizontal a 375px.
   - Stack encerrada ao final: processos do backend e do Vite derrubados, `docker rm -f mysql-expense-test`, `backend/.env.testing` apagado (não é ignorado pelo git), portas 3307/8001/3001 livres, e apagados do disco só os comprovantes da própria validação (os referenciados no banco descartável).
   - O usuário confirma por escrito que validou localmente. Sem essa confirmação, **não há push nem PR**.
+- **TASK-462** (nasceu na TASK-451, achado B2; executa depois da TASK-450 e antes da TASK-463):
+  - Em `updatePaymentProof`, a busca da quota, as verificações que dependem do estado (quota paga, ciclo não selado, estado final com foto ou descrição) e o `update` passam a rodar dentro de `DB::transaction`, com a quota lida por `lockForUpdate`. O caminho anterior (`$previousPath`) passa a ser o lido sob o lock. Nada de `Quota::where('paid', true)->update(...)` com contagem de linhas afetadas: em MySQL um `update` que não muda nenhum valor devolve 0 e recusaria uma edição legítima sem alteração.
+  - Teste novo prova que o lock é tomado: com `DB::listen`, a requisição executa um `select` em `ex_quotas` com `for update`, e `DB::transactionLevel()` nesse instante é **maior** que o nível antes da requisição (a transação é aninhada ao `DatabaseTransactions` do teste).
+  - Teste novo: se a quota deixou de estar paga entre a primeira e a segunda leitura (simulado com `Quota::retrieved` desfazendo o pagamento direto no banco depois da leitura sem lock, se ainda houver uma), a resposta é 422 `Esta despesa não está paga nessa competência.`, **nenhum arquivo** fica gravado e a quota não ganha foto nem descrição. Se a implementação final tiver uma única leitura (a travada), o teste usa o desfazer feito por `unpay` antes da requisição e a prova da corrida fica só no teste do lock, com o motivo registrado.
+  - Os 29 testes de `ExpenseControllerPaymentProofTest` passam **sem edição**, e `--filter="ExpenseControllerPayTest|SettlementConfirmationControllerTest|ExpenseControllerSummaryTest"` continua verde. `./vendor/bin/pint --test` limpo.
+  - Efeito do `unpay` concorrente, aceito e registrado: como ele lê o caminho antes de apagar, no pior caso a foto nova fica órfã (sem inconsistência de estado).
+- **TASK-463** (nasceu na TASK-451, achado B3; executa depois da TASK-462):
+  - Hoje o disco `local` tem `'throw' => false` e `storeAs` devolve `false` quando a gravação falha (disco cheio, permissão). Em `updatePaymentProof`, a edição seguiria com 200 sem a foto; em `pay()` o `false` iria para a coluna `payment_proof_path`. Passa a haver, logo depois de `ProofStorage::store`, uma recusa `abort(500, 'Não foi possível gravar o comprovante.')` antes de qualquer `update`, nos dois pontos.
+  - Testes novos, simulando o disco com falha (um disco registrado com `Storage::set('local', ...)` cujo `putFileAs` devolve `false`): (a) `updatePaymentProof` com foto nova responde 500, a quota fica **igual** (foto, descrição e `paid`) e nenhum arquivo é gravado; (b) o caso "foto nova mais descrição limpa" não deixa a quota sem foto e sem descrição; (c) `pay()` com foto responde 500 e a quota continua **não paga**, com `payment_proof_path` nulo.
+  - `--filter="ExpenseControllerPayTest|ExpenseControllerPaymentProofTest"` verde, com os testes que já existiam passando sem edição. `./vendor/bin/pint --test` limpo.
+- **TASK-464** (nasceu na TASK-451, achados B1, B4, B5, B6):
+  - Existe um arquivo novo em `docs/backlog/`, no formato de `docs/backlog/README.md`, com **regras adotadas** e **decisões em aberto** em tabela (opções, recomendação e por quê), mais a linha no índice. O ID é o próximo livre depois de reconfirmar o maior em `dev` e nas branches locais (a TASK-459 usa o 085, então este seria o 086).
+  - Registra, com arquivo e linha **conferidos no código antes de escrever**: (B1) a regra `image` do Laravel 10 aceita SVG e o download serve inline com o `Content-Type` do conteúdo, sem `X-Content-Type-Options` nem CSP, o que permite script num SVG aberto no domínio da API; (B4) a extensão vem de `getClientOriginalExtension()` e uma extensão longa estoura a coluna `payment_proof_path` (`string(255)`); (B5) `payment_proof_path` (caminho interno) é serializado nas respostas de `pay`, `unpay` e da rota nova; (B6) `cycles_ago` não tem teto nas rotas de pagamento. Opções de solução: trocar `image` por `mimes:jpg,jpeg,png,webp,gif`, usar `guessExtension()`, acrescentar os cabeçalhos no download, esconder o caminho interno.
+  - Deixa explícito que remover SVG de `pay()` toca o contrato público (Constitution §4.1) e é decisão humana, e registra a precondição de infraestrutura: a segurança do disco privado depende de o docroot de produção ser `.../api/public` (a memória do deploy diz que é; não foi reverificado ao vivo nesta feature).
