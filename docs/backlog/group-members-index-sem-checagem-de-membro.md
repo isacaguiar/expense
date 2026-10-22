@@ -1,6 +1,6 @@
 # `GET /api/groups/{groupId}/members` não confere se quem chama é membro do grupo
 
-ID: 082
+ID: 085
 Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §8 (achado X1 da revisão de segurança da TASK-414, fora do diff revisado); `backend/app/Http/Controllers/GroupMemberController.php` (`index()`); `backend/routes/api.php:55`
 Criado em: 2026-10-21
 Prioridade: ALTA
@@ -37,6 +37,6 @@ A fechar na Triagem/Specify.
 ## Por que importa
 É vazamento de dado pessoal e de dado de cobrança (Pix) entre contas, com a exploração mais simples possível: um token válido e um `id` de grupo. O risco cresce com a base de usuários, e o backend já está em produção. Enquanto este item estiver aberto, qualquer pessoa cadastrada pode montar uma lista de e-mails, Pix e WhatsApp dos participantes de todos os grupos.
 
-Relacionado: 083 (inclusão de membro sem consentimento e sem como sair), que agrava a exposição, e 060 (log do `User` inteiro em `GroupController::store`).
+Relacionado: 086 (inclusão de membro sem consentimento e sem como sair), que agrava a exposição, e 060 (log do `User` inteiro em `GroupController::store`).
 
 Tipo sugerido: backend

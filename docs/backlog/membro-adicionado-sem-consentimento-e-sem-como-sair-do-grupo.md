@@ -1,6 +1,6 @@
 # Usuário é adicionado a um grupo sem consentimento e não tem como sair (`GroupMemberController::destroy` não existe)
 
-ID: 083
+ID: 086
 Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §8 (achados X2 e S1 da revisão de segurança da TASK-414); `backend/app/Http/Controllers/GroupMemberController.php` (`store()`); `backend/routes/api.php:57`; `docs/sdd/03-tasks.md` TASK-017
 Criado em: 2026-10-21
 Prioridade: ALTA
@@ -39,6 +39,6 @@ A fechar no Specify da feature.
 ## Por que importa
 É a causa raiz de qualquer rota que cresça com o número de grupos do usuário (como o `/me/overview`), além de ser um problema de produto e de LGPD (entrar numa lista sem aceitar, com e-mail e Pix visíveis aos demais membros). Sem saída, a única defesa do usuário é pedir a alguém para excluir o grupo.
 
-Relacionado: 082 (leitura de membros sem checagem), 060 (log do `User` inteiro em `GroupController::store`) e 072 (exclusão de conta).
+Relacionado: 085 (leitura de membros sem checagem), 060 (log do `User` inteiro em `GroupController::store`) e 072 (exclusão de conta).
 
 Tipo sugerido: backend

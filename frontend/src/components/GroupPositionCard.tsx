@@ -281,7 +281,7 @@ const GroupPositionCard: React.FC<GroupPositionCardProps> = ({ overview, current
         icon={<PhotoCameraOutlinedIcon />}
         onClose={() => setPayExpenseId(null)}
         onConfirm={file => {
-          if (payExpenseId !== null) handlePay(payExpenseId, file);
+          if (payExpenseId !== null) handlePay(payExpenseId, { proof: file });
           setPayExpenseId(null);
         }}
       />

@@ -54,13 +54,13 @@ describe('usePaymentActions', () => {
     expect(result.current.canUnpay({ ...expense, paid: true })).toBe(true);
   });
 
-  it('sends cycles_ago in the pay and unpay POST bodies', async () => {
+  it('sends cycles_ago and descricao as JSON when only a note is given, and cycles_ago when undoing', async () => {
     const { result } = renderHook(() => usePaymentActions(1, summaryWith('closed'), 3, () => {}));
 
-    act(() => result.current.handlePay(42));
+    act(() => result.current.handlePay(42, { note: 'Pago em dinheiro' }));
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
     expect(vi.mocked(axios.post).mock.calls[0][0]).toContain('/expenses/42/pay');
-    expect(vi.mocked(axios.post).mock.calls[0][1]).toEqual({ cycles_ago: 3 });
+    expect(vi.mocked(axios.post).mock.calls[0][1]).toEqual({ cycles_ago: 3, descricao: 'Pago em dinheiro' });
 
     act(() => result.current.handleUnpay(42));
     await waitFor(() => expect(vi.mocked(axios.post).mock.calls.length).toBe(2));
@@ -68,15 +68,68 @@ describe('usePaymentActions', () => {
     expect(vi.mocked(axios.post).mock.calls[1][1]).toEqual({ cycles_ago: 3 });
   });
 
+  it('trims the note before sending it', async () => {
+    const { result } = renderHook(() => usePaymentActions(1, summaryWith('closed'), 0, () => {}));
+
+    act(() => result.current.handlePay(42, { note: '  ref. 12345  ' }));
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+
+    expect(vi.mocked(axios.post).mock.calls[0][1]).toEqual({ cycles_ago: 0, descricao: 'ref. 12345' });
+  });
+
+  it('omits descricao when the note is blank and a proof file is attached', async () => {
+    const { result } = renderHook(() => usePaymentActions(1, summaryWith('closed'), 0, () => {}));
+
+    act(() => result.current.handlePay(42, { proof: new File(['x'], 'proof.png', { type: 'image/png' }), note: '   ' }));
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+
+    const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+    expect(body).toBeInstanceOf(FormData);
+    expect(body.has('descricao')).toBe(false);
+  });
+
   it('sends cycles_ago as a field when a proof file is attached', async () => {
     const { result } = renderHook(() => usePaymentActions(1, summaryWith('closed'), 2, () => {}));
 
-    act(() => result.current.handlePay(42, new File(['x'], 'proof.png', { type: 'image/png' })));
+    act(() => result.current.handlePay(42, { proof: new File(['x'], 'proof.png', { type: 'image/png' }) }));
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
 
     const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
     expect(body).toBeInstanceOf(FormData);
     expect(body.get('cycles_ago')).toBe('2');
     expect(body.get('comprovante')).toBeInstanceOf(File);
+    expect(body.has('descricao')).toBe(false);
+  });
+
+  it('sends the proof file, the note and cycles_ago together in the multipart body', async () => {
+    const { result } = renderHook(() => usePaymentActions(1, summaryWith('closed'), 1, () => {}));
+
+    act(() =>
+      result.current.handlePay(42, {
+        proof: new File(['x'], 'proof.png', { type: 'image/png' }),
+        note: 'Pix agendado para sexta',
+      })
+    );
+    await waitFor(() => expect(axios.post).toHaveBeenCalled());
+
+    const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+    expect(body.get('cycles_ago')).toBe('1');
+    expect(body.get('comprovante')).toBeInstanceOf(File);
+    expect(body.get('descricao')).toBe('Pix agendado para sexta');
+  });
+
+  // Guarda em tempo de compilação (roda no `tsc --noEmit`, não no vitest):
+  // `handlePay` exige foto OU texto, então o clique "sem popup" não compila.
+  // Se alguém voltar a aceitar `handlePay(id)`, estas diretivas ficam sem erro
+  // para suprimir e o `tsc` falha com "Unused '@ts-expect-error' directive".
+  it('requires a proof or a note in the handlePay type', () => {
+    const typeGuard = (handlePay: ReturnType<typeof usePaymentActions>['handlePay']) => {
+      // @ts-expect-error — sem detalhes não é um pagamento válido
+      handlePay(42);
+      // @ts-expect-error — objeto vazio não traz nem foto nem texto
+      handlePay(42, {});
+    };
+
+    expect(typeof typeGuard).toBe('function');
   });
 });
