@@ -260,7 +260,7 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-427`, a partir de `357ff
 | 50 grupos vazios | (não medido) | 302, 1.021 ms | — |
 | 1 grupo com pendência recente | 18, 129 ms | **19** (+1: a consulta da primeira data) | 23 |
 
-Por grupo vazio sobram 6 consultas (a primeira data, o snapshot do ciclo vigente, as três de entradas e a das confirmações) mais 2 da raiz (grupos e membros). O custo por grupo não depende mais da idade do grupo, só do que ele tem: o piso é o `view()` do ciclo escolhido. Com 50 grupos o pior caso fica em ~300 consultas e ~1 s, o que a TASK-428 passa a limitar por construção.
+Por grupo vazio sobram 6 consultas (a primeira data, o snapshot do ciclo vigente, as três de entradas e a das confirmações) mais 2 da raiz (grupos e membros). O custo por grupo não depende mais da idade do grupo, só do que ele tem: o piso é o `view()` do ciclo escolhido. ~~Com 50 grupos o pior caso fica em ~300 consultas e ~1 s, o que a TASK-428 passa a limitar por construção.~~ **(Correção na TASK-424, §29: isso vale só para grupos vazios. Com 50 grupos que têm despesa antiga já quitada e não selada, o custo medido é de 2.352 consultas e 7,4 s. O teto da TASK-428 limita o número de grupos, mas não o custo de cada um.)**
 
 **Mutações** (cada uma revertida em seguida; `git diff` final só tem o código e os testes da task):
 
@@ -689,7 +689,7 @@ Feita em 2026-10-22 sobre a branch da feature já integrada (`f26ce6ce71`), com 
 | Serviço (`PersonalOverviewService::forUser`, 5 grupos) | **85 consultas SQL** (17 por grupo em média), 281 ms na primeira execução e 247 a 270 ms nas seguintes. (As contagens "170, 255…" da saída vieram de um erro do meu script de medição, que registrava um `DB::listen` novo a cada execução; vale a primeira execução, e as seguintes deram o mesmo número por execução) |
 | HTTP, `/api/me` (rota trivial, a base do ambiente) | 400 a 505 ms |
 | HTTP, `/api/me/overview` (5 grupos) | 758 a 885 ms; primeira chamada, a frio, 1,27 s. Com 6 grupos: 795 a 897 ms |
-| Leitura | O ambiente de desenvolvimento (`artisan serve` num processo só, no Windows, com MySQL em Docker) já gasta ~440 ms numa rota que não faz nada: o `/me/overview` custa cerca de **350 ms a mais** que essa base. Em produção, com PHP-FPM e banco local, a base é bem menor. Com o teto de 50 grupos (D9) o pior caso fica em ~300 consultas |
+| Leitura | O ambiente de desenvolvimento (`artisan serve` num processo só, no Windows, com MySQL em Docker) já gasta ~440 ms numa rota que não faz nada: o `/me/overview` custa cerca de **350 ms a mais** que essa base. Em produção, com PHP-FPM e banco local, a base é bem menor. ~~Com o teto de 50 grupos (D9) o pior caso fica em ~300 consultas~~ **(Correção na TASK-424, §29: ~300 consultas é o teto só para 50 grupos vazios; o pior caso real medido é de 2.352 consultas e 7,4 s)** |
 
 ### Achados da validação (para o usuário decidir; nenhum bloqueia)
 
@@ -858,3 +858,46 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-451` (**só documentaç
 **Estado da stack:** continua no ar para o usuário. Dados deixados: Condomínio pago com foto e descrição; Residencial e Oficina com comprovante e descrição; Seguro pago; o resto como na §23.
 
 **Pendências do §23/§25 que continuam abertas:** a confirmação por escrito do usuário de que validou localmente (sem ela não há push nem PR) e o encerramento da stack depois dela. **Arquivos de comprovante desta validação** a apagar no encerramento, em `backend/storage/app/comprovantes/`: os criados hoje nas pastas `1`, `2`, `4` e `6` (a pasta é compartilhada com a suíte PHPUnit, que usa ids altos; apagar por data de criação e só nessas pastas, nunca varrer a raiz).
+
+## 29. Evidências da TASK-424 (revisão final)
+
+Sobre a branch da feature integrada com a `dev` (HEAD `b0c3482db8`; `git fetch origin dev` imediatamente antes: **0 commits atrás, 53 à frente**). Dois agentes em paralelo (`pr-readiness-checker` e `security-reviewer`) e a suíte do frontend, que rodei eu. Os relatórios dos agentes são saída de modelo: o que vem deles está marcado como tal, e o que reproduzi eu mesmo está marcado como medido.
+
+### Checklist do `04-implementation.md` §1 itens 3 e 5
+
+| Item | Quem rodou | Resultado literal |
+|---|---|---|
+| `./vendor/bin/pint --test` | `pr-readiness-checker` | `PASS ... 174 files`, exit 0 |
+| `php artisan test` | `pr-readiness-checker` | `Tests: 562 passed (3511 assertions)`, 134,20 s, exit 0. Igual ao §26 |
+| `npx tsc --noEmit` | `pr-readiness-checker` e eu | Sem saída, exit 0 nas duas |
+| `npx vitest run --maxWorkers=2` | eu | `Test Files 53 passed`, `Tests 488 passed`, 401,72 s |
+| Migrações no diff contra `origin/dev` | `pr-readiness-checker` | Saída vazia (as 2 migrações de `payment_note`/`note` já estão na `dev`) |
+| Segredos no diff | `pr-readiness-checker` | Nenhum. Só `token-de-teste`, `token-invalido` e e-mails `@example.test` nos testes; nenhum `.env*` em nenhum dos 53 commits |
+| `backend/.env.testing` | `pr-readiness-checker` | Fora do diff e untracked, **mas não ignorado** pelo `.gitignore`: um `git add -A` o incluiria. Só se faz `git add <caminho>` |
+| Escopo, `git diff origin/dev --stat -- :/backend :/frontend` | `pr-readiness-checker` | 29 arquivos, sem exclusões; 10 existentes modificados, todos do tema: `ExpenseController` (métodos movidos), `RouteServiceProvider` e `routes/api.php` (throttle), `App.tsx`, os dois menus e os 3 testes de layout. `Payments.tsx`, `usePaymentActions.ts` e `PaymentProofDialog.tsx` idênticos à `dev` |
+| `backend/tests` | `pr-readiness-checker` | 3 arquivos, os 3 novos contra a `dev`; nenhum teste da `dev` editado |
+| Log do `implementation.md` | `pr-readiness-checker` | Toda task de 409 a 451 (menos 424, 425 e 426) tem linha e seção com comando e resultado |
+| Sem `any`, `@ts-ignore`, `console.log`, `dd(`, TODO nas linhas adicionadas | `pr-readiness-checker` | Nenhum |
+
+Veredito do `pr-readiness-checker`: tecnicamente verde, **mas não pronto para push e PR**, por 3 pendências que não são de código: a confirmação por escrito do usuário (TASK-423), as TASK-425 e 426 ainda não feitas (a descrição do PR deve dizer isso) e o registro desta revisão.
+
+### Revisão de segurança (`security-reviewer`, do que mudou depois da TASK-414)
+
+**Veredito dele: aprovado com ressalvas. Nenhum achado alto ou médio.** Sem IDOR, vazamento entre grupos, escrita nem log sensível em `GET /api/me/overview`. Pontos que ele examinou e confirmou (por leitura, não reexecutados por mim, salvo onde indicado): o escopo é a própria consulta; o limiter `overview` é chaveado só pelo id do usuário do token, não é contornável nem esgota o limite de outro usuário, e `Limit::none()` sem token válido não abre canal novo (o limiter global por IP continua valendo); as notas (`paymentNote`, `confirmedNote`) **não** chegam ao overview nem a log ou `Notifier`; a porta de `paymentNote`/`confirmedNote` para o `CycleSummaryService` é idêntica ao código da `dev` (`diff -w`: só difere a chamada de `entries()`); a leitura não grava nada (a §23 já tinha medido 0 snapshots).
+
+| ID | Sev. | Achado | Minha verificação / decisão |
+|---|---|---|---|
+| **R1** | baixa | O orçamento de consultas só cobria grupo vazio e grupo com pendência recente. O `focus()` só pula ciclos **anteriores à primeira entrada**; um grupo com despesa antiga já quitada e nunca selada tem até 12 ciclos fechados, quitados e não selados, e cada um passa pelo `compute()`. O "~300 consultas no pior caso" do §9 e do §23 valia **só para grupos vazios**. Estimativa dele: 1.800 a 7.000 consultas com 50 grupos, **sem medir** | **Confirmado por medida minha** (sonda descartável, apagada; banco de testes, "agora" = 15/10/2026): 1 grupo = **49 consultas, 473 ms**; 10 grupos = **472, 1.656 ms**; 50 grupos = **2.352 consultas, 7.390 ms**. Meu número estava errado e foi corrigido no §9, no §23 e no `plan.md` §8. **Decisão pendente do usuário** (abaixo) |
+| R2 | baixa | O teto de 50 pelos de **menor id** pode empurrar para fora o grupo real de uma vítima que um atacante tenha adicionado a ≥50 grupos mais antigos (~17 contas verificadas, por causa do limite de 3 grupos criados por conta). O efeito é só o grupo sumir do Painel, com `truncated: true`; nenhum dado é exposto | Aceito: é a D9. O vetor se fecha tratando o item 086 (entrada sem consentimento) |
+| R3 | informativo | **Nada trava a D14** (notas fora do overview): hoje é seguro porque os arrays têm chaves explícitas, mas nenhum teste falha se alguém passar `$settlement` ou `$expense` inteiros adiante. Um `grep` de `paymentNote`, `confirmedNote` e `payment_note` nos testes do overview dá vazio | **Decisão pendente do usuário**: um teste pequeno (semear `payment_note` e `note` com um texto marcador e afirmar que o corpo bruto do `/me/overview` não o contém) |
+| R4 | informativo | `OverviewController` usa `auth('api')->user()` e o resto do app `auth()->id()`; mesma identidade, e dá o 401 limpo da TASK-431 | Nenhuma ação (desvio de convenção registrado) |
+| X1, X2, X3 | (já registradas) | `GroupMemberController::index` sem checagem de membro; `store` sem consentimento e `destroy` inexistente; `Log::info` do usuário inteiro | **Inalterados**: itens 085, 086 e 060 do backlog. Sem novidade |
+
+**Observação do `security-reviewer`, fora do diff e sem ID:** `GroupController::destroy` exige só ser **membro** para apagar fisicamente o grupo (sem ciclo fechado), em cascata, e a Constitution §6.0 diz "nunca DELETE físico sem o gate humano". Achou a decisão da exclusão física numa feature antiga, mas nenhuma decisão sobre "qualquer membro". É também a rota de escape de quem foi adicionado sem consentimento (086). Não é desta feature; vai para a lista da TASK-425.
+
+### O que continua em aberto
+
+1. **Confirmação por escrito do usuário** de que validou localmente (último critério da TASK-423). Sem ela, não há push nem PR.
+2. **R1:** aceitar, corrigir ou reduzir (tabela na conversa). **R3:** fazer o teste agora ou deixar.
+3. **TASK-425** (backlog, com os itens novos acima) e **TASK-426** (plano de Relatórios).
+4. **Encerramento da stack de validação** depois da confirmação do item 1.
