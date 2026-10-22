@@ -21,7 +21,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-419 | Criar `MyItemsList` ("Seus itens") com as ações guiadas pelas flags do servidor | frontend | plan.md §2, §3 | nenhum | Concluída |
 | TASK-420 | Criar `GroupPositionCard` com totais, selos, "Você paga" (Pix e comprovante) e as ações de marcar e desfazer | frontend | plan.md §2, §3, §4 | nenhum | Concluída |
 | TASK-421 | Criar a página `MyPanel` | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-422 | Registrar a rota `/painel` e o item "Painel" nos dois menus | frontend | plan.md §2 | nenhum | Pendente |
+| TASK-422 | Registrar a rota `/painel` e o item "Painel" nos dois menus | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-423 | Validar o painel localmente na stack isolada (API e tela) e registrar o resultado | frontend | plan.md §6 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
 | TASK-424 | Rodar a revisão final (backend e frontend): `pr-readiness-checker`, suítes completas e checklist do `04-implementation.md` §1 item 5 | backend | plan.md §6 | antes do merge | Pendente |
 | TASK-425 | Registrar em `docs/backlog/` os achados tangenciais da feature | doc | plan.md §9 | nenhum | Pendente |

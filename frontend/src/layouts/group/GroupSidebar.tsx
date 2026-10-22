@@ -1,4 +1,5 @@
 import React from 'react';
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import PeopleOutlineOutlinedIcon from '@mui/icons-material/PeopleOutlineOutlined';
@@ -26,6 +27,8 @@ export type GroupNavItem = {
 
 export function groupNavItems(groupId: string, navigate: NavigateFunction): GroupNavItem[] {
   return [
+    // Visão entre grupos: o mesmo `/painel` de fora de um grupo, alcançável daqui.
+    { label: 'Painel', icon: DashboardOutlinedIcon, to: '/painel' },
     { label: 'Home', icon: HomeOutlinedIcon, to: `/groups/${groupId}/summary` },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: `/groups/${groupId}/expenses` },
     { label: 'Pagamentos', icon: PaymentsOutlinedIcon, to: `/groups/${groupId}/payments` },

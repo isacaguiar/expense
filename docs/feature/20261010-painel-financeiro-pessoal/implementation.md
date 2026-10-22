@@ -40,6 +40,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-419 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-419`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §19 | Botões só pelas flags do servidor; recalcular a permissão no cliente derruba o teste de regressão. 3 mutações |
 | TASK-420 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-420`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §20 | O `cycles_ago` do payload vai nas 3 ações; fixar `0` derruba os 3 testes. `usePaymentActions` e `useConfirmSettlement` sem alteração. Snackbars no cartão (desvio do plano). 4 mutações |
 | TASK-421 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-421`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §21 | Página `MyPanel` com estados, ordem do servidor, aviso de corte em 50 e recarga depois de cada ação. Acrescentei "Tentar novamente" e o atalho "Ir para Meus Grupos". 5 mutações |
+| TASK-422 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-422`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §22 | Rota `/painel` e item "Painel" como primeiro dos dois menus. Fim do frontend. Os testes existentes dos layouts passaram sem edição de asserção. 4 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -602,3 +603,35 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-421`, a partir de `3e65
 | M5 | Esconder os cartões durante a recarga (spinner a cada `reload`) | Derrubou os dois testes de recarga: sem o cartão montado as mensagens de sucesso somem, o que prova que a decisão de mantê-las no cartão (§20) depende de ele não desmontar |
 
 **Verificação visual:** ainda sem rota (TASK-422). Fica para a TASK-423.
+
+## 22. Evidências da TASK-422 (rota `/painel` e item "Painel" nos menus)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-422`, a partir de `051ae2f68c`. Suíte antes: 400 testes. **Última task de frontend.**
+
+**O que mudou** (diff de produção de 3 arquivos, +7 linhas):
+- `App.tsx`: `<Route path="/painel" element={<MyPanel />} />` dentro do bloco do `SimpleShellLayout`, antes de `/meus-grupos`.
+- `layouts/simpleNavItems.ts`: `{ label: 'Painel', icon: DashboardOutlinedIcon, to: '/painel' }` como **primeiro** item (o menu de fora de um grupo e o do celular, que reaproveita os mesmos itens).
+- `layouts/group/GroupSidebar.tsx` (`groupNavItems`): o mesmo item, também primeiro, para o Painel ser alcançável de dentro de um grupo.
+- O título do cabeçalho sai do item ativo (`flatItems.find(item.to === pathname)`), então `/painel` mostra "Painel" sem código extra.
+
+**Conferência dos testes existentes** (o critério pedia verificar `Sidebar.test.tsx`, `MobileNavDrawer.test.tsx` e `App.test.tsx`): `Sidebar.test.tsx` e `MobileNavDrawer.test.tsx` montam o componente com itens próprios, então o item novo não os alcança, e passaram sem edição. As asserções que já existiam em `SimpleShellLayout.test.tsx`, `GroupShellLayout.test.tsx` e `App.test.tsx` passaram **sem edição**: elas procuram os links por nome (`/Home/`, `/Pagamentos/`…), e "Painel" não casa com nenhum. A única mudança num teste existente foi no `beforeEach` de `App.test.tsx`: um ramo para `GET /api/me/overview` **antes** de `/api/me`, porque `url.includes('/api/me')` também casa com `/api/me/overview` e devolveria o usuário no lugar do painel.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `npx vitest run src/App.test.tsx src/layouts` com os 5 testes novos e sem a implementação | 5 falharam; os 34 existentes passaram |
+| Testes novos | `SimpleShellLayout.test.tsx` (3): "Painel" é o primeiro link e vai a `/painel`; o título do cabeçalho em `/painel` é "Painel"; o menu do celular também oferece o link e navega. `GroupShellLayout.test.tsx` (1): "Painel" é o primeiro link da sidebar do grupo. `App.test.tsx` (1): `/painel` mostra "Você ainda não participa de nenhum grupo.", o título "Painel" e o link no menu | 39 passed (34 + 5) |
+| Tipos | `npx tsc --noEmit` | Sem erro |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 52 passed`, `Tests 405 passed` (400 + 5 novos), 162,99 s |
+
+**Mutações** (cada uma revertida):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | Sem a rota `/painel` | Derrubou só o teste de `App` (rota) |
+| M2 | "Painel" em segundo lugar no menu simples | Derrubou só "shows Painel as the first item" |
+| M3 | Sem "Painel" no menu simples | Derrubou 4: primeiro item, título, menu do celular e `App` |
+| M4 | Sem "Painel" no menu do grupo | Derrubou só o teste da sidebar do grupo |
+
+**Um deslize meu, pego pela suíte.** Ao restaurar a M4, a edição de restauração falhou ("String to replace not found"): a mutação tinha tirado só a linha do item e deixado o comentário acima dela, e eu procurei um trecho sem o comentário. Segui direto para a suíte inteira, que acusou o teste do menu do grupo vermelho. Corrigi e conferi o `git diff` dos três arquivos de produção contra o esperado antes de seguir. Lição para as próximas mutações: reler o trecho antes de restaurar.
+
+**Verificação visual:** a rota e o menu agora existem, mas a conferência no navegador (tela, menu, largura de celular) é a TASK-423, na stack isolada, com a confirmação do usuário.
