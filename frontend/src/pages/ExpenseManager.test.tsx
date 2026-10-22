@@ -33,6 +33,7 @@ type SummaryExpenseFixture = {
   valuePerPerson?: number;
   paid?: boolean;
   paymentProofUrl?: string | null;
+  paymentNote?: string | null;
   payerName?: string | null;
   participants?: string[];
   participantDetails?: { id: number; name: string; avatarUrl: string | null }[];
@@ -83,6 +84,17 @@ function mockGetResponses(
     }
     return Promise.reject(new Error(`unexpected GET ${url}`));
   });
+}
+
+/**
+ * "Marcar como paga" agora abre o popup de comprovante (specify §2.1 item 1):
+ * clica no ✓, escreve a descrição e confirma.
+ */
+async function payThroughDialog(user: ReturnType<typeof userEvent.setup>, note = 'Pago em dinheiro') {
+  await user.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+  const dialog = await screen.findByRole('dialog');
+  await user.type(within(dialog).getByLabelText('Descrição'), note);
+  await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
 }
 
 describe('ExpenseManager - Nova Despesa', () => {
@@ -168,6 +180,117 @@ describe('ExpenseManager - listagem em cards', () => {
       'href',
       '/api/groups/1/proofs/quota/9?signature=stub'
     );
+  });
+
+  describe('descrição do pagamento no modal de detalhes', () => {
+    const renderManager = () =>
+      render(
+        <MemoryRouter>
+          <ExpenseManager />
+        </MemoryRouter>
+      );
+
+    it('shows the note of a paid expense, with no proof link when it was paid with text only', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        {
+          id: 30,
+          description: 'Condomínio',
+          value: 500,
+          date: '2026-08-02',
+          payerName: 'Isac',
+          paid: true,
+          paymentProofUrl: null,
+          paymentNote: 'Pago em dinheiro, recibo 123',
+        },
+      ]);
+      renderManager();
+
+      await screen.findByText('Condomínio');
+      // Sem foto, a lista não mostra o ícone de comprovante.
+      expect(screen.queryByRole('link', { name: 'Ver comprovante' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Descrição do pagamento: Pago em dinheiro, recibo 123')).toBeInTheDocument();
+      expect(within(dialog).queryByRole('link', { name: 'Ver comprovante' })).not.toBeInTheDocument();
+    });
+
+    it('shows both the proof link and the note when the payment has a photo and a text', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        {
+          id: 31,
+          description: 'Internet',
+          value: 120,
+          date: '2026-08-03',
+          payerName: 'Isac',
+          paid: true,
+          paymentProofUrl: '/api/groups/1/proofs/quota/31?signature=stub',
+          paymentNote: 'Pix agendado',
+        },
+      ]);
+      renderManager();
+
+      await screen.findByText('Internet');
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByRole('link', { name: 'Ver comprovante' })).toBeInTheDocument();
+      expect(within(dialog).getByText('Descrição do pagamento: Pix agendado')).toBeInTheDocument();
+    });
+
+    it('shows no note block for a paid expense without a note', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        { id: 32, description: 'Luz', value: 90, date: '2026-08-04', payerName: 'Isac', paid: true, paymentNote: null },
+      ]);
+      renderManager();
+
+      await screen.findByText('Luz');
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).queryByText(/Descrição do pagamento:/)).not.toBeInTheDocument();
+    });
+
+    it('shows no note block for a pending expense even if the payload carries a stale note', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        { id: 33, description: 'Gás', value: 80, date: '2026-08-05', payerName: 'Isac', paid: false, paymentNote: 'sobra' },
+      ]);
+      renderManager();
+
+      await screen.findByText('Gás');
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).queryByText(/Descrição do pagamento:/)).not.toBeInTheDocument();
+    });
+
+    it('renders markup in the note as plain text', async () => {
+      const user = userEvent.setup();
+      mockGetResponses([
+        {
+          id: 34,
+          description: 'Água',
+          value: 60,
+          date: '2026-08-06',
+          payerName: 'Isac',
+          paid: true,
+          paymentNote: '<b>negrito</b>',
+        },
+      ]);
+      renderManager();
+
+      await screen.findByText('Água');
+      await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
+
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByText('Descrição do pagamento: <b>negrito</b>')).toBeInTheDocument();
+      expect(dialog.querySelector('b')).toBeNull();
+    });
   });
 
   it('filters by description on the client side', async () => {
@@ -1122,11 +1245,12 @@ describe('ExpenseManager - marcar como paga / desfazer pagamento', () => {
       </MemoryRouter>
     );
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+    await payThroughDialog(userEvent.setup());
 
     await waitFor(() => expect(axios.post).toHaveBeenCalled());
-    const [url] = vi.mocked(axios.post).mock.calls[0];
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
     expect(url).toContain('/api/expenses/40/pay');
+    expect(body).toEqual({ cycles_ago: 0, descricao: 'Pago em dinheiro' });
     expect(await screen.findByText('Despesa marcada como paga.')).toBeInTheDocument();
   });
 
@@ -1209,9 +1333,132 @@ describe('ExpenseManager - marcar como paga / desfazer pagamento', () => {
       </MemoryRouter>
     );
 
-    await userEvent.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+    await payThroughDialog(userEvent.setup());
 
     expect(await screen.findByText('Não é possível alterar dados de uma competência já fechada.')).toBeInTheDocument();
+  });
+});
+
+describe('ExpenseManager - popup de comprovante ao marcar como paga', () => {
+  const unpaid: SummaryExpenseFixture = {
+    id: 60,
+    description: 'Mercado',
+    value: 300,
+    date: '2026-08-10',
+    payerName: 'Isac',
+    paid: false,
+    isFixed: false,
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+  };
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    mockGetResponses([unpaid]);
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+  });
+
+  const renderManager = () =>
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+  it('opens the proof popup on the ✓ click and sends NOTHING until it is confirmed', async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Confirmar pagamento')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  it('enables Confirmar with only a note and sends it as JSON', async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await payThroughDialog(user, 'Pago em dinheiro, recibo 123');
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/expenses/60/pay');
+    expect(body).toEqual({ cycles_ago: 0, descricao: 'Pago em dinheiro, recibo 123' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+  });
+
+  it('enables Confirmar with only a photo and sends it as multipart', async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+    const dialog = await screen.findByRole('dialog');
+    const file = new File(['x'], 'comprovante.jpg', { type: 'image/jpeg' });
+    await user.upload(dialog.querySelector('input[type="file"]') as HTMLInputElement, file);
+    await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+    expect(body).toBeInstanceOf(FormData);
+    expect(body.get('comprovante')).toBe(file);
+    expect(body.get('cycles_ago')).toBe('0');
+    expect(body.has('descricao')).toBe(false);
+  });
+
+  it('sends the photo and the note together', async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.upload(
+      dialog.querySelector('input[type="file"]') as HTMLInputElement,
+      new File(['x'], 'comprovante.jpg', { type: 'image/jpeg' })
+    );
+    await user.type(within(dialog).getByLabelText('Descrição'), 'Pix agendado para sexta');
+    await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+    expect(body.get('descricao')).toBe('Pix agendado para sexta');
+    expect(body.get('comprovante')).toBeInstanceOf(File);
+  });
+
+  it('closes without sending anything when the popup is cancelled', async () => {
+    const user = userEvent.setup();
+    renderManager();
+
+    await user.click(await screen.findByRole('button', { name: 'Marcar como paga' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Descrição'), 'vou desistir');
+    await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  it('pays the expense whose ✓ was clicked when there are several', async () => {
+    const user = userEvent.setup();
+    mockGetResponses([
+      { ...unpaid, id: 61, description: 'Aluguel' },
+      { ...unpaid, id: 62, description: 'Internet' },
+    ]);
+    renderManager();
+
+    await screen.findByText('Aluguel');
+    const internetRow = screen.getByRole('row', { name: /Internet/ });
+
+    await user.click(within(internetRow).getByRole('button', { name: 'Marcar como paga' }));
+    const dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByLabelText('Descrição'), 'ok');
+    await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(axios.post).mock.calls[0][0]).toMatch(/\/api\/expenses\/62\/pay$/);
   });
 });
 
@@ -1284,7 +1531,7 @@ describe('ExpenseManager - fluxo completo (grid, pagar, despagar, excluir)', () 
     expect(screen.getByRole('button', { name: 'Marcar como paga' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Desfazer pagamento' })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Marcar como paga' }));
+    await payThroughDialog(user);
     await waitFor(() => expect(screen.getByText('Paga')).toBeInTheDocument());
 
     // Paga: "Excluir"/"Marcar como paga" somem, "Desfazer pagamento" aparece.
@@ -1460,5 +1707,35 @@ describe('ExpenseManager - viewport estreito (cartões)', () => {
 
     await user.click(screen.getByRole('button', { name: 'Ver detalhes' }));
     expect(await screen.findByText('Detalhes da despesa')).toBeInTheDocument();
+  });
+
+  it('opens the proof popup from the card ✓ too and sends nothing until it is confirmed', async () => {
+    mockGetResponses([
+      { id: 21, description: 'Internet', value: 120, date: '2026-08-05', payerName: 'Isac', isFixed: false },
+    ]);
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Internet');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Marcar como paga' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(axios.post).not.toHaveBeenCalled();
+
+    await user.type(within(dialog).getByLabelText('Descrição'), 'Pago no cartão');
+    await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/expenses/21/pay');
+    expect(body).toEqual({ cycles_ago: 0, descricao: 'Pago no cartão' });
   });
 });

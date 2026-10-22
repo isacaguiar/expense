@@ -1029,10 +1029,15 @@ class ExpenseController extends Controller
      * Ao quitar a última pendência da competência, sela o ciclo
      * (`sealCycleIfSettled`): a partir daí ele vira histórico imutável.
      *
-     * Comprovante (`comprovante`) é opcional no contrato da API: o fluxo
-     * antigo de `ExpenseManager` chama este endpoint sem corpo e precisa
-     * continuar funcionando; a Tela de Pagamentos é quem exige a foto,
-     * do lado do cliente, antes de chamar isto.
+     * Comprovante (`comprovante`, foto) e descrição (`descricao`, texto livre
+     * de até 500 caracteres) são ambos opcionais no contrato da API. A regra
+     * "foto OU descrição" é da interface web (`PaymentProofDialog`), que não
+     * deixa confirmar sem um dos dois; o servidor segue permissivo porque
+     * exigir isto aqui seria mudança breaking de contrato em produção
+     * (`00-constitution.md` §4.1) — decisão D1 em
+     * `docs/feature/20261021-comprovante-ao-marcar-paga/specify.md` §3.3.
+     * Um novo `pay()` sem `descricao` não apaga a nota que já existe; só
+     * `unpay()` limpa.
      */
     public function pay($expenseId, Request $request)
     {
@@ -1044,6 +1049,9 @@ class ExpenseController extends Controller
 
         $data = $request->validate([
             'comprovante' => 'nullable|image|max:5120',
+            // Trim e "" → null vêm dos middlewares globais (TrimStrings e
+            // ConvertEmptyStringsToNull, `Http/Kernel.php`); `max` conta caracteres.
+            'descricao' => 'nullable|string|max:500',
             'cycles_ago' => 'nullable|integer|min:0',
         ]);
 
@@ -1064,6 +1072,12 @@ class ExpenseController extends Controller
 
         if (! empty($data['comprovante'])) {
             $update['payment_proof_path'] = ProofStorage::store($request->file('comprovante'), $expense->group_id);
+        }
+
+        // `filled()`, não `empty()`: `empty("0")` é verdadeiro e descartaria a
+        // descrição "0" (válida) sem erro.
+        if (filled($data['descricao'] ?? null)) {
+            $update['payment_note'] = $data['descricao'];
         }
 
         $wasPaid = (bool) $quota->paid;
@@ -1108,8 +1122,9 @@ class ExpenseController extends Controller
      * Se o `unpay` quebra a quitação total de um ciclo já selado, dessela
      * (`unsealIfBroken`): o ciclo volta a ser recalculado ao vivo.
      *
-     * Se a quota tinha comprovante, apaga o arquivo do disco — um pagamento
-     * desfeito não deve manter "prova" de um estado que não vale mais.
+     * Se a quota tinha comprovante, apaga o arquivo do disco, e a descrição
+     * (`payment_note`) é limpa junto — um pagamento desfeito não deve manter
+     * "prova" nem observação de um estado que não vale mais.
      */
     public function unpay($expenseId, Request $request)
     {
@@ -1141,6 +1156,7 @@ class ExpenseController extends Controller
             'paid_at' => null,
             'paid_by' => null,
             'payment_proof_path' => null,
+            'payment_note' => null,
         ]);
 
         $this->unsealIfBroken($group, $group->id, $cycle['start'], $cycle['end']);
@@ -1153,7 +1169,8 @@ class ExpenseController extends Controller
      * líquido que deve a `to_user_id` num ciclo — conceito distinto de
      * `pay()`/`unpay()`, que confirmam uma despesa específica do lado do
      * credor. O comprovante aqui é obrigatório (é o conteúdo da ação, não
-     * um anexo opcional como em `pay()`).
+     * um anexo opcional como em `pay()`). A descrição (`descricao`, até 500
+     * caracteres) é opcional e vai para `note`; reenviar substitui foto e nota.
      *
      * Desde a feature `20260902-pagamento-ciclo-fechado`, o acerto do devedor
      * só é aceito quando a competência-alvo está **fechada** (`closed` por data
@@ -1173,6 +1190,8 @@ class ExpenseController extends Controller
         $data = $request->validate([
             'to_user_id' => 'required|integer|exists:ex_users,id',
             'comprovante' => 'required|image|max:5120',
+            // Opcional; trim e "" → null vêm dos middlewares globais.
+            'descricao' => 'nullable|string|max:500',
             'cycles_ago' => 'nullable|integer|min:0',
         ]);
 
@@ -1218,6 +1237,9 @@ class ExpenseController extends Controller
             'cycle_end' => $cycle['end']->toDateString(),
             'amount' => $settlement['amount'],
             'proof_path' => $path,
+            // Reenvio substitui o comprovante inteiro: sem `descricao` a nota
+            // anterior é limpa, igual à foto que é trocada.
+            'note' => $data['descricao'] ?? null,
             'confirmed_at' => Carbon::now(),
         ]);
 
@@ -1278,6 +1300,9 @@ class ExpenseController extends Controller
                     'paid' => $entry['paid'],
                     'bornPaid' => $entry['bornPaid'],
                     'paymentProofUrl' => $entry['paymentProofUrl'],
+                    // Aditivo (Constitution §4.1): descrição do pagamento; snapshots
+                    // selados antes da feature 20261021 não trazem este campo.
+                    'paymentNote' => $entry['paymentNote'],
                     'payerName' => $entry['expense']->payer->name ?? null,
                     // Aditivo (Constitution §4.1): sibling de payerName/participants,
                     // não substitui — avatar do credor/participantes pra exibição
@@ -1439,6 +1464,7 @@ class ExpenseController extends Controller
                 $confirmation = $confirmations->get("{$settlement['from_user_id']}-{$settlement['to_user_id']}");
 
                 $settlement['confirmedProofUrl'] = $confirmation?->proof_url;
+                $settlement['confirmedNote'] = $confirmation?->note;
                 $settlement['confirmedAt'] = $confirmation?->confirmed_at?->toIso8601String();
 
                 return $settlement;
@@ -1568,7 +1594,7 @@ class ExpenseController extends Controller
      * regra de corte de recorrência de indexByGroup, adaptada de mês único para
      * intervalo de datas, que pode atravessar dois meses calendário).
      *
-     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool, bornPaid: bool, paymentProofUrl: ?string}>
+     * @return \Illuminate\Support\Collection<int, array{expense: Expense, date: Carbon, value: float, paid: bool, bornPaid: bool, paymentProofUrl: ?string, paymentNote: ?string}>
      */
     private function collectCycleEntries($groupId, Carbon $start, Carbon $end)
     {
@@ -1598,6 +1624,7 @@ class ExpenseController extends Controller
                 'bornPaid' => (bool) ($quota->born_paid ?? false),
                 'quotaNumber' => $quota->number ?? null,
                 'paymentProofUrl' => $quota->payment_proof_url ?? null,
+                'paymentNote' => $quota->payment_note ?? null,
             ]);
         }
 
@@ -1624,6 +1651,7 @@ class ExpenseController extends Controller
                 // montar "Parcelada 2/6". Só faz sentido em IN_INSTALLMENTS.
                 'quotaNumber' => $quota->number,
                 'paymentProofUrl' => $quota->payment_proof_url,
+                'paymentNote' => $quota->payment_note,
             ]);
         }
 
@@ -1667,6 +1695,7 @@ class ExpenseController extends Controller
                         // logo não tem número — e FIXED não tem semântica de "parcela n/N".
                         'quotaNumber' => $quota->number ?? null,
                         'paymentProofUrl' => $quota->payment_proof_url ?? null,
+                        'paymentNote' => $quota->payment_note ?? null,
                     ]);
                 }
 

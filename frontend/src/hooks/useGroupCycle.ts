@@ -36,6 +36,9 @@ export type SummaryExpense = {
   valuePerPerson: number;
   paid: boolean;
   paymentProofUrl: string | null;
+  // Descrição do pagamento (docs/feature/20261021-comprovante-ao-marcar-paga):
+  // opcional porque falta num ciclo selado antes da feature (snapshot congelado).
+  paymentNote?: string | null;
   payerName: string | null;
   // Opcionais: aditivos (docs/feature/20260904-avatar-usuario-listagens/plan.md
   // §1) — ausentes num ciclo selado antes dessa mudança (snapshot congelado).
@@ -71,6 +74,9 @@ export type SummarySettlement = {
   to_user_id: number;
   amount: number;
   confirmedProofUrl: string | null;
+  // Descrição enviada pelo devedor junto do comprovante (opcional: decorada ao
+  // vivo pelo backend, mas fixtures e respostas antigas podem não trazê-la).
+  confirmedNote?: string | null;
   confirmedAt: string | null;
 };
 

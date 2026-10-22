@@ -20,6 +20,7 @@ class Quota extends Model
         'paid_by',
         'born_paid',
         'payment_proof_path',
+        'payment_note',
         'value_quota',
         'expense_id',
     ];

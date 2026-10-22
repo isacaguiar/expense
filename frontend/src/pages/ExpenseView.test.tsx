@@ -495,6 +495,94 @@ describe('ExpenseView', () => {
     expect(screen.queryByRole('link', { name: 'Ver comprovante' })).not.toBeInTheDocument();
   });
 
+  describe('descrição do pagamento', () => {
+    const renderView = () =>
+      render(
+        <MemoryRouter>
+          <ExpenseView />
+        </MemoryRouter>
+      );
+
+    it('shows the note of the latest paid quota that has one, next to the proof link', async () => {
+      mockGetResponses({
+        expense: {
+          ...expenseDetail,
+          quotas: [
+            { date_expected: '2026-07-01', paid: true, payment_proof_url: null, payment_note: 'Julho em dinheiro' },
+            {
+              date_expected: '2026-08-01',
+              paid: true,
+              payment_proof_url: '/api/groups/1/proofs/quota/8?signature=stub',
+              payment_note: 'Agosto via Pix',
+            },
+          ],
+        },
+      });
+
+      renderView();
+
+      expect(await screen.findByText('Descrição do pagamento: Agosto via Pix')).toBeInTheDocument();
+      expect(screen.queryByText(/Julho em dinheiro/)).not.toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'Ver comprovante' })).toBeInTheDocument();
+    });
+
+    it('shows the note even when there is no photo, and then shows no proof link', async () => {
+      mockGetResponses({
+        expense: {
+          ...expenseDetail,
+          quotas: [{ date_expected: '2026-08-01', paid: true, payment_proof_url: null, payment_note: 'Pago em dinheiro' }],
+        },
+      });
+
+      renderView();
+
+      expect(await screen.findByText('Descrição do pagamento: Pago em dinheiro')).toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: 'Ver comprovante' })).not.toBeInTheDocument();
+    });
+
+    it('shows nothing extra when no paid quota has a note', async () => {
+      mockGetResponses({
+        expense: {
+          ...expenseDetail,
+          quotas: [{ date_expected: '2026-08-01', paid: true, payment_proof_url: null, payment_note: null }],
+        },
+      });
+
+      renderView();
+
+      await screen.findByText('Aluguel');
+      expect(screen.queryByText(/Descrição do pagamento:/)).not.toBeInTheDocument();
+    });
+
+    it('ignores the note of a quota that is not paid', async () => {
+      mockGetResponses({
+        expense: {
+          ...expenseDetail,
+          quotas: [{ date_expected: '2026-08-01', paid: false, payment_proof_url: null, payment_note: 'sobra' }],
+        },
+      });
+
+      renderView();
+
+      await screen.findByText('Aluguel');
+      expect(screen.queryByText(/Descrição do pagamento:/)).not.toBeInTheDocument();
+    });
+
+    it('renders markup in the note as plain text', async () => {
+      mockGetResponses({
+        expense: {
+          ...expenseDetail,
+          quotas: [{ date_expected: '2026-08-01', paid: true, payment_proof_url: null, payment_note: '<b>negrito</b>' }],
+        },
+      });
+
+      renderView();
+
+      expect(await screen.findByText('Descrição do pagamento: <b>negrito</b>')).toBeInTheDocument();
+      expect(document.querySelector('b')).toBeNull();
+    });
+  });
+
   it('does not show a type selector for a FIXED expense (default fixture)', async () => {
     const user = userEvent.setup();
 
