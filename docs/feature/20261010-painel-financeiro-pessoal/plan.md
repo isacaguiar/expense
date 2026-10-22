@@ -120,7 +120,7 @@ Para cada grupo, sobre o `summary` do `view()`:
 
 - **Tipos** em `types/overview.ts` (padrão de `types/group.ts`: tipado pelo endpoint).
 - **`hooks/useMyOverview.ts`:** mesmo padrão de `useGroupCycleHistory.ts` (axios, `Authorization`, 401 → `navigate('/', {replace:true})`), expondo `{ data, loading, error, reload }`.
-- **`pages/MyPanel.tsx`**, envolta em `DespesasThemeScope` como `Payments.tsx`: carregando, erro, vazio ("Você ainda não participa de nenhum grupo."), lista de `GroupPositionCard`. Snackbars de sucesso/erro iguais aos de Payments.
+- **`pages/MyPanel.tsx`**, envolta em `DespesasThemeScope` como `Payments.tsx`: carregando, erro, vazio ("Você ainda não participa de nenhum grupo."), lista de `GroupPositionCard` (cada um recebe `currentUser={data.user}` e `onChanged={reload}`). Os Snackbars de sucesso/erro, iguais aos de Payments, ficam **no cartão** (TASK-420), porque `usePaymentActions` e `useConfirmSettlement` são instanciados nele e guardam esse estado.
 - **`components/GroupPositionCard.tsx`:** nome, chip de ciclo (`cycleStatusChip` de `useGroupCycle.ts:85`; carência = "Fecha em dd/mm"), três totais (A pagar = `owe.open`, A receber = `receive.open`, Já confirmado = `owe.confirmed`), selo "Em dia" quando `has_open = false`, alerta quando `has_open`, link "Ver ciclos" para `/groups/:id/payments`. `Collapse` abre o detalhe.
 - **Detalhe:**
   - **Você paga:** reaproveita `PayableSettlementList` por um adaptador (`to_pay` → `SummarySettlement[]` + `SummaryBalance[]`), `canConfirm = to_pay.some(s => s.can_confirm)` (a condição é do ciclo, igual para todos).

@@ -19,7 +19,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-417 | Criar `types/overview.ts` e `useMyOverview` | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-418 | Criar `ReceivableList` ("Você recebe") | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-419 | Criar `MyItemsList` ("Seus itens") com as ações guiadas pelas flags do servidor | frontend | plan.md §2, §3 | nenhum | Concluída |
-| TASK-420 | Criar `GroupPositionCard` com totais, selos, "Você paga" (Pix e comprovante) e as ações de marcar e desfazer | frontend | plan.md §2, §3, §4 | nenhum | Pendente |
+| TASK-420 | Criar `GroupPositionCard` com totais, selos, "Você paga" (Pix e comprovante) e as ações de marcar e desfazer | frontend | plan.md §2, §3, §4 | nenhum | Concluída |
 | TASK-421 | Criar a página `MyPanel` | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-422 | Registrar a rota `/painel` e o item "Painel" nos dois menus | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-423 | Validar o painel localmente na stack isolada (API e tela) e registrar o resultado | frontend | plan.md §6 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
@@ -108,7 +108,7 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
   - `usePaymentActions` **não foi alterado** (`git diff --stat -- src/hooks/usePaymentActions.ts` vazio) e `usePaymentActions.test.tsx` verde.
   - Mutação: trocar o `cycles_ago` por `'0'` fixo derruba os testes de comprovante, de marcar e de desfazer. `tsc` sem erro.
 - **TASK-421**:
-  - `MyPanel.test.tsx`: loading, erro, vazio ("Você ainda não participa de nenhum grupo."), cartões na **ordem que o servidor mandou**, `reload` do hook passado como `onChanged` dos cartões, e mensagens de sucesso ("Comprovante enviado." e "Pagamento confirmado.") em `Snackbar`. A página está dentro de `DespesasThemeScope`.
+  - `MyPanel.test.tsx`: loading, erro, vazio ("Você ainda não participa de nenhum grupo."), cartões na **ordem que o servidor mandou**, `reload` do hook passado como `onChanged` dos cartões, e mensagens de sucesso ("Comprovante enviado." e "Pagamento confirmado.") em `Snackbar` (**no `GroupPositionCard`, não na página**: o estado das ações vive no cartão, TASK-420, §20 do `implementation.md`; o teste da página as acha igual). A página está dentro de `DespesasThemeScope` e passa `data.user` como `currentUser` de cada cartão.
   - Com `truncated: true` (TASK-428), um `Alert` informativo acima dos cartões: "Você participa de mais de 50 grupos. Aqui aparecem os 50 mais antigos; os demais estão em Meus Grupos."; com `false`, nenhum aviso.
 - **TASK-422**:
   - `App.tsx` tem `<Route path="/painel" …>` dentro do bloco `SimpleShellLayout`; `simpleNavItems.ts` e `groupNavItems` (`GroupSidebar.tsx`) têm "Painel" como **primeiro** item, com `to: '/painel'`.

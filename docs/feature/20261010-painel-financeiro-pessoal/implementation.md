@@ -38,6 +38,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-417 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-417`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §17 | Tipos do contrato e fixtures tipadas sem cast (renomear um campo no tipo quebra o `tsc` na fixture). `reload` não volta ao spinner. 3 mutações |
 | TASK-418 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-418`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §18 | Lista só de acompanhamento, sem botão. 3 mutações |
 | TASK-419 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-419`) | 2026-10-21 | Claude (IA), com aprovação do usuário | Ver §19 | Botões só pelas flags do servidor; recalcular a permissão no cliente derruba o teste de regressão. 3 mutações |
+| TASK-420 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-420`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §20 | O `cycles_ago` do payload vai nas 3 ações; fixar `0` derruba os 3 testes. `usePaymentActions` e `useConfirmSettlement` sem alteração. Snackbars no cartão (desvio do plano). 4 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -530,3 +531,39 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-419`, a partir de `a191
 | M3 | `busy` sempre falso (aplicada junto com a M2; falhas separáveis) | Derrubou "disables the buttons of the item being saved" |
 
 **Verificação visual:** ainda sem rota (TASK-421/422); fica para a TASK-423.
+
+## 20. Evidências da TASK-420 (`GroupPositionCard`)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-420`, a partir de `f4f48070ea`. Suíte antes: 371 testes.
+
+**O que mudou.** `src/components/GroupPositionCard.tsx` (novo). Props: `overview: OverviewGroup`, `currentUser: {id, name}`, `onChanged`.
+- **Resumo (sempre visível):** nome do grupo (`h2`), datas do ciclo em foco ("01/09 – 30/09"), chip do ciclo (`cycleStatusChip`; em carência, `Fecha em dd/mm` com `closes_at`), os três totais ("A pagar" = `owe.open`, "A receber" = `receive.open`, "Já confirmado" = `owe.confirmed`), o selo "Em dia" quando `has_open` é falso, o alerta quando é verdadeiro (aviso de pagamento em aberto se há `owe.open`, informativo se só há a receber) e os botões "Ver ciclos" (link para `/groups/{id}/payments`) e "Ver detalhes"/"Ocultar detalhes" (`aria-expanded`).
+- **Detalhe (`Collapse`, fechado por padrão):** "Você paga" reaproveita `PayableSettlementList` por um adaptador (`to_pay` → `SummarySettlement[]` e `SummaryBalance[]`, com o usuário logado como devedor), `canConfirm = to_pay.some(can_confirm)`; "Você recebe" (`ReceivableList`); "Seus itens" (`MyItemsList`).
+- **Ações:** enviar comprovante do acerto (`ProofUploadDialog` + `useConfirmSettlement(group.id, …)`), pagar com Pix (`PixPaymentDialog`), marcar como paga (`ProofUploadDialog` + `usePaymentActions(null, null, cycle.cycles_ago, onChanged).handlePay`) e desfazer (`handleUnpay`). **Em todas, o `cycles_ago` é o do payload.** Depois do sucesso, `onChanged()`.
+- Os hooks `usePaymentActions` e `useConfirmSettlement` **não foram alterados** (`git diff --stat` dos dois arquivos vazio).
+
+**Três decisões de desenho que o plano deixava em aberto ou que mudei:**
+1. **Snackbars no cartão, não na página.** O plano punha os Snackbars em `MyPanel`, mas o estado de sucesso e erro (`paySuccess`, `unpaySuccess`, `payError`, sucesso do comprovante) vive nos hooks instanciados no cartão. Levá-lo à página exigiria subir cada estado por callbacks. O cartão não é desmontado por um `reload` (as chaves são o id do grupo, e a ordem muda por movimento), então as mensagens sobrevivem. `plan.md` §2 e o critério da TASK-421 foram ajustados; o teste da página as acha do mesmo jeito.
+2. **Pix do credor que saiu do grupo.** Sem e-mail (`to_user.email` nulo, "Desconhecido") não há como gerar o Pix, e a mensagem "ainda não cadastrou uma chave Pix" seria falsa. Esse caso mostra "Não foi possível identificar esse credor." (a mesma de `Payments`); a mensagem da chave só vale quando há e-mail e falta `pix`. Teste próprio.
+3. **"Você paga" vazio.** O texto de `PayableSettlementList` vazio ("Ninguém deve nada a ninguém neste ciclo.") não serve a uma seção pessoal: o cartão mostra "Você não deve nada neste ciclo." e só usa a lista quando há acertos.
+
+**Um ajuste de teste.** A fixture tem dois links "Comprovante enviado" (um do acerto que o usuário paga, outro do que ele recebe). A primeira asserção usava `getByRole` e falhou por ambiguidade; passou a conferir o `href` esperado entre todos os links.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `npx vitest run src/components/GroupPositionCard.test.tsx` sem o componente | Falhou (módulo inexistente) |
+| Cartão | `GroupPositionCard.test.tsx` (19 testes), sempre com `cycles_ago: 2`: resumo, datas, 3 totais, chip de carência e normal, "Em dia", alertas (pagar e só receber), link "Ver ciclos", detalhe fechado/aberto, "não deve nada"; comprovante (POST com `to_user_id`, `comprovante`, `cycles_ago` `'2'`, `Bearer`, `onChanged`, snackbar), reenvio, botões escondidos sem `can_confirm`; Pix (diálogo com e-mail, nome, valor e `GET /pix/generate`; credor sem chave; credor sem e-mail); marcar como paga (foto obrigatória, `FormData` com `cycles_ago` `'2'`), desfazer (`{cycles_ago: 2}`), erro sem recarregar; "Você recebe" | 19 passed |
+| `usePaymentActions` | `git diff --stat -- src/hooks/usePaymentActions.ts src/hooks/useConfirmSettlement.ts` | Vazio |
+| Tipos | `npx tsc --noEmit` | Sem erro, sem `any` |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 51 passed`, `Tests 390 passed` (371 + 19 novos), 311,64 s (a máquina estava mais lenta que nas tasks anteriores: 167 a 230 s) |
+
+**Mutações** (cada uma revertida; `grep` confirmou `cycle.cycles_ago`, `canConfirm =`, `has_open &&` e a mensagem do Pix de volta):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | `cycles_ago` fixo em `0` no comprovante e no `usePaymentActions` (o critério da task) | Derrubou 3: comprovante, marcar como paga e desfazer |
+| M2 | `canConfirm = true` (ignorar a flag do servidor) | Derrubou o teste dos botões escondidos sem `can_confirm` |
+| M3 | Sem a checagem de chave Pix | Derrubou "does not open the dialog and warns when the creditor has no Pix key" |
+| M4 | Selo "Em dia" invertido (aplicada junto com a M3; falhas separáveis) | Derrubou "Em dia" e "warns when there is something to pay…" |
+
+**Verificação visual:** ainda sem rota (TASK-421/422). O cartão em largura de celular e de desktop, conferido contra `assets/images/screen/movel.png` e `desktop.png`, fica para a TASK-423.
