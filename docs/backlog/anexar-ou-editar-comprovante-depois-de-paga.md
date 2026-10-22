@@ -4,7 +4,7 @@ ID: 084
 Origem: docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga/specify.md §2.1 (item 6 da auditoria) e §4; `frontend/src/hooks/usePaymentActions.ts` (`canPay`), `backend/app/Http/Controllers/ExpenseController.php` (`pay`, `unpay`)
 Criado em: 2026-10-21
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-449
 
 ## Descrição
 Depois que o credor marca uma despesa como paga, ele não consegue mais acrescentar ou trocar a foto do comprovante nem a descrição do pagamento. Na interface web, `canPay` exige `!exp.paid` (`usePaymentActions.ts:60-61`), então o ✓ e o botão "Confirmar pagamento" somem assim que a despesa fica paga. O único caminho é **desfazer o pagamento** e refazê-lo, o que apaga foto e descrição, perde o `paid_at` original e, se o ciclo estava selado, o dessela (`unsealIfBroken`).
