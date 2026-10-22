@@ -3,8 +3,6 @@ import { Link as RouterLink } from 'react-router-dom';
 import { Alert, Box, Button, Card, Chip, Collapse, Snackbar, Stack, Typography } from '@mui/material';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import { cycleStatusChip } from '../hooks/useGroupCycle';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 import { useConfirmSettlement } from '../hooks/useConfirmSettlement';
@@ -13,7 +11,7 @@ import type { OverviewGroup, OverviewPayable } from '../types/overview';
 import MyItemsList from './MyItemsList';
 import PayableSettlementList from './PayableSettlementList';
 import PixPaymentDialog from './PixPaymentDialog';
-import ProofUploadDialog from './ProofUploadDialog';
+import PaymentProofDialog, { PaymentProofValue } from './PaymentProofDialog';
 import ReceivableList from './ReceivableList';
 
 const formatMoney = (value: number): string =>
@@ -43,7 +41,7 @@ type Total = { testId: string; label: string; value: number; color?: string };
  * toda ação (comprovante, marcar e desfazer), nunca um valor seu.
  *
  * As ações reaproveitam o que `Payments` usa: `useConfirmSettlement`,
- * `usePaymentActions`, `PixPaymentDialog` e `ProofUploadDialog`. Uma instância
+ * `usePaymentActions`, `PixPaymentDialog` e `PaymentProofDialog`. Uma instância
  * dos hooks por cartão, porque eles são por `cyclesAgo`.
  *
  * docs/feature/20261010-painel-financeiro-pessoal/plan.md §2 e §3
@@ -259,29 +257,32 @@ const GroupPositionCard: React.FC<GroupPositionCardProps> = ({ overview, current
         />
       )}
 
-      <ProofUploadDialog
+      {/* Acerto do devedor: a foto continua obrigatória (o servidor exige `comprovante`) e a
+          descrição é só um complemento. */}
+      <PaymentProofDialog
         open={proofTarget !== null}
         title="Enviar comprovante do Pix"
         description="Anexe o comprovante do seu pagamento via Pix para confirmar."
-        selectLabel="Selecionar comprovante"
-        icon={<UploadFileOutlinedIcon />}
+        photoLabel="Selecionar comprovante"
+        requirePhoto
         busy={sendingProof}
         error={proofError}
         onClose={() => setProofTarget(null)}
-        onConfirm={file => {
-          if (proofTarget) confirmSettlement(proofTarget.to_user.id, file, cycle.cycles_ago);
+        onConfirm={({ file, note }: PaymentProofValue) => {
+          if (proofTarget && file) confirmSettlement(proofTarget.to_user.id, file, cycle.cycles_ago, note);
         }}
       />
 
-      <ProofUploadDialog
+      {/* Credor marcando a despesa como paga: foto OU descrição, como em Pagamentos e Despesas. */}
+      <PaymentProofDialog
         open={payExpenseId !== null}
         title="Confirmar pagamento"
-        description="Anexe uma foto do comprovante para confirmar o pagamento."
-        selectLabel="Selecionar foto"
-        icon={<PhotoCameraOutlinedIcon />}
+        description="Anexe uma foto do comprovante ou descreva o pagamento."
+        photoLabel="Selecionar foto"
+        requirePhoto={false}
         onClose={() => setPayExpenseId(null)}
-        onConfirm={file => {
-          if (payExpenseId !== null) handlePay(payExpenseId, { proof: file });
+        onConfirm={({ file, note }: PaymentProofValue) => {
+          if (payExpenseId !== null) handlePay(payExpenseId, file ? { proof: file, note } : { note });
           setPayExpenseId(null);
         }}
       />

@@ -212,6 +212,38 @@ describe('GroupPositionCard', () => {
       expect(await screen.findByText('Comprovante enviado.')).toBeInTheDocument();
     });
 
+    // A foto continua obrigatória no acerto do devedor (o servidor exige `comprovante`); a
+    // descrição é só um complemento opcional.
+    it('keeps Confirmar disabled with only a description, because the settlement needs the photo', async () => {
+      const user = userEvent.setup();
+      renderCard(group());
+      await expand(user);
+
+      await user.click(screen.getByRole('button', { name: 'Enviar comprovante' }));
+      await user.type(await screen.findByRole('textbox', { name: /Descrição/ }), 'Só o texto');
+
+      expect(screen.getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+      expect(axios.post).not.toHaveBeenCalled();
+    });
+
+    it('sends the description with the photo of the settlement as descricao', async () => {
+      const user = userEvent.setup();
+      renderCard(group());
+      await expand(user);
+
+      await user.click(screen.getByRole('button', { name: 'Enviar comprovante' }));
+      const note = await screen.findByRole('textbox', { name: /Descrição/ });
+      await user.upload(fileInput(), new File(['foto'], 'pix.png', { type: 'image/png' }));
+      await user.type(note, '  Pix de manhã  ');
+      await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+      expect(body.get('descricao')).toBe('Pix de manhã');
+      expect(body.get('cycles_ago')).toBe('2');
+      expect(body.get('to_user_id')).toBe('9');
+    });
+
     it('offers to send the proof again when it was already sent', async () => {
       const user = userEvent.setup();
       const base = group();
@@ -291,14 +323,16 @@ describe('GroupPositionCard', () => {
   });
 
   describe('itens (credor)', () => {
-    it('asks for a photo before marking as paid, then posts multipart with the cycles_ago of the payload', async () => {
+    // TASK-450 (decisão D13): o mesmo `PaymentProofDialog` de Pagamentos. Para o credor a
+    // foto é opcional, mas é preciso foto OU descrição; o `cycles_ago` é sempre o do payload.
+    it('asks for a photo or a description before marking as paid, then posts multipart with the cycles_ago of the payload', async () => {
       const user = userEvent.setup();
       const { onChanged } = renderCard(group({ my_items: [creditorItem()] }));
       await expand(user);
 
       await user.click(screen.getByRole('button', { name: 'Marcar como paga' }));
 
-      expect(await screen.findByText('Anexe uma foto do comprovante para confirmar o pagamento.')).toBeInTheDocument();
+      expect(await screen.findByText('Anexe uma foto do comprovante ou descreva o pagamento.')).toBeInTheDocument();
       const confirmButton = screen.getByRole('button', { name: 'Confirmar' });
       expect(confirmButton).toBeDisabled();
       expect(axios.post).not.toHaveBeenCalled();
@@ -313,9 +347,48 @@ describe('GroupPositionCard', () => {
       expect(body).toBeInstanceOf(FormData);
       expect((body as FormData).get('comprovante')).toBe(file);
       expect((body as FormData).get('cycles_ago')).toBe('2');
+      expect((body as FormData).has('descricao')).toBe(false);
 
       await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
       expect(await screen.findByText('Pagamento confirmado.')).toBeInTheDocument();
+    });
+
+    it('marks as paid with only a description, no photo, posting JSON with descricao and the cycles_ago of the payload', async () => {
+      const user = userEvent.setup();
+      const { onChanged } = renderCard(group({ my_items: [creditorItem()] }));
+      await expand(user);
+
+      await user.click(screen.getByRole('button', { name: 'Marcar como paga' }));
+      const confirmButton = await screen.findByRole('button', { name: 'Confirmar' });
+      expect(confirmButton).toBeDisabled();
+
+      await user.type(screen.getByRole('textbox', { name: /Descrição/ }), '  Pago em dinheiro  ');
+      expect(confirmButton).toBeEnabled();
+      await user.click(confirmButton);
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      const [url, body] = vi.mocked(axios.post).mock.calls[0];
+      expect(url).toContain('/api/expenses/61/pay');
+      expect(body).toEqual({ cycles_ago: 2, descricao: 'Pago em dinheiro' });
+
+      await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(1));
+    });
+
+    it('marks as paid with a photo and a description together', async () => {
+      const user = userEvent.setup();
+      renderCard(group({ my_items: [creditorItem()] }));
+      await expand(user);
+
+      await user.click(screen.getByRole('button', { name: 'Marcar como paga' }));
+      await user.upload(fileInput(), new File(['foto'], 'comprovante.png', { type: 'image/png' }));
+      await user.type(screen.getByRole('textbox', { name: /Descrição/ }), 'Pix do João');
+      await user.click(screen.getByRole('button', { name: 'Confirmar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+      expect(body.get('descricao')).toBe('Pix do João');
+      expect(body.get('comprovante')).toBeInstanceOf(File);
+      expect(body.get('cycles_ago')).toBe('2');
     });
 
     it('undoes a payment without a photo, posting the cycles_ago of the payload', async () => {

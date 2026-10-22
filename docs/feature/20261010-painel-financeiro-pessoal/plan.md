@@ -135,9 +135,10 @@ Para cada grupo, sobre o `summary` do `view()`:
 |---|---|---|
 | Enviar / reenviar comprovante do acerto | **extrair de `Payments.tsx`** `hooks/useConfirmSettlement.ts` (POST `settlements/confirm` com `to_user_id`, `comprovante`, `cycles_ago`) e `components/ProofUploadDialog.tsx` (diálogo de foto, hoje duplicado inline em `Payments.tsx:330-354` e `:367-401`) | `Payments.tsx` passa a usar os dois (refatoração sem mudar comportamento). `cycles_ago` vem do payload do servidor |
 | Pagar via Pix | `PixPaymentDialog` como está | sem chave Pix do credor: botão desabilitado com a mesma mensagem de `GroupGrossDebtsPanel` ("ainda não cadastrou uma chave Pix") |
-| Marcar como paga | `usePaymentActions(null, null, cycle.cycles_ago, reload).handlePay(id, file)` | os dois primeiros argumentos só alimentam `canPay`/`canUnpay`, que o painel **não usa** (a visibilidade vem de `can_pay`/`can_unpay` do servidor). Foto obrigatória no cliente com `ProofUploadDialog` (D7) |
+| Marcar como paga | `usePaymentActions(null, null, cycle.cycles_ago, reload).handlePay(id, file)` | os dois primeiros argumentos só alimentam `canPay`/`canUnpay`, que o painel **não usa** (a visibilidade vem de `can_pay`/`can_unpay` do servidor). ~~Foto obrigatória no cliente com `ProofUploadDialog` (D7)~~ **Foto ou descrição, com o `PaymentProofDialog` da `dev` (D13, que reescreve a D7); `handlePay(id, { proof?, note? })`** (TASK-450) |
 | Desfazer pagamento | `usePaymentActions(...).handleUnpay(id)` | sem comprovante |
 
+- **Atualização da TASK-450 (decisão D13):** o `ProofUploadDialog` que a TASK-415 extraiu **foi removido**. A `dev` criou o `PaymentProofDialog` (foto **ou** descrição; foto obrigatória só no acerto do devedor) e Pagamentos já o usa. O Painel adota o mesmo: acerto do devedor com `requirePhoto` (a descrição é complemento e vai como `descricao` pelo `useConfirmSettlement`, que ganhou o parâmetro `note`); credor marcando como paga com foto ou descrição, pelo `handlePay(id, details)`. O `cycles_ago` do payload segue nas duas ações. A descrição **não é exibida** nas listas do Painel (D14): vai para o backlog.
 - `usePaymentActions` **não é alterado**. Uma instância por `GroupPositionCard`, porque o hook é por `cyclesAgo` e por `reload`.
 - Depois de qualquer ação com sucesso, `reload()` do `useMyOverview` refaz o `GET /me/overview`.
 

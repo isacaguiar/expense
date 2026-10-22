@@ -44,6 +44,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-423 | **Em validação** (roteiro executado; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário para iniciar | Ver §23 | 12 itens conferidos no navegador e por HTTP, todos conforme o esperado; 5 achados para o usuário decidir (o principal: "Já confirmado" não mostra o que o credor já recebeu). Falta a confirmação por escrito do usuário e o encerramento da stack |
 | TASK-433 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`) | 2026-10-22 | Claude (IA), com aprovação do usuário ("siga", opção B recomendada no achado 1 da TASK-423) | Ver §24 | Quarto total "Já recebido" (`receive.confirmed`), sem mudança de backend; conferido no navegador em desktop e em 375 px. 2 mutações |
 | TASK-449 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-449`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D12) | Ver §26 | Merge da `dev` (54 commits) com 3 conflitos resolvidos; `paymentNote` e `confirmedNote` portados para o `CycleSummaryService`; backend 562 e frontend 489 testes verdes. Um erro meu corrigido: a `dev` usa os IDs de backlog 082 e 084, e os meus viraram 085 e 086. 5 mutações |
+| TASK-450 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D13) | Ver §27 | O Painel usa o `PaymentProofDialog` da `dev` (foto ou descrição); o `ProofUploadDialog` foi removido; o `useConfirmSettlement` manda `descricao`. `MyPanel.test.tsx` passou sem edição. 5 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -799,3 +800,37 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-449`, a partir de `bc843
 | M5 | `withConfirmations` sem `confirmedNote` | Derrubou 3: o meu, o do snapshot e o do `summary` (`SettlementConfirmationControllerTest`/`ExpenseControllerSummaryTest`) |
 
 **Estado da validação local:** a stack (8001/3001/`painel_validacao`) segue no ar e já tem as migrações, então o backend dela serve a coluna nova; o Vite recarregou o frontend integrado. O que falta repetir no navegador é da TASK-451, depois da TASK-450.
+
+## 27. Evidências da TASK-450 (o Painel adota o `PaymentProofDialog`)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`, a partir de `eb9ed3c40f`. Decisão D13 (e D14: a descrição é só enviada, não exibida). Suíte antes: 489 testes.
+
+**O que mudou**
+- `GroupPositionCard.tsx`: os dois `ProofUploadDialog` viraram `PaymentProofDialog`, com os mesmos textos e regras do `Payments.tsx` da `dev`. **Acerto do devedor:** `requirePhoto` (o servidor exige `comprovante`; a descrição é complemento) e `confirmSettlement(id, file, cycles_ago, note)`. **Credor marcando como paga:** `requirePhoto={false}`, foto **ou** descrição, e `handlePay(id, file ? { proof: file, note } : { note })`. O `cycles_ago` do payload continua nas três ações. Os dois imports de ícone que ficaram sem uso saíram.
+- `useConfirmSettlement.ts`: `confirm(toUserId, proof, cyclesAgo, note?)`; manda `descricao` só quando há texto (o mesmo cuidado de `Payments.tsx`).
+- **Removidos:** `ProofUploadDialog.tsx` e o teste dele (8 testes). `grep` por `ProofUploadDialog` em `src/` voltou vazio.
+- **Não alterados:** `usePaymentActions.ts` e `PaymentProofDialog.tsx` (são da `dev`), e `MyPanel.test.tsx`.
+
+**Testes**
+- `useConfirmSettlement.test.tsx` (+3): `descricao` vai com o texto; não vai quando o texto é `undefined` nem `''`.
+- `GroupPositionCard.test.tsx` (+4 e 1 adaptado): acerto do devedor com só a descrição mantém "Confirmar" desabilitado; acerto com foto e descrição manda `descricao` (com `trim`); credor marca como paga **só com descrição** (corpo JSON `{ cycles_ago: 2, descricao }`, sem foto) e **com foto e descrição** (FormData com as duas); o teste "foto antes de marcar como paga" ganhou o texto do diálogo novo e passou a conferir que `descricao` **não** vai quando só há foto. **Única asserção antiga editada:** o texto "Anexe uma foto do comprovante para confirmar o pagamento." virou "Anexe uma foto do comprovante ou descreva o pagamento.", porque é o texto do diálogo novo.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | Hook: `npx vitest run src/hooks/useConfirmSettlement.test.tsx` sem o parâmetro; Cartão: os 5 testes novos/adaptados com o diálogo antigo | Hook: 1 falha e o `tsc` acusou o 4º argumento. Cartão: 5 falhas (campo "Descrição" inexistente e texto antigo); os demais passaram |
+| Hook | `useConfirmSettlement.test.tsx` | 10 passed |
+| Cartão e página | `GroupPositionCard.test.tsx` e `MyPanel.test.tsx` | 35 passed, `MyPanel.test.tsx` sem edição |
+| Tipos | `npx tsc --noEmit` | Sem erro, sem `any` |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 53 passed`, `Tests 488 passed` (489 − 8 do diálogo removido + 7 novos), 212,63 s |
+
+**Mutações** (cada uma revertida; reli o trecho antes de restaurar):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | `cycles_ago` fixo em `0` no `usePaymentActions` e no comprovante (o critério da task) | Derrubou 6: comprovante, as duas variantes com descrição, marcar com foto, marcar com foto e descrição, e desfazer |
+| M2 | O acerto sem passar a `note` | Derrubou só "sends the description with the photo of the settlement as descricao" |
+| M3 | O credor perde a descrição quando manda foto (`{ proof: file }`) | Derrubou só "marks as paid with a photo and a description together" |
+| M4 | `requirePhoto={false}` no acerto do devedor | Derrubou só "keeps Confirmar disabled with only a description, because the settlement needs the photo" |
+| M5 | `requirePhoto` no credor | Derrubou só "marks as paid with only a description, no photo…" |
+
+**Verificação visual:** a tela mudou (agora há o campo "Descrição" nos dois diálogos do Painel). Conferência no navegador e envio real da descrição ao banco (`note` e `payment_note`) são da TASK-451.
