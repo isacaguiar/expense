@@ -96,7 +96,11 @@ const GroupPositionCard: React.FC<GroupPositionCardProps> = ({ overview, current
       value: overview.receive.open,
       color: overview.receive.open > 0 ? 'success.main' : undefined
     },
-    { testId: 'total-confirmed', label: 'Já confirmado', value: overview.owe.confirmed }
+    { testId: 'total-confirmed', label: 'Já confirmado', value: overview.owe.confirmed },
+    // O que os devedores já comprovaram ao usuário (`receive.confirmed`): sem ele, o credor
+    // via "Já confirmado R$ 0,00" mesmo com comprovantes enviados. São comprovantes, não
+    // dinheiro conferido: o sistema não tem confirmação de recebimento pelo credor.
+    { testId: 'total-received', label: 'Já recebido', value: overview.receive.confirmed }
   ];
 
   // `PayableSettlementList` é a mesma lista de Pagamentos: recebe acertos no
@@ -165,9 +169,9 @@ const GroupPositionCard: React.FC<GroupPositionCardProps> = ({ overview, current
         </Stack>
       </Box>
 
-      <Box display="flex" gap={1.5} mt={2} flexWrap="wrap">
+      <Box display="grid" gap={1.5} mt={2} gridTemplateColumns={{ xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' }}>
         {totals.map(total => (
-          <Box key={total.testId} data-testid={total.testId} flex="1 1 90px" minWidth={0}>
+          <Box key={total.testId} data-testid={total.testId} minWidth={0}>
             <Typography variant="caption" color="text.secondary" component="p">
               {total.label}
             </Typography>

@@ -42,6 +42,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-421 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-421`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §21 | Página `MyPanel` com estados, ordem do servidor, aviso de corte em 50 e recarga depois de cada ação. Acrescentei "Tentar novamente" e o atalho "Ir para Meus Grupos". 5 mutações |
 | TASK-422 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-422`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §22 | Rota `/painel` e item "Painel" como primeiro dos dois menus. Fim do frontend. Os testes existentes dos layouts passaram sem edição de asserção. 4 mutações |
 | TASK-423 | **Em validação** (roteiro executado; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário para iniciar | Ver §23 | 12 itens conferidos no navegador e por HTTP, todos conforme o esperado; 5 achados para o usuário decidir (o principal: "Já confirmado" não mostra o que o credor já recebeu). Falta a confirmação por escrito do usuário e o encerramento da stack |
+| TASK-433 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`) | 2026-10-22 | Claude (IA), com aprovação do usuário ("siga", opção B recomendada no achado 1 da TASK-423) | Ver §24 | Quarto total "Já recebido" (`receive.confirmed`), sem mudança de backend; conferido no navegador em desktop e em 375 px. 2 mutações |
 
 ## 3. Evidências da TASK-409
 
@@ -702,3 +703,28 @@ Feita em 2026-10-22 sobre a branch da feature já integrada (`f26ce6ce71`), com 
 A stack **continua no ar** para o usuário validar: frontend `http://localhost:3001/app/`, backend `http://localhost:8001`, banco `painel_validacao`. Ao receber o OK, ou se o usuário pedir, encerrar: parar os processos que escutam na **8001** (`php`) e na **3001** (`node`, o Vite) e nunca os da 3000/8000; apagar o banco `painel_validacao`; apagar só os arquivos de comprovante referenciados no banco descartável (`comprovantes/1/…png` e `comprovantes/6/…png`, mais o de marcar como paga do Condomínio); conferir as portas livres.
 
 **Ajuste do critério de encerramento:** o `.env.testing` e o container `mysql-painel-test` **não** são removidos agora. A TASK-424 (revisão final) precisa rodar a suíte completa do backend e o `security-reviewer`, e ambos dependem deles. Saem no fim da feature (§1, desvios 2 e 3), junto do worktree.
+
+## 24. Evidências da TASK-433 ("Já recebido" no cartão)
+
+Branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`, a partir de `f65eb61124`. Suíte antes: 405 testes. Nasceu do achado 1 da validação local (§23): o usuário respondeu "siga" à pergunta "faço o 'Já recebido' como TASK nova agora, ou deixo para um backlog?", e tomei isso como aprovação da recomendação (opção B). **O "siga" não foi tomado como a confirmação por escrito de que ele validou localmente**, que continua pendente.
+
+**O que mudou** (só `GroupPositionCard.tsx` e o teste; sem backend, sem contrato novo):
+- Quarto total, **"Já recebido"**, com `receive.confirmed`, na ordem "A pagar", "A receber", "Já confirmado", "Já recebido".
+- A faixa de totais passou de `flex` com quebra para uma grade (`display: grid`): **2 colunas até `xs`, 4 de `sm` para cima**. Com 4 itens, o `flex` deixaria o quarto sozinho numa segunda linha no celular.
+- Anotei no código e no `plan.md` §2 que o valor conta **comprovantes** enviados, não dinheiro conferido (o sistema não tem confirmação de recebimento pelo credor). O rótulo "Já recebido" foi o proposto ao usuário; se preferir "Comprovantes recebidos", é uma troca de texto.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Vermelho antes | `npx vitest run src/components/GroupPositionCard.test.tsx` com os 2 testes novos | Os 2 falharam (`total-received` inexistente); os 19 existentes passaram |
+| Testes novos | "Já recebido" mostra `receive.confirmed` (R$ 250,00) enquanto "A receber" mostra só o que falta (R$ 400,00); e fica R$ 0,00 sem comprovantes, separado do "Já confirmado" de quem deve (R$ 100,00) | 21 passed (19 + 2); **nenhuma asserção existente foi editada** |
+| Tipos | `npx tsc --noEmit` | Sem erro |
+| **Suíte inteira** | `npx vitest run --maxWorkers=2` | `Test Files 52 passed`, `Tests 407 passed` (405 + 2 novos), 175,79 s |
+| Desktop, na stack da TASK-423 | `/painel` (Vite com recarga automática) | Consórcio: "A receber R$ 400,00", "Já recebido R$ 250,00" (a Norma já comprovou), quatro totais numa linha |
+| 375 px | Viewport 375×812 | 2 colunas, sem overflow horizontal (`scrollWidth` = `clientWidth`); posições: A pagar e A receber em cima, Já confirmado e Já recebido embaixo, todos com 149 px |
+
+**Mutações** (revertidas; reli o trecho antes de restaurar, a lição da TASK-422):
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | "Já recebido" com `receive.open` | Derrubou os 2 testes novos |
+| M2 | "Já recebido" repetindo `owe.confirmed` | Derrubou os 2 testes novos |
