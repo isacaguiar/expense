@@ -13,11 +13,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\FailsToWriteProofs;
 use Tests\TestCase;
 
 class ExpenseControllerPayTest extends TestCase
 {
     use DatabaseTransactions;
+    use FailsToWriteProofs;
 
     protected function tearDown(): void
     {
@@ -1086,5 +1088,27 @@ class ExpenseControllerPayTest extends TestCase
         $current = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
         $this->assertStringStartsWith('comprovantes/', $current);
         Storage::disk('local')->assertExists($current);
+    }
+
+    // --- Disco que não grava (TASK-463, achado B3 da revisão de segurança) ---
+
+    public function test_pay_with_a_photo_that_the_disk_cannot_write_returns_500_and_leaves_the_quota_unpaid(): void
+    {
+        // Sem a guarda em `ProofStorage::store`, o `false` do disco ia direto
+        // para a coluna `payment_proof_path` e a quota ficava paga.
+        $this->failProofWrites();
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(500);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertFalse((bool) $quota->paid);
+        $this->assertNull($quota->payment_proof_path);
+        $this->assertNull($quota->paid_at);
+        $this->assertCount(0, Storage::disk('local')->allFiles());
     }
 }
