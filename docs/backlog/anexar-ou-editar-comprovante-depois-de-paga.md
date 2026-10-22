@@ -1,7 +1,7 @@
 # Anexar ou editar comprovante e descrição depois de a despesa estar paga
 
 ID: 084
-Origem: docs/feature/20261021-comprovante-ao-marcar-paga/specify.md §2.1 (item 6 da auditoria) e §4; `frontend/src/hooks/usePaymentActions.ts` (`canPay`), `backend/app/Http/Controllers/ExpenseController.php` (`pay`, `unpay`)
+Origem: docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga/specify.md §2.1 (item 6 da auditoria) e §4; `frontend/src/hooks/usePaymentActions.ts` (`canPay`), `backend/app/Http/Controllers/ExpenseController.php` (`pay`, `unpay`)
 Criado em: 2026-10-21
 Prioridade: MEDIA
 Status: Aberto

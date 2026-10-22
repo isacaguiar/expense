@@ -1035,7 +1035,7 @@ class ExpenseController extends Controller
      * deixa confirmar sem um dos dois; o servidor segue permissivo porque
      * exigir isto aqui seria mudança breaking de contrato em produção
      * (`00-constitution.md` §4.1) — decisão D1 em
-     * `docs/feature/20261021-comprovante-ao-marcar-paga/specify.md` §3.3.
+     * `docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga/specify.md` §3.3.
      * Um novo `pay()` sem `descricao` não apaga a nota que já existe; só
      * `unpay()` limpa.
      */

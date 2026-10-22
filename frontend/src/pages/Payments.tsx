@@ -84,7 +84,7 @@ const Payments: React.FC = () => {
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
 
   // Popup "Confirmar pagamento" do credor: foto OU descrição, o mesmo
-  // componente do ✓ de Despesas (docs/feature/20261021-comprovante-ao-marcar-paga,
+  // componente do ✓ de Despesas (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga,
   // decisão D2 — antes a foto era obrigatória aqui, plan.md §6 da tela de Pagamentos).
   const [confirmExpenseId, setConfirmExpenseId] = useState<number | null>(null);
 

@@ -22,7 +22,7 @@ type CanConfirmInput = {
 };
 
 /**
- * Regra de habilitação do botão Confirmar (docs/feature/20261021-comprovante-ao-marcar-paga,
+ * Regra de habilitação do botão Confirmar (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga,
  * specify R1/R2): com a foto opcional, basta foto OU descrição não vazia; com
  * a foto obrigatória (acerto do devedor), só a foto conta e o texto é um
  * complemento. Nunca confirma enquanto `busy`.

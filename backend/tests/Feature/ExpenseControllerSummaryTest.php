@@ -149,7 +149,7 @@ class ExpenseControllerSummaryTest extends TestCase
         $this->assertStringContainsString('signature=', $entry['paymentProofUrl']);
     }
 
-    // --- Descrição do pagamento (docs/feature/20261021-comprovante-ao-marcar-paga, plan.md §4) ---
+    // --- Descrição do pagamento (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga, plan.md §4) ---
 
     public function test_paid_in_cash_entry_exposes_payment_note_even_without_a_photo(): void
     {

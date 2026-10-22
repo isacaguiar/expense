@@ -36,7 +36,7 @@ export type SummaryExpense = {
   valuePerPerson: number;
   paid: boolean;
   paymentProofUrl: string | null;
-  // Descrição do pagamento (docs/feature/20261021-comprovante-ao-marcar-paga):
+  // Descrição do pagamento (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga):
   // opcional porque falta num ciclo selado antes da feature (snapshot congelado).
   paymentNote?: string | null;
   payerName: string | null;
