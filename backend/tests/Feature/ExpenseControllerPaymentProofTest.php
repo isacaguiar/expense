@@ -590,4 +590,58 @@ class ExpenseControllerPaymentProofTest extends TestCase
         $this->assertSame([$old], Storage::disk('local')->allFiles());
         $this->assertSame($old, $quota->fresh()->payment_proof_path);
     }
+
+    // --- Corrida entre editar e desfazer (TASK-462, achado B2 da revisão de segurança) ---
+
+    public function test_the_quota_is_read_with_a_row_lock_inside_a_nested_transaction(): void
+    {
+        // O que impede a edição de gravar foto e descrição numa quota que o
+        // `unpay` acabou de despagar: a leitura que decide (e o `update`) rodam
+        // numa transação, com a linha travada (`for update`). Não dá para
+        // intercalar duas conexões num teste com `DatabaseTransactions`; então
+        // provamos o mecanismo: o `select` travado existe e roda dentro de uma
+        // transação mais funda que a do próprio teste.
+        Storage::fake('local');
+        [$creditor, , $expense] = $this->paidExpense(['payment_note' => 'Antiga']);
+
+        $baseline = DB::transactionLevel();
+        $lockedAtLevel = [];
+
+        DB::listen(function ($query) use (&$lockedAtLevel) {
+            if (str_contains($query->sql, 'ex_quotas') && str_contains(strtolower($query->sql), 'for update')) {
+                $lockedAtLevel[] = DB::transactionLevel();
+            }
+        });
+
+        $this->edit($creditor, $expense, ['descricao' => 'Nova'])->assertStatus(200);
+
+        $this->assertNotEmpty($lockedAtLevel, 'a quota deveria ser lida com `for update`');
+
+        foreach ($lockedAtLevel as $level) {
+            $this->assertGreaterThan($baseline, $level, 'o `for update` deveria rodar dentro de uma transação aninhada');
+        }
+    }
+
+    public function test_editing_right_after_unpay_is_rejected_and_never_leaves_a_proof_on_an_unpaid_quota(): void
+    {
+        Storage::fake('local');
+        [$creditor, $group, $expense, $quota] = $this->paidExpense(['payment_note' => 'Antes de desfazer']);
+        $quota->update(['payment_proof_path' => $this->putProof($group)]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/unpay")
+            ->assertStatus(200);
+
+        $this->editMultipart($creditor, $expense, [
+            'comprovante' => UploadedFile::fake()->image('tarde-demais.jpg'),
+            'descricao' => 'Tarde demais',
+        ])->assertStatus(422)
+            ->assertJsonPath('error', 'Esta despesa não está paga nessa competência.');
+
+        $fresh = $quota->fresh();
+        $this->assertFalse((bool) $fresh->paid);
+        $this->assertNull($fresh->payment_proof_path);
+        $this->assertNull($fresh->payment_note);
+        $this->assertCount(0, Storage::disk('local')->allFiles());
+    }
 }

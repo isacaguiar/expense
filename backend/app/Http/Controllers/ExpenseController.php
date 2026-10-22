@@ -1224,53 +1224,73 @@ class ExpenseController extends Controller
         $group = $expense->group;
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
 
-        // Mesma busca de `unpay()`: não materializa `FIXED`.
-        $quota = $expense->quotas()
-            ->whereBetween('date_expected', [$cycle['start']->toDateString(), $cycle['end']->toDateString()])
-            ->first();
+        // Toda decisão que depende do estado da quota e a gravação acontecem sob
+        // lock de linha (`for update`): se o `unpay` (ou outra edição) estiver
+        // no meio, esperamos o commit dele e relemos o estado, em vez de gravar
+        // foto e descrição numa quota que acabou de ser despaga (achado B2 da
+        // revisão de segurança, TASK-462). Não usamos a contagem de linhas
+        // afetadas de um `update ... where paid`: em MySQL um `update` sem mudança
+        // de valor devolve 0 e recusaria uma edição legítima sem alteração.
+        $outcome = DB::transaction(function () use ($request, $expense, $group, $cycle, $data, $remove) {
+            // Mesma busca de `unpay()`: não materializa `FIXED`.
+            $quota = $expense->quotas()
+                ->whereBetween('date_expected', [$cycle['start']->toDateString(), $cycle['end']->toDateString()])
+                ->lockForUpdate()
+                ->first();
 
-        if (! $quota || ! $quota->paid) {
-            return response()->json(['error' => 'Esta despesa não está paga nessa competência.'], 422);
+            if (! $quota || ! $quota->paid) {
+                return response()->json(['error' => 'Esta despesa não está paga nessa competência.'], 422);
+            }
+
+            $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
+                ->where('cycle_start', $cycle['start']->toDateString())
+                ->first();
+
+            if ($snapshot && $snapshot->isSealed()) {
+                return response()->json(['error' => 'Esta competência já foi encerrada. Desfaça o pagamento para corrigir o comprovante.'], 422);
+            }
+
+            $newNote = $request->has('descricao') ? ($data['descricao'] ?? null) : $quota->payment_note;
+            $willHaveProof = $request->hasFile('comprovante') || ($quota->payment_proof_path && ! $remove);
+
+            // `filled()`, não `empty()`: `empty("0")` descartaria a descrição "0".
+            if (! $willHaveProof && ! filled($newNote)) {
+                return response()->json(['error' => 'Informe a foto do comprovante ou uma descrição do pagamento.'], 422);
+            }
+
+            $previousPath = $quota->payment_proof_path;
+            $newPath = $request->hasFile('comprovante')
+                ? ProofStorage::store($request->file('comprovante'), $expense->group_id)
+                : null;
+
+            $update = ['payment_note' => $newNote];
+
+            if ($newPath) {
+                $update['payment_proof_path'] = $newPath;
+            } elseif ($remove) {
+                $update['payment_proof_path'] = null;
+            }
+
+            try {
+                $quota->update($update);
+            } catch (\Throwable $e) {
+                // O banco não apontou para o arquivo novo: não deixa órfão.
+                ProofStorage::delete($newPath);
+
+                throw $e;
+            }
+
+            return [$quota, $previousPath, $update];
+        });
+
+        if ($outcome instanceof \Illuminate\Http\JsonResponse) {
+            return $outcome;
         }
 
-        $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
-            ->where('cycle_start', $cycle['start']->toDateString())
-            ->first();
+        [$quota, $previousPath, $update] = $outcome;
 
-        if ($snapshot && $snapshot->isSealed()) {
-            return response()->json(['error' => 'Esta competência já foi encerrada. Desfaça o pagamento para corrigir o comprovante.'], 422);
-        }
-
-        $newNote = $request->has('descricao') ? ($data['descricao'] ?? null) : $quota->payment_note;
-        $willHaveProof = $request->hasFile('comprovante') || ($quota->payment_proof_path && ! $remove);
-
-        // `filled()`, não `empty()`: `empty("0")` descartaria a descrição "0".
-        if (! $willHaveProof && ! filled($newNote)) {
-            return response()->json(['error' => 'Informe a foto do comprovante ou uma descrição do pagamento.'], 422);
-        }
-
-        $previousPath = $quota->payment_proof_path;
-        $newPath = $request->hasFile('comprovante')
-            ? ProofStorage::store($request->file('comprovante'), $expense->group_id)
-            : null;
-
-        $update = ['payment_note' => $newNote];
-
-        if ($newPath) {
-            $update['payment_proof_path'] = $newPath;
-        } elseif ($remove) {
-            $update['payment_proof_path'] = null;
-        }
-
-        try {
-            $quota->update($update);
-        } catch (\Throwable $e) {
-            // O banco não apontou para o arquivo novo: não deixa órfão.
-            ProofStorage::delete($newPath);
-
-            throw $e;
-        }
-
+        // Só depois do commit: se a transação desse rollback, o arquivo antigo
+        // continuaria referenciado e não pode ter sido apagado.
         if (array_key_exists('payment_proof_path', $update)
             && $previousPath
             && $previousPath !== $update['payment_proof_path']) {

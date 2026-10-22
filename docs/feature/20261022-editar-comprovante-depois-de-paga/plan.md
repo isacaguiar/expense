@@ -51,7 +51,7 @@ Route::post('/expenses/{expenseId}/payment-proof', [ExpenseController::class, 'u
 6. **Ciclo selado** (D4): `GroupCycleSnapshot::where(group_id, cycle_start)->first()?->isSealed()` responde 422 `{error: 'Esta competência já foi encerrada. Desfaça o pagamento para corrigir o comprovante.'}`, o mesmo padrão de `confirmSettlement` (`:1211`).
 7. **Estado final** (D5): `temFoto = hasFile || ($quota->payment_proof_path && ! remover)` e `novaNota = has('descricao') ? ($data['descricao'] ?? null) : $quota->payment_note`. Se `! temFoto && ! filled($novaNota)`, responde 422 `{error: 'Informe a foto do comprovante ou uma descrição do pagamento.'}`. `filled()`, nunca `empty()`, para não repetir o defeito do `"0"` (TASK-448 da feature anterior).
 
-**Gravação** (R3): guardar o caminho anterior, gravar o arquivo novo (se veio), atualizar a quota e **só depois** apagar o arquivo anterior:
+**Gravação** (R3): guardar o caminho anterior, gravar o arquivo novo (se veio), atualizar a quota e **só depois** apagar o arquivo anterior: Desde a TASK-462, a busca da quota, as verificações de estado e o `update` acontecem dentro de `DB::transaction` com a quota lida por `lockForUpdate`, e o arquivo anterior é apagado **depois do commit**.
 
 ```php
 $anterior = $quota->payment_proof_path;
@@ -196,7 +196,7 @@ Em `ExpenseControllerPayTest.php` (R9): `pay()` repetido com foto nova apaga a a
 
 ## 10. Riscos aceitos
 
-- **Corrida entre editar e desfazer**: se o credor desfaz o pagamento (`unpay`, que lê o caminho antes de apagar) no mesmo instante em que outra requisição troca a foto, a foto nova pode ficar órfã. É a mesma família do item de backlog "corrida entre pagamento e edição de despesa"; não é resolvida aqui.
+- **Corrida entre editar e desfazer**: fechada na TASK-462 (achado B2 da revisão de segurança). A leitura da quota, as verificações que dependem do estado e o `update` rodam dentro de `DB::transaction` com `lockForUpdate`, e o arquivo anterior só é apagado depois do commit; assim, a edição nunca grava foto ou descrição numa quota que o `unpay` acabou de despagar. Resta, no pior caso, uma **foto nova órfã** quando o `unpay` concorrente já tinha lido o caminho antigo (nunca um comprovante válido perdido nem um estado inconsistente). Também resta, aceita, a janela mínima em que uma selagem de ciclo concorrente (disparada por outro `pay`) congela o snapshot um instante antes da gravação; a nota só é informativa e a edição de ciclo selado já é recusada.
 - **Falha ao apagar o arquivo antigo** depois do `update` fica silenciosa (`ProofStorage::delete` ignora arquivo ausente): pior caso, um arquivo órfão, nunca um comprovante perdido (R3).
 - **Link do comprovante em ciclo selado** continua expirando (specify §2.5). Como a edição é bloqueada em ciclo selado (D4), esta feature não piora isso.
 
