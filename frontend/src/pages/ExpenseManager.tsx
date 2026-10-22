@@ -180,7 +180,7 @@ const ExpenseManager: React.FC = () => {
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
 
   // O ✓ "Marcar como paga" não paga direto: abre o popup de comprovante (foto
-  // ou descrição) — docs/feature/20261021-comprovante-ao-marcar-paga.
+  // ou descrição) — docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga.
   const [payTargetId, setPayTargetId] = useState<number | null>(null);
 
   const confirmPayment = ({ file, note }: PaymentProofValue) => {

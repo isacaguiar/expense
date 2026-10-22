@@ -776,7 +776,7 @@ class ExpenseControllerPayTest extends TestCase
             ->atLeast()->once();
     }
 
-    // --- Descrição do pagamento (docs/feature/20261021-comprovante-ao-marcar-paga) ---
+    // --- Descrição do pagamento (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga) ---
 
     /**
      * Cria grupo, credor e uma despesa à vista com a quota de agosto/2026 ainda

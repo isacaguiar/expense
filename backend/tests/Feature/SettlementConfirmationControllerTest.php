@@ -596,7 +596,7 @@ class SettlementConfirmationControllerTest extends TestCase
             ->atLeast()->once();
     }
 
-    // --- Descrição do acerto (docs/feature/20261021-comprovante-ao-marcar-paga) ---
+    // --- Descrição do acerto (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga) ---
 
     /**
      * Grupo com um acerto real do devedor para o credor, competência de

@@ -33,7 +33,7 @@ type ExpenseQuota = {
   date_expected: string;
   paid: boolean;
   payment_proof_url: string | null;
-  // Descrição do pagamento (docs/feature/20261021-comprovante-ao-marcar-paga);
+  // Descrição do pagamento (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga);
   // opcional: ausente em respostas/fixtures anteriores à feature.
   payment_note?: string | null;
   // O cast `decimal:2` do backend serializa número como string ("292.40"),

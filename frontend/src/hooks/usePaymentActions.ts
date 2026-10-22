@@ -5,7 +5,7 @@ import type { Summary, SummaryExpense } from './useGroupCycle';
 
 /**
  * O que acompanha um pagamento: foto do comprovante, descrição em texto, ou os
- * dois. O tipo exige **pelo menos um** (docs/feature/20261021-comprovante-ao-marcar-paga,
+ * dois. O tipo exige **pelo menos um** (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga,
  * specify R1): `handlePay(id)` sem detalhes, o antigo clique sem popup, não compila.
  */
 export type PaymentDetails = { proof: File; note?: string } | { proof?: File; note: string };

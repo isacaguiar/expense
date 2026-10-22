@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 /**
- * Colunas de descrição do pagamento (docs/feature/20261021-comprovante-ao-marcar-paga,
+ * Colunas de descrição do pagamento (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga,
  * plan.md §1): `ex_quotas.payment_note` e `ex_settlement_confirmations.note`.
  */
 class PaymentNotePersistenceTest extends TestCase
