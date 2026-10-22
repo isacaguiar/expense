@@ -728,3 +728,31 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`, a partir de `f65e
 |---|---|---|
 | M1 | "Já recebido" com `receive.open` | Derrubou os 2 testes novos |
 | M2 | "Já recebido" repetindo `owe.confirmed` | Derrubou os 2 testes novos |
+
+## 25. Bloqueio da TASK-424: a `dev` divergiu da base da feature
+
+Achado ao começar a revisão final, antes de rodar qualquer suíte (que seria jogada fora). Nada foi alterado no código; só leitura, `git fetch origin dev` e uma simulação de merge que **não toca a árvore de trabalho**.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Distância da base | `git fetch origin dev`; `git merge-base HEAD origin/dev`; `git log --oneline 5dc5ac9c80..origin/dev` | A base da feature continua sendo `5dc5ac9c80`; a `dev` tem **54 commits** a mais |
+| Conflitos de um merge | `git merge-tree --write-tree --name-only HEAD origin/dev` | **3 arquivos em conflito:** `backend/app/Http/Controllers/ExpenseController.php`, `docs/backlog/README.md` e `frontend/src/pages/Payments.tsx` |
+| O que mudou na `dev` | `git diff --stat 5dc5ac9c80 origin/dev -- :/backend :/frontend` | 25 arquivos, +2.642/−132: a feature **`20261021-comprovante-ao-marcar-paga`** (TASK-434 a 448 da `dev`, arquivada) |
+
+**O que essa feature da `dev` fez**, e onde ela pisa na nossa:
+
+| Peça da `dev` | Sobreposição com a feature do Painel |
+|---|---|
+| `pay()` e `confirmSettlement()` aceitam `descricao` (grava `payment_note` e `note`); `unpay()` limpa a nota; 2 migrações aditivas | Controller sem conflito de texto. **O banco da validação local precisa de `migrate`** depois do merge |
+| `summary` passa a expor `paymentNote` e `confirmedNote` (em `collectCycleEntries`, `computeCycleSummary` e `attachSettlementConfirmations`) | **Conflito mecânico:** são os métodos que a TASK-409 moveu para o `CycleSummaryService`. As linhas da `dev` têm de ser portadas para `entries()`, `compute()` e `withConfirmations()`. Os testes que a `dev` escreveu (`ExpenseControllerSummaryTest`, `PaymentNotePersistenceTest`, `SettlementConfirmationControllerTest`) servem de prova, via HTTP |
+| Novo `PaymentProofDialog` (foto **ou** descrição; foto obrigatória só no acerto do devedor) substitui os diálogos de comprovante em Pagamentos e em Despesas | **Conflito de decisão:** a TASK-415 trocou esses mesmos diálogos pelo `ProofUploadDialog` (só foto). Passam a existir dois componentes para a mesma coisa, e o Painel usa o nosso |
+| `usePaymentActions.handlePay(expenseId, details: PaymentDetails)`, com `{ proof?, note? }` | **Quebra de compilação:** o `GroupPositionCard` chama `handlePay(id, file)` |
+| (`useConfirmSettlement` é nosso e não existe na `dev`) | Não manda `descricao`; o acerto do devedor no Painel perderia a descrição que Pagamentos passa a oferecer |
+| Regra "foto ou descrição" para o credor marcar como paga | A decisão **D7** do `specify.md` ("foto obrigatória, como em Pagamentos") precisa ser relida: Pagamentos mudou |
+| `docs/backlog/README.md`: a `dev` tem o 081; eu tenho 082 e 083 | Conflito de linhas. Conferi que a `dev` **não usa IDs ≥ 082** (`git grep` em `origin/dev`) |
+
+**Numeração:** a `dev` consumiu as TASK-434 a 448. As tasks novas desta feature devem começar na **TASK-449** (a TASK-433 daqui não colide, mas já ficou para trás do contador global).
+
+**Decisões pendentes do usuário** (D12 a D14, abaixo no `specify.md` §5 quando adotadas): ver a tabela proposta na conversa de 2026-10-22.
+
+**Estado da validação local:** a stack (8001, 3001, banco `painel_validacao`) continua no ar sobre o código **anterior** ao merge. Depois de integrar a `dev`, o roteiro da §23 precisa ser repetido no que mudar (pelo menos o envio de comprovante, o marcar como paga e o `migrate`).
