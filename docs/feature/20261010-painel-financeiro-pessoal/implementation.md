@@ -41,6 +41,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-420 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-420`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §20 | O `cycles_ago` do payload vai nas 3 ações; fixar `0` derruba os 3 testes. `usePaymentActions` e `useConfirmSettlement` sem alteração. Snackbars no cartão (desvio do plano). 4 mutações |
 | TASK-421 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-421`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §21 | Página `MyPanel` com estados, ordem do servidor, aviso de corte em 50 e recarga depois de cada ação. Acrescentei "Tentar novamente" e o atalho "Ir para Meus Grupos". 5 mutações |
 | TASK-422 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-422`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §22 | Rota `/painel` e item "Painel" como primeiro dos dois menus. Fim do frontend. Os testes existentes dos layouts passaram sem edição de asserção. 4 mutações |
+| TASK-423 | **Em validação** (roteiro executado; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário para iniciar | Ver §23 | 12 itens conferidos no navegador e por HTTP, todos conforme o esperado; 5 achados para o usuário decidir (o principal: "Já confirmado" não mostra o que o credor já recebeu). Falta a confirmação por escrito do usuário e o encerramento da stack |
 
 ## 3. Evidências da TASK-409
 
@@ -635,3 +636,69 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-422`, a partir de `051a
 **Um deslize meu, pego pela suíte.** Ao restaurar a M4, a edição de restauração falhou ("String to replace not found"): a mutação tinha tirado só a linha do item e deixado o comentário acima dela, e eu procurei um trecho sem o comentário. Segui direto para a suíte inteira, que acusou o teste do menu do grupo vermelho. Corrigi e conferi o `git diff` dos três arquivos de produção contra o esperado antes de seguir. Lição para as próximas mutações: reler o trecho antes de restaurar.
 
 **Verificação visual:** a rota e o menu agora existem, mas a conferência no navegador (tela, menu, largura de celular) é a TASK-423, na stack isolada, com a confirmação do usuário.
+
+## 23. Validação local da TASK-423 (stack isolada, no navegador)
+
+Feita em 2026-10-22 sobre a branch da feature já integrada (`f26ce6ce71`), com backend e frontend reais, banco real e o navegador do painel do app. **Estado: validado pelo Claude; aguardando a confirmação do usuário.** Sem ela não há push nem PR (TASK-423, último critério).
+
+### Ambiente
+
+| Peça | Como |
+|---|---|
+| Banco | Banco **`painel_validacao`** criado dentro do container `mysql-painel-test` (3308, o mesmo dos testes PHPUnit, `ex-db`). Desvio da receita (container novo na 3307): reaproveitei o container já existente da feature (§1, desvio 2) e separei por banco, para os dados de validação nunca irem parar no `ex-db` dos testes. O alvo foi conferido antes de migrar (`painel_validacao @ porta 3308`) e todos os scripts recusam rodar em outro banco |
+| Backend | `php artisan serve --env=testing --port=8001`, com `DB_DATABASE=painel_validacao` na variável de ambiente (o `.env.testing` não foi alterado). Confirmado pelos dados: o login dos usuários semeados só existe nesse banco |
+| Frontend | `VITE_API_BASE_URL=http://localhost:8001 npx vite --port 3001 --strictPort` (`/app/painel`). O CORS por `FRONTEND_URL` já era `http://localhost:3001` |
+| Dados | Script descartável fora do repositório. 5 usuários (`isac`, `nadia`, `norma`, `otavio`, `semgrupo`, todos `@painel.test`, senha padrão do `UserFactory`) e os grupos abaixo. "Hoje" = 22/10/2026, sem `Carbon::setTestNow`: setembro está fechado e outubro é o ciclo vigente |
+
+### Cenários semeados (a Isac é membro de todos)
+
+| Grupo | Cenário do critério | Dados |
+|---|---|---|
+| Residencial | (a) ciclo fechado pendente, devedora | Aluguel 900 (Nádia), Reforma parcelada 6× (parcela 2/6 em setembro, 150) e Internet 120 (a própria Isac pagou) → deve R$ 315,00 à Nádia (300 + 75 − 60) |
+| Consórcio | (b) ciclo fechado, credora | Condomínio 800 e Seguro 100 pagos pela Isac → recebe R$ 650,00; a Norma já enviou comprovante de R$ 250,00 |
+| Viagem | (c) só o ciclo vigente | Hospedagem em outubro, deve R$ 300,00 (ciclo aberto) |
+| Sítio | (d) em dia | Despesa de setembro paga e acerto confirmado |
+| Ateliê | (e) carência | `closing_day` 18: o ciclo 19/09–18/10 já passou da fronteira e só fecha em 23/10; deve R$ 100,00 |
+| Oficina (acrescentado na validação) | credor sem chave Pix | A Isac deve R$ 40,00 ao Otávio, que não tem Pix |
+
+### Resultados, item a item
+
+| # | Item do critério | Como foi conferido | Resultado |
+|---|---|---|---|
+| 1 | Totais de cada cartão contra o `GET /summary` do mesmo ciclo | Script HTTP: login, `/me/overview` e, para cada grupo, `/groups/{id}/expenses/summary?cycles_ago=N` com o `cycles_ago` do cartão, somando os acertos da Isac | **6 de 6 iguais** (ciclo, status, "a pagar" e "a receber"), na carga inicial e de novo no estado final. Ordem do servidor respeitada (com algo em aberto primeiro, "Em dia" por último) |
+| 2 | Devedor envia comprovante e o status do acerto muda | Residencial no navegador: "Enviar comprovante", imagem anexada, "Confirmar" | Aviso "Comprovante enviado."; o cartão recarregou **sem fechar o detalhe**: "A pagar" R$ 315,00 → R$ 0,00, "Já confirmado" R$ 0,00 → R$ 315,00, selo "Em dia", chip "Comprovante enviado" e botão "Reenviar comprovante". No banco: confirmação do **ciclo 2026-09-01..30** (e não de outubro: o `cycles_ago` do payload chegou), arquivo gravado, 1 notificação `settlement_confirmed` para a credora |
+| 3 | Credor marca e desfaz a despesa | Consórcio: "Marcar como paga" no Condomínio, com foto, e depois "Desfazer" | "Pagamento confirmado." e o item virou "Paga" com "Desfazer"; depois do desfazer voltou a "Pendente" (banco: `paga = não`). **Os totais "a receber" não mudaram nas duas ações** (ver o achado 2 abaixo) |
+| 4 | Pix abre o diálogo | Residencial: "Pagar com Pix" | Diálogo "Pagar Nádia Lima", "R$ 315,00 via Pix", QR Code e código copia-e-cola com a chave dela. Credor sem chave (Oficina): nenhum diálogo e o aviso "Otávio Braga ainda não cadastrou uma chave Pix." |
+| 5 | Ciclo ainda não fechável | Ateliê (carência) e Viagem (vigente) | Chip "Fecha em 23/10" no Ateliê; nos dois, sem botões de Pix e de comprovante e com "Disponível após o fechamento do ciclo." |
+| 6 | Largura de 375 px sem scroll horizontal | Viewport 375×812, os 6 cartões com o detalhe aberto | `scrollWidth` = `clientWidth` = 375 (sem overflow). Os botões "Pagar com Pix" e "Enviar comprovante" quebram em duas linhas dentro do cartão |
+| 7 | Usuário sem grupos | Saída pela tela e entrada como `semgrupo` | "Você ainda não participa de nenhum grupo." e o atalho "Ir para Meus Grupos" |
+| 8 | Sessão expirada volta ao login | Token do `localStorage` trocado por um inválido e recarga de `/painel` | Voltou ao login (`/app`) |
+| 9 | Não grava nem notifica pela leitura | Banco depois de todas as leituras | `ex_group_cycle_snapshots`: **0 linhas**. As 5 notificações (`settlement_confirmed` ×2, `expense_paid` ×3) vieram só das ações |
+| 10 | Regressão da refatoração das TASK-415 e 416 | Tela de Pagamentos (`/groups/6/payments`): "Enviar comprovante" | Funciona: chip "Comprovante enviado", "Reenviar comprovante", e a confirmação gravada no **ciclo de setembro** (`cycles_ago` do ciclo em foco) |
+| 11 | Menu | Menu fora de grupo e dentro do grupo | "Painel" é o primeiro item nos dois e abre `/painel` com o título "Painel" |
+| 12 | "Informar pagamento" de `GroupGrossDebtsPanel` inalterado | `git diff --stat 5dc5ac9c80 HEAD -- GroupGrossDebtsPanel.tsx GroupGrossDebtsPanel.test.tsx` | Vazio; o botão segue como era |
+
+### Medição de `/me/overview` com 5 grupos
+
+| Camada | Medida |
+|---|---|
+| Serviço (`PersonalOverviewService::forUser`, 5 grupos) | **85 consultas SQL** (17 por grupo em média), 281 ms na primeira execução e 247 a 270 ms nas seguintes. (As contagens "170, 255…" da saída vieram de um erro do meu script de medição, que registrava um `DB::listen` novo a cada execução; vale a primeira execução, e as seguintes deram o mesmo número por execução) |
+| HTTP, `/api/me` (rota trivial, a base do ambiente) | 400 a 505 ms |
+| HTTP, `/api/me/overview` (5 grupos) | 758 a 885 ms; primeira chamada, a frio, 1,27 s. Com 6 grupos: 795 a 897 ms |
+| Leitura | O ambiente de desenvolvimento (`artisan serve` num processo só, no Windows, com MySQL em Docker) já gasta ~440 ms numa rota que não faz nada: o `/me/overview` custa cerca de **350 ms a mais** que essa base. Em produção, com PHP-FPM e banco local, a base é bem menor. Com o teto de 50 grupos (D9) o pior caso fica em ~300 consultas |
+
+### Achados da validação (para o usuário decidir; nenhum bloqueia)
+
+| # | Achado | Opções | Recomendação |
+|---|---|---|---|
+| 1 | "Já confirmado" é só `owe.confirmed` (o que a pessoa **deve** e já confirmou). Para quem é credor, o cartão mostra "Já confirmado R$ 0,00" mesmo com R$ 250,00 já confirmados por um devedor (aparece só no detalhe, em "Você recebe"). É o que o `plan.md` §2 definiu | A) manter como está<br>B) acrescentar o total confirmado a receber (o payload já traz `receive.confirmed`), por exemplo um quarto valor "Já recebido"<br>C) somar os dois em "Já confirmado" | **B**: o dado já vem do servidor, a mudança é só de tela, e corrige uma leitura enganosa do credor. Entraria como TASK nova antes do PR |
+| 2 | "Marcar como paga" e "Desfazer" **não alteram os totais do cartão**, só o selo Paga/Pendente do item. É a decisão D1 (valor = acerto líquido; "Paga" é informação). O critério da TASK-423 dizia "o total acompanha", o que não vale nessa regra | A) manter a D1<br>B) mostrar também uma contagem de itens pendentes (o payload traz `pending_items_count`) | **A**: é o que a D1 decidiu e é o mesmo comportamento de Pagamentos. Opcional: **B** num segundo momento |
+| 3 | Depois de uma ação o cartão pode **trocar de posição** (o Residencial desceu abaixo da Viagem ao virar "Em dia"), porque o servidor reordena. O detalhe aberto acompanha o cartão | A) manter (a ordem do servidor é o contrato)<br>B) congelar a ordem até a próxima carga | **A**: simples e previsível; só vale revisar se incomodar no uso real |
+| 4 | Em desenvolvimento o `/me/overview` é chamado duas vezes na carga: é o `StrictMode` do React (a primeira resposta é descartada pelo hook). Não acontece no build de produção | — | Nada a fazer |
+| 5 | O "Em dia" e o selo "Ciclo fechado" convivem com itens ainda "Pendente" (o credor ainda não marcou como paga), porque o painel segue o acerto líquido. O ciclo continua em foco até o credor marcar tudo e o ciclo ser selado | — | Consequência da D1; ver o achado 2 |
+
+### Encerramento da stack (a fazer só depois do OK do usuário)
+
+A stack **continua no ar** para o usuário validar: frontend `http://localhost:3001/app/`, backend `http://localhost:8001`, banco `painel_validacao`. Ao receber o OK, ou se o usuário pedir, encerrar: parar os processos que escutam na **8001** (`php`) e na **3001** (`node`, o Vite) e nunca os da 3000/8000; apagar o banco `painel_validacao`; apagar só os arquivos de comprovante referenciados no banco descartável (`comprovantes/1/…png` e `comprovantes/6/…png`, mais o de marcar como paga do Condomínio); conferir as portas livres.
+
+**Ajuste do critério de encerramento:** o `.env.testing` e o container `mysql-painel-test` **não** são removidos agora. A TASK-424 (revisão final) precisa rodar a suíte completa do backend e o `security-reviewer`, e ambos dependem deles. Saem no fim da feature (§1, desvios 2 e 3), junto do worktree.

@@ -22,7 +22,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-420 | Criar `GroupPositionCard` com totais, selos, "Você paga" (Pix e comprovante) e as ações de marcar e desfazer | frontend | plan.md §2, §3, §4 | nenhum | Concluída |
 | TASK-421 | Criar a página `MyPanel` | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-422 | Registrar a rota `/painel` e o item "Painel" nos dois menus | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-423 | Validar o painel localmente na stack isolada (API e tela) e registrar o resultado | frontend | plan.md §6 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
+| TASK-423 | Validar o painel localmente na stack isolada (API e tela) e registrar o resultado | frontend | plan.md §6 | antes do merge (o usuário valida localmente antes do push e do PR) | Em validação: roteiro executado (`implementation.md` §23); aguardando a confirmação do usuário e o encerramento da stack |
 | TASK-424 | Rodar a revisão final (backend e frontend): `pr-readiness-checker`, suítes completas e checklist do `04-implementation.md` §1 item 5 | backend | plan.md §6 | antes do merge | Pendente |
 | TASK-425 | Registrar em `docs/backlog/` os achados tangenciais da feature | doc | plan.md §9 | nenhum | Pendente |
 | TASK-426 | Atualizar o plan de `20261006-relatorios-acompanhamento-fechamento` para usar `CycleSummaryService` e as linhas atuais | doc | plan.md §0.4 | nenhum | Pendente |
@@ -118,7 +118,7 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
   - Roteiro do `plan.md` §6 executado na stack isolada (MySQL descartável na 3307, backend na 8001, Vite na 3001): usuário em grupos com (a) ciclo fechado pendente como devedor, (b) ciclo fechado como credor, (c) só ciclo vigente, (d) um grupo em dia e (e) um ciclo em carência. Conferir:
     - os totais de cada cartão contra o `GET /summary` do mesmo ciclo;
     - devedor envia comprovante e o status do acerto muda;
-    - credor marca e desfaz a despesa e o total acompanha; Pix abre o diálogo;
+    - credor marca e desfaz a despesa e o selo do item acompanha (os **totais do cartão não mudam**: são o acerto líquido, decisão D1; corrigido na validação, `implementation.md` §23); Pix abre o diálogo;
     - largura de 375 px sem scroll horizontal; usuário sem grupos; sessão expirada volta ao login.
   - Registrado no `implementation.md` o resultado de cada item, com o que foi observado, o **número de consultas SQL e o tempo da chamada** de `/me/overview` com 5 grupos semeados, e o item "Informar pagamento" de `GroupGrossDebtsPanel` conferido como inalterado.
   - Stack isolada encerrada ao final (processos, banco e `.env.testing` removidos, portas liberadas).
