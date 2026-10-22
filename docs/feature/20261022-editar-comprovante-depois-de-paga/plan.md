@@ -95,7 +95,7 @@ Mesma ordem de R3 (grava, atualiza, só então apaga). Nada mais muda em `pay()`
 `frontend/src/hooks/usePaymentActions.ts`:
 
 - **`canEditProof(exp)`**, ao lado de `canUnpay` (`:65`):
-  `!cycleIsFuture && !cycleSealed && exp.paid && isCreditor(exp)`, com `cycleSealed = summary?.cycle.settled === true`. É o espelho de D4: nunca oferece a ação num ciclo selado. `born_paid` entra naturalmente (R10).
+  `cycleAllowsProofEdit && exp.paid && isCreditor(exp)`, com `cycleAllowsProofEdit = summary !== null && !cycleIsFuture && summary.cycle.settled !== true`. É o espelho de D4: nunca oferece a ação num ciclo selado, e, sem o resumo carregado (não dá para provar que o ciclo não está selado), também não oferece. `canPay` e `canUnpay` não mudam e seguem só excluindo `future`. `born_paid` entra naturalmente (R10).
 - **Tipo exportado** `EditProofInput = { proof?: File; removeProof?: boolean; note: string }`. `note` é obrigatório no tipo porque a tela sempre envia o estado final da descrição.
 - **`handleEditProof(expenseId, input)`**: `POST ${API_BASE_URL}/api/expenses/${expenseId}/payment-proof`.
   - com `proof`: `FormData` com `comprovante`, `cycles_ago`, `descricao` (mesmo vazio), e `remover_comprovante = '1'` só quando `removeProof` (o `boolean` do Laravel não aceita a string `"true"`);
