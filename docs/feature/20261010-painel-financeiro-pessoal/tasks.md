@@ -34,7 +34,7 @@ IDs a partir de TASK-409: o maior em qualquer branch do repositório é TASK-408
 | TASK-432 | Fechar as lacunas de teste do overview apontadas pela revisão: ex-membro, credor que saiu do grupo e vazamento de e-mail de grupo alheio | backend | plan.md §1.4, §6 | nenhum | Concluída |
 | TASK-433 | Mostrar "Já recebido" no cartão (achado 1 da validação local, `implementation.md` §23) | frontend | plan.md §2 | roda antes da TASK-424 | Concluída |
 | TASK-449 | Integrar a `dev` (54 commits) na branch da feature, resolvendo os 3 conflitos e portando `paymentNote`/`confirmedNote` para o `CycleSummaryService` (decisão D12) | backend | `implementation.md` §25 | roda antes da TASK-424; **a stack da validação local é interrompida enquanto o merge está com conflito** | Concluída |
-| TASK-450 | O Painel adota o `PaymentProofDialog` e a descrição do pagamento; retirar o `ProofUploadDialog` (decisão D13, que reescreve a D7) | frontend | `implementation.md` §25 | depois da TASK-449 | Pendente |
+| TASK-450 | O Painel adota o `PaymentProofDialog` e a descrição do pagamento; retirar o `ProofUploadDialog` (decisão D13, que reescreve a D7) | frontend | `implementation.md` §25 | depois da TASK-449 | Concluída |
 | TASK-451 | Repetir no navegador, na stack da TASK-423, o roteiro afetado pelo merge (`migrate`, comprovante do devedor, marcar e desfazer, Pagamentos) | frontend | `implementation.md` §23 | depois da TASK-450; antes da TASK-424 | Pendente |
 
 Ordem: TASK-409 → 410 → 411 → 412 → 413 → 414 (backend, plan.md §7 passos 1 a 3). Em seguida TASK-415 → 416 → 417 → 418 → 419 → 420 → 421 → 422 (frontend, passos 4 a 6). As TASK-415 e 416 não dependem do backend e poderiam rodar antes; ficam depois para integrar o contrato real a partir da TASK-417. Fecham TASK-423 (validação local) → 424 (revisão final) → 425 → 426. A revisão da TASK-414 gerou as TASK-427 a 432 (backend), que rodam logo depois dela e antes de a TASK-423 validar tudo: TASK-427 → 428 → 429 → 430 → 431 → 432. As TASK-428 e 429 dependem das decisões D9 e D10 do `specify.md` §5; se forem recusadas, ficam Canceladas. Se a validação ou a revisão apontar defeito, ele vira task nova, não amplia a task em andamento.
@@ -84,7 +84,7 @@ Comandos de backend a partir de `backend/`, de frontend a partir de `frontend/`.
 - **TASK-414**:
   - Agent `security-reviewer` rodado sobre `OverviewController`, `PersonalOverviewService` e a rota; o resultado e cada achado (corrigido, descartado com motivo ou virou task nova) registrados no `implementation.md`. Nenhum achado alto sem tratamento.
   - `php artisan test` da suíte inteira verde, `./vendor/bin/pint --test` limpo, com os comandos e as contagens reais no `implementation.md`.
-- **TASK-415**:
+- **TASK-415** (**superada pela TASK-450 em 2026-10-22**: o `ProofUploadDialog` foi removido e o Painel usa o `PaymentProofDialog` da `dev`, decisão D13; os critérios abaixo valem como histórico do que foi entregue e provado na época):
   - `src/components/ProofUploadDialog.tsx` existe e `Payments.tsx` o usa nos **dois** diálogos de comprovante (`grep -n "Selecionar foto\|Selecionar comprovante" src/pages/Payments.tsx` vazio).
   - `npx vitest run src/pages/Payments.test.tsx` verde **sem edição** (8 testes).
   - `ProofUploadDialog.test.tsx`: "Confirmar" desabilitado até escolher arquivo; ao confirmar chama `onConfirm` com o `File`; `error` mostrado num `Alert`; `busy` desabilita os dois botões; título, texto, rótulo do botão de seleção e ícone vêm por props.

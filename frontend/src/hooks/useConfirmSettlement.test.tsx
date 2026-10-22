@@ -36,6 +36,32 @@ describe('useConfirmSettlement', () => {
     expect(config).toEqual({ headers: { Authorization: 'Bearer token-de-teste' } });
   });
 
+  // TASK-450: o acerto do devedor aceita uma descrição opcional (`descricao`, feature
+  // 20261021 da `dev`); o servidor guarda em `note`. Sem texto, o campo nem vai.
+  it('sends the description as `descricao` when there is one', async () => {
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+    const { result } = renderHook(() => useConfirmSettlement('5', () => {}));
+
+    act(() => result.current.confirm(999, proof(), 1, 'Pix de manhã'));
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+
+    const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+    expect(body.get('descricao')).toBe('Pix de manhã');
+    expect(body.get('cycles_ago')).toBe('1');
+    expect(body.get('to_user_id')).toBe('999');
+  });
+
+  it.each([undefined, ''])('does not send `descricao` when the note is %j', async note => {
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+    const { result } = renderHook(() => useConfirmSettlement('5', () => {}));
+
+    act(() => result.current.confirm(999, proof(), 1, note));
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+
+    const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+    expect(body.has('descricao')).toBe(false);
+  });
+
   it('is submitting while the request runs and calls onSuccess when it succeeds', async () => {
     let resolvePost: (value: unknown) => void = () => {};
     vi.mocked(axios.post).mockReturnValue(new Promise(resolve => (resolvePost = resolve)));

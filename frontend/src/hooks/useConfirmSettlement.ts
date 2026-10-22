@@ -6,7 +6,7 @@ type UseConfirmSettlementResult = {
   submitting: boolean;
   error: string | null;
   clearError: () => void;
-  confirm: (toUserId: number, proof: File, cyclesAgo: number) => void;
+  confirm: (toUserId: number, proof: File, cyclesAgo: number, note?: string) => void;
 };
 
 /**
@@ -31,7 +31,7 @@ export function useConfirmSettlement(
   const [error, setError] = useState<string | null>(null);
 
   const confirm = useCallback(
-    (toUserId: number, proof: File, cyclesAgo: number) => {
+    (toUserId: number, proof: File, cyclesAgo: number, note?: string) => {
       if (!groupId) return;
 
       setSubmitting(true);
@@ -42,6 +42,8 @@ export function useConfirmSettlement(
       form.append('to_user_id', String(toUserId));
       form.append('comprovante', proof);
       form.append('cycles_ago', String(cyclesAgo));
+      // Descrição opcional do acerto (servidor: `descricao`, até 500 caracteres, vai para `note`).
+      if (note) form.append('descricao', note);
 
       axios
         .post(`${API_BASE_URL}/api/groups/${groupId}/settlements/confirm`, form, {
