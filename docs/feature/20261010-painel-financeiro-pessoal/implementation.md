@@ -45,6 +45,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-433 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`) | 2026-10-22 | Claude (IA), com aprovação do usuário ("siga", opção B recomendada no achado 1 da TASK-423) | Ver §24 | Quarto total "Já recebido" (`receive.confirmed`), sem mudança de backend; conferido no navegador em desktop e em 375 px. 2 mutações |
 | TASK-449 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-449`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D12) | Ver §26 | Merge da `dev` (54 commits) com 3 conflitos resolvidos; `paymentNote` e `confirmedNote` portados para o `CycleSummaryService`; backend 562 e frontend 489 testes verdes. Um erro meu corrigido: a `dev` usa os IDs de backlog 082 e 084, e os meus viraram 085 e 086. 5 mutações |
 | TASK-450 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D13) | Ver §27 | O Painel usa o `PaymentProofDialog` da `dev` (foto ou descrição); o `ProofUploadDialog` foi removido; o `useConfirmSettlement` manda `descricao`. `MyPanel.test.tsx` passou sem edição. 5 mutações |
+| TASK-452 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-452`; só testes) | 2026-10-22 | Claude (IA), com aprovação do usuário (R3) | Ver §30 | 2 testes que travam a D14: as notas de pagamento não saem no `/me/overview`, ao vivo e pelo snapshot. **A primeira versão era vazia** (a mutação não a derrubou) e foi refeita. 3 mutações |
 | TASK-451 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-451`; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §28 | Os 4 fluxos novos conferidos no navegador, com a descrição chegando ao banco (`note` e `payment_note`) e saindo no `/summary`; reconciliação 6 de 6. Um falso alarme meu no script de conferência (`??` não distingue campo nulo de ausente) |
 
 ## 3. Evidências da TASK-409
@@ -898,6 +899,31 @@ Veredito do `pr-readiness-checker`: tecnicamente verde, **mas não pronto para p
 ### O que continua em aberto
 
 1. **Confirmação por escrito do usuário** de que validou localmente (último critério da TASK-423). Sem ela, não há push nem PR.
-2. **R1:** aceitar, corrigir ou reduzir (tabela na conversa). **R3:** fazer o teste agora ou deixar.
+2. ~~**R1:** aceitar, corrigir ou reduzir. **R3:** fazer o teste agora ou deixar.~~ **Decidido pelo usuário em 2026-10-22:** **R1 aceito**, com o número real documentado e a correção de verdade registrada no backlog (lista da TASK-425); **R3 feito** como TASK-452 (§30).
 3. **TASK-425** (backlog, com os itens novos acima) e **TASK-426** (plano de Relatórios).
 4. **Encerramento da stack de validação** depois da confirmação do item 1.
+
+## 30. Evidências da TASK-452 (trava da D14: notas fora do overview)
+
+Branch `backend/20261010-painel-financeiro-pessoal-TASK-452`, a partir de `dc29ca3f7f`. Achado R3 do `security-reviewer` (§29), aprovado pelo usuário. **Só testes: nenhuma linha de produção mudou** (`git diff --stat -- app` vazio).
+
+**O que mudou.** Em `OverviewControllerTest`: `assertNotesStayOutOfTheOverview()` (para um usuário, o corpo bruto de `GET /api/me/overview` não contém os textos marcadores `MARCADOR-NOTA-DO-PAGAMENTO` e `MARCADOR-NOTA-DO-ACERTO`) e dois testes:
+- `test_payment_notes_never_reach_the_overview_from_a_live_cycle`: duas despesas (uma paga, com `payment_note`; outra pendente, para o ciclo seguir em foco) e o acerto líquido de R$ 80,00 já confirmado, com `note`. Pré-condições: o painel mostra o ciclo 1, as 2 despesas e o comprovante do acerto. **Controle:** o `summary` do mesmo ciclo **contém** os dois marcadores. Confere o devedor **e** o credor.
+- `test_payment_notes_never_reach_the_overview_from_a_sealed_snapshot`: o ciclo vigente selado, lido do snapshot (que guarda `paymentNote` nas despesas); a nota do acerto vem da confirmação ao vivo, que `view()` aplica sobre os acertos do snapshot. Mesmas pré-condições e controle (`summary` com `cycles_ago=0`). Confere os dois usuários.
+
+**Um erro meu, pego pela mutação.** A primeira versão (um teste só, semeando uma despesa **toda paga** e um acerto confirmado) passou de primeira, mas ao vazar o `paymentNote` em `my_items` a suíte **continuou verde** (42 passaram). Motivo: um ciclo todo quitado sai do painel (cai em outubro, vazio), então nenhuma nota chegava a ser testada: o teste era vazio. Refiz com a segunda despesa pendente, as pré-condições que provam que o painel exibe as despesas e o acerto, e o caso do snapshot. Foi a mutação que revelou, e não a leitura do teste, que parecia correto.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Testes novos | `php artisan test --filter=test_payment_notes_never_reach_the_overview` | 2 passed (28 asserções) |
+| Produção intacta | `git diff --stat -- app`; `grep -c "confirmedNote\|paymentNote" app/Services/PersonalOverviewService.php` | Vazio; **0** referências às notas no serviço do overview (coerente com a D14) |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 174 files` |
+| **Suíte inteira** | `php artisan test --no-ansi` | `Tests: 564 passed (3539 assertions)`, 82,02 s (562 + 2) |
+
+**Mutações** (cada uma revertida; reli o trecho antes de restaurar). Todas derrubam **os dois** testes, com a mensagem certa:
+
+| # | Mutação | Resultado |
+|---|---|---|
+| M1 | `'note' => $expense['paymentNote']` num item de `my_items` | "a nota do pagamento vazou no overview (ciclo ao vivo, Beto Devedor)" e a versão do snapshot |
+| M2 | `'confirmed_note'` numa linha de `to_receive` | "a nota do acerto vazou no overview (…, **Ana Credora**)": só o credor via esse vazamento, por isso o teste olha os dois |
+| M3 | `'confirmed_note'` numa linha de `to_pay` | "a nota do acerto vazou no overview (…, **Beto Devedor**)" |

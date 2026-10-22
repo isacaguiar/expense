@@ -112,6 +112,108 @@ class OverviewControllerTest extends TestCase
         $this->getJson('/api/me/overview')->assertStatus(401);
     }
 
+    // TASK-452 (achado R3 da revisão final): a decisão D14 é que o painel só ENVIA a descrição do
+    // pagamento, não a exibe. Hoje isso vale porque os arrays do serviço têm chaves explícitas;
+    // este teste falha se alguém passar a despesa ou o acerto inteiros adiante.
+    private const PAYMENT_NOTE = 'MARCADOR-NOTA-DO-PAGAMENTO';
+
+    private const SETTLEMENT_NOTE = 'MARCADOR-NOTA-DO-ACERTO';
+
+    private function assertNotesStayOutOfTheOverview(User $user, string $when): void
+    {
+        $body = $this->overviewAs($user)->assertOk()->getContent();
+
+        $this->assertStringNotContainsString(self::PAYMENT_NOTE, $body, "a nota do pagamento vazou no overview ({$when}, {$user->name})");
+        $this->assertStringNotContainsString(self::SETTLEMENT_NOTE, $body, "a nota do acerto vazou no overview ({$when}, {$user->name})");
+    }
+
+    public function test_payment_notes_never_reach_the_overview_from_a_live_cycle(): void
+    {
+        // Duas despesas: a primeira paga e com nota, a segunda pendente, para o ciclo continuar
+        // em foco (um ciclo todo quitado sairia do painel e o teste não provaria nada). O acerto
+        // líquido do devedor é 50 + 30 = 80, já confirmado, com nota.
+        $group = $this->group('Residencial', $this->creditor, $this->debtor);
+        $paid = $this->septemberExpense($group, $this->creditor, [$this->debtor], 100);
+        $paid->quotas()->first()->update(['paid' => true, 'payment_note' => self::PAYMENT_NOTE]);
+        $this->septemberExpense($group, $this->creditor, [$this->debtor], 60);
+        $this->confirmSeptember($group, $this->debtor, $this->creditor, 80)->update(['note' => self::SETTLEMENT_NOTE]);
+
+        // O painel mostra mesmo as duas despesas e o acerto confirmado: é onde uma nota vazaria.
+        $this->overviewAs($this->debtor)->assertOk()
+            ->assertJsonPath('groups.0.cycle.cycles_ago', 1)
+            ->assertJsonCount(2, 'groups.0.my_items')
+            ->assertJsonPath('groups.0.to_pay.0.amount', 80)
+            ->assertJsonPath('groups.0.to_pay.0.confirmed_proof_url', fn ($url) => $url !== null);
+
+        // Controle: o summary do mesmo ciclo carrega as duas notas. Sem isso o teste poderia
+        // passar só porque a semente não pegou.
+        $summary = $this->summaryAs($this->debtor, $group, 1)->assertOk()->getContent();
+        $this->assertStringContainsString(self::PAYMENT_NOTE, $summary);
+        $this->assertStringContainsString(self::SETTLEMENT_NOTE, $summary);
+
+        $this->assertNotesStayOutOfTheOverview($this->debtor, 'ciclo ao vivo');
+        $this->assertNotesStayOutOfTheOverview($this->creditor, 'ciclo ao vivo');
+    }
+
+    public function test_payment_notes_never_reach_the_overview_from_a_sealed_snapshot(): void
+    {
+        // O ciclo vigente selado, lido do snapshot, que guarda `paymentNote` nas despesas; a nota do
+        // acerto vem da confirmação ao vivo, que `view()` aplica por cima dos acertos do snapshot.
+        $group = $this->group('Residencial', $this->creditor, $this->debtor);
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-10-01',
+            'cycle_end' => '2026-10-31',
+            'totals' => ['total' => 100.0, 'paid' => 100.0, 'pending' => 0.0],
+            'expenses' => [[
+                'id' => 9100,
+                'description' => 'Despesa do snapshot',
+                'date' => '2026-10-05',
+                'value' => 100.0,
+                'valuePerPerson' => 50.0,
+                'paid' => true,
+                'paymentNote' => self::PAYMENT_NOTE,
+                'payerName' => 'Ana Credora',
+                'participants' => ['Ana Credora', 'Beto Devedor'],
+                'participantDetails' => [
+                    ['id' => $this->creditor->id, 'name' => 'Ana Credora', 'avatarUrl' => null],
+                    ['id' => $this->debtor->id, 'name' => 'Beto Devedor', 'avatarUrl' => null],
+                ],
+                'expenseType' => 'IN_CASH',
+                'isFixed' => false,
+                'userPayerId' => $this->creditor->id,
+                'userCreatorId' => $this->creditor->id,
+            ]],
+            'balances' => [],
+            'settlements' => [['from_user_id' => $this->debtor->id, 'to_user_id' => $this->creditor->id, 'amount' => 50.0]],
+            'settled_at' => now(),
+        ]);
+        SettlementConfirmation::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-10-01',
+            'cycle_end' => '2026-10-31',
+            'from_user_id' => $this->debtor->id,
+            'to_user_id' => $this->creditor->id,
+            'amount' => 50,
+            'proof_path' => 'comprovantes/'.$group->id.'/x.jpg',
+            'note' => self::SETTLEMENT_NOTE,
+            'confirmed_at' => now(),
+        ]);
+
+        $this->overviewAs($this->debtor)->assertOk()
+            ->assertJsonPath('groups.0.cycle.settled', true)
+            ->assertJsonCount(1, 'groups.0.my_items')
+            ->assertJsonPath('groups.0.my_items.0.description', 'Despesa do snapshot')
+            ->assertJsonPath('groups.0.to_pay.0.confirmed_proof_url', fn ($url) => $url !== null);
+
+        $summary = $this->summaryAs($this->debtor, $group, 0)->assertOk()->getContent();
+        $this->assertStringContainsString(self::PAYMENT_NOTE, $summary);
+        $this->assertStringContainsString(self::SETTLEMENT_NOTE, $summary);
+
+        $this->assertNotesStayOutOfTheOverview($this->debtor, 'snapshot selado');
+        $this->assertNotesStayOutOfTheOverview($this->creditor, 'snapshot selado');
+    }
+
     public function test_the_controller_answers_401_when_there_is_no_user(): void
     {
         // TASK-431 (achado S4): o jwt.auth já barra quem não tem token, mas o
