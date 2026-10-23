@@ -4,7 +4,7 @@ ID: 085
 Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §8 (achado X1 da revisão de segurança da TASK-414, fora do diff revisado); `backend/app/Http/Controllers/GroupMemberController.php` (`index()`); `backend/routes/api.php:55`
 Criado em: 2026-10-21
 Prioridade: ALTA
-Status: Aberto
+Status: Promovido para TASK-476
 
 ## Descrição
 `GroupMemberController::index()` faz só `Group::with('members')->findOrFail($groupId)` e devolve `$group->members`. Não há `authorizeMembership`, que o `store()` da mesma classe já usa. Qualquer usuário autenticado recebe `200` com os dados de cada membro de **qualquer** grupo existente: `name`, `email`, `pix`, `whatsapp`, `role`, `invited_by` e demais campos do model `User` que não estão em `$hidden`.
