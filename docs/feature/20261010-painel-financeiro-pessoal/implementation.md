@@ -1046,3 +1046,17 @@ Stack: backend `php artisan serve --env=testing --port=8001` com `DB_DATABASE=pa
 **Um tropeço meu, sem efeito:** o `check_db.php` falhou na primeira vez (`Access denied for user 'forge'`) porque eu o rodei sem `APP_ENV=testing`, então ele leu o `.env` em vez do `.env.testing`. Rodando com `APP_ENV=testing` funciona.
 
 **Pendências (inalteradas):** a confirmação por escrito do usuário (último critério da TASK-423); o encerramento da stack (processos 8001 e 3001, banco `painel_validacao`, arquivos de comprovante de hoje nas pastas 1, 2, 4 e 6 de `storage/app/comprovantes/`) só depois dela.
+
+**Conferência visual (mesmo dia, depois do pedido "consegue fazer a validação?").** O item 3 acima e a coluna "Resultado" da tabela foram conferidos pelo DOM porque o painel do navegador estava **oculto** e os screenshots saíam cortados. Abri o painel (`show_pane preview`) e olhei a tela de fato, em largura de celular (o painel tem ~454 px):
+
+| Estado | O que vi |
+|---|---|
+| Devedor, ciclo fechado (Ateliê) | Valor "A pagar" em vermelho, "A receber", "Já confirmado" e "Já recebido" em grade 2×2, chip "Ciclo fechado", aviso âmbar "Você tem pagamentos em aberto neste ciclo.", links "Ver ciclos" e "Ver detalhes" |
+| Em dia (Oficina, Residencial) | Chip verde "Em dia" ao lado de "Ciclo fechado", sem aviso, "Já confirmado R$ 40,00" |
+| Em andamento (Viagem) | Chip azul "Ciclo em andamento", "A pagar R$ 300,00" em vermelho e o aviso |
+| Credor expandido (Consórcio) | "Você paga: você não deve nada"; "Você recebe": um cartão por devedor com valor em verde e chip (laranja "Aguardando pagamento" ×2, verde "Comprovante enviado"); "Seus itens" com chip "Paga" e botão "Desfazer" |
+| Desktop (1280 px, pelo CSS calculado) | 6 grades de totais com **4 colunas iguais** (216,75 px), sem scroll horizontal, menu lateral visível |
+
+**Um falso alarme meu, sem defeito:** logo depois de clicar em "Ver detalhes" no Consórcio, o screenshot mostrou o cartão cortado depois do primeiro devedor. Era a animação de abrir (Collapse) ainda em curso: um segundo screenshot mostrou o cartão inteiro.
+
+**O que uma conferência minha não substitui:** o juízo do dono do produto sobre a tela (texto, hierarquia, o que falta), e a sensação em aparelho real. Por isso o último critério da TASK-423 continua sendo a confirmação por escrito do usuário.
