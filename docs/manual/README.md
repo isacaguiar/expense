@@ -53,11 +53,13 @@ pdffonts MANUAL.pdf
 
 Em 2026-10-23 o script, sem mudar nenhuma palavra do HTML, reproduziu o `MANUAL.pdf` de `dev`: 6 páginas, Letter (612 x 792 pt), texto idêntico (`pdftotext -raw` com espaços normalizados, 4660 caracteres), as mesmas fontes embutidas (Arial-Bold, Consolas, Consolas-Bold, Georgia, Georgia-Bold, Segoe UI, Segoe UI Italic, Segoe UI Semibold, Segoe UI Symbol) e as 6 páginas idênticas pixel a pixel quando renderizadas a 72 dpi; só 12 bytes do arquivo diferiam (metadados de data). Um controle com uma palavra a mais no HTML mudou o texto (4660 para 4666 caracteres) e a página 4, como deveria.
 
+Esse era o PDF de antes do texto da edição de comprovante (TASK-458). Com os dois parágrafos novos o manual passou a ter **7 páginas** (670201 bytes): as páginas 1 a 3 continuam idênticas pixel a pixel, e o texto que entrou foi exatamente o desses dois parágrafos (166 palavras acrescentadas, nenhuma removida).
+
 ## Como editar o manual
 
 1. Edite o texto em `manual.html`. Cada tela do manual é um bloco `<div class="screen">` com a captura, a legenda e os parágrafos; as seções "O que é", "Como a conta é calculada", "Ciclo e tipos de despesa" e "Passo a passo" são blocos `<section class="block">`.
 2. Faça a mesma mudança, com as mesmas palavras, no `MANUAL.md` (o arquivo usa quebra de linha CRLF: preserve).
-3. Gere o PDF para um arquivo temporário (`-Saida`), compare o texto com o `MANUAL.pdf` atual e confira que **só mudaram os parágrafos que você editou**. Renderize as páginas afetadas (`pdftoppm -r 60 -png`) e olhe: um parágrafo a mais pode empurrar uma figura para a página seguinte.
+3. Gere o PDF para um arquivo temporário (`-Saida`), compare o texto com o `MANUAL.pdf` atual e confira que **só mudaram os parágrafos que você editou**. Renderize as páginas afetadas (`pdftoppm -r 60 -png`) e olhe: um parágrafo a mais pode empurrar uma figura para a página seguinte. Cada tela (`.screen`) e as seções marcadas com `keep` não se dividem entre páginas, então um parágrafo a mais pode mandar o bloco inteiro para a página seguinte, deixar um vazio no pé da anterior e refluir o resto (foi o que levou o PDF de 6 para 7 páginas na TASK-458; a seção "Passo a passo" ganhou `keep` para a lista de passos não ficar cortada entre duas páginas).
 4. Gere o `MANUAL.pdf` definitivo e faça o commit de `manual.html`, `MANUAL.md` e `MANUAL.pdf` juntos.
 
 ## De onde vêm as capturas

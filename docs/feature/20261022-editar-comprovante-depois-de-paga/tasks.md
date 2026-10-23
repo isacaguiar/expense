@@ -17,7 +17,7 @@ IDs a partir de TASK-449: o maior em qualquer branch do repositório é TASK-448
 | TASK-455 | Oferecer "Editar comprovante" no cartão da tela Pagamentos, com testes | frontend | plan.md §6 e §7 | nenhum | Concluída |
 | TASK-456 | Atualizar `MANUAL.md` com a edição do comprovante depois de paga | doc | plan.md §9 | nenhum | Concluída |
 | TASK-457 | Versionar a fonte do manual em `docs/manual/` (HTML, capturas e script de geração) e provar que reproduz o PDF atual | doc | plan.md §9 e §11 (T1) | nenhum | Concluída |
-| TASK-458 | Acrescentar a edição de comprovante à fonte do manual e regenerar `MANUAL.pdf` | doc | plan.md §9 | nenhum | Pendente |
+| TASK-458 | Acrescentar a edição de comprovante à fonte do manual e regenerar `MANUAL.pdf` | doc | plan.md §9 | nenhum | Concluída |
 | TASK-459 | Registrar em `docs/backlog/` o item "link do comprovante expira em ciclo selado" | doc | plan.md §9 e specify.md §2.5 | nenhum | Concluída |
 | TASK-460 | Rodar o checklist pré-PR completo na branch da feature integrada | backend | plan.md §7 e §12 | nenhum | Pendente |
 | TASK-461 | Validar o fluxo localmente na stack isolada e registrar o resultado | frontend | plan.md §12 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
