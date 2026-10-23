@@ -46,6 +46,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-449 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-449`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D12) | Ver §26 | Merge da `dev` (54 commits) com 3 conflitos resolvidos; `paymentNote` e `confirmedNote` portados para o `CycleSummaryService`; backend 562 e frontend 489 testes verdes. Um erro meu corrigido: a `dev` usa os IDs de backlog 082 e 084, e os meus viraram 085 e 086. 5 mutações |
 | TASK-450 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D13) | Ver §27 | O Painel usa o `PaymentProofDialog` da `dev` (foto ou descrição); o `ProofUploadDialog` foi removido; o `useConfirmSettlement` manda `descricao`. `MyPanel.test.tsx` passou sem edição. 5 mutações |
 | TASK-452 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-452`; só testes) | 2026-10-22 | Claude (IA), com aprovação do usuário (R3) | Ver §30 | 2 testes que travam a D14: as notas de pagamento não saem no `/me/overview`, ao vivo e pelo snapshot. **A primeira versão era vazia** (a mutação não a derrubou) e foi refeita. 3 mutações |
+| TASK-425 | Concluída (branch `docs/20261010-painel-financeiro-pessoal-TASK-425`; só docs) | 2026-10-22 | Claude (IA), com aprovação do usuário ("Siga") | Ver §31 | 9 itens novos no backlog (087 a 095), notas aditivas nos itens 074 e 075 e índice atualizado. Cada afirmação conferida no código; 2 reproduzidas com sonda descartável (403 × 404 do `gerarPix`, `cycles_ago` extremo). 4 correções minhas antes de fechar. **Achado novo: colisão de numeração de TASK com a `dev` (433) e com uma feature local (449 a 452); decisão N1 a N3 do usuário** |
 | TASK-451 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-451`; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §28 | Os 4 fluxos novos conferidos no navegador, com a descrição chegando ao banco (`note` e `payment_note`) e saindo no `/summary`; reconciliação 6 de 6. Um falso alarme meu no script de conferência (`??` não distingue campo nulo de ausente) |
 
 ## 3. Evidências da TASK-409
@@ -927,3 +928,59 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-452`, a partir de `dc29c
 | M1 | `'note' => $expense['paymentNote']` num item de `my_items` | "a nota do pagamento vazou no overview (ciclo ao vivo, Beto Devedor)" e a versão do snapshot |
 | M2 | `'confirmed_note'` numa linha de `to_receive` | "a nota do acerto vazou no overview (…, **Ana Credora**)": só o credor via esse vazamento, por isso o teste olha os dois |
 | M3 | `'confirmed_note'` numa linha de `to_pay` | "a nota do acerto vazou no overview (…, **Beto Devedor**)" |
+
+## 31. Evidências da TASK-425 (backlog dos achados tangenciais)
+
+Branch `docs/20261010-painel-financeiro-pessoal-TASK-425`, a partir de `b0ce30ee1a`. **Só documentação**: nenhum arquivo de `backend/` ou `frontend/` mudou. O próximo ID livre foi conferido contra a `dev` (`git ls-tree` e `git grep "^ID:"` em `origin/dev`): a `dev` não usa nada acima de 084, então os novos vão de **087 a 095**.
+
+| Achado | Onde ficou | Prioridade |
+|---|---|---|
+| `grossDebts` usa o pagador sem checar nulo | **087** `gross-debts-pagador-nulo-sem-checagem.md` | BAIXA |
+| Destino do botão "Informar pagamento" | **088** `informar-pagamento-botao-so-visual-destino.md` | BAIXA |
+| `GET /api/dashboard` stub, `Navbar.tsx` e `InternalLayout.tsx` mortos | **089** `api-dashboard-stub-e-codigo-morto.md` | BAIXA |
+| S5: `cycles_ago` sem teto e relativo a "agora" | **090** `acoes-de-pagamento-identificam-o-ciclo-por-cycles-ago.md` | BAIXA |
+| S6: contato do credor e lookup do Pix por e-mail | **091** `contato-do-credor-no-overview-e-pix-por-email.md` | BAIXA |
+| `jwt.auth` fora do `middlewarePriority` | **092** `jwt-auth-fora-do-middleware-priority.md` | BAIXA |
+| R1: custo do `focus()` (2.352 consultas, 7,4 s) | **093** `custo-do-focus-com-ciclos-quitados-e-nao-selados.md` | MEDIA |
+| D14: exibir a descrição do pagamento | **094** `exibir-descricao-do-pagamento-no-painel.md` | BAIXA |
+| `GroupController::destroy` por qualquer membro | **095** `group-destroy-exclusao-fisica-por-qualquer-membro.md` | MEDIA |
+| `/me/overview` no escopo v1 do app | nota em **074** (não é item novo) | — |
+| Status individual por parte em `my_items[]` | nota em **075** (não é item novo) | — |
+| X1, X2, X3 | **já existiam**: 085, 086 e 060 (conferidos, não recriados) | — |
+
+Cada item segue o formato do `README.md` (ID, Origem, Criado em, Prioridade, Status, Descrição, Por que importa, Tipo) e, onde há decisão, `## Regras adotadas` e `## Decisões em aberto` em tabela, com opções, recomendação e motivo. O 087 só tem regras (não há decisão).
+
+**Cada afirmação foi conferida no código antes de escrever**, e duas foram **reproduzidas** com sonda descartável (apagada, nada versionado):
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| `GET /pix/generate`: e-mail existente sem grupo em comum × e-mail inexistente | Teste temporário `ZzProbePixOracleTest` com o token de um usuário | **403 × 404**: qualquer conta autenticada testa se um e-mail está cadastrado. Mesma classe da enumeração já aceita em `POST /register` (item 045), por isso o 091 diz que **não eleva o risco** |
+| `BillingCycle::cycleFor` com `cycles_ago` extremo | `php -r` com o autoload | `12` → 2025-10-11; `1000` → 1943-06-11; `100000` → ano **-6307**, sem exceção. O que `pay`/`confirm` fazem com isso **não testei**, e o 090 diz assim |
+| O botão "Próximo ciclo" do `GroupGrossDebtsPanel` envia valor negativo | Leitura: só o ícone de Pix tem `disabled`; `goToNextCycle` faz `prev - 1` | Sim, chega a `-1`. Por isso o 090 não recomenda `min:0` nas leituras |
+| `destroy` tem teste? | `grep` em `GroupControllerTest` | **Tem**, e trava "qualquer membro" até com cota **não paga** (`test_member_can_delete_group_without_closed_cycle_physically`) |
+
+**Quatro erros meus, pegos ao conferir antes de fechar:** (1) escrevi "`GroupShell`"; o nome é `GroupShellLayout`. (2) No 090 afirmei que o web usa `cycles_ago` negativo e que valores extremos caíam em `422`, sem ter visto nem testado; troquei pelo que li e medi. (3) Na opção C do 093 eu descartava ciclos sem cota pendente, mas um ciclo com todas as cotas pagas ainda pode ter acerto sem confirmação, e isso só o `compute()` sabe: reescrevi a opção e separei as duas origens de ciclo quitado e não selado (`bornPaid` nunca sela por desenho; o outro caso depende de medir). (4) No 095 escrevi "lacuna de teste de `destroy`"; os testes existem e travam o comportamento. Corrigi o texto.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Links do índice | laço sobre os `](arquivo.md)` do `README.md` | Nenhum quebrado |
+| IDs únicos | `grep -oE "^\| [0-9]{3} "` + `uniq -d` | Vazio |
+| Arquivo sem linha no índice | laço sobre `docs/backlog/*.md` | Nenhum |
+| Escopo | `git status --short` | Só `docs/backlog/**` (9 novos, 3 alterados) e os dois docs da feature; `backend/.env.testing` segue untracked |
+
+### Achado novo: colisão de numeração de TASK (decisão do usuário)
+
+Ao conferir o próximo ID livre apareceram duas colisões de **número de TASK**, que quebram o "toda mudança rastreável até uma task":
+
+| Colisão | Fato | Quem causou |
+|---|---|---|
+| **TASK-433** | A feature `20261021-comprovante-ao-marcar-paga` (já na `dev`, `docs/feature/concluidas/202610/`) tem uma linha `TASK-433` e declara "IDs a partir de TASK-433: o maior em qualquer branch é TASK-432 (feature `20261010-painel-financeiro-pessoal`)". Depois disso, numerei "Já recebido" como **TASK-433** nesta feature | **Eu.** Devia ter conferido a `dev` antes de numerar |
+| **TASK-449 a 452** | A feature `20261022-editar-comprovante-depois-de-paga` (branch local `frontend/20261022-editar-comprovante-depois-de-paga-TASK-454`, em outro worktree, **não está no `origin`**) numera suas tasks de **449 a 464** (as 449 a 453 já concluídas, a 454 em andamento). Meus 449 (merge da `dev`), 450, 451 e 452 usam os mesmos números | Concorrência: as duas sessões escolheram a partir de 449 |
+
+As TASK-427 a 432 e 409 a 422 não colidem. **Não alterei nada em nenhuma das duas frentes.** Os commits e os merges já feitos citam o número antigo, e o histórico do git não se reescreve.
+
+| # | Decisão | Opções | Recomendação | Por quê |
+|---|---|---|---|---|
+| N1 | Como resolver | A) renumerar, **só nos docs**, as minhas tasks que colidem (433, 449, 450, 451, 452) para um bloco livre acima de tudo o que existe, com um mapa antigo → novo no §1 deste arquivo<br>B) deixar e qualificar sempre pela feature ("TASK-433 do painel")<br>C) a feature que chegar por último na `dev` renumera | **A, em task própria e com a sua aprovação** | O 433 já colide com o que está **publicado** na `dev`, então é meu consertar. B deixa ambiguidade em `git log` e em `grep`. C só resolve os 449 a 452 e depende de quem mergear primeiro. |
+| N2 | Bloco novo | A) 465 a 469 (logo acima do maior número conhecido, 464)<br>B) um bloco bem acima, por exemplo 470 em diante | **B** | A outra feature ainda tem tasks pendentes e pode passar de 464. |
+| N3 | IDs de backlog | A) combinar com a outra sessão quem usa 087 em diante<br>B) quem mergear depois renumera | **B** | Ela ainda vai criar itens (TASK-459 e 464 dela registram backlog) a partir do 085, que existe só na minha branch. O 085 a 095 aqui só viram `dev` no meu PR; vale conferir o índice no momento do merge. |
