@@ -41,3 +41,9 @@ A fechar no specify.
 Hoje o credor que marcou como paga e depois recebe o comprovante, ou digitou a descrição errada, só tem a saída destrutiva de desfazer o pagamento. Com a regra "foto OU descrição" da feature `20261021-comprovante-ao-marcar-paga`, um pagamento registrado só com texto passa a ser comum, e anexar a foto depois é o complemento natural. O arquivo órfão do re-`pay()` é um defeito de armazenamento que só aparece quando alguém chama a API diretamente.
 
 Tipo sugerido: backend + frontend
+
+## Resolução
+Concluído em: 2026-10-23
+Feature: docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga/   (a pasta migra para lá quando o PR da feature mergear em `dev`, ADR-009)
+Tasks: TASK-449 a TASK-464 (449 a 459 e 462 a 464 de código e documentação; 460 e 461 de verificação e de validação local)
+PRs: https://github.com/isacaguiar/expense/pull/227
