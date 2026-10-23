@@ -36,7 +36,7 @@ describe('useConfirmSettlement', () => {
     expect(config).toEqual({ headers: { Authorization: 'Bearer token-de-teste' } });
   });
 
-  // TASK-450: o acerto do devedor aceita uma descrição opcional (`descricao`, feature
+  // TASK-472: o acerto do devedor aceita uma descrição opcional (`descricao`, feature
   // 20261021 da `dev`); o servidor guarda em `note`. Sem texto, o campo nem vai.
   it('sends the description as `descricao` when there is one', async () => {
     vi.mocked(axios.post).mockResolvedValue({ data: {} });

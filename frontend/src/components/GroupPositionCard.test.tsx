@@ -81,7 +81,7 @@ describe('GroupPositionCard', () => {
       expect(within(screen.getByTestId('total-confirmed')).getByText('R$ 0,00')).toBeInTheDocument();
     });
 
-    // TASK-433 (achado 1 da validação local): quem é credor via "Já confirmado R$ 0,00"
+    // TASK-470 (achado 1 da validação local): quem é credor via "Já confirmado R$ 0,00"
     // mesmo com comprovantes já enviados por devedores. "Já recebido" é o que os
     // devedores já comprovaram (`receive.confirmed`), distinto do que ainda falta.
     it('shows "Já recebido" with the proofs already sent to the user, apart from what is still open', () => {
@@ -323,7 +323,7 @@ describe('GroupPositionCard', () => {
   });
 
   describe('itens (credor)', () => {
-    // TASK-450 (decisão D13): o mesmo `PaymentProofDialog` de Pagamentos. Para o credor a
+    // TASK-472 (decisão D13): o mesmo `PaymentProofDialog` de Pagamentos. Para o credor a
     // foto é opcional, mas é preciso foto OU descrição; o `cycles_ago` é sempre o do payload.
     it('asks for a photo or a description before marking as paid, then posts multipart with the cycles_ago of the payload', async () => {
       const user = userEvent.setup();
