@@ -1,7 +1,7 @@
 # Usuário é adicionado a um grupo sem consentimento e não tem como sair (`GroupMemberController::destroy` não existe)
 
 ID: 086
-Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §8 (achados X2 e S1 da revisão de segurança da TASK-414); `backend/app/Http/Controllers/GroupMemberController.php` (`store()`); `backend/routes/api.php:57`; `docs/sdd/03-tasks.md` TASK-017
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §8 (achados X2 e S1 da revisão de segurança da TASK-414); `backend/app/Http/Controllers/GroupMemberController.php` (`store()`); `backend/routes/api.php:57`; `docs/sdd/03-tasks.md` TASK-017
 Criado em: 2026-10-21
 Prioridade: ALTA
 Status: Aberto

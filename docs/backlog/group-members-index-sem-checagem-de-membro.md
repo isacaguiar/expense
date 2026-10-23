@@ -1,7 +1,7 @@
 # `GET /api/groups/{groupId}/members` não confere se quem chama é membro do grupo
 
 ID: 085
-Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §8 (achado X1 da revisão de segurança da TASK-414, fora do diff revisado); `backend/app/Http/Controllers/GroupMemberController.php` (`index()`); `backend/routes/api.php:55`
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §8 (achado X1 da revisão de segurança da TASK-414, fora do diff revisado); `backend/app/Http/Controllers/GroupMemberController.php` (`index()`); `backend/routes/api.php:55`
 Criado em: 2026-10-21
 Prioridade: ALTA
 Status: Aberto

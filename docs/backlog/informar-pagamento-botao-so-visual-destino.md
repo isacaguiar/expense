@@ -1,7 +1,7 @@
 # Botão "Informar pagamento" do `GroupGrossDebtsPanel` é só visual: definir o destino
 
 ID: 088
-Origem: docs/feature/20261010-painel-financeiro-pessoal/plan.md §9 e tasks.md (TASK-425); `frontend/src/components/GroupGrossDebtsPanel.tsx` (`markInformed`, botão com `aria-label` "Informar pagamento de … para …")
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §9 e tasks.md (TASK-425); `frontend/src/components/GroupGrossDebtsPanel.tsx` (`markInformed`, botão com `aria-label` "Informar pagamento de … para …")
 Criado em: 2026-10-22
 Prioridade: BAIXA
 Status: Aberto

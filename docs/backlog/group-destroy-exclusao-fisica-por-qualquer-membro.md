@@ -1,7 +1,7 @@
 # `GroupController::destroy` apaga fisicamente o grupo, em cascata, a pedido de qualquer membro
 
 ID: 095
-Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §29 (observação do `security-reviewer`, fora do diff da feature); `backend/app/Http/Controllers/GroupController.php` (`destroy()`, linhas 106-131)
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §29 (observação do `security-reviewer`, fora do diff da feature); `backend/app/Http/Controllers/GroupController.php` (`destroy()`, linhas 106-131)
 Criado em: 2026-10-22
 Prioridade: MEDIA
 Status: Aberto

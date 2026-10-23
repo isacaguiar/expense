@@ -21,7 +21,7 @@ type UseConfirmSettlementResult = {
  * o ciclo corrente (aberto) e recusa o acerto de um ciclo anterior já fechado
  * ("só pode ser confirmado depois que a competência é fechada"). Usado por
  * `Payments.tsx` e pelo Painel
- * (docs/feature/20261010-painel-financeiro-pessoal/plan.md §3).
+ * (docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §3).
  */
 export function useConfirmSettlement(
   groupId: string | number | undefined,

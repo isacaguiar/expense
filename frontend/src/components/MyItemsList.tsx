@@ -28,7 +28,7 @@ type MyItemsListProps = {
  *
  * Os botões seguem `can_pay`/`can_unpay` do servidor e nada mais: o cliente não
  * deduz permissão de `role` nem de `paid`
- * (docs/feature/20261010-painel-financeiro-pessoal/plan.md §2 e §3).
+ * (docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §2 e §3).
  */
 const MyItemsList: React.FC<MyItemsListProps> = ({ items, busyExpenseId, onPay, onUnpay }) => {
   if (items.length === 0) {

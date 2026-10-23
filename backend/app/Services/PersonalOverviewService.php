@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
  * ele deve (e a quem), o que tem a receber (e de quem), os itens do ciclo de
  * que participa e as flags de ação, tudo calculado aqui para o cliente não
  * recompor rateio, ciclo nem permissão. Ver
- * docs/feature/20261010-painel-financeiro-pessoal/plan.md §1.3.
+ * docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §1.3.
  *
  * Só lê: usa `CycleSummaryService::view()`, que não sela nem notifica.
  * "Devo" e "a receber" são o acerto **líquido** par a par (`settlements`), o

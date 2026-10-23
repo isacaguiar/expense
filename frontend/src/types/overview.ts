@@ -7,7 +7,7 @@
  * Tudo aqui vem calculado do servidor (valores, `cycles_ago`, `can_*`): o
  * cliente só exibe e manda de volta o que recebeu.
  *
- * docs/feature/20261010-painel-financeiro-pessoal/plan.md §1.1
+ * docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §1.1
  */
 import type { CycleStatus } from '../hooks/useGroupCycle';
 

@@ -15,7 +15,7 @@ use Illuminate\Support\Collection;
  * Lado de **leitura** do cálculo de ciclo: entradas da competência, totais,
  * saldos, liquidação par-a-par, confirmações e a checagem de "totalmente
  * quitado". Extraído de `ExpenseController` sem mudar regra
- * (docs/feature/20261010-painel-financeiro-pessoal/plan.md §0.2): o Painel
+ * (docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §0.2): o Painel
  * Financeiro Pessoal precisa do mesmo cálculo fora do controller.
  *
  * Nada aqui grava: selagem (`GroupCycleSnapshot`) e notificação continuam no
@@ -413,7 +413,7 @@ class CycleSummaryService
      * entrada (`firstPossibleEntryDate`) não tem entrada alguma, logo é
      * "quitado" e o laço o pularia — então nem é calculado, e os snapshots dos
      * demais vêm numa só consulta. O resultado é o mesmo da varredura completa
-     * (docs/feature/20261010-painel-financeiro-pessoal/tasks.md, TASK-427).
+     * (docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/tasks.md, TASK-427).
      */
     public function focus(Group $group): int
     {

@@ -31,7 +31,7 @@ class RouteServiceProvider extends ServiceProvider
         // `GET /me/overview` calcula o ciclo de cada grupo do usuário: limite
         // próprio, por usuário (o `api` acima, com o guard padrão `web`, acaba
         // chaveando por IP). Ver
-        // docs/feature/20261010-painel-financeiro-pessoal/specify.md §5 (D10).
+        // docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/specify.md §5 (D10).
         //
         // Mesmo declarado depois do `jwt.auth` na rota, o `ThrottleRequests`
         // roda ANTES dele: o `middlewarePriority` do Kernel o ordena à frente
