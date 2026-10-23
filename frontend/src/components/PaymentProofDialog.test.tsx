@@ -42,6 +42,345 @@ describe('canConfirmPayment', () => {
   });
 });
 
+describe('canConfirmPayment in edit mode', () => {
+  const base = { requirePhoto: false, hasFile: false, note: '', busy: false };
+
+  it('keeps the current photo as the final photo unless it is being removed', () => {
+    expect(canConfirmPayment({ ...base, hasCurrentProof: true })).toBe(true);
+    expect(canConfirmPayment({ ...base, hasCurrentProof: true, removeProof: true })).toBe(false);
+  });
+
+  it('accepts removing the photo only when a note remains', () => {
+    expect(canConfirmPayment({ ...base, hasCurrentProof: true, removeProof: true, note: 'Pago em dinheiro' })).toBe(true);
+    expect(canConfirmPayment({ ...base, hasCurrentProof: true, removeProof: true, note: '   ' })).toBe(false);
+  });
+
+  it('accepts a new photo even when the current one is marked for removal', () => {
+    expect(canConfirmPayment({ ...base, hasFile: true, hasCurrentProof: true, removeProof: true })).toBe(true);
+  });
+
+  it('requires a final photo when the photo is mandatory', () => {
+    expect(canConfirmPayment({ ...base, requirePhoto: true, hasCurrentProof: true, note: 'x' })).toBe(true);
+    expect(canConfirmPayment({ ...base, requirePhoto: true, hasCurrentProof: true, removeProof: true, note: 'x' })).toBe(false);
+  });
+
+  it('refuses to confirm when nothing changed, whatever else is true', () => {
+    expect(canConfirmPayment({ ...base, hasCurrentProof: true, note: 'x', changed: false })).toBe(false);
+    expect(canConfirmPayment({ ...base, hasFile: true, changed: false })).toBe(false);
+  });
+
+  it('does not alter the base rule when changed is true or absent', () => {
+    expect(canConfirmPayment({ ...base, changed: true })).toBe(false);
+    expect(canConfirmPayment({ ...base, note: 'x', changed: true })).toBe(true);
+    expect(canConfirmPayment({ ...base, note: 'x' })).toBe(true);
+  });
+
+  it('never confirms while busy, even with a change', () => {
+    expect(canConfirmPayment({ ...base, hasFile: true, changed: true, busy: true })).toBe(false);
+  });
+});
+
+describe('PaymentProofDialog in edit mode', () => {
+  const editProps: Partial<Props> = {
+    title: 'Editar comprovante',
+    confirmLabel: 'Salvar',
+    photoLabel: 'Trocar a foto',
+    initialNote: 'Pix agendado',
+    currentProofUrl: 'https://api.exemplo.com/proofs/9?signature=abc'
+  };
+  const saveButton = () => screen.getByRole('button', { name: 'Salvar' });
+  const removeCheckbox = () => screen.getByRole('checkbox', { name: 'Remover a foto atual' });
+
+  it('opens with the description pre-filled from initialNote', () => {
+    renderDialog(editProps);
+    expect(noteField()).toHaveValue('Pix agendado');
+    expect(screen.getByText('12/500')).toBeInTheDocument();
+  });
+
+  it('uses confirmLabel for the confirm button and falls back to Confirmar', () => {
+    const { unmount } = renderDialog(editProps);
+    expect(saveButton()).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Confirmar' })).not.toBeInTheDocument();
+    unmount();
+
+    renderDialog();
+    expect(confirmButton()).toBeInTheDocument();
+  });
+
+  it('shows the link to the current photo and the remove checkbox when there is one', () => {
+    renderDialog(editProps);
+
+    const link = screen.getByRole('link', { name: 'Ver foto atual' });
+    expect(link).toHaveAttribute('href', 'https://api.exemplo.com/proofs/9?signature=abc');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link.getAttribute('rel')).toContain('noreferrer');
+    expect(removeCheckbox()).not.toBeChecked();
+  });
+
+  it('shows neither the link nor the checkbox when the expense has no photo', () => {
+    renderDialog({ ...editProps, currentProofUrl: null });
+
+    expect(screen.queryByRole('link', { name: 'Ver foto atual' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Remover a foto atual' })).not.toBeInTheDocument();
+  });
+
+  it('shows neither the link nor the checkbox outside edit mode', () => {
+    renderDialog();
+
+    expect(screen.queryByRole('link', { name: 'Ver foto atual' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+  });
+
+  it('marking "Remover a foto atual" clears the chosen photo', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.upload(fileInput(), photo());
+    expect(screen.getByText('comprovante.jpg')).toBeInTheDocument();
+
+    await user.click(removeCheckbox());
+
+    expect(removeCheckbox()).toBeChecked();
+    expect(screen.queryByText('comprovante.jpg')).not.toBeInTheDocument();
+    expect(screen.getByText('Trocar a foto')).toBeInTheDocument();
+    // O <input> nativo é recriado: sem isso, escolher de novo o mesmo arquivo
+    // não dispara `change` e a foto não voltaria a valer.
+    expect(fileInput().files).toHaveLength(0);
+  });
+
+  it('choosing a photo unchecks "Remover a foto atual"', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.click(removeCheckbox());
+    expect(removeCheckbox()).toBeChecked();
+
+    await user.upload(fileInput(), photo());
+
+    expect(removeCheckbox()).not.toBeChecked();
+    expect(screen.getByText('comprovante.jpg')).toBeInTheDocument();
+  });
+
+  it('keeps Salvar disabled until something changes', () => {
+    renderDialog(editProps);
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('enables Salvar when only the description changes', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.type(noteField(), ' ajustado');
+
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it('does not count a whitespace-only edit of the description as a change', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.type(noteField(), '   ');
+
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('enables Salvar again when the description is put back and then changed', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.type(noteField(), 'x');
+    expect(saveButton()).toBeEnabled();
+    await user.type(noteField(), '{Backspace}');
+
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('enables Salvar when a new photo is chosen', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.upload(fileInput(), photo());
+
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it('removing the photo keeps Salvar enabled while a description remains', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.click(removeCheckbox());
+
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it('removing the photo disables Salvar when the description is empty', async () => {
+    const user = userEvent.setup();
+    renderDialog({ ...editProps, initialNote: '' });
+
+    await user.click(removeCheckbox());
+
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('removing the photo and then clearing the description disables Salvar', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.click(removeCheckbox());
+    expect(saveButton()).toBeEnabled();
+    await user.clear(noteField());
+
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('clearing the description is fine while the current photo stays', async () => {
+    const user = userEvent.setup();
+    renderDialog(editProps);
+
+    await user.clear(noteField());
+
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it('sends removeProof along with the file and the trimmed note on confirm', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    renderDialog({ ...editProps, onConfirm });
+
+    await user.click(removeCheckbox());
+    await user.click(saveButton());
+
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledWith({ file: null, note: 'Pix agendado', removeProof: true });
+  });
+
+  it('sends removeProof false when only the description changed', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    renderDialog({ ...editProps, onConfirm });
+
+    await user.type(noteField(), '  ');
+    await user.type(noteField(), ' ok ');
+    await user.click(saveButton());
+
+    expect(onConfirm).toHaveBeenCalledWith({ file: null, note: 'Pix agendado   ok', removeProof: false });
+  });
+
+  it('sends the new photo with removeProof false', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    renderDialog({ ...editProps, onConfirm });
+    const file = photo();
+
+    await user.upload(fileInput(), file);
+    await user.click(saveButton());
+
+    expect(onConfirm).toHaveBeenCalledWith({ file, note: 'Pix agendado', removeProof: false });
+  });
+
+  it('lets the creditor attach a first photo to an expense that has neither photo nor description', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    renderDialog({ ...editProps, initialNote: '', currentProofUrl: null, onConfirm });
+    expect(noteField()).toHaveValue('');
+    expect(saveButton()).toBeDisabled();
+    const file = photo();
+
+    await user.upload(fileInput(), file);
+    expect(saveButton()).toBeEnabled();
+    await user.click(saveButton());
+
+    expect(onConfirm).toHaveBeenCalledWith({ file, note: '', removeProof: false });
+  });
+
+  it('does not call onConfirm when Salvar is disabled', async () => {
+    // O `userEvent` recusa clicar em botão desabilitado; desligar a checagem
+    // de ponteiro deixa o clique acontecer e prova que nada é enviado.
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const onConfirm = vi.fn();
+    renderDialog({ ...editProps, onConfirm });
+
+    await user.click(saveButton());
+
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('does not put removeProof in the value outside edit mode', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn();
+    renderDialog({ onConfirm });
+
+    await user.type(noteField(), 'Pago em dinheiro');
+    await user.click(confirmButton());
+
+    expect(onConfirm.mock.calls[0][0]).not.toHaveProperty('removeProof');
+  });
+
+  it('starts every opening from the current state: description restored and chosen photo dropped', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderDialog(editProps);
+
+    await user.type(noteField(), ' mudado');
+    await user.upload(fileInput(), photo());
+    expect(saveButton()).toBeEnabled();
+
+    rerender(<PaymentProofDialog {...baseProps} {...editProps} open={false} />);
+    rerender(<PaymentProofDialog {...baseProps} {...editProps} open />);
+
+    expect(noteField()).toHaveValue('Pix agendado');
+    expect(screen.queryByText('comprovante.jpg')).not.toBeInTheDocument();
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('starts every opening with "Remover a foto atual" unchecked', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderDialog(editProps);
+
+    // Este cenário termina com o checkbox marcado (escolher uma foto o
+    // desmarcaria), para provar que é a reabertura que o zera.
+    await user.click(removeCheckbox());
+    expect(removeCheckbox()).toBeChecked();
+
+    rerender(<PaymentProofDialog {...baseProps} {...editProps} open={false} />);
+    rerender(<PaymentProofDialog {...baseProps} {...editProps} open />);
+
+    expect(removeCheckbox()).not.toBeChecked();
+    expect(saveButton()).toBeDisabled();
+  });
+
+  it('takes the description of the target it is reopened with, not the previous one', () => {
+    const { rerender } = renderDialog(editProps);
+
+    rerender(<PaymentProofDialog {...baseProps} {...editProps} open={false} />);
+    rerender(<PaymentProofDialog {...baseProps} {...editProps} initialNote="Outra despesa" open />);
+
+    expect(noteField()).toHaveValue('Outra despesa');
+  });
+
+  it('does not overwrite what the user is typing when the parent re-renders with a new initialNote while open', async () => {
+    const user = userEvent.setup();
+    const { rerender } = renderDialog(editProps);
+
+    await user.type(noteField(), ' digitando');
+    rerender(<PaymentProofDialog {...baseProps} {...editProps} initialNote="Recarregou" />);
+
+    expect(noteField()).toHaveValue('Pix agendado digitando');
+  });
+
+  it('disables the remove checkbox while busy', () => {
+    renderDialog({ ...editProps, busy: true });
+    expect(removeCheckbox()).toBeDisabled();
+  });
+
+  it('renders the description as plain text, never as markup', () => {
+    renderDialog({ ...editProps, initialNote: '<img src=x onerror="alert(1)"><b>negrito</b>' });
+
+    expect(noteField()).toHaveValue('<img src=x onerror="alert(1)"><b>negrito</b>');
+    expect(document.querySelector('img')).toBeNull();
+    expect(document.querySelector('b')).toBeNull();
+  });
+});
+
 describe('PaymentProofDialog', () => {
   it('renders the title and the help text', () => {
     renderDialog();

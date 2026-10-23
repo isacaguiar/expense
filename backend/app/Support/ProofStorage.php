@@ -27,6 +27,13 @@ class ProofStorage
     /**
      * Grava o arquivo em `comprovantes/<groupId>/<uuid>.<ext>` no disco
      * privado e devolve o path relativo (para persistir na coluna).
+     *
+     * O disco `local` tem `'throw' => false` (`config/filesystems.php`): numa
+     * falha de gravação (disco cheio, permissão) `storeAs` devolve `false` em
+     * vez de lançar. Sem a guarda abaixo, quem chama seguiria em frente com um
+     * `false` no lugar do path (`pay()` o gravava na coluna e a edição de
+     * comprovante respondia 200 sem a foto). Aborta com 500 antes de qualquer
+     * escrita no banco.
      */
     public static function store(UploadedFile $file, int $groupId): string
     {
@@ -35,7 +42,13 @@ class ProofStorage
 
         $name = Str::uuid()->toString().'.'.$extension;
 
-        return $file->storeAs("comprovantes/{$groupId}", $name, self::DISK);
+        $path = $file->storeAs("comprovantes/{$groupId}", $name, self::DISK);
+
+        if ($path === false) {
+            abort(500, 'Não foi possível gravar o comprovante.');
+        }
+
+        return $path;
     }
 
     /**
