@@ -5,10 +5,27 @@ namespace Tests\Unit;
 use App\Support\ProofStorage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\Concerns\FailsToWriteProofs;
 use Tests\TestCase;
 
 class ProofStorageTest extends TestCase
 {
+    use FailsToWriteProofs;
+
+    public function test_store_aborta_com_500_quando_o_disco_nao_consegue_gravar(): void
+    {
+        $this->failProofWrites();
+
+        try {
+            ProofStorage::store(UploadedFile::fake()->image('comprovante.jpg'), 42);
+            $this->fail('store deveria abortar quando o disco devolve false');
+        } catch (HttpException $e) {
+            $this->assertSame(500, $e->getStatusCode());
+            $this->assertSame('Não foi possível gravar o comprovante.', $e->getMessage());
+        }
+    }
+
     public function test_store_grava_no_diretorio_do_grupo_no_disco_privado(): void
     {
         Storage::fake('local');

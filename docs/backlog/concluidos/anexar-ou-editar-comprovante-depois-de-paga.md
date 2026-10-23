@@ -4,7 +4,7 @@ ID: 084
 Origem: docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga/specify.md §2.1 (item 6 da auditoria) e §4; `frontend/src/hooks/usePaymentActions.ts` (`canPay`), `backend/app/Http/Controllers/ExpenseController.php` (`pay`, `unpay`)
 Criado em: 2026-10-21
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-449
 
 ## Descrição
 Depois que o credor marca uma despesa como paga, ele não consegue mais acrescentar ou trocar a foto do comprovante nem a descrição do pagamento. Na interface web, `canPay` exige `!exp.paid` (`usePaymentActions.ts:60-61`), então o ✓ e o botão "Confirmar pagamento" somem assim que a despesa fica paga. O único caminho é **desfazer o pagamento** e refazê-lo, o que apaga foto e descrição, perde o `paid_at` original e, se o ciclo estava selado, o dessela (`unsealIfBroken`).
@@ -41,3 +41,9 @@ A fechar no specify.
 Hoje o credor que marcou como paga e depois recebe o comprovante, ou digitou a descrição errada, só tem a saída destrutiva de desfazer o pagamento. Com a regra "foto OU descrição" da feature `20261021-comprovante-ao-marcar-paga`, um pagamento registrado só com texto passa a ser comum, e anexar a foto depois é o complemento natural. O arquivo órfão do re-`pay()` é um defeito de armazenamento que só aparece quando alguém chama a API diretamente.
 
 Tipo sugerido: backend + frontend
+
+## Resolução
+Concluído em: 2026-10-23
+Feature: docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga/   (a pasta migra para lá quando o PR da feature mergear em `dev`, ADR-009)
+Tasks: TASK-449 a TASK-464 (449 a 459 e 462 a 464 de código e documentação; 460 e 461 de verificação e de validação local)
+PRs: https://github.com/isacaguiar/expense/pull/227
