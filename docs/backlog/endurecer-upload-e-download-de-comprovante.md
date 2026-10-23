@@ -1,7 +1,7 @@
 # Endurecer o upload e o download de comprovante: SVG aceito, extensão vinda do cliente, download sem cabeçalhos de proteção, caminho interno nas respostas e `cycles_ago` sem teto
 
 ID: 097
-Origem: docs/feature/20261022-editar-comprovante-depois-de-paga/implementation.md (TASK-451, revisão do agent `security-reviewer`, achados B1, B4, B5 e B6); reproduzido em 2026-10-23 na TASK-464 da mesma feature; `backend/app/Support/ProofStorage.php`, `backend/app/Http/Controllers/ProofDownloadController.php`, `backend/app/Http/Controllers/ExpenseController.php` (`pay`, `confirmSettlement`, `updatePaymentProof`, `summary`)
+Origem: docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga/implementation.md (TASK-451, revisão do agent `security-reviewer`, achados B1, B4, B5 e B6); reproduzido em 2026-10-23 na TASK-464 da mesma feature; `backend/app/Support/ProofStorage.php`, `backend/app/Http/Controllers/ProofDownloadController.php`, `backend/app/Http/Controllers/ExpenseController.php` (`pay`, `confirmSettlement`, `updatePaymentProof`, `summary`)
 Criado em: 2026-10-23
 Prioridade: MEDIA
 Status: Aberto

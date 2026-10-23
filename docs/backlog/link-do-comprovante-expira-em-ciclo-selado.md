@@ -1,7 +1,7 @@
 # Link "Ver comprovante" do credor expira em ciclo selado: o snapshot congela a URL assinada de 30 minutos
 
 ID: 096
-Origem: docs/feature/20261022-editar-comprovante-depois-de-paga/specify.md §2.5 (achado incidental); reproduzido em 2026-10-23 na TASK-459 da mesma feature; `backend/app/Models/Quota.php` (`getPaymentProofUrlAttribute`), `backend/app/Http/Controllers/ExpenseController.php` (`summary`, `cycleHistory`, `sealCycleIfSettled`, `collectCycleEntries`)
+Origem: docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga/specify.md §2.5 (achado incidental); reproduzido em 2026-10-23 na TASK-459 da mesma feature; `backend/app/Models/Quota.php` (`getPaymentProofUrlAttribute`), `backend/app/Http/Controllers/ExpenseController.php` (`summary`, `cycleHistory`, `sealCycleIfSettled`, `collectCycleEntries`)
 Criado em: 2026-10-23
 Prioridade: MEDIA
 Status: Aberto

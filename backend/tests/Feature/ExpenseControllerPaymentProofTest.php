@@ -19,7 +19,7 @@ use Tests\TestCase;
 /**
  * `POST /api/expenses/{id}/payment-proof`: o credor acrescenta, troca ou remove
  * a foto e a descrição de uma despesa JÁ paga, sem desfazer o pagamento
- * (docs/feature/20261022-editar-comprovante-depois-de-paga, plan.md §1).
+ * (docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga, plan.md §1).
  */
 class ExpenseControllerPaymentProofTest extends TestCase
 {
