@@ -22,6 +22,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
 | TASK-476 | Concluída (direto na branch da feature `backend/20261023-members-index-checagem-de-membro`, por ser a primeira task) | 2026-10-23 | Claude (IA), com aprovação do usuário (specify, plan e tasks aprovados) | Ver §4 | RED reproduziu o vazamento (`200` para não membro); conserto só no `index`; a mutação de remover `authorizeMembership` derruba só o teste do não membro; suíte 604 → **607** |
+| TASK-477 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-477`; só teste) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §5 | O teste de corpo idêntico nasceu verde; a mutação para `findOrFail` o derrubou e **confirmou a hipótese**: o `findOrFail` devolve `"No query results for model [App\\Models\\Group] N"` e o grupo alheio devolve `""`. Sonda em 4 endpoints: o padrão é **sistêmico**. Suíte 607 → **608** |
 
 ## 3. Ambiente de teste (pré-condição da TASK-476)
 
@@ -52,3 +53,38 @@ Branch `backend/20261023-members-index-checagem-de-membro`, **direto nela** (pri
 | **Suíte inteira** | `php artisan test` | **607 passed (3737 asserções)**, 76,55 s (604 + 3) |
 
 **O que esta task NÃO prova (fica para a TASK-477):** que o corpo do `404` do grupo inexistente seja igual ao do grupo alheio (R2). O código já usa `find` + `abort_if` para isso, mas **nenhum teste ainda compara os dois corpos**. Por isso reescrevi o comentário do `index` depois de escrevê-lo: a primeira versão dizia que o `findOrFail` "cairia no handler de ModelNotFoundException com outra mensagem", como fato. Isso é a **hipótese** da TASK-477, e o comentário agora diz "pode devolver outra mensagem".
+
+## 5. Evidências da TASK-477 (404 indistinguível; hipótese do `findOrFail`)
+
+Branch `backend/20261023-members-index-checagem-de-membro-TASK-477`, a partir de `fe2a372629`. **Só teste: nenhuma linha de produção mudou** (`git diff backend/20261023-members-index-checagem-de-membro --stat -- backend/app` vazio).
+
+**O teste:** `test_unknown_group_and_foreign_group_are_indistinguishable`, em `GroupMemberControllerTest`. Um usuário autenticado chama `GET /api/groups/{id}/members` num grupo que **não existe** (`Group::max('id') + 1000`) e num grupo **existente do qual não é membro**, com `config(['app.debug' => false])` fixado **dentro do teste** (o `phpunit.xml` não define `APP_DEBUG`, e em modo debug o corpo traz `file`, `line` e `trace`). Exige o mesmo status (`404`) e o **mesmo corpo** (`getContent()`).
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| **Primeira execução** (código da TASK-476) | `php artisan test --filter=GroupMemberControllerTest` | **7 passed (24 asserções)**. Nasceu **verde**, como previsto no plano: é uma trava, não um RED |
+| **Mutação 1**: voltar o `index` para `Group::findOrFail($groupId)` | `php artisan test --filter=test_unknown_group_and_foreign_group_are_indistinguishable` | **Falhou: a hipótese do plan.md §2 está CONFIRMADA.** Grupo inexistente: `{"message": "No query results for model [App\\Models\\Group] 2392"}`. Grupo alheio: `{"message": ""}`. Mesmo status, **corpos diferentes**: o corpo confirma a existência do grupo |
+| Mutação 2 (corpo diferente só no caminho do grupo alheio) | — | **Não foi necessária**: a mutação 1 já derrubou o teste, o que prova que ele não é vazio (o plano só a exigia se a hipótese fosse refutada) |
+| Restauração | Reli `GroupMemberController.php` linhas 16-28 e comparei com a branch da feature | Idêntico; `git diff … -- backend/app` vazio |
+| Estilo | `php vendor/bin/pint --test` | `PASS` 176 arquivos |
+| **Suíte inteira** | `php artisan test` | **608 passed (3740 asserções)**, 73,83 s (607 + 1) |
+
+### Achado novo: o vazamento de existência é sistêmico (alimenta a TASK-480)
+
+Sonda descartável (um teste temporário, **apagado** antes do commit, nada versionado), com o mesmo usuário não membro, `app.debug = false`, no grupo inexistente e no grupo alheio:
+
+| Endpoint | Grupo inexistente | Grupo alheio |
+|---|---|---|
+| `GET /api/groups/{id}` (`GroupController::show`) | `404 "No query results for model [App\\Models\\Group] 2400"` | `404 ""` |
+| `GET /api/groups/{id}/expenses/summary` | idem | idem |
+| `GET /api/groups/{id}/expenses/gross-debts` | idem | idem |
+| `POST /api/groups/{id}/members` (`store`, **a mesma classe**) | idem | idem |
+
+O padrão é o mesmo em todos: `Group::findOrFail` seguido de `authorizeGroupMembership`. Consequências, **medidas** nos 4 endpoints acima e **inferidas por leitura** nos demais que usam o mesmo par (`update`, `destroy`, `indexByGroup`, `getMonthlyExpenses`, `close`, `reopen`, os relatórios):
+
+1. **Qualquer usuário autenticado descobre se um grupo existe** pelo corpo da resposta, em vez de pelo status. A convenção "`404`, não `403`, para não confirmar a existência" do backend inteiro é anulada pela mensagem.
+2. **A mensagem vaza o nome da classe interna do model** (`App\Models\Group`) e o id.
+
+Isto **não** é corrigido por esta feature: o `index` (R2) já está protegido, e o resto exige decisão própria (a correção natural é no handler global `App\Exceptions\Handler`, que muda o corpo de `404` de rotas que o web pode ler). Vira item de backlog na TASK-480, com tabela de decisão.
+
+**O comentário do `index` ficou como está** ("pode devolver outra mensagem"): agora está **provado**, mas reescrevê-lo mexeria em produção, e esta task é só de teste.
