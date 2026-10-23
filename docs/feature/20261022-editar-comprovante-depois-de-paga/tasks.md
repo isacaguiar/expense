@@ -14,7 +14,7 @@ IDs a partir de TASK-449: o maior em qualquer branch do repositório é TASK-448
 | TASK-452 | Acrescentar `canEditProof` e `handleEditProof` ao `usePaymentActions`, com testes | frontend | plan.md §3 e §7 | nenhum | Concluída |
 | TASK-453 | Dar ao `PaymentProofDialog` o modo de edição (foto atual, remover foto, descrição pré-preenchida), com testes | frontend | plan.md §4 e §7 | nenhum | Concluída |
 | TASK-454 | Oferecer "Editar comprovante" na tela Despesas (ícone, popup e aviso de sucesso), com testes | frontend | plan.md §5 e §7 | nenhum | Concluída |
-| TASK-455 | Oferecer "Editar comprovante" no cartão da tela Pagamentos, com testes | frontend | plan.md §6 e §7 | nenhum | Pendente |
+| TASK-455 | Oferecer "Editar comprovante" no cartão da tela Pagamentos, com testes | frontend | plan.md §6 e §7 | nenhum | Concluída |
 | TASK-456 | Atualizar `MANUAL.md` com a edição do comprovante depois de paga | doc | plan.md §9 | nenhum | Pendente |
 | TASK-457 | Versionar a fonte do manual em `docs/manual/` (HTML, capturas e script de geração) e provar que reproduz o PDF atual | doc | plan.md §9 e §11 (T1) | nenhum | Pendente |
 | TASK-458 | Acrescentar a edição de comprovante à fonte do manual e regenerar `MANUAL.pdf` | doc | plan.md §9 | nenhum | Pendente |
