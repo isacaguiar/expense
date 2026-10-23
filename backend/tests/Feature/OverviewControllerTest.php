@@ -112,7 +112,7 @@ class OverviewControllerTest extends TestCase
         $this->getJson('/api/me/overview')->assertStatus(401);
     }
 
-    // TASK-452 (achado R3 da revisão final): a decisão D14 é que o painel só ENVIA a descrição do
+    // TASK-474 (achado R3 da revisão final): a decisão D14 é que o painel só ENVIA a descrição do
     // pagamento, não a exibe. Hoje isso vale porque os arrays do serviço têm chaves explícitas;
     // este teste falha se alguém passar a despesa ou o acerto inteiros adiante.
     private const PAYMENT_NOTE = 'MARCADOR-NOTA-DO-PAGAMENTO';

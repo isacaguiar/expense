@@ -14,6 +14,7 @@ Versão: 1.0 · Criado em: 20261010
 | 2 | Banco de teste: container **`mysql-painel-test`**, `mysql:8.0.34`, porta **3308** (a receita usa `mysql-expense-test`, 8.0.17, porta 3307) | Já existia um `mysql-expense-test` parado, que não é desta feature (criado em 08/10, provavelmente da validação do rateio ou reservado à validação dos filtros). Não foi apagado nem reaproveitado. A imagem 8.0.17 não está em cache e a 8.0.34 está | `docker rm -f mysql-painel-test` no fim |
 | 3 | `backend/.env.testing` criado **dentro do worktree**, com senha, `APP_KEY` e `JWT_SECRET` descartáveis | Necessário para `php artisan test` (a `phpunit.xml` usa `APP_ENV=testing` e não há `.env`) | O arquivo **não é ignorado pelo git**: nunca entra em commit (`git add` por caminho) e é apagado no fim |
 | 4 | `backend/vendor` copiado do checkout principal com `robocopy ... /XD .git` (530 MB, 20.704 arquivos, 58 s) | `composer` não está no PATH. O `vendor` original tem 3,9 GB porque os pacotes trazem `.git` embutido | Nada: `vendor/` é ignorado pelo git |
+| 5 | Numeração de TASK trocada **depois** de executada: 433 → 470 e 449 a 452 → 471 a 474 (decisões N1 a N3, §31 e §35) | Colisão com a TASK-433 já publicada na `dev` e com as 449 a 464 de uma feature local que ainda não está na `dev` | Nada. Os commits e os nomes de branch já criados citam o número antigo; vale o mapa do `tasks.md` |
 
 ## 2. Log de implementação
 
@@ -41,13 +42,15 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-420 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-420`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §20 | O `cycles_ago` do payload vai nas 3 ações; fixar `0` derruba os 3 testes. `usePaymentActions` e `useConfirmSettlement` sem alteração. Snackbars no cartão (desvio do plano). 4 mutações |
 | TASK-421 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-421`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §21 | Página `MyPanel` com estados, ordem do servidor, aviso de corte em 50 e recarga depois de cada ação. Acrescentei "Tentar novamente" e o atalho "Ir para Meus Grupos". 5 mutações |
 | TASK-422 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-422`) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §22 | Rota `/painel` e item "Painel" como primeiro dos dois menus. Fim do frontend. Os testes existentes dos layouts passaram sem edição de asserção. 4 mutações |
-| TASK-423 | **Concluída** (roteiro executado; sem código novo) | 2026-10-22 e 2026-10-23 | Claude (IA), com aprovação do usuário para iniciar e **confirmação por escrito do usuário em 2026-10-23** | Ver §23, §33 e §34 | 12 itens conferidos no navegador e por HTTP, todos conforme o esperado; 5 achados que o usuário decidiu (o principal: "Já confirmado" não mostrava o que o credor já recebeu, virou a TASK-433). Refeito na branch final (§33). Stack encerrada (§34) |
-| TASK-433 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`) | 2026-10-22 | Claude (IA), com aprovação do usuário ("siga", opção B recomendada no achado 1 da TASK-423) | Ver §24 | Quarto total "Já recebido" (`receive.confirmed`), sem mudança de backend; conferido no navegador em desktop e em 375 px. 2 mutações |
-| TASK-449 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-449`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D12) | Ver §26 | Merge da `dev` (54 commits) com 3 conflitos resolvidos; `paymentNote` e `confirmedNote` portados para o `CycleSummaryService`; backend 562 e frontend 489 testes verdes. Um erro meu corrigido: a `dev` usa os IDs de backlog 082 e 084, e os meus viraram 085 e 086. 5 mutações |
-| TASK-450 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D13) | Ver §27 | O Painel usa o `PaymentProofDialog` da `dev` (foto ou descrição); o `ProofUploadDialog` foi removido; o `useConfirmSettlement` manda `descricao`. `MyPanel.test.tsx` passou sem edição. 5 mutações |
-| TASK-452 | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-452`; só testes) | 2026-10-22 | Claude (IA), com aprovação do usuário (R3) | Ver §30 | 2 testes que travam a D14: as notas de pagamento não saem no `/me/overview`, ao vivo e pelo snapshot. **A primeira versão era vazia** (a mutação não a derrubou) e foi refeita. 3 mutações |
+| TASK-423 | **Concluída** (roteiro executado; sem código novo) | 2026-10-22 e 2026-10-23 | Claude (IA), com aprovação do usuário para iniciar e **confirmação por escrito do usuário em 2026-10-23** | Ver §23, §33 e §34 | 12 itens conferidos no navegador e por HTTP, todos conforme o esperado; 5 achados que o usuário decidiu (o principal: "Já confirmado" não mostrava o que o credor já recebeu, virou a TASK-470). Refeito na branch final (§33). Stack encerrada (§34) |
+| TASK-470 (antes TASK-433) | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`) | 2026-10-22 | Claude (IA), com aprovação do usuário ("siga", opção B recomendada no achado 1 da TASK-423) | Ver §24 | Quarto total "Já recebido" (`receive.confirmed`), sem mudança de backend; conferido no navegador em desktop e em 375 px. 2 mutações |
+| TASK-471 (antes TASK-449) | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-449`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D12) | Ver §26 | Merge da `dev` (54 commits) com 3 conflitos resolvidos; `paymentNote` e `confirmedNote` portados para o `CycleSummaryService`; backend 562 e frontend 489 testes verdes. Um erro meu corrigido: a `dev` usa os IDs de backlog 082 e 084, e os meus viraram 085 e 086. 5 mutações |
+| TASK-472 (antes TASK-450) | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`) | 2026-10-22 | Claude (IA), com aprovação do usuário (D13) | Ver §27 | O Painel usa o `PaymentProofDialog` da `dev` (foto ou descrição); o `ProofUploadDialog` foi removido; o `useConfirmSettlement` manda `descricao`. `MyPanel.test.tsx` passou sem edição. 5 mutações |
+| TASK-474 (antes TASK-452) | Concluída (branch `backend/20261010-painel-financeiro-pessoal-TASK-452`; só testes) | 2026-10-22 | Claude (IA), com aprovação do usuário (R3) | Ver §30 | 2 testes que travam a D14: as notas de pagamento não saem no `/me/overview`, ao vivo e pelo snapshot. **A primeira versão era vazia** (a mutação não a derrubou) e foi refeita. 3 mutações |
 | TASK-425 | Concluída (branch `docs/20261010-painel-financeiro-pessoal-TASK-425`; só docs) | 2026-10-22 | Claude (IA), com aprovação do usuário ("Siga") | Ver §31 | 9 itens novos no backlog (087 a 095), notas aditivas nos itens 074 e 075 e índice atualizado. Cada afirmação conferida no código; 2 reproduzidas com sonda descartável (403 × 404 do `gerarPix`, `cycles_ago` extremo). 4 correções minhas antes de fechar. **Achado novo: colisão de numeração de TASK com a `dev` (433) e com uma feature local (449 a 452); decisão N1 a N3 do usuário** |
-| TASK-451 | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-451`; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §28 | Os 4 fluxos novos conferidos no navegador, com a descrição chegando ao banco (`note` e `payment_note`) e saindo no `/summary`; reconciliação 6 de 6. Um falso alarme meu no script de conferência (`??` não distingue campo nulo de ausente) |
+| TASK-473 (antes TASK-451) | Concluída (branch `frontend/20261010-painel-financeiro-pessoal-TASK-451`; sem código novo) | 2026-10-22 | Claude (IA), com aprovação do usuário | Ver §28 | Os 4 fluxos novos conferidos no navegador, com a descrição chegando ao banco (`note` e `payment_note`) e saindo no `/summary`; reconciliação 6 de 6. Um falso alarme meu no script de conferência (`??` não distingue campo nulo de ausente) |
+| TASK-426 | **Plano pronto, aplicação pendente do usuário** (branch `docs/20261010-painel-financeiro-pessoal-TASK-426`; só docs) | 2026-10-22 | Claude (IA), com aprovação do usuário ("siga") | Ver §32 | O plan de Relatórios não é versionado (só existe no checkout principal) e o worktree não escreve fora de si. Plan v1.1 preparado no scratchpad, com SHA e a lista de mudanças; falta o usuário copiá-lo. 3 decisões de desenho novas (D-N1 a D-N3) para o gate do plan de Relatórios |
+| TASK-475 | Concluída (branch `docs/20261010-painel-financeiro-pessoal-TASK-475`; docs e 5 comentários de teste) | 2026-10-23 | Claude (IA), com aprovação do usuário (decisões N1 a N3) | Ver §35 | Renumeração das minhas tasks que colidem: 433 → 470, 449 a 452 → 471 a 474. Só documentos e comentários; histórico do git e nomes de branch intactos. Um erro meu: a primeira execução do script não protegeu a seção da colisão (acentos lidos como ANSI), pego pela conferência e refeito |
 
 ## 3. Evidências da TASK-409
 
@@ -228,7 +231,7 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-414`, criada da branch d
 | D9 | **B, com desenho corrigido** | TASK-428 mantida. Ao responder a dúvida do usuário sobre o que cresce, reli o critério original e achei um erro meu: ordenar por pendência *antes* do corte exigia calcular todos os grupos, então o teto não limitava o custo. O corte passou a ser na consulta, antes de calcular (50 grupos de menor `ex_groups.id`, 51ª linha só para sinalizar `truncated`). Teste de orçamento com 60 grupos prova a posição do corte |
 | D10 | **B** (30/min por usuário na rota) | TASK-429 mantida |
 | D11 | **A** (manter o contato do credor) | Minimização (S6) fica só no backlog da TASK-425 |
-| X1/X2 | **Backlog, tratar depois do Painel** | Sem Triagem agora e sem task nesta feature. Registrados em 2026-10-21 como `docs/backlog/` 085 (X1) e 086 (X2), ambos ALTA (nasceram como 082 e 083; renumerados na TASK-449, §26). **O dado segue exposto em produção até esse tratamento**, ciente o usuário |
+| X1/X2 | **Backlog, tratar depois do Painel** | Sem Triagem agora e sem task nesta feature. Registrados em 2026-10-21 como `docs/backlog/` 085 (X1) e 086 (X2), ambos ALTA (nasceram como 082 e 083; renumerados na TASK-471, §26). **O dado segue exposto em produção até esse tratamento**, ciente o usuário |
 
 Ressalva à premissa do S1/D9, achada ao escrever o item 083: o reviewer e eu tratamos o abuso como "adicionar a vítima a quantos grupos quiser", mas `GroupController::MAX_GROUPS_CREATED_PER_USER = 3` limita os grupos que **cada conta cria**; levar uma vítima a N grupos exige ~N/3 contas com e-mail verificado. O vetor é mais caro que o descrito, o custo medido não muda, e o teto da D9 segue como defesa em profundidade. O X3 já existe como item 060 e não foi duplicado.
 
@@ -709,7 +712,7 @@ A stack **continua no ar** para o usuário validar: frontend `http://localhost:3
 
 **Ajuste do critério de encerramento:** o `.env.testing` e o container `mysql-painel-test` **não** são removidos agora. A TASK-424 (revisão final) precisa rodar a suíte completa do backend e o `security-reviewer`, e ambos dependem deles. Saem no fim da feature (§1, desvios 2 e 3), junto do worktree.
 
-## 24. Evidências da TASK-433 ("Já recebido" no cartão)
+## 24. Evidências da TASK-470 (antes TASK-433) ("Já recebido" no cartão)
 
 Branch `frontend/20261010-painel-financeiro-pessoal-TASK-433`, a partir de `f65eb61124`. Suíte antes: 405 testes. Nasceu do achado 1 da validação local (§23): o usuário respondeu "siga" à pergunta "faço o 'Já recebido' como TASK nova agora, ou deixo para um backlog?", e tomei isso como aprovação da recomendação (opção B). **O "siga" não foi tomado como a confirmação por escrito de que ele validou localmente**, que continua pendente.
 
@@ -756,13 +759,13 @@ Achado ao começar a revisão final, antes de rodar qualquer suíte (que seria j
 | Regra "foto ou descrição" para o credor marcar como paga | A decisão **D7** do `specify.md` ("foto obrigatória, como em Pagamentos") precisa ser relida: Pagamentos mudou |
 | `docs/backlog/README.md`: a `dev` tem o 081; eu tenho 082 e 083 | Conflito de linhas. ~~Conferi que a `dev` **não usa IDs ≥ 082**~~ **(afirmação errada: a `dev` usa 082 e 084; ver §26)** (`git grep` em `origin/dev`) |
 
-**Numeração:** a `dev` consumiu as TASK-434 a 448. As tasks novas desta feature devem começar na **TASK-449** (a TASK-433 daqui não colide, mas já ficou para trás do contador global).
+**Numeração:** a `dev` consumiu as TASK-434 a 448. As tasks novas desta feature devem começar na **TASK-449** (~~a TASK-433 daqui não colide, mas já ficou para trás do contador global~~ **afirmação errada, corrigida no §31: a `dev` também tem uma TASK-433, da feature `comprovante-ao-marcar-paga`**). **Esses números foram trocados depois (§35):** 433 virou 470 e 449 a 452 viraram 471 a 474.
 
 **Decisões pendentes do usuário** (D12 a D14, abaixo no `specify.md` §5 quando adotadas): ver a tabela proposta na conversa de 2026-10-22.
 
 **Estado da validação local:** a stack (8001, 3001, banco `painel_validacao`) continua no ar sobre o código **anterior** ao merge. Depois de integrar a `dev`, o roteiro da §23 precisa ser repetido no que mudar (pelo menos o envio de comprovante, o marcar como paga e o `migrate`).
 
-## 26. Evidências da TASK-449 (merge da `dev`)
+## 26. Evidências da TASK-471 (antes TASK-449) (merge da `dev`)
 
 Branch `backend/20261010-painel-financeiro-pessoal-TASK-449`, a partir de `bc84387b3c`. Decisão D12 (merge, não rebase). Antes: backend 525 e frontend 407 testes.
 
@@ -774,7 +777,7 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-449`, a partir de `bc843
 | `backend/app/Services/CycleSummaryService.php` (portado) | `paymentNote` nas **três** entradas de `entries()` e no mapa de `compute()`; `confirmedNote` em `withConfirmations()`; `@return` de `entries()` atualizado. Mesmas linhas e comentários da `dev` |
 | `frontend/src/pages/Payments.tsx` | A versão da `dev` inteira (`git checkout --theirs`), conforme a D13: ela usa o `PaymentProofDialog`, sem nenhuma referência aos meus `ProofUploadDialog` e `useConfirmSettlement`. O que a TASK-415 e a 416 tinham feito ali deixou de existir, e o `Payments.tsx` já não aparece na diferença contra a `dev` |
 | `docs/backlog/README.md` e os 2 itens | Linhas dos dois lados mantidas. **Renumeração (ver abaixo): 082 → 085 e 083 → 086** |
-| `frontend/src/components/GroupPositionCard.tsx` | Único ajuste de código fora dos conflitos: `handlePay(id, { proof: file })`, porque a assinatura da `dev` agora é `handlePay(id, details: PaymentDetails)` e o `tsc` acusou exatamente esse ponto. A troca de diálogo é a TASK-450 |
+| `frontend/src/components/GroupPositionCard.tsx` | Único ajuste de código fora dos conflitos: `handlePay(id, { proof: file })`, porque a assinatura da `dev` agora é `handlePay(id, details: PaymentDetails)` e o `tsc` acusou exatamente esse ponto. A troca de diálogo é a TASK-472 |
 
 **Um erro meu, corrigido.** No §25 e na resposta ao usuário eu afirmei que "a `dev` não usa os IDs de backlog 082 e 083". Estava errado: a `dev` usa **081, 082 e 084**. A causa foi um pathspec relativo: com o diretório de trabalho em `frontend/`, `git grep … -- docs/backlog` procurava em `frontend/docs/backlog`, e a busca voltava vazia. (O mesmo vício já tinha produzido um `git diff --stat` vazio mais cedo, que eu notei na hora.) O conflito do índice mostrou a verdade. Com a raiz explícita (`-- :/docs/backlog`) a busca acha os 3. Renumerei os meus itens para **085** (X1, `GET /groups/{id}/members` sem checagem de membro) e **086** (X2, entrada sem consentimento e sem como sair), por ser o próximo ID depois do maior usado (084), e ajustei as referências cruzadas entre os dois e as menções no `tasks.md`, no `specify.md` e neste arquivo. O "1.082 consultas" das medições **não é ID** e ficou como estava.
 
@@ -802,9 +805,9 @@ Branch `backend/20261010-painel-financeiro-pessoal-TASK-449`, a partir de `bc843
 | M4 | O mapa de `compute()` sem `paymentNote` | Derrubou 5, as três formas de entrada e o do snapshot |
 | M5 | `withConfirmations` sem `confirmedNote` | Derrubou 3: o meu, o do snapshot e o do `summary` (`SettlementConfirmationControllerTest`/`ExpenseControllerSummaryTest`) |
 
-**Estado da validação local:** a stack (8001/3001/`painel_validacao`) segue no ar e já tem as migrações, então o backend dela serve a coluna nova; o Vite recarregou o frontend integrado. O que falta repetir no navegador é da TASK-451, depois da TASK-450.
+**Estado da validação local:** a stack (8001/3001/`painel_validacao`) segue no ar e já tem as migrações, então o backend dela serve a coluna nova; o Vite recarregou o frontend integrado. O que falta repetir no navegador é da TASK-473, depois da TASK-472.
 
-## 27. Evidências da TASK-450 (o Painel adota o `PaymentProofDialog`)
+## 27. Evidências da TASK-472 (antes TASK-450) (o Painel adota o `PaymentProofDialog`)
 
 Branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`, a partir de `eb9ed3c40f`. Decisão D13 (e D14: a descrição é só enviada, não exibida). Suíte antes: 489 testes.
 
@@ -836,9 +839,9 @@ Branch `frontend/20261010-painel-financeiro-pessoal-TASK-450`, a partir de `eb9e
 | M4 | `requirePhoto={false}` no acerto do devedor | Derrubou só "keeps Confirmar disabled with only a description, because the settlement needs the photo" |
 | M5 | `requirePhoto` no credor | Derrubou só "marks as paid with only a description, no photo…" |
 
-**Verificação visual:** a tela mudou (agora há o campo "Descrição" nos dois diálogos do Painel). Conferência no navegador e envio real da descrição ao banco (`note` e `payment_note`) são da TASK-451.
+**Verificação visual:** a tela mudou (agora há o campo "Descrição" nos dois diálogos do Painel). Conferência no navegador e envio real da descrição ao banco (`note` e `payment_note`) são da TASK-473.
 
-## 28. Validação local da TASK-451 (depois do merge da `dev` e da TASK-450)
+## 28. Validação local da TASK-473 (antes TASK-451) (depois do merge da `dev` e da TASK-472 (antes TASK-450))
 
 Branch `frontend/20261010-painel-financeiro-pessoal-TASK-451` (**só documentação**), sobre a branch da feature em `0d267e3bc9`, na mesma stack da §23 (frontend 3001, backend 8001, banco `painel_validacao`, com as 2 migrações da `dev` aplicadas). Código integrado: o Vite recarregou o frontend e o backend serviu o `CycleSummaryService` portado.
 
@@ -900,11 +903,11 @@ Veredito do `pr-readiness-checker`: tecnicamente verde, **mas não pronto para p
 ### O que continua em aberto
 
 1. **Confirmação por escrito do usuário** de que validou localmente (último critério da TASK-423). Sem ela, não há push nem PR.
-2. ~~**R1:** aceitar, corrigir ou reduzir. **R3:** fazer o teste agora ou deixar.~~ **Decidido pelo usuário em 2026-10-22:** **R1 aceito**, com o número real documentado e a correção de verdade registrada no backlog (lista da TASK-425); **R3 feito** como TASK-452 (§30).
+2. ~~**R1:** aceitar, corrigir ou reduzir. **R3:** fazer o teste agora ou deixar.~~ **Decidido pelo usuário em 2026-10-22:** **R1 aceito**, com o número real documentado e a correção de verdade registrada no backlog (lista da TASK-425); **R3 feito** como TASK-474 (§30).
 3. **TASK-425** (backlog, com os itens novos acima) e **TASK-426** (plano de Relatórios).
 4. **Encerramento da stack de validação** depois da confirmação do item 1.
 
-## 30. Evidências da TASK-452 (trava da D14: notas fora do overview)
+## 30. Evidências da TASK-474 (antes TASK-452) (trava da D14: notas fora do overview)
 
 Branch `backend/20261010-painel-financeiro-pessoal-TASK-452`, a partir de `dc29ca3f7f`. Achado R3 do `security-reviewer` (§29), aprovado pelo usuário. **Só testes: nenhuma linha de produção mudou** (`git diff --stat -- app` vazio).
 
@@ -985,6 +988,8 @@ As TASK-427 a 432 e 409 a 422 não colidem. **Não alterei nada em nenhuma das d
 | N2 | Bloco novo | A) 465 a 469 (logo acima do maior número conhecido, 464)<br>B) um bloco bem acima, por exemplo 470 em diante | **B** | A outra feature ainda tem tasks pendentes e pode passar de 464. |
 | N3 | IDs de backlog | A) combinar com a outra sessão quem usa 087 em diante<br>B) quem mergear depois renumera | **B** | Ela ainda vai criar itens (TASK-459 e 464 dela registram backlog) a partir do 085, que existe só na minha branch. O 085 a 095 aqui só viram `dev` no meu PR; vale conferir o índice no momento do merge. |
 
+**Decidido pelo usuário em 2026-10-23:** **N1 = A** (renumerar só nos docs), **N2 = B** (bloco de 470 em diante), **N3 = B** (quem mergear depois renumera os IDs de backlog). Executado na TASK-475 (§35). Esta seção mantém de propósito os números **antigos**, porque descreve a colisão.
+
 ## 32. Evidências da TASK-426 (atualização do plan de Relatórios)
 
 Branch `docs/20261010-painel-financeiro-pessoal-TASK-426`, a partir de `1961dc8e73`. **Só documentação muda neste repositório: este log, o `tasks.md` e o item 093 do backlog** (ganhou os três caminhos que o plan de Relatórios levantou para o ciclo quitado e não selado).
@@ -1023,7 +1028,7 @@ Branch `docs/20261010-painel-financeiro-pessoal-TASK-426`, a partir de `1961dc8e
 
 ## 33. Revalidação da stack na branch final (2026-10-23)
 
-A stack da TASK-423 caiu quando a sessão anterior terminou (portas 8001 e 3001 livres; o contêiner `mysql-painel-test` seguiu no ar). A pedido do usuário ("suba a stack e valide"), subi de novo, no commit `3510895b36`, **sem nenhuma mudança de código de produção desde a TASK-451** (só testes e docs), e repeti um roteiro curto. **Isto não é a confirmação por escrito do usuário** de que ele validou: é a minha conferência, para ele validar em cima de uma stack viva.
+A stack da TASK-423 caiu quando a sessão anterior terminou (portas 8001 e 3001 livres; o contêiner `mysql-painel-test` seguiu no ar). A pedido do usuário ("suba a stack e valide"), subi de novo, no commit `3510895b36`, **sem nenhuma mudança de código de produção desde a TASK-473** (só testes e docs), e repeti um roteiro curto. **Isto não é a confirmação por escrito do usuário** de que ele validou: é a minha conferência, para ele validar em cima de uma stack viva.
 
 Stack: backend `php artisan serve --env=testing --port=8001` com `DB_DATABASE=painel_validacao` (32 migrações aplicadas, 0 pendentes), Vite na 3001 apontando para a 8001. Portas 3000 e 8000 **não** foram tocadas (livres).
 
@@ -1075,3 +1080,42 @@ Stack: backend `php artisan serve --env=testing --port=8001` com `DB_DATABASE=pa
 | Banco | `SHOW DATABASES` no contêiner `mysql-painel-test`, `DROP DATABASE painel_validacao`, `SHOW DATABASES` de novo (a senha lida do `.env.testing` e passada por variável de ambiente, sem imprimir) | Antes: `ex-db` e `painel_validacao`. Depois: só **`ex-db`** (o banco do PHPUnit) |
 
 **Mantidos até o fim da feature**, como combinado: o contêiner `mysql-painel-test` (o PHPUnit usa o `ex-db` dele) e o `backend/.env.testing` (untracked, **nunca** entra em `git add -A`). Ao fim: `docker rm -f mysql-painel-test`, apagar o `.env.testing` e remover o worktree.
+
+## 35. Evidências da TASK-475 (renumeração das tasks que colidem)
+
+Branch `docs/20261010-painel-financeiro-pessoal-TASK-475`, a partir de `a9b06ef5b6` (a `dev` já integrada, 0 atrás). Decisões do usuário em 2026-10-23: **N1 = A, N2 = B, N3 = B** (§31). Só **documentos da feature** e **5 comentários de teste** mudam; nenhuma linha executável.
+
+| Antes | Agora |
+|---|---|
+| TASK-433 | **TASK-470** |
+| TASK-449 | **TASK-471** |
+| TASK-450 | **TASK-472** |
+| TASK-451 | **TASK-473** |
+| TASK-452 | **TASK-474** |
+
+**Regras aplicadas** (por script em PowerShell, depois conferidas por `git grep`):
+
+| Regra | Por quê |
+|---|---|
+| Troca o ID em `tasks.md`, `plan.md` e `implementation.md`, e nos 5 comentários de teste | É o que a decisão N1 manda |
+| **Mantém** os nomes de branch já criados (`backend/20261010-painel-financeiro-pessoal-TASK-449` etc.) | São referências literais a branches que existiram |
+| **Mantém** a seção "Achado novo: colisão de numeração" (§31, até o §32) com os números antigos | Ela descreve a colisão: trocá-los apagaria o motivo |
+| Linha de tabela, título de seção e critério ganham "(antes TASK-xxx)" | Quem chega por um commit antigo acha a task nova |
+| `specify.md` e `docs/backlog/` **não mudam** | Nenhuma ocorrência dos cinco números |
+| Os docs de **outras** features (por exemplo, `comprovante-ao-marcar-paga`, que tem a TASK-433 dela) **não são tocados** | O `git grep` excluiu esse caminho de propósito |
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Alcance | `git grep -nE "TASK-(433\|449\|450\|451\|452)\b"` por arquivo, antes | `implementation.md` 26, `tasks.md` 15, `plan.md` 3, e 5 comentários de teste; nada em `specify.md`, `docs/backlog/`, `docs/sdd/`, `.claude/` ou `CLAUDE.md` |
+| Diff | `git diff --stat` depois do script | 34 linhas trocadas por 34 em `implementation.md`+`plan.md`+`tasks.md` (o arquivo não foi reescrito; CRLF preservado) |
+| O que sobrou com número antigo, fora de nome de branch e de "(antes …)" | `git grep` filtrado | **Só** a seção protegida do §31 (a linha da TASK-433 da `dev` e a das TASK-449 a 452 da outra feature, mais a opção B da N1) e a frase do §25 |
+| Backend | `php artisan test --filter="CycleSummaryServiceTest\|OverviewControllerTest"` | **48 passed (375 asserções)** |
+| Estilo | `php vendor/bin/pint --test` | `PASS ... 174 files` |
+| Frontend | `npx vitest run` em `GroupPositionCard.test.tsx` e `useConfirmSettlement.test.tsx` | **2 arquivos, 35 testes passaram** |
+| Tipos | `npx tsc --noEmit` | Sem erro (exit 0) |
+
+**Dois erros meus, pegos pela conferência:**
+1. **A primeira execução do script não protegeu a seção da colisão.** O PowerShell 5.1 lê `.ps1` sem BOM como ANSI, então os literais com acento ("colisão", "Numeração") nunca casaram e a seção e a frase do §25 foram convertidas. O `git grep` do que sobrou mostrou que as linhas protegidas **não apareciam**, o que denunciou o problema. Restaurei os três arquivos (nenhuma outra edição pendente) e refiz com padrões ASCII; depois a lista do que sobrou bateu com o esperado.
+2. **A frase do §25 estava errada desde o começo**: dizia que "a TASK-433 daqui não colide". A `dev` tem uma TASK-433 (feature `comprovante-ao-marcar-paga`). Risquei a frase e apontei para o §31.
+
+**Fica para depois (decisão N3 = B, sem ação):** os IDs de backlog 085 a 095 podem colidir com itens que a feature `editar-comprovante-depois-de-paga` crie a partir do 085. Quem mergear depois renumera; se ela integrar a `dev` depois do meu merge, já pega 096 em diante.

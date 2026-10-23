@@ -357,7 +357,7 @@ class CycleSummaryServiceTest extends TestCase
         $this->assertSame(0, $this->service()->focus($group));
     }
 
-    // --- descrição do pagamento (feature 20261021 da `dev`, portada na TASK-449) ---
+    // --- descrição do pagamento (feature 20261021 da `dev`, portada na TASK-471) ---
     // `pay()`/`confirmSettlement()` gravam `payment_note`/`note`; o `summary` as expõe como
     // `paymentNote`/`confirmedNote`. Esse cálculo mora aqui desde a TASK-409, então o serviço
     // precisa entregá-las em cada forma de entrada, não só o `ExpenseControllerSummaryTest`.
