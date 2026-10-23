@@ -87,6 +87,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 080 | [store-despesa-devolve-mensagem-da-excecao-no-500.md](store-despesa-devolve-mensagem-da-excecao-no-500.md) | `POST /api/expenses` devolve a mensagem da exceção (`details`) no 500. Provável BFF | rateio-parcelas-no-backend (TASK-403) | 2026-10-09 | MEDIA | Aberto |
 | 082 | [accept-invite-limpar-timer-do-redirecionamento.md](accept-invite-limpar-timer-do-redirecionamento.md) | `AcceptInvitePage` não cancela o redirecionamento de 2s quando a página sai da tela: guardar o id do `setTimeout` e limpá-lo no cleanup. Proposta 2 do item 081 | estabilizar-teste-accept-invite (item 081) | 2026-10-21 | BAIXA | Aberto |
 | 084 | [anexar-ou-editar-comprovante-depois-de-paga.md](anexar-ou-editar-comprovante-depois-de-paga.md) | Anexar ou editar comprovante e descrição depois de a despesa estar paga: hoje só desfazendo o pagamento (`canPay` exige `!exp.paid`), e um novo `pay()` deixa a foto antiga órfã no disco | comprovante-ao-marcar-paga | 2026-10-21 | MEDIA | Promovido para TASK-449 |
+| 096 | [link-do-comprovante-expira-em-ciclo-selado.md](link-do-comprovante-expira-em-ciclo-selado.md) | Link "Ver comprovante" do credor expira em ciclo selado: o snapshot congela a URL assinada de 30 minutos, e abrir o link 31 minutos depois dá 403 | editar-comprovante-depois-de-paga (specify §2.5, TASK-459) | 2026-10-23 | MEDIA | Aberto |
 
 ## Itens concluídos
 

@@ -191,7 +191,7 @@ Em `ExpenseControllerPayTest.php` (R9): `pay()` repetido com foto nova apaga a a
 
 - `MANUAL.md` (seção Despesas e seção Pagamentos): descrever o "Editar comprovante".
 - `MANUAL.pdf`: regenerar. **O HTML que gera o PDF não está no repositório** (só no diretório temporário desta sessão). Ver decisão em aberto abaixo.
-- **Backlog novo** (specify §2.5): registrar o item "link do comprovante expira em ciclo selado" (snapshot congela a URL assinada de 30 minutos). ID: o maior em `dev` hoje é 084 e a branch local do painel financeiro reservou o 083, então o próximo livre é **085**; reconfirmar na hora de gravar.
+- **Backlog novo** (specify §2.5): registrar o item "link do comprovante expira em ciclo selado" (snapshot congela a URL assinada de 30 minutos). ID: o maior em `dev` hoje é 084; a varredura de todas as branches em 2026-10-23 mostrou que a do painel financeiro (não mergeada) usa de 085 a 095, então o próximo livre é **096**.
 - Ao fim: seção "Resolução" no item 084 e mudança dele para `docs/backlog/concluidos/` (etapa 6 do `/promover-backlog`), com a linha correspondente no índice. Atenção: `docs/backlog/README.md` volta a ser tocado e a branch do painel financeiro também o altera; espere conflito de texto em quem mergear depois.
 
 ## 10. Riscos aceitos
