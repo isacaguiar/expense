@@ -54,8 +54,19 @@ editar, excluir e **marcar como paga**. Ao clicar em **marcar como paga** (o ✓
 linha), abre um popup: anexe uma **foto do comprovante**, escreva uma **descrição**
 do pagamento (por exemplo "pago em dinheiro" ou "Pix agendado", até 500
 caracteres) ou os dois. É preciso informar pelo menos um deles para confirmar.
-A descrição aparece nos **detalhes** da despesa. **Fechar mês** congela os números do
-período.
+A descrição aparece nos **detalhes** da despesa.
+
+Depois de paga, o credor ainda pode corrigir o comprovante sem desfazer o
+pagamento: o ícone do **clipe** (**Editar comprovante**, ao lado de **Desfazer
+pagamento**) abre o mesmo popup, já com a foto e a descrição atuais. Dá para
+**trocar a foto**, **remover a foto** ou **ajustar a descrição**, e também anexar
+a primeira foto a uma despesa que foi paga sem comprovante. A despesa continua
+paga, com a mesma data; só é preciso que sobre a foto ou a descrição. Quando o
+ciclo está totalmente quitado (todas as despesas pagas e todos os acertos
+confirmados), ele vira histórico: o ícone deixa de aparecer e, para corrigir, é
+preciso **desfazer o pagamento** e marcá-lo como pago de novo.
+
+**Fechar mês** congela os números do período.
 
 ### Nova despesa
 ![Formulário de cadastro de despesa](manual-assets/06-nova-despesa.jpg)
@@ -68,10 +79,13 @@ igualmente entre elas.
 ![Tela de pagamentos](manual-assets/07-pagamentos.jpg)
 Onde as contas são acertadas. Em **Despesas do ciclo**, o credor confirma o
 pagamento no mesmo popup da tela Despesas: foto do comprovante, descrição ou os
-dois. Em **Valores a pagar**, quem deve usa **Pagar com Pix** (abre o QR Code /
-copia-e-cola do credor) e **Enviar comprovante** para registrar o pagamento; aqui
-a **foto é obrigatória** e a **descrição é opcional**. Reenviar o comprovante
-substitui a foto e a descrição anteriores.
+dois. Depois de paga, o cartão da despesa ganha o botão **Editar comprovante**,
+que faz o mesmo que o ícone da tela Despesas (trocar, remover ou anexar a foto e
+ajustar a descrição sem desfazer o pagamento) e também deixa de aparecer quando o
+ciclo está totalmente quitado. Em **Valores a pagar**, quem deve usa **Pagar com
+Pix** (abre o QR Code / copia-e-cola do credor) e **Enviar comprovante** para
+registrar o pagamento; aqui a **foto é obrigatória** e a **descrição é opcional**.
+Reenviar o comprovante substitui a foto e a descrição anteriores.
 
 ### Relatórios
 ![Histórico de ciclos fechados](manual-assets/08-relatorios.jpg)
