@@ -1020,3 +1020,29 @@ Branch `docs/20261010-painel-financeiro-pessoal-TASK-426`, a partir de `1961dc8e
 | Efeito no repositório | `git status --short` | Só `docs/` da feature do Painel |
 
 **O que falta (é seu).** Copiar o plan atualizado por cima do original no checkout principal. Se o `plan.md` de lá mudar antes (o SHA do original é `281513B58511`), a cópia perde essa mudança: me avise.
+
+## 33. Revalidação da stack na branch final (2026-10-23)
+
+A stack da TASK-423 caiu quando a sessão anterior terminou (portas 8001 e 3001 livres; o contêiner `mysql-painel-test` seguiu no ar). A pedido do usuário ("suba a stack e valide"), subi de novo, no commit `3510895b36`, **sem nenhuma mudança de código de produção desde a TASK-451** (só testes e docs), e repeti um roteiro curto. **Isto não é a confirmação por escrito do usuário** de que ele validou: é a minha conferência, para ele validar em cima de uma stack viva.
+
+Stack: backend `php artisan serve --env=testing --port=8001` com `DB_DATABASE=painel_validacao` (32 migrações aplicadas, 0 pendentes), Vite na 3001 apontando para a 8001. Portas 3000 e 8000 **não** foram tocadas (livres).
+
+| # | Verificação | Como | Resultado |
+|---|---|---|---|
+| 1 | Reconciliação por HTTP | `check_overview.php` (cada cartão do `/me/overview` contra o `/summary` do mesmo ciclo) | **6 de 6 iguais** (Ateliê, Consórcio, Viagem, Oficina, Residencial, Sítio) |
+| 2 | `/painel` com valores | Login pela tela, link "Painel" do menu | Os quatro totais por cartão batem com a API: Consórcio 400 em aberto + 250 já recebido = 650 do acerto; Residencial 315 e Oficina 40 só em "Já confirmado" |
+| 3 | Visão de devedor | Detalhes do Ateliê | "Isac Aguiar deve pagar R$ 100,00 a Otávio Braga", com "Pagar com Pix" e "Enviar comprovante"; item Material pendente (sua parte 100 de 200) |
+| 4 | Diálogo do comprovante do acerto | "Enviar comprovante" | Foto **obrigatória** (Confirmar desabilitado), descrição opcional, contador 0/500. Cancelado sem enviar |
+| 5 | Visão de credor | Detalhes do Consórcio | Três devedores com status distintos (Aguardando ×2, "Comprovante enviado" ×1); itens pagos com "Desfazer" |
+| 6 | Escrita de ponta a ponta (reversível) | No **Seguro** (pago, sem foto e sem nota): Desfazer, depois "Marcar como paga" só com descrição | `POST unpay` 200, `GET overview` 200, `POST pay` 200, `GET overview` 200. Depois do Desfazer o item vai a "Pendente" e **os totais do cartão não mudam** (D1). O diálogo diz "foto **ou** descrição" e só habilita Confirmar com uma delas. No banco: `payment_note` = a descrição com acentos intactos; o Condomínio (com foto e nota) **intocado**; `ex_group_cycle_snapshots` = **0** (a leitura não sela) |
+| 7 | 375 px | `resize_window` 375×812 | Sem scroll horizontal (`scrollWidth` = `clientWidth` = 375), totais em 2 colunas (148,5 px cada) |
+| 8 | Sem sessão | Acesso direto a `/app/painel` depois de Sair | Volta ao login |
+| 9 | Usuário sem grupos | `semgrupo@painel.test` | "Você ainda não participa de nenhum grupo." e "Ir para Meus Grupos" |
+| 10 | Console e rede | `read_console_messages` e `read_network_requests` | Sem erro de console; todas as chamadas 200 ou 204 (preflight). O overview é chamado duas vezes ao entrar na tela: é o `React.StrictMode` do modo dev (`main.tsx`), não ocorre em produção |
+| 11 | Tempo | `check_overview.php`, máquina ociosa | Login 0,78 s; `/me/overview` com 6 grupos ≈ 1,0 s. As primeiras chamadas, com Vite e backend ainda subindo, levaram 5 a 13 s: ruído de carga, não do código |
+
+**Estado deixado no banco da validação:** o Seguro (grupo 2) agora está pago **com** a nota "Revalidação local da branch final: Seguro pago em dinheiro" (antes, sem nota). Todo o resto como estava. Uma notificação `expense_paid` nova (a #15, para o usuário 3, de 14 para 15 linhas); o `unpay` não gerou nenhuma. Eu tinha escrito "três" de memória, sem contar, e o banco corrigiu.
+
+**Um tropeço meu, sem efeito:** o `check_db.php` falhou na primeira vez (`Access denied for user 'forge'`) porque eu o rodei sem `APP_ENV=testing`, então ele leu o `.env` em vez do `.env.testing`. Rodando com `APP_ENV=testing` funciona.
+
+**Pendências (inalteradas):** a confirmação por escrito do usuário (último critério da TASK-423); o encerramento da stack (processos 8001 e 3001, banco `painel_validacao`, arquivos de comprovante de hoje nas pastas 1, 2, 4 e 6 de `storage/app/comprovantes/`) só depois dela.
