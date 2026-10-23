@@ -984,3 +984,39 @@ As TASK-427 a 432 e 409 a 422 não colidem. **Não alterei nada em nenhuma das d
 | N1 | Como resolver | A) renumerar, **só nos docs**, as minhas tasks que colidem (433, 449, 450, 451, 452) para um bloco livre acima de tudo o que existe, com um mapa antigo → novo no §1 deste arquivo<br>B) deixar e qualificar sempre pela feature ("TASK-433 do painel")<br>C) a feature que chegar por último na `dev` renumera | **A, em task própria e com a sua aprovação** | O 433 já colide com o que está **publicado** na `dev`, então é meu consertar. B deixa ambiguidade em `git log` e em `grep`. C só resolve os 449 a 452 e depende de quem mergear primeiro. |
 | N2 | Bloco novo | A) 465 a 469 (logo acima do maior número conhecido, 464)<br>B) um bloco bem acima, por exemplo 470 em diante | **B** | A outra feature ainda tem tasks pendentes e pode passar de 464. |
 | N3 | IDs de backlog | A) combinar com a outra sessão quem usa 087 em diante<br>B) quem mergear depois renumera | **B** | Ela ainda vai criar itens (TASK-459 e 464 dela registram backlog) a partir do 085, que existe só na minha branch. O 085 a 095 aqui só viram `dev` no meu PR; vale conferir o índice no momento do merge. |
+
+## 32. Evidências da TASK-426 (atualização do plan de Relatórios)
+
+Branch `docs/20261010-painel-financeiro-pessoal-TASK-426`, a partir de `1961dc8e73`. **Só documentação muda neste repositório: este log, o `tasks.md` e o item 093 do backlog** (ganhou os três caminhos que o plan de Relatórios levantou para o ciclo quitado e não selado).
+
+**O achado que mudou o caminho.** `docs/feature/20261006-relatorios-acompanhamento-fechamento/` **não está no git**: `git log --all -- <pasta>` é vazio, `git ls-tree origin/dev` não a tem, e a pasta não existe neste worktree. Só existe, como arquivos não rastreados de 06/10, no checkout principal (`specify.md`, `plan.md`, `tasks.md` em branco, `implementation.md`). Perguntei ao usuário onde aplicar; a escolha foi **editar no checkout principal, sem commit**.
+
+**O que travou.** O harness recusa a ferramenta de edição fora do worktree ("edite a cópia do worktree"), e este worktree não tem cópia. **Não contornei por outra ferramenta.** Preparei o plan **já atualizado** no scratchpad e deixei a cópia final para o usuário:
+
+| Arquivo | SHA-256 (12 primeiros) | Observação |
+|---|---|---|
+| `plan.md` original, no checkout principal (conferido em 2026-10-23) | `281513B58511` | Não foi tocado. Cópia de segurança no scratchpad: `relatorios-original\plan.md.orig` |
+| `plan.md` atualizado (scratchpad: `relatorios-atualizado\plan.md`) | `CFBA61CA86FB` | 157 → 182 linhas; versão 1.0 → 1.1 |
+
+**O que muda no plan** (nenhuma decisão do `specify.md` muda):
+
+| Onde | Mudança |
+|---|---|
+| Topo | Bloco "Atualização de 2026-10-22": vale depois do merge do Painel na `dev`; tabela "estava → passa a ser"; método por nome, linha só como dica |
+| §0.1 item 2 | Linhas de `sealCycleIfSettled` (`:696`, `:789`, `:1053`, `:1216`), `rejectIfCycleClosed` (`:390`, `:160`, `:365`, `:392`) e `Notifier::cycleSettled` (`:1321`); `focusCycle` → `CycleSummaryService::focus()`; ligação com o item 093 e com o caso `bornPaid`-só, que **não** vira `awaiting_seal` |
+| §0.2 | Rota em `routes/api.php:72` (era `:70`); `computeCycleSummary` → `compute` |
+| §0.3 | **Nada a extrair**: `CycleSummaryService::summaryIsFullySettled` já existe com a assinatura proposta. Texto original mantido como histórico |
+| §1 | `FOCUS_LOOKBACK` com o prefixo da classe do serviço (no controller não existe mais); `compute`/`withConfirmations`; atalho com `view()`; custo medido (≈49 consultas, ≈0,5 s por grupo) |
+| §2.1 | Fonte "snapshot ou ao vivo" via `viewAt` (D-N3); `withConfirmations` |
+| §3, §4 | `useGroupCycle.ts:91` (era `:85`), `GroupHeader.tsx:46` (era `:45`); `SummarySidePanel.tsx:54`, `CycleDetailPanel.tsx:46-90` e `:92-135`, `Sidebar.tsx:17` e `BillingCycle.php:49` conferidos **sem mudança** |
+| §6, §7, §8 | Sentinelas + `CycleSummaryServiceTest`; passo 1 de §7 removido; ligação do §8 com o item 093 |
+| 3 decisões novas, propostas | **D-N1** mostrar `paymentNote`/`confirmedNote` no Fechamento (rec. A); **D-N2** varredura do Acompanhamento no `CycleSummaryService` (rec. A); **D-N3** `viewAt` no serviço, com `view()` delegando (rec. A). Vão ao gate do plan, antes do `tasks.md` de Relatórios |
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Cada linha citada | `grep -n` no worktree antes de escrever, e `Read` das faixas `:666-673`, `:698-703` e `CycleDetailPanel.tsx:86-141` ao final | Todas conferem. **Um erro meu pego aqui:** escrevi `:668-702` para o bloco de escolha da fonte em `summary()`; o certo é `:671-702` |
+| Referências antigas que sobraram | Busca no plan atualizado por `:566`, `:686`, `:936`, `:1091`, `:284`, `:286`, `:629`, `:1404`, `:605`, `:1323`, `:1378`, `:541-572`, `:668-702`, `useGroupCycle.ts:85`, `GroupHeader.tsx:45`, `api.php:70` | Nenhuma |
+| `specify.md` de Relatórios | Releitura | **Não editado.** Tem as mesmas linhas defasadas e dois `computeCycleSummary`, mas nenhuma decisão contradita; o critério da task é editar só se algo ficar contraditório. Vale o plan |
+| Efeito no repositório | `git status --short` | Só `docs/` da feature do Painel |
+
+**O que falta (é seu).** Copiar o plan atualizado por cima do original no checkout principal. Se o `plan.md` de lá mudar antes (o SHA do original é `281513B58511`), a cópia perde essa mudança: me avise.
