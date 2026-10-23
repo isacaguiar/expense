@@ -20,26 +20,26 @@ mês a mês, quem deve quanto a quem, e paga/cobra por Pix dentro do próprio ap
   acertos separados, o app mostra apenas: *ngaguiar → Isac R$ 30* e
   *mateus.davi.10 → Isac R$ 30*. Dois Pix, não seis.
 
-![Tela de pagamentos com a lista "Valores a pagar"](manual-assets/07-pagamentos.jpg)
+![Tela de pagamentos com a lista "Valores a pagar"](docs/manual/images/07-pagamentos.jpg)
 *Cada linha de "Valores a pagar" é uma transferência única já calculada pelo app:
 "Fulano deve pagar R$ X a Beltrano".*
 
 ## Telas principais
 
 ### Login
-![Tela de login](manual-assets/01-login.jpg)
+![Tela de login](docs/manual/images/01-login.jpg)
 Informe e-mail e senha e clique em **Entrar**. Novos usuários entram por convite:
 ao ser adicionado a um grupo, você recebe um e-mail com um link para criar a
 senha e ativar a conta.
 
 ### Meus Grupos
-![Lista de grupos do usuário](manual-assets/02-meus-grupos.jpg)
+![Lista de grupos do usuário](docs/manual/images/02-meus-grupos.jpg)
 Ponto de partida. Lista os grupos de que você participa, com o responsável e os
 integrantes. **Novo Grupo** cria um grupo (informe nome, descrição e, se quiser,
 um "dia de fechamento"). Clique no nome do grupo para abrir a Home dele.
 
 ### Home (resumo do grupo)
-![Home do grupo com totais e saldo por pessoa](manual-assets/03-resumo.jpg)
+![Home do grupo com totais e saldo por pessoa](docs/manual/images/03-resumo.jpg)
 Visão do ciclo selecionado (use as setas **‹ ›** para trocar de período):
 **Total de despesas**, **Pago** e **A pagar**, a lista de despesas e, à direita,
 o painel com duas abas — **Saldo** (líquido de cada pessoa) e **À pagar** (a
@@ -47,7 +47,7 @@ liquidação mínima). O selo *Prévia* indica que os números ainda mudam até 
 fechar.
 
 ### Despesas
-![Lista de despesas do ciclo](manual-assets/05-despesas.jpg)
+![Lista de despesas do ciclo](docs/manual/images/05-despesas.jpg)
 Todas as despesas do ciclo, com **Tipo**, **Valor**, **Credor** (quem pagou) e
 **Status** (Paga / Pendente). Dá para buscar, filtrar por **Fixas/Variáveis**,
 editar, excluir e **marcar como paga**. Ao clicar em **marcar como paga** (o ✓ da
@@ -69,14 +69,14 @@ preciso **desfazer o pagamento** e marcá-lo como pago de novo.
 **Fechar mês** congela os números do período.
 
 ### Nova despesa
-![Formulário de cadastro de despesa](manual-assets/06-nova-despesa.jpg)
+![Formulário de cadastro de despesa](docs/manual/images/06-nova-despesa.jpg)
 Preencha **Descrição**, **Valor**, **Tipo** (À Vista, Parcelada ou Fixa), a
 **Data** e o **Pagador** (quem pagou de fato). Em **"Quem participa desta
 despesa?"** marque só as pessoas que entram nessa divisão — o valor é rateado
 igualmente entre elas.
 
 ### Pagamentos
-![Tela de pagamentos](manual-assets/07-pagamentos.jpg)
+![Tela de pagamentos](docs/manual/images/07-pagamentos.jpg)
 Onde as contas são acertadas. Em **Despesas do ciclo**, o credor confirma o
 pagamento no mesmo popup da tela Despesas: foto do comprovante, descrição ou os
 dois. Depois de paga, o cartão da despesa ganha o botão **Editar comprovante**,
@@ -88,7 +88,7 @@ registrar o pagamento; aqui a **foto é obrigatória** e a **descrição é opci
 Reenviar o comprovante substitui a foto e a descrição anteriores.
 
 ### Relatórios
-![Histórico de ciclos fechados](manual-assets/08-relatorios.jpg)
+![Histórico de ciclos fechados](docs/manual/images/08-relatorios.jpg)
 Histórico dos ciclos já fechados. Clique em um deles para rever os totais, as
 despesas e os saldos daquele período — agora com valores **definitivos**.
 
