@@ -44,6 +44,14 @@ A fechar no specify.
 | D5 | Comprovante | A) obrigatório quando o devedor paga<br>B) opcional | **A** | Igual a `confirmSettlement`. |
 | D6 | Competências aceitas | A) vigente e passadas (como `pay()`)<br>B) também futuras | **A** | Parcelas futuras ficam para a quitação (076). |
 
+## Nota (2026-10-22, feature `20261010-painel-financeiro-pessoal`)
+O Painel (`GET /api/me/overview`, `/painel`) já consome o resumo do ciclo e vai sentir esta mudança. Pontos para o specify da 075:
+
+- **Totais "devo" e "a receber"** do Painel são o acerto líquido par a par (`settlements`, decisão D1 do Painel) e vêm de `CycleSummaryService::compute`. Se o R5 daqui valer (par que zera por pagamento individual conta como quitado), os totais do Painel acompanham sozinhos, sem tocar no overview. Conferir com um teste de reconciliação `owe` × `settlements`, como o do Painel.
+- **`my_items[]`** traz hoje `paid` por parcela inteira (o que o credor marcou) e `my_share`. Com o pagamento por participante, acrescentar de forma **aditiva** o status da parte do próprio usuário (por exemplo, `my_share_paid` e quem confirmou), sem mudar o significado de `paid`.
+- **"Pagar esta despesa"** do devedor é um fluxo novo no Painel e em Pagamentos: reaproveitar `PaymentProofDialog` (foto e/ou descrição) e `usePaymentActions`, em vez de um diálogo novo.
+- O Painel mostra "Paga/Pendente" só como informação e nunca altera os totais ao marcar; manter isso explícito na tela para não confundir pagamento da parcela com pagamento da parte.
+
 ## Por que importa
 O app cobra de novo o que já foi pago por fora, todo mês, e não há correção limpa no banco quando o rateio tem mais de duas pessoas. O pagamento por participante é a peça que o modelo não tem, e a quitação antecipada (076) depende dela.
 
