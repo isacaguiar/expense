@@ -195,7 +195,7 @@ const ExpenseManager: React.FC = () => {
   };
 
   // "Editar comprovante" (despesa já paga): outro popup, com estado próprio —
-  // docs/feature/20261022-editar-comprovante-depois-de-paga. O id do alvo não é
+  // docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga. O id do alvo não é
   // zerado ao fechar: o popup continua mostrando a mesma despesa durante a
   // animação de saída. Quem manda abrir é `editProofOpen`.
   const [editProofExpenseId, setEditProofExpenseId] = useState<number | null>(null);

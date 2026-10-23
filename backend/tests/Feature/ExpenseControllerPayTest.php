@@ -998,7 +998,7 @@ class ExpenseControllerPayTest extends TestCase
         $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false, 'payment_note' => null]);
     }
 
-    // --- pay() repetido apaga a foto anterior (docs/feature/20261022-editar-comprovante-depois-de-paga, R9) ---
+    // --- pay() repetido apaga a foto anterior (docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga, R9) ---
 
     public function test_first_pay_with_a_photo_stores_exactly_one_file(): void
     {
