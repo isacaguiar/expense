@@ -1462,6 +1462,513 @@ describe('ExpenseManager - popup de comprovante ao marcar como paga', () => {
   });
 });
 
+describe('ExpenseManager - editar comprovante depois de paga', () => {
+  const PROOF_URL = 'https://api.exemplo.com/api/proofs/9?signature=abc';
+  const paid: SummaryExpenseFixture = {
+    id: 70,
+    description: 'Mercado',
+    value: 300,
+    date: '2026-08-10',
+    payerName: 'Isac',
+    paid: true,
+    isFixed: false,
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+    paymentProofUrl: PROOF_URL,
+    paymentNote: 'Pix agendado',
+  };
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    mockGetResponses([paid]);
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+  });
+
+  const renderManager = () =>
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+  const editButton = () => screen.getByRole('button', { name: 'Editar comprovante' });
+  const openEditDialog = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(await screen.findByRole('button', { name: 'Editar comprovante' }));
+    return screen.findByRole('dialog');
+  };
+
+  describe('visibilidade do ícone', () => {
+    it('shows "Editar comprovante" for the creditor of a paid expense, before "Desfazer pagamento"', async () => {
+      renderManager();
+
+      const edit = await screen.findByRole('button', { name: 'Editar comprovante' });
+      const undo = screen.getByRole('button', { name: 'Desfazer pagamento' });
+      expect(edit.compareDocumentPosition(undo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+
+    it('also shows it on a paid expense that has neither photo nor description', async () => {
+      mockGetResponses([{ ...paid, paymentProofUrl: null, paymentNote: null }]);
+      renderManager();
+
+      expect(await screen.findByRole('button', { name: 'Editar comprovante' })).toBeInTheDocument();
+    });
+
+    it('does not show it on a pending expense', async () => {
+      mockGetResponses([{ ...paid, paid: false }]);
+      renderManager();
+
+      await screen.findByText('Mercado');
+      expect(screen.queryByRole('button', { name: 'Editar comprovante' })).not.toBeInTheDocument();
+    });
+
+    it('does not show it for someone who is not the creditor', async () => {
+      mockGetResponses([{ ...paid, userPayerId: CURRENT_USER_ID + 1 }]);
+      renderManager();
+
+      await screen.findByText('Mercado');
+      expect(screen.queryByRole('button', { name: 'Editar comprovante' })).not.toBeInTheDocument();
+    });
+
+    it('does not show it in a sealed (settled) cycle', async () => {
+      mockGetResponses([paid], { status: 'closed', settled: true });
+      renderManager();
+
+      await screen.findByText('Mercado');
+      expect(screen.queryByRole('button', { name: 'Editar comprovante' })).not.toBeInTheDocument();
+      // O desfazer segue disponível: é o caminho para corrigir um ciclo selado.
+      expect(screen.getByRole('button', { name: 'Desfazer pagamento' })).toBeInTheDocument();
+    });
+
+    it('shows it in a closed cycle that is not sealed yet', async () => {
+      mockGetResponses([paid], { status: 'closed', settled: false });
+      renderManager();
+
+      expect(await screen.findByRole('button', { name: 'Editar comprovante' })).toBeInTheDocument();
+    });
+
+    it('does not show it in a future cycle', async () => {
+      mockGetResponses([paid], { status: 'future' });
+      renderManager();
+
+      await screen.findByText('Mercado');
+      expect(screen.queryByRole('button', { name: 'Editar comprovante' })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('popup', () => {
+    it('opens "Editar comprovante" already filled with the current description and photo, sending nothing yet', async () => {
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+
+      expect(within(dialog).getByText('Editar comprovante')).toBeInTheDocument();
+      expect(within(dialog).getByText(/O pagamento continua marcado como pago/)).toBeInTheDocument();
+      expect(within(dialog).getByLabelText('Descrição')).toHaveValue('Pix agendado');
+      expect(within(dialog).getByRole('link', { name: 'Ver foto atual' })).toHaveAttribute('href', PROOF_URL);
+      expect(within(dialog).getByRole('checkbox', { name: 'Remover a foto atual' })).not.toBeChecked();
+      expect(within(dialog).getByRole('button', { name: 'Salvar' })).toBeDisabled();
+      expect(axios.post).not.toHaveBeenCalled();
+    });
+
+    it('opens empty, with no photo link, for a paid expense that had neither', async () => {
+      mockGetResponses([{ ...paid, paymentProofUrl: null, paymentNote: null }]);
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+
+      expect(within(dialog).getByLabelText('Descrição')).toHaveValue('');
+      expect(within(dialog).queryByRole('link', { name: 'Ver foto atual' })).not.toBeInTheDocument();
+      expect(within(dialog).queryByRole('checkbox')).not.toBeInTheDocument();
+      expect(within(dialog).getByRole('button', { name: 'Salvar' })).toBeDisabled();
+    });
+
+    it('offers "Trocar a foto" when there is a photo and "Selecionar foto" when there is none', async () => {
+      const user = userEvent.setup();
+      const first = renderManager();
+
+      let dialog = await openEditDialog(user);
+      expect(within(dialog).getByText('Trocar a foto')).toBeInTheDocument();
+      first.unmount();
+
+      mockGetResponses([{ ...paid, paymentProofUrl: null }]);
+      renderManager();
+      dialog = await openEditDialog(user);
+      expect(within(dialog).getByText('Selecionar foto')).toBeInTheDocument();
+      expect(within(dialog).queryByText('Trocar a foto')).not.toBeInTheDocument();
+    });
+
+    it('does not interfere with the "Marcar como paga" popup, which still opens blank', async () => {
+      mockGetResponses([paid, { ...paid, id: 71, description: 'Aluguel', paid: false, paymentProofUrl: null, paymentNote: null }]);
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+      await user.click(screen.getByRole('button', { name: 'Marcar como paga' }));
+      const payDialog = await screen.findByRole('dialog');
+
+      expect(within(payDialog).getByText('Confirmar pagamento')).toBeInTheDocument();
+      expect(within(payDialog).getByLabelText('Descrição')).toHaveValue('');
+      expect(within(payDialog).queryByRole('checkbox')).not.toBeInTheDocument();
+      expect(within(payDialog).getByRole('button', { name: 'Confirmar' })).toBeDisabled();
+    });
+
+    it('closes without sending anything when it is cancelled', async () => {
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.type(within(dialog).getByLabelText('Descrição'), ' vou desistir');
+      await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(axios.post).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('salvar', () => {
+    it('sends only the description as JSON to .../payment-proof when no photo is involved', async () => {
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.type(within(dialog).getByLabelText('Descrição'), ' sexta');
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      const [url, body] = vi.mocked(axios.post).mock.calls[0];
+      expect(url).toMatch(/\/api\/expenses\/70\/payment-proof$/);
+      expect(body).toEqual({ cycles_ago: 0, descricao: 'Pix agendado sexta' });
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('sends the new photo as multipart, keeping the description', async () => {
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      const file = new File(['x'], 'novo.jpg', { type: 'image/jpeg' });
+      await user.upload(dialog.querySelector('input[type="file"]') as HTMLInputElement, file);
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+      expect(body).toBeInstanceOf(FormData);
+      expect(body.get('comprovante')).toBe(file);
+      expect(body.get('cycles_ago')).toBe('0');
+      expect(body.get('descricao')).toBe('Pix agendado');
+      expect(body.has('remover_comprovante')).toBe(false);
+    });
+
+    it('sends remover_comprovante when the current photo is removed', async () => {
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.click(within(dialog).getByRole('checkbox', { name: 'Remover a foto atual' }));
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(axios.post).mock.calls[0][1]).toEqual({
+        cycles_ago: 0,
+        descricao: 'Pix agendado',
+        remover_comprovante: true,
+      });
+    });
+
+    it('sends an empty description when it is cleared and the photo stays', async () => {
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.clear(within(dialog).getByLabelText('Descrição'));
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(axios.post).mock.calls[0][1]).toEqual({ cycles_ago: 0, descricao: '' });
+    });
+
+    it('attaches a first photo to an expense that was paid with neither photo nor description', async () => {
+      mockGetResponses([{ ...paid, paymentProofUrl: null, paymentNote: null }]);
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      const file = new File(['x'], 'primeira.jpg', { type: 'image/jpeg' });
+      await user.upload(dialog.querySelector('input[type="file"]') as HTMLInputElement, file);
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      const body = vi.mocked(axios.post).mock.calls[0][1] as FormData;
+      expect(body.get('comprovante')).toBe(file);
+      expect(body.get('descricao')).toBe('');
+    });
+
+    it('edits the competence being shown (cycles_ago), not always the current one', async () => {
+      const user = userEvent.setup();
+      renderManager();
+
+      await screen.findByText('Mercado');
+      await user.click(screen.getByLabelText('Competência anterior'));
+      const dialog = await openEditDialog(user);
+      await user.type(within(dialog).getByLabelText('Descrição'), '!');
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      expect((vi.mocked(axios.post).mock.calls[0][1] as { cycles_ago: number }).cycles_ago).toBe(1);
+    });
+
+    it('shows "Comprovante atualizado." and reloads the summary on success', async () => {
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.type(within(dialog).getByLabelText('Descrição'), '!');
+      const getsBefore = vi.mocked(axios.get).mock.calls.filter(([u]) => String(u).includes('/expenses/summary')).length;
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('Comprovante atualizado.')).toBeInTheDocument();
+      await waitFor(() =>
+        expect(
+          vi.mocked(axios.get).mock.calls.filter(([u]) => String(u).includes('/expenses/summary')).length
+        ).toBeGreaterThan(getsBefore)
+      );
+      expect(screen.queryByText('Despesa marcada como paga.')).not.toBeInTheDocument();
+    });
+
+    it('shows the API error in the Snackbar and no success message', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(axios.post).mockRejectedValue({
+        response: { data: { error: 'Esta competência já foi encerrada. Desfaça o pagamento para corrigir o comprovante.' } },
+      });
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.type(within(dialog).getByLabelText('Descrição'), '!');
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      expect(
+        await screen.findByText('Esta competência já foi encerrada. Desfaça o pagamento para corrigir o comprovante.')
+      ).toBeInTheDocument();
+      expect(screen.queryByText('Comprovante atualizado.')).not.toBeInTheDocument();
+    });
+
+    it('falls back to the default message when the API gives no text', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(axios.post).mockRejectedValue(new Error('Network Error'));
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.type(within(dialog).getByLabelText('Descrição'), '!');
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('Falha ao atualizar o comprovante.')).toBeInTheDocument();
+    });
+
+    it('disables the icon of that expense while the request is in flight', async () => {
+      let resolve!: (value: unknown) => void;
+      vi.mocked(axios.post).mockReturnValue(new Promise(r => { resolve = r; }));
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+      await user.type(within(dialog).getByLabelText('Descrição'), '!');
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(editButton()).toBeDisabled());
+      resolve({ data: {} });
+      await waitFor(() => expect(editButton()).toBeEnabled());
+    });
+  });
+
+  describe('alvo do popup', () => {
+    it('edits the expense whose icon was clicked when there are several', async () => {
+      mockGetResponses([
+        { ...paid, id: 72, description: 'Aluguel', paymentNote: 'nota do aluguel' },
+        { ...paid, id: 73, description: 'Internet', paymentNote: 'nota da internet' },
+      ]);
+      const user = userEvent.setup();
+      renderManager();
+
+      await screen.findByText('Aluguel');
+      const internetRow = screen.getByRole('row', { name: /Internet/ });
+      await user.click(within(internetRow).getByRole('button', { name: 'Editar comprovante' }));
+      const dialog = await screen.findByRole('dialog');
+
+      expect(within(dialog).getByLabelText('Descrição')).toHaveValue('nota da internet');
+      await user.type(within(dialog).getByLabelText('Descrição'), '!');
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(axios.post).mock.calls[0][0]).toMatch(/\/api\/expenses\/73\/payment-proof$/);
+    });
+
+    it('switches to the next expense when another icon is clicked after closing the popup', async () => {
+      mockGetResponses([
+        { ...paid, id: 72, description: 'Aluguel', paymentNote: 'nota do aluguel' },
+        { ...paid, id: 73, description: 'Internet', paymentNote: 'nota da internet' },
+      ]);
+      const user = userEvent.setup();
+      renderManager();
+
+      await screen.findByText('Aluguel');
+      await user.click(within(screen.getByRole('row', { name: /Aluguel/ })).getByRole('button', { name: 'Editar comprovante' }));
+      let dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByLabelText('Descrição')).toHaveValue('nota do aluguel');
+      await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+      await user.click(within(screen.getByRole('row', { name: /Internet/ })).getByRole('button', { name: 'Editar comprovante' }));
+      dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByLabelText('Descrição')).toHaveValue('nota da internet');
+      await user.type(within(dialog).getByLabelText('Descrição'), '!');
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(axios.post).mock.calls[0][0]).toMatch(/\/api\/expenses\/73\/payment-proof$/);
+    });
+
+    it('reads the target from the current list: after a reload the popup shows the fresh description', async () => {
+      const user = userEvent.setup();
+      let current = { ...paid, paymentNote: 'versão antiga' };
+      vi.mocked(axios.get).mockImplementation((url: string) => {
+        if (url.includes('/expenses/summary')) return Promise.resolve({ data: summaryResponse([current]) });
+        if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      });
+      renderManager();
+
+      let dialog = await openEditDialog(user);
+      expect(within(dialog).getByLabelText('Descrição')).toHaveValue('versão antiga');
+      current = { ...paid, paymentNote: 'versão nova' };
+      await user.type(within(dialog).getByLabelText('Descrição'), '!');
+      await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+      await screen.findByText('Comprovante atualizado.');
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+      dialog = await openEditDialog(user);
+      expect(within(dialog).getByLabelText('Descrição')).toHaveValue('versão nova');
+    });
+
+    it('closes the popup if the expense disappears from the list while it is open', async () => {
+      const user = userEvent.setup();
+      let list: SummaryExpenseFixture[] = [paid];
+      vi.mocked(axios.get).mockImplementation((url: string) => {
+        if (url.includes('/expenses/summary')) return Promise.resolve({ data: summaryResponse(list) });
+        if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      });
+      renderManager();
+
+      await openEditDialog(user);
+      list = [];
+      await user.click(screen.getByLabelText('Competência anterior'));
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+  });
+
+  describe('texto puro', () => {
+    it('shows a description with markup as literal text, never as HTML', async () => {
+      mockGetResponses([{ ...paid, paymentNote: '<img src=x onerror="alert(1)"><b>negrito</b>' }]);
+      const user = userEvent.setup();
+      renderManager();
+
+      const dialog = await openEditDialog(user);
+
+      expect(within(dialog).getByLabelText('Descrição')).toHaveValue('<img src=x onerror="alert(1)"><b>negrito</b>');
+      expect(dialog.querySelector('img')).toBeNull();
+      expect(dialog.querySelector('b')).toBeNull();
+    });
+  });
+});
+
+describe('ExpenseManager - editar comprovante nos cartões (viewport estreito)', () => {
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockReturnValue({
+        matches: true,
+        media: '',
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const paidCard: SummaryExpenseFixture = {
+    id: 80,
+    description: 'Internet',
+    value: 120,
+    date: '2026-08-05',
+    payerName: 'Isac',
+    paid: true,
+    isFixed: false,
+    paymentProofUrl: 'https://api.exemplo.com/api/proofs/3?signature=zzz',
+    paymentNote: 'Pix',
+  };
+
+  it('shows "Editar comprovante" on the card, before "Desfazer pagamento", and edits from it', async () => {
+    mockGetResponses([paidCard]);
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Internet');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    const edit = screen.getByRole('button', { name: 'Editar comprovante' });
+    const undo = screen.getByRole('button', { name: 'Desfazer pagamento' });
+    expect(edit.compareDocumentPosition(undo) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    await user.click(edit);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByLabelText('Descrição')).toHaveValue('Pix');
+    await user.type(within(dialog).getByLabelText('Descrição'), ' ok');
+    await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toMatch(/\/api\/expenses\/80\/payment-proof$/);
+    expect(body).toEqual({ cycles_ago: 0, descricao: 'Pix ok' });
+    expect(await screen.findByText('Comprovante atualizado.')).toBeInTheDocument();
+  });
+
+  it('does not show it on a card in a sealed cycle', async () => {
+    mockGetResponses([paidCard], { status: 'closed', settled: true });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Internet');
+    expect(screen.queryByRole('button', { name: 'Editar comprovante' })).not.toBeInTheDocument();
+  });
+});
+
 describe('ExpenseManager - fluxo completo (grid, pagar, despagar, excluir)', () => {
   beforeEach(() => {
     vi.mocked(axios.get).mockReset();
