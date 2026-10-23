@@ -66,4 +66,51 @@ class GroupMemberControllerTest extends TestCase
         $this->assertSame(1, $group->members()->count());
         Mail::assertNothingSent();
     }
+
+    // --- GET /api/groups/{groupId}/members (item 085: só quem é membro lê a lista) ---
+
+    public function test_non_member_cannot_list_members(): void
+    {
+        $member = User::factory()->create([
+            'pix' => 'pix-do-membro@example.com',
+            'whatsapp' => '5511999990001',
+        ]);
+        $outsider = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($outsider))
+            ->getJson('/api/groups/'.$group->id.'/members');
+
+        $response->assertStatus(404);
+
+        // O corpo da resposta não pode carregar nenhum dado do membro.
+        $body = $response->getContent();
+        $this->assertStringNotContainsString($member->email, $body);
+        $this->assertStringNotContainsString('pix-do-membro@example.com', $body);
+        $this->assertStringNotContainsString('5511999990001', $body);
+    }
+
+    public function test_member_can_list_members(): void
+    {
+        $member = User::factory()->create();
+        $colleague = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach([$member->id, $colleague->id]);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups/'.$group->id.'/members');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(2)
+            ->assertJsonFragment(['id' => $member->id, 'email' => $member->email])
+            ->assertJsonFragment(['id' => $colleague->id, 'email' => $colleague->email]);
+    }
+
+    public function test_unauthenticated_cannot_list_members(): void
+    {
+        $group = Group::create(['name' => 'Grupo de teste']);
+
+        $this->getJson('/api/groups/'.$group->id.'/members')->assertStatus(401);
+    }
 }
