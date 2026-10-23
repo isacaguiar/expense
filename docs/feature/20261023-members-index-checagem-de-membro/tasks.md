@@ -10,7 +10,7 @@ IDs a partir de TASK-476: o maior em qualquer lugar do projeto é TASK-475 (`ori
 |---|---|---|---|---|---|
 | TASK-476 | Fazer `GroupMemberController::index` recusar com `404` quem não é membro do grupo, com testes PHPUnit | backend | plan.md §1 e §4 | nenhum | Concluída (`implementation.md` §4) |
 | TASK-477 | Travar por teste que o `404` de grupo inexistente e o de grupo alheio são indistinguíveis no `index`, e provar por mutação a hipótese do `findOrFail` | backend | plan.md §2 | nenhum | Concluída (`implementation.md` §5; hipótese **confirmada**) |
-| TASK-478 | Travar por teste o contrato de quem é membro: grupo excluído continua `200` e o payload mantém os campos | backend | plan.md §3 | nenhum | Pendente |
+| TASK-478 | Travar por teste o contrato de quem é membro: grupo excluído continua `200` e o payload mantém os campos | backend | plan.md §3 | nenhum | Concluída (`implementation.md` §6) |
 | TASK-479 | Revisar o diff com o `security-reviewer`, rodar o checklist pré-PR na branch integrada e registrar os resultados | backend | plan.md §5 | antes do merge | Pendente |
 | TASK-480 | Registrar em `docs/backlog/` os achados tangenciais da feature | doc | plan.md §8 | nenhum | Pendente |
 
