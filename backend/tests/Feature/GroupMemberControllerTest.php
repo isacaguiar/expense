@@ -141,4 +141,48 @@ class GroupMemberControllerTest extends TestCase
             'o corpo do 404 revela se o grupo existe'
         );
     }
+
+    // TASK-478 (R7 do specify, decisão D1 = B): a leitura de grupo excluído logicamente
+    // segue como as demais leituras (`show`, `indexByGroup`, `summary`): o membro recebe
+    // 200. Só a escrita (`store`) responde 404 a grupo excluído.
+    public function test_member_of_deleted_group_still_lists_members(): void
+    {
+        $member = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo excluído', 'deleted' => true]);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups/'.$group->id.'/members');
+
+        $response->assertStatus(200)
+            ->assertJsonCount(1)
+            ->assertJsonFragment(['id' => $member->id, 'email' => $member->email]);
+    }
+
+    // TASK-478 (R3 e R8): o payload de quem é membro não muda. Trava o que as telas
+    // leem e o que NUNCA pode sair (`$hidden` do User). Não é um snapshot exato: uma
+    // coluna nova em ex_users não deve quebrar este teste.
+    public function test_member_payload_keeps_the_fields_the_web_reads(): void
+    {
+        $member = User::factory()->create([
+            'pix' => 'pix-do-membro@example.com',
+            'whatsapp' => '5511999990001',
+            'google_id' => 'google-id-do-membro',
+            'photo_path' => 'avatars/foto-do-membro.jpg',
+        ]);
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($member->id);
+
+        $response = $this->withToken($this->tokenFor($member))
+            ->getJson('/api/groups/'.$group->id.'/members');
+
+        $response->assertStatus(200)
+            ->assertJsonStructure(['*' => ['id', 'name', 'email', 'pix', 'whatsapp', 'avatar_url']])
+            ->assertJsonFragment(['pix' => 'pix-do-membro@example.com', 'whatsapp' => '5511999990001']);
+
+        $item = $response->json('0');
+        foreach (['password', 'remember_token', 'google_id', 'photo_path'] as $hidden) {
+            $this->assertArrayNotHasKey($hidden, $item, "o campo {$hidden} não pode sair na lista de membros");
+        }
+    }
 }

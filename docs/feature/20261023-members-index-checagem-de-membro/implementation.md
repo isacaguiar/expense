@@ -23,6 +23,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 |---|---|---|---|---|---|
 | TASK-476 | Concluída (direto na branch da feature `backend/20261023-members-index-checagem-de-membro`, por ser a primeira task) | 2026-10-23 | Claude (IA), com aprovação do usuário (specify, plan e tasks aprovados) | Ver §4 | RED reproduziu o vazamento (`200` para não membro); conserto só no `index`; a mutação de remover `authorizeMembership` derruba só o teste do não membro; suíte 604 → **607** |
 | TASK-477 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-477`; só teste) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §5 | O teste de corpo idêntico nasceu verde; a mutação para `findOrFail` o derrubou e **confirmou a hipótese**: o `findOrFail` devolve `"No query results for model [App\\Models\\Group] N"` e o grupo alheio devolve `""`. Sonda em 4 endpoints: o padrão é **sistêmico**. Suíte 607 → **608** |
+| TASK-478 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-478`; só testes) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §6 | Duas travas, ambas nasceram verdes. **Três** mutações (duas do plano + uma extra para a asserção negativa), cada uma derrubando o teste certo. Suíte 608 → **610** |
 
 ## 3. Ambiente de teste (pré-condição da TASK-476)
 
@@ -88,3 +89,23 @@ O padrão é o mesmo em todos: `Group::findOrFail` seguido de `authorizeGroupMem
 Isto **não** é corrigido por esta feature: o `index` (R2) já está protegido, e o resto exige decisão própria (a correção natural é no handler global `App\Exceptions\Handler`, que muda o corpo de `404` de rotas que o web pode ler). Vira item de backlog na TASK-480, com tabela de decisão.
 
 **O comentário do `index` ficou como está** ("pode devolver outra mensagem"): agora está **provado**, mas reescrevê-lo mexeria em produção, e esta task é só de teste.
+
+## 6. Evidências da TASK-478 (trava do contrato de quem é membro)
+
+Branch `backend/20261023-members-index-checagem-de-membro-TASK-478`, a partir de `a222960e8f`. **Só testes: nenhuma linha de produção mudou** (`git diff backend/20261023-members-index-checagem-de-membro --stat -- backend/app` vazio).
+
+**Os dois testes novos** em `GroupMemberControllerTest`:
+- `test_member_of_deleted_group_still_lists_members` (R7, decisão D1 = B): grupo com `deleted = true` e o usuário como membro recebe `200` com a lista (`assertJsonCount(1)` e o membro com e-mail).
+- `test_member_payload_keeps_the_fields_the_web_reads` (R3 e R8): o usuário de teste tem `pix`, `whatsapp`, `google_id` e `photo_path` **preenchidos** (para a asserção negativa valer). A resposta traz `id`, `name`, `email`, `pix`, `whatsapp` e `avatar_url` e **não** traz `password`, `remember_token`, `google_id` nem `photo_path`. Não é um snapshot exato: uma coluna nova em `ex_users` não o quebra.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| **Primeira execução** | `php artisan test --filter=GroupMemberControllerTest` | **9 passed (42 asserções)**. As duas **nasceram verdes**, como previsto: são travas do que a feature promete não mudar |
+| **Mutação A** (a do plano) | `abort_if($group->deleted, 404);` depois de `authorizeMembership` no `index` | **1 failed, 8 passed**: cai **só** `member of deleted group still lists members` ("Expected … [200] but received 404") |
+| **Mutação B** (a do plano) | retorno trocado por `$group->members->map->only(['id', 'name'])` | **3 failed**: `member payload keeps the fields the web reads` ("Failed asserting that an array has the key 'email'") e, por também lerem o e-mail, `member can list members` e `member of deleted group still lists members` |
+| **Mutação C** (extra, minha) | retorno trocado por `$group->members->makeVisible(['google_id', 'photo_path'])` | **1 failed, 8 passed**: cai **só** o teste do payload ("o campo google_id não pode sair na lista de membros"). Prova que a asserção **negativa** não é vazia, o que as duas do plano não provavam |
+| Restauração | Reli `GroupMemberController.php` linhas 16-28 depois de cada volta; `git diff … -- backend/app` vazio ao final | Idêntico à branch da feature |
+| Estilo | `php vendor/bin/pint --test` | `PASS` 176 arquivos |
+| **Suíte inteira** | `php artisan test` | **610 passed (3758 asserções)**, 70,15 s (608 + 2) |
+
+**Por que a Mutação C existe:** o plano pedia duas mutações, e as duas só provavam a parte *positiva* do teste do payload (campos que **devem** sair). A parte negativa (campos que **não** podem sair) só falharia se alguém passasse a expô-los, e nenhuma mutação do plano fazia isso. Sem a C, essa metade do teste poderia estar vazia sem ninguém notar (a mesma lição da TASK-474 da feature do Painel, cujo primeiro teste era vazio).
