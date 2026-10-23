@@ -1,7 +1,7 @@
 # Minimizar o contato do credor no `/me/overview` e trocar o lookup de `GET /pix/generate` de e-mail para `user_id`
 
 ID: 091
-Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §8 (achado S6 e decisão D11 da revisão de segurança da TASK-414); `backend/app/Services/PersonalOverviewService.php` (`person()`), `backend/app/Http/Controllers/PixController.php` (`gerarPix()`), `frontend/src/components/PixPaymentDialog.tsx`
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §8 (achado S6 e decisão D11 da revisão de segurança da TASK-414); `backend/app/Services/PersonalOverviewService.php` (`person()`), `backend/app/Http/Controllers/PixController.php` (`gerarPix()`), `frontend/src/components/PixPaymentDialog.tsx`
 Criado em: 2026-10-22
 Prioridade: BAIXA
 Status: Aberto

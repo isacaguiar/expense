@@ -10,7 +10,7 @@ use App\Services\PersonalOverviewService;
  * cálculo mora em `PersonalOverviewService`; o escopo (só grupos em que o
  * usuário é membro) é a própria consulta do serviço, não um filtro posterior.
  * Só lê: não sela ciclo nem notifica. Ver
- * docs/feature/20261010-painel-financeiro-pessoal/plan.md §1.
+ * docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §1.
  */
 class OverviewController extends Controller
 {

@@ -1,7 +1,7 @@
 # `jwt.auth` (Tymon) fora do `middlewarePriority`: throttle e bindings rodam antes da autenticação
 
 ID: 092
-Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md (TASK-429, "A premissa que o teste derrubou"); `backend/app/Http/Kernel.php` (alias `jwt.auth`, linha 69)
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md (TASK-429, "A premissa que o teste derrubou"); `backend/app/Http/Kernel.php` (alias `jwt.auth`, linha 69)
 Criado em: 2026-10-22
 Prioridade: BAIXA
 Status: Aberto

@@ -44,7 +44,7 @@ type Total = { testId: string; label: string; value: number; color?: string };
  * `usePaymentActions`, `PixPaymentDialog` e `PaymentProofDialog`. Uma instância
  * dos hooks por cartão, porque eles são por `cyclesAgo`.
  *
- * docs/feature/20261010-painel-financeiro-pessoal/plan.md §2 e §3
+ * docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §2 e §3
  */
 const GroupPositionCard: React.FC<GroupPositionCardProps> = ({ overview, currentUser, onChanged }) => {
   const { group, cycle } = overview;
