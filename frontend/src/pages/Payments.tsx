@@ -19,6 +19,7 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
+import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
@@ -74,13 +75,17 @@ const Payments: React.FC = () => {
     payError,
     paySuccess,
     unpaySuccess,
+    editSuccess,
     dismissPayError,
     dismissPaySuccess,
     dismissUnpaySuccess,
+    dismissEditSuccess,
     canPay,
     canUnpay,
+    canEditProof,
     handlePay,
-    handleUnpay
+    handleUnpay,
+    handleEditProof
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
 
   // Popup "Confirmar pagamento" do credor: foto OU descrição, o mesmo
@@ -92,6 +97,24 @@ const Payments: React.FC = () => {
     if (confirmExpenseId === null) return;
     handlePay(confirmExpenseId, file ? { proof: file, note } : { note });
     setConfirmExpenseId(null);
+  };
+
+  // "Editar comprovante" (despesa já paga): popup próprio, com estado separado do
+  // `confirmExpenseId` acima — docs/feature/20261022-editar-comprovante-depois-de-paga.
+  // O id do alvo não é zerado ao fechar: o popup continua mostrando a mesma
+  // despesa durante a animação de saída. Quem manda abrir é `editProofOpen`.
+  const [editProofExpenseId, setEditProofExpenseId] = useState<number | null>(null);
+  const [editProofOpen, setEditProofOpen] = useState<boolean>(false);
+
+  const openEditProof = (expenseId: number) => {
+    setEditProofExpenseId(expenseId);
+    setEditProofOpen(true);
+  };
+
+  const confirmEditProof = ({ file, note, removeProof }: PaymentProofValue) => {
+    if (editProofExpenseId === null) return;
+    handleEditProof(editProofExpenseId, { proof: file ?? undefined, removeProof, note });
+    setEditProofOpen(false);
   };
 
   // Valor a pagar por pessoa: ao clicar num settlement, abre o Pix do credor
@@ -167,6 +190,9 @@ const Payments: React.FC = () => {
   };
 
   const expenses = summary?.expenses ?? [];
+  // Sempre da lista atual (nunca um objeto guardado): depois de recarregar, o
+  // popup abre com a descrição e a foto que estão gravadas agora.
+  const editProofExpense = expenses.find(exp => exp.id === editProofExpenseId) ?? null;
 
   return (
     <DespesasThemeScope>
@@ -264,7 +290,7 @@ const Payments: React.FC = () => {
                           </Typography>
                         )}
 
-                        <Box display="flex" justifyContent="flex-end" mt={2} gap={1}>
+                        <Box display="flex" justifyContent="flex-end" flexWrap="wrap" mt={2} gap={1}>
                           {canPay(exp) && (
                             <Button
                               size="small"
@@ -274,6 +300,17 @@ const Payments: React.FC = () => {
                               onClick={() => setConfirmExpenseId(exp.id)}
                             >
                               Confirmar pagamento
+                            </Button>
+                          )}
+                          {canEditProof(exp) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<AttachFileOutlinedIcon />}
+                              disabled={payingExpenseId === exp.id}
+                              onClick={() => openEditProof(exp.id)}
+                            >
+                              Editar comprovante
                             </Button>
                           )}
                           {canUnpay(exp) && (
@@ -327,6 +364,20 @@ const Payments: React.FC = () => {
         onConfirm={confirmPayment}
       />
 
+      {/* Popup de edição do comprovante de uma despesa já paga */}
+      <PaymentProofDialog
+        open={editProofOpen && editProofExpense !== null}
+        title="Editar comprovante"
+        description="Troque a foto, remova-a ou ajuste a descrição. O pagamento continua marcado como pago."
+        photoLabel={editProofExpense?.paymentProofUrl ? 'Trocar a foto' : 'Selecionar foto'}
+        requirePhoto={false}
+        confirmLabel="Salvar"
+        initialNote={editProofExpense?.paymentNote ?? ''}
+        currentProofUrl={editProofExpense?.paymentProofUrl ?? null}
+        onClose={() => setEditProofOpen(false)}
+        onConfirm={confirmEditProof}
+      />
+
       {pixTarget && (
         <PixPaymentDialog
           open={pixTarget !== null}
@@ -369,6 +420,17 @@ const Payments: React.FC = () => {
       >
         <Alert onClose={dismissUnpaySuccess} severity="success" variant="filled">
           Pagamento desfeito.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={editSuccess}
+        autoHideDuration={4000}
+        onClose={dismissEditSuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissEditSuccess} severity="success" variant="filled">
+          Comprovante atualizado.
         </Alert>
       </Snackbar>
 

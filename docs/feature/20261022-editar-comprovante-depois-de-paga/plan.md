@@ -129,7 +129,7 @@ Mesma ordem de R3 (grava, atualiza, só então apaga). Nada mais muda em `pay()`
 
 ## 6. Frontend: Pagamentos (specify D6)
 
-`frontend/src/pages/Payments.tsx`: no cartão (caixa de ações em `:267`), botão `outlined` pequeno "Editar comprovante" (ícone `AttachFileOutlined`) antes de "Desfazer pagamento" (`:279`), com `canEditProof(exp)`. Mesma instância de diálogo de edição e o mesmo Snackbar de sucesso. Estado próprio (`editProofExpenseId`), separado do `confirmExpenseId` do popup de pagamento.
+`frontend/src/pages/Payments.tsx`: no cartão (caixa de ações em `:267`), botão `outlined` pequeno "Editar comprovante" (ícone `AttachFileOutlined`) antes de "Desfazer pagamento" (`:279`), com `canEditProof(exp)`. Mesmo diálogo de edição (o mesmo componente e as mesmas props de Despesas, §5) e o mesmo aviso "Comprovante atualizado." (um Snackbar próprio da tela, não o de "Pagamento confirmado."). Estados próprios (`editProofExpenseId` e `editProofOpen`, como em Despesas), separados do `confirmExpenseId` do popup de pagamento. A caixa de ações ganha `flexWrap="wrap"`: a 375px os dois botões somam 345 px (166 + 8 de espaço + 171) para 309 px de largura disponível, então "Editar comprovante" e "Desfazer pagamento" passam a quebrar em duas linhas alinhadas à direita em vez de estourar o cartão.
 
 ## 7. Testes (Constitution §2.2)
 
