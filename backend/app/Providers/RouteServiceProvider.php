@@ -28,6 +28,23 @@ class RouteServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
         });
 
+        // `GET /me/overview` calcula o ciclo de cada grupo do usuário: limite
+        // próprio, por usuário (o `api` acima, com o guard padrão `web`, acaba
+        // chaveando por IP). Ver
+        // docs/feature/20261010-painel-financeiro-pessoal/specify.md §5 (D10).
+        //
+        // Mesmo declarado depois do `jwt.auth` na rota, o `ThrottleRequests`
+        // roda ANTES dele: o `middlewarePriority` do Kernel o ordena à frente
+        // do `SubstituteBindings`, e o middleware do Tymon não está na lista.
+        // Por isso o limiter resolve o usuário do token por conta própria e
+        // não conta quem não tem token válido — o `jwt.auth` devolve 401 logo
+        // em seguida, e uma chamada sem token não gasta o limite de ninguém.
+        RateLimiter::for('overview', function (Request $request) {
+            $userId = $request->user('api')?->id;
+
+            return $userId ? Limit::perMinute(30)->by($userId) : Limit::none();
+        });
+
         $this->routes(function () {
             Route::middleware('api')
                 ->prefix('api')
