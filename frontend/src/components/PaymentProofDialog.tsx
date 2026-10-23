@@ -37,7 +37,7 @@ type CanConfirmInput = {
  * a foto obrigatória (acerto do devedor), só a foto conta e o texto é um
  * complemento. Nunca confirma enquanto `busy`.
  *
- * Na edição de uma despesa já paga (docs/feature/20261022-editar-comprovante-depois-de-paga,
+ * Na edição de uma despesa já paga (docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga,
  * plan §4) a regra vale sobre o **estado final**: a foto atual conta enquanto
  * não for removida, e uma nova a substitui. Remover a foto sem deixar descrição
  * é recusado, porque o backend recusa (422) um pagamento sem foto e sem texto.

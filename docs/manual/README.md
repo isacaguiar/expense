@@ -2,7 +2,7 @@
 
 > O `MANUAL.pdf` da raiz do repositório é gerado a partir desta pasta. O `MANUAL.md` (também na raiz) é o mesmo conteúdo em texto, para ler no GitHub. Os dois precisam dizer a mesma coisa: ao mudar um, mude o outro.
 
-Esta pasta existe porque, até 2026-10-22, o HTML que gerava o PDF **não estava no repositório**: só o PDF era versionado, e o ajuste seguinte do manual obrigou a refazer o desenho do zero. Origem: `docs/feature/20261022-editar-comprovante-depois-de-paga/` (decisão T1 do `plan.md`, tasks TASK-457 e TASK-458).
+Esta pasta existe porque, até 2026-10-22, o HTML que gerava o PDF **não estava no repositório**: só o PDF era versionado, e o ajuste seguinte do manual obrigou a refazer o desenho do zero. Origem: `docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga/` (decisão T1 do `plan.md`, tasks TASK-457 e TASK-458).
 
 ## Arquivos
 

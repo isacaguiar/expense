@@ -12,7 +12,7 @@ export type PaymentDetails = { proof: File; note?: string } | { proof?: File; no
 
 /**
  * Edição do comprovante de uma despesa **já paga** (`POST .../payment-proof`,
- * docs/feature/20261022-editar-comprovante-depois-de-paga, plan §3). A tela
+ * docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga, plan §3). A tela
  * sempre manda o estado final da descrição, por isso `note` é obrigatório (texto
  * vazio limpa a descrição). `proof` troca ou anexa a foto; `removeProof` apaga a
  * atual. As duas coisas juntas o backend recusa, e o diálogo nunca as monta.
