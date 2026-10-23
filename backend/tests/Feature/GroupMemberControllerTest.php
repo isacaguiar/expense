@@ -113,4 +113,32 @@ class GroupMemberControllerTest extends TestCase
 
         $this->getJson('/api/groups/'.$group->id.'/members')->assertStatus(401);
     }
+
+    // TASK-477 (R2 do specify): para quem não é membro, "o grupo não existe" e "o grupo
+    // existe, mas não é seu" têm de ser indistinguíveis, no status e no corpo. Senão a
+    // checagem de membro continuaria confirmando a existência do grupo.
+    public function test_unknown_group_and_foreign_group_are_indistinguishable(): void
+    {
+        // Em modo debug o corpo do erro traz `file`, `line` e `trace`, que diferem por
+        // construção; o phpunit.xml não fixa APP_DEBUG, então o teste fixa aqui.
+        config(['app.debug' => false]);
+
+        $member = User::factory()->create();
+        $outsider = User::factory()->create();
+        $foreignGroup = Group::create(['name' => 'Grupo alheio']);
+        $foreignGroup->members()->attach($member->id);
+        $unknownId = Group::max('id') + 1000;
+        $token = $this->tokenFor($outsider);
+
+        $unknown = $this->withToken($token)->getJson('/api/groups/'.$unknownId.'/members');
+        $foreign = $this->withToken($token)->getJson('/api/groups/'.$foreignGroup->id.'/members');
+
+        $this->assertSame(404, $unknown->getStatusCode());
+        $this->assertSame($unknown->getStatusCode(), $foreign->getStatusCode());
+        $this->assertSame(
+            $unknown->getContent(),
+            $foreign->getContent(),
+            'o corpo do 404 revela se o grupo existe'
+        );
+    }
 }
