@@ -165,6 +165,12 @@ Rodado na branch integrada (`ba1eea7ff7`). Comandos reais e resultados dele, que
 | `GET /api/groups/{x}/members` com `x` = `abc`, `-1`, `0`, `99999999999999999999`, `1e999`, `{id}abc`, `{id}.0`, `%20{id}` | Para o **não membro**: `404` **com corpo idêntico** ao do grupo inexistente, **em todos os 8**. Para o **membro**: `404` nos 5 valores que não viram um id, e `200` em `{id}abc`, `{id}.0` e `%20{id}` (o MySQL converte para o id real: é o **mesmo grupo** pedido por outro nome, sem bypass: o não membro continua em `404`) |
 | (as da TASK-477, já no §5) | corpo do `404` do `findOrFail` em 4 endpoints |
 
+### 7.4 Integração final com a `dev` e reconferência do estado final
+
+Enquanto os agents rodavam, o usuário mergeou na `dev` o **PR #226** (arquivamento da feature do Painel: move a pasta e reescreve caminhos em comentários de código e nos itens de backlog). Integrei de novo (`git merge origin/dev`): **sem conflito**; só o item 085 estava nas duas pontas (a `dev` trocou a linha `Origem`, eu a linha `Status`: hunks separados). Estado final: **0 atrás, 11 à frente** de `origin/dev`.
+
+Como a integração tocou comentários de backend, **refiz no estado final**: `php vendor/bin/pint --test` → `PASS` 176 arquivos; `php artisan test` → **610 passed (3758 asserções)**, 78,65 s; `git diff origin/dev --name-only` → os mesmos **8 arquivos** (2 de backend, 2 de `docs/backlog`, 4 da feature); `git status --short` → só `?? backend/.env.testing`. Ou seja, as conclusões do `pr-readiness-checker` (feitas no commit anterior) valem também para o commit final.
+
 **Pendências que não são de código, e o que está decidido ou não:**
 
 1. **Confirmação por escrito do usuário** de que validou o que precisa localmente. Sem ela, **o PR não é aberto nem enviado**, e a TASK-479 não fecha.
