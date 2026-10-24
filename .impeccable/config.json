@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "docs/manual/manual.html"
+        ],
+        "createdAt": "2026-10-23T04:08:31.090Z",
+        "reason": "assistente: estilo original da legenda do manual, reproduzido do MANUAL.pdf publicado; mudar quebraria a prova de reprodutibilidade da TASK-457 (paginas 1 a 3 identicas pixel a pixel). O usuario nao pediu redesenho"
+      }
+    ]
+  }
+}
