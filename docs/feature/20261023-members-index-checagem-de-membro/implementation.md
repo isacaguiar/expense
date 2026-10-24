@@ -24,6 +24,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-476 | Concluída (direto na branch da feature `backend/20261023-members-index-checagem-de-membro`, por ser a primeira task) | 2026-10-23 | Claude (IA), com aprovação do usuário (specify, plan e tasks aprovados) | Ver §4 | RED reproduziu o vazamento (`200` para não membro); conserto só no `index`; a mutação de remover `authorizeMembership` derruba só o teste do não membro; suíte 604 → **607** |
 | TASK-477 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-477`; só teste) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §5 | O teste de corpo idêntico nasceu verde; a mutação para `findOrFail` o derrubou e **confirmou a hipótese**: o `findOrFail` devolve `"No query results for model [App\\Models\\Group] N"` e o grupo alheio devolve `""`. Sonda em 4 endpoints: o padrão é **sistêmico**. Suíte 607 → **608** |
 | TASK-478 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-478`; só testes) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §6 | Duas travas, ambas nasceram verdes. **Três** mutações (duas do plano + uma extra para a asserção negativa), cada uma derrubando o teste certo. Suíte 608 → **610** |
+| TASK-479 | **Revisão feita; fecha depois da confirmação por escrito do usuário** (branch `backend/20261023-members-index-checagem-de-membro-TASK-479`; só docs) | 2026-10-23 | Claude (IA), com aprovação do usuário para iniciar | Ver §7 | `security-reviewer`: **aprovado**, sem achado alto ou médio, itens (a), (b) e (c) confirmados; 4 observações informativas. `pr-readiness-checker`: **pronto com pendências** (610 passed, Pint, 8 arquivos, sem segredo nem migração). Três sondas descartáveis minhas medem o que o revisor só leu |
 
 ## 3. Ambiente de teste (pré-condição da TASK-476)
 
@@ -109,3 +110,63 @@ Branch `backend/20261023-members-index-checagem-de-membro-TASK-478`, a partir de
 | **Suíte inteira** | `php artisan test` | **610 passed (3758 asserções)**, 70,15 s (608 + 2) |
 
 **Por que a Mutação C existe:** o plano pedia duas mutações, e as duas só provavam a parte *positiva* do teste do payload (campos que **devem** sair). A parte negativa (campos que **não** podem sair) só falharia se alguém passasse a expô-los, e nenhuma mutação do plano fazia isso. Sem a C, essa metade do teste poderia estar vazia sem ninguém notar (a mesma lição da TASK-474 da feature do Painel, cujo primeiro teste era vazio).
+
+## 7. Evidências da TASK-479 (revisão de segurança e checklist pré-PR)
+
+Branch `backend/20261023-members-index-checagem-de-membro-TASK-479`, a partir de `ba1eea7ff7`. **Só documentação**: nenhuma linha de produção ou de teste muda nesta task.
+
+**Antes de revisar, integrei a `dev` de novo** (a branch estava 2 commits atrás: o PR #228, de arquivamento da feature `editar-comprovante-depois-de-paga`; nenhum arquivo em comum comigo). Depois disso: **0 atrás, 8 à frente** de `origin/dev`, e `git diff origin/dev --name-only` lista só os 8 arquivos desta feature (2 de backend, 2 em `docs/backlog`, 4 em `docs/feature/20261023-members-index-checagem-de-membro`).
+
+### 7.1 `security-reviewer`: aprovado, sem achado alto ou médio
+
+Resultado **como veio**. Incidentes de execução, registrados porque limitam o que ele mediu: (1) a primeira execução caiu por **limite de uso (HTTP 429)** no meio do trabalho, e eu a **retomei** com `SendMessage` no mesmo agent (o trabalho parcial estava salvo); (2) uma sonda que ele tentou rodar foi **negada pelo classificador de permissões** ("Modify Shared Resources", porque criaria registros mesmo em transação), e ele **respeitou a negativa e não contornou**. Por isso o que ele afirma sobre IDs estranhos e sobre `500` de rotas sem método vinha de **leitura**, e eu medi depois (§7.3).
+
+**Os três itens pedidos pelo plano §5:**
+
+| Item | Veredito dele | Evidência dele |
+|---|---|---|
+| (a) nenhuma outra rota de `groups/{groupId}/members` ficou sem checagem | **Confirmado** | `routes/api.php:54-58`: `GET index` agora confere; `POST store` já conferia (`findOrFail` + `authorizeMembership` + `abort_if(deleted)`); `DELETE /{userId}` aponta para `destroy` que não existe (item 086) e não abre brecha (não lê dado, não consulta o grupo, está atrás de `jwt.auth`). Auditou também `ExpenseController` (grupo e despesa), `GroupExpenseReportController`, `GroupController`, `PixController`, `NotificationController` e `OverviewController`: todos conferem acesso |
+| (b) o `404` é indistinguível no `index` | **Confirmado, com a premissa `APP_DEBUG=false`** | Os dois casos viram `HttpException` `404` com mensagem vazia (`abort_if` linha 24 e `abort_unless` linha 100); `find()` não lança `ModelNotFoundException`; `Handler.php` do app não altera `404`; middlewares e limiter não dependem do grupo. O teste existente passou na execução dele |
+| (c) payload e `$hidden` | **Confirmado** | Mesma relação `belongsToMany`, mesmo `pivot`, mesmos atributos; `$hidden` (`User.php:36-41`) íntegro. `avatar_url` sai como URL assinada de 30 min, como antes |
+
+**As 4 observações dele, com a minha verificação e a decisão proposta:**
+
+| # | Sev. | O que diz | Minha verificação | Decisão proposta |
+|---|---|---|---|---|
+| 1 | Informativa | Canal de **tempo** teórico: inexistente faz 1 consulta (`find`), alheio 2 (`find` + `exists`), membro 3. Diferença sub-milissegundo, abaixo do jitter de rede. Endurecimento opcional: uma consulta só, `Group::whereHas('members', …)->find()` + `abort_if`, como `GroupController@index:19-21`; custo: abrir mão do helper (decisão D3 = A) | Conferi `GroupController.php:19-21`: o padrão existe. **Não medi tempo** (seria ruído) | **Não fazer agora** (recomendação): ganho teórico, e reabriria a D3 que o usuário aprovou. Fica registrado aqui. Se o usuário preferir, vira uma task própria |
+| 2 | Informativa | A igualdade dos corpos de `404` só vale com `APP_DEBUG=false`; com `true` o corpo traz `file`, `line`, `trace` | **Conferi:** `deploy-backend.yml:36` escreve `APP_DEBUG=false`; `config/app.php:45` tem padrão `false`; `ci-backend.yml:49` usa `true` (CI), por isso o teste fixa `config(['app.debug' => false])`. Não li o `.env` real de produção, só o que o deploy escreve | Nada a fazer. É a premissa que o plano §2 já registrou |
+| 3 | Informativa (pré-existente, fora do diff) | `DELETE /groups/{id}/members/{userId}` e `GET /api/expenses` apontam para métodos que não existem | **Medi** (§7.3): as duas dão `500 "Server Error"` (genérico, sem vazamento). `GET /api/expenses` **já é conhecido**: TASK-016 do `03-tasks.md`, `01-specify.md:58` e Constitution §2 item 4 (a TASK-016 pedia `index/show/update/destroy`; só o `index` ficou). A rota `DELETE` é o item 086 | **Nenhum item novo**: ambos já têm dono. Anoto na TASK-480 só como referência cruzada |
+| 4 | Informativa | O teste de corpo idêntico não compara **cabeçalhos**; um cabeçalho condicional futuro passaria | Hoje são idênticos. Comparar cabeçalhos exigiria excluir `Date` e `X-RateLimit-Remaining` (que mudam de uma chamada para a outra) | **Não fazer** (recomendação): frágil, e nenhum cabeçalho condicional existe. Fica registrado |
+
+### 7.2 `pr-readiness-checker`: pronto com pendências (pendências não são de código)
+
+Rodado na branch integrada (`ba1eea7ff7`). Comandos reais e resultados dele, que eu **reconferi no git** (HEAD, `0 8` atrás e à frente, 8 arquivos, +452 −8, IDs de backlog):
+
+| Item | Resultado |
+|---|---|
+| `php artisan test` | **610 passed (3758 asserções)**, 90,96 s (mais lento porque rodou o Pint em paralelo) |
+| `php vendor/bin/pint --test` | `PASS` 176 arquivos |
+| `npx tsc` e `vitest` | N/A: o diff não toca `frontend/` |
+| `git diff origin/dev --stat` | 8 arquivos; **0 migrações, 0 apagados**, nada fora do escopo |
+| Segredos nas linhas adicionadas | 21 linhas casaram, **todas benignas** (`tokenFor()`, `withToken()`, `$hidden`, menções por nome a `APP_KEY` e `JWT_SECRET` sem valor); dados de teste fictícios |
+| `.env.testing` | fora do diff, não rastreado (e **não** está no `.gitignore`: por isso `git add` só por caminho) |
+| Termos proibidos (`dd(`, `var_dump`, `console.log`, TODO…) | 0 ocorrências |
+| Log e `tasks.md` | uma linha e uma seção com comando e resultado reais para 476, 477 e 478; contagem 604 → 607 → 608 → 610 fecha |
+| Item 085 no backlog | "Promovido para TASK-476" no índice e no arquivo |
+| Commits | todos terminam com `Co-Authored-By`; os de conteúdo seguem `tipo(escopo): descrição (TASK-xxx)` |
+
+**Um erro meu que ele apontou, corrigido:** o critério da TASK-480 dizia "hoje o maior é 095", mas o backlog já tem **096 e 097** (da outra feature). O próximo livre é **098**, a conferir na hora (`tasks.md` ajustado).
+
+### 7.3 Três sondas minhas, descartáveis (nada versionado; arquivos apagados)
+
+| Sonda | Resultado |
+|---|---|
+| `GET /api/expenses` e `DELETE /api/groups/{id}/members/{userId}`, usuário membro, `app.debug = false` | **`500 "Server Error"`** nas duas: confirma a leitura do revisor e que não há vazamento no corpo |
+| `GET /api/groups/{x}/members` com `x` = `abc`, `-1`, `0`, `99999999999999999999`, `1e999`, `{id}abc`, `{id}.0`, `%20{id}` | Para o **não membro**: `404` **com corpo idêntico** ao do grupo inexistente, **em todos os 8**. Para o **membro**: `404` nos 5 valores que não viram um id, e `200` em `{id}abc`, `{id}.0` e `%20{id}` (o MySQL converte para o id real: é o **mesmo grupo** pedido por outro nome, sem bypass: o não membro continua em `404`) |
+| (as da TASK-477, já no §5) | corpo do `404` do `findOrFail` em 4 endpoints |
+
+**Pendências que não são de código, e o que está decidido ou não:**
+
+1. **Confirmação por escrito do usuário** de que validou o que precisa localmente. Sem ela, **o PR não é aberto nem enviado**, e a TASK-479 não fecha.
+2. **TASK-480** (backlog) ainda não feita.
+3. As observações #1 e #4 do revisor: recomendação é **não fazer**; aguardam o usuário.

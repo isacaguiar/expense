@@ -11,7 +11,7 @@ IDs a partir de TASK-476: o maior em qualquer lugar do projeto é TASK-475 (`ori
 | TASK-476 | Fazer `GroupMemberController::index` recusar com `404` quem não é membro do grupo, com testes PHPUnit | backend | plan.md §1 e §4 | nenhum | Concluída (`implementation.md` §4) |
 | TASK-477 | Travar por teste que o `404` de grupo inexistente e o de grupo alheio são indistinguíveis no `index`, e provar por mutação a hipótese do `findOrFail` | backend | plan.md §2 | nenhum | Concluída (`implementation.md` §5; hipótese **confirmada**) |
 | TASK-478 | Travar por teste o contrato de quem é membro: grupo excluído continua `200` e o payload mantém os campos | backend | plan.md §3 | nenhum | Concluída (`implementation.md` §6) |
-| TASK-479 | Revisar o diff com o `security-reviewer`, rodar o checklist pré-PR na branch integrada e registrar os resultados | backend | plan.md §5 | antes do merge | Pendente |
+| TASK-479 | Revisar o diff com o `security-reviewer`, rodar o checklist pré-PR na branch integrada e registrar os resultados | backend | plan.md §5 | antes do merge | **Revisão feita** (`implementation.md` §7: segurança aprovada, checklist pronto com pendências); **fecha** depois da confirmação por escrito do usuário |
 | TASK-480 | Registrar em `docs/backlog/` os achados tangenciais da feature | doc | plan.md §8 | nenhum | Pendente |
 
 Ordem: TASK-476 → 477 → 478 → 479 → 480. A 477 depende da 476 (mexem no **mesmo método**). A 478 vem depois, para travar o estado final. A 479 revisa o conjunto. A 480 fica por último porque o resultado da hipótese testada na 477 decide se um dos achados vira item de backlog. Se a revisão ou a validação apontar defeito, ele vira task nova, não amplia a task em andamento.
@@ -47,7 +47,7 @@ O ambiente de teste (contêiner `mysql-members-test` na 3309, `backend/.env.test
   - Descrição do PR lista as tasks 476 a 480 e referencia a feature e o item 085.
   - **O PR não é aberto nem enviado sem o usuário confirmar por escrito que validou** o que precisar validar localmente (preferência registrada). Merge em `dev` é gate humano.
 - **TASK-480** (branch de task):
-  - Um arquivo por achado em `docs/backlog/`, no formato do `README.md` (ID sequencial livre **conferido na hora** em `origin/dev` e nas branches locais; hoje o maior é 095; Origem, Criado em, Prioridade, Status, Descrição) e, quando houver decisão, `## Regras adotadas` e `## Decisões em aberto` em tabela, com recomendação e motivo:
+  - Um arquivo por achado em `docs/backlog/`, no formato do `README.md` (ID sequencial livre **conferido na hora** em `origin/dev` e nas branches locais; hoje o maior é 097 (096 e 097 vieram da feature de comprovante) e o próximo livre é 098; Origem, Criado em, Prioridade, Status, Descrição) e, quando houver decisão, `## Regras adotadas` e `## Decisões em aberto` em tabela, com recomendação e motivo:
     - **a corrigir só se a TASK-477 confirmar:** a mensagem do `404` do `findOrFail` entrega a existência de grupo em **todos** os endpoints de grupo (candidata à correção no handler global);
     - as **três cópias do helper de membro** (`Controller.php`, `GroupMemberController.php`, `GroupController.php`) (BAIXA);
     - a Constitution (§5 item 3) e o `01-specify.md` (§3.3) descrevem como abertos achados já resolvidos (BAIXA, doc; editar a Constitution é gate humano).
