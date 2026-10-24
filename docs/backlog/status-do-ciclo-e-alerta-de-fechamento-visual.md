@@ -1,7 +1,7 @@
 # Status do ciclo e alerta de fechamento: distinguir fechado, revisável e quitado, com mais destaque
 
 ID: 100
-Origem: docs/bugfix/20261024-alerta-ciclo-fechado-apos-pagamento.md (investigação do alerta incoerente; melhoria separada do bugfix por ser comportamento novo)
+Origem: docs/bugfix/concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md (investigação do alerta incoerente; melhoria separada do bugfix por ser comportamento novo)
 Criado em: 2026-10-24
 Prioridade: BAIXA
 Status: Aberto

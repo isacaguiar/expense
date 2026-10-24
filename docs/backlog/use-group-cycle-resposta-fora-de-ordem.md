@@ -1,7 +1,7 @@
 # `useGroupCycle` aceita resposta fora de ordem e mantém o resumo antigo durante o reload
 
 ID: 101
-Origem: docs/bugfix/20261024-alerta-ciclo-fechado-apos-pagamento.md (hipótese "dados desatualizados", verificada à parte da causa do relato)
+Origem: docs/bugfix/concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md (hipótese "dados desatualizados", verificada à parte da causa do relato)
 Criado em: 2026-10-24
 Prioridade: BAIXA
 Status: Aberto

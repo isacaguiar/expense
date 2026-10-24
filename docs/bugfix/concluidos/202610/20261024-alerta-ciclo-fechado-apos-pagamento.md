@@ -90,3 +90,9 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-10-24 | `cd backend && php artisan test --filter=CycleSummaryServiceTest` (MySQL isolado 3307) | 32 passed (125 assertions), com o teste novo `balances do not change when an expense is paid or a settlement is confirmed` |
 | 2026-10-24 | `cd backend && ./vendor/bin/pint --test tests/Feature/CycleSummaryServiceTest.php` | PASS |
 | 2026-10-24 | Validação manual na stack isolada (backend 8002, Vite 3002, MySQL 3307), 3 grupos de setembro/2026, login como o credor | Parcial (Ana confirmou, Bruno não): Home mostra "falta acertar: Bruno." com o saldo da Ana ainda "R$ 100,00 a pagar". Tudo confirmado com despesa pendente: sem aviso. Dívida circular (saldos R$ 0,00): "falta acertar: Bruno, Carla, Ana." Em Despesas, "Marcar como paga" recarrega na mesma competência (setembro) e o aviso segue só com o Bruno; depois da confirmação dele e do pagamento, setembro fica "Definitivo" sem aviso e o app passa a abrir em outubro. Console do navegador sem erros. |
+| 2026-10-24 | Desmontagem do ambiente de teste (após o "validado" do usuário) | Parados backend (8002) e Vite (3002); `backend/.env.testing` removido; container `mysql-expense-test` removido; aba do Chrome fechada; `git push -u origin fix/20261024-alerta-ciclo-fechado-apos-pagamento` e PR #234 aberto contra `dev` |
+
+## Resolução
+Concluído em: 2026-10-24
+Branch: fix/20261024-alerta-ciclo-fechado-apos-pagamento
+PR: https://github.com/isacaguiar/expense/pull/234
