@@ -21,6 +21,11 @@ Ordem e pré-condições (trilha **070 → 071 → 075 → 074**): depende de **
 
 Ações do usuário no Play Console: confirmar o tipo da conta (organização dispensa o teste fechado de 12 testadores por 14 dias; conta pessoal exige), criar o app, reservar o `applicationId` e conferir o registro na verificação de desenvolvedor Android (vale desde 30/09/2026, Brasil primeiro). Chaves e credenciais de publicação são do usuário, nunca em chat nem no repositório.
 
+## Nota (2026-10-22, feature `20261010-painel-financeiro-pessoal`)
+O Painel financeiro pessoal criou o contrato que a tela inicial do app precisa e o esboço de escopo v1 acima não cita: **`GET /api/me/overview`**. Devolve, por grupo do usuário e no ciclo em foco, o que ele deve e a quem, o que tem a receber e de quem, os itens de que participa e as flags de ação (`can_confirm`, `can_pay`, `can_unpay`), tudo calculado no servidor, com `cycle.cycles_ago` para o cliente nunca calcular ciclo. Limites: no máximo 50 grupos por chamada (`truncated: true` quando corta) e 30 chamadas por minuto por usuário. O mockup mobile "Meus grupos" (`assets/images/screen/movel.png`) já desenha "A pagar" e "A receber" por grupo, que é exatamente este payload.
+
+Proposta para o specify do app: tratar `/me/overview` como a **fonte da tela "Meus grupos"** (sem rateio nem ciclo no cliente) e como pré-condição na trilha, junto de 070, 071 e 075, **quando a feature do Painel estiver em produção**. Consumir também as ações que ele já usa (`pay`, `unpay`, `settlements/confirm`, com `descricao` opcional). Antes do app consumir, ver os itens 090 (`cycle_start` de conferência nas ações), 091 (contato do credor por `user_id`) e 093 (custo com muitos grupos), que mexem nesse contrato de forma aditiva.
+
 ## Por que importa
 É o objetivo do produto: disponibilizar o Shared Expense na Google Play. A ordem 070 → 071 → 075 → 074 foi escolhida para reduzir risco: o contrato de parcelas (070, 071) e o de pagamento por participante (075) são provados em produção pelo web antes de o app depender deles, e o app nasce sem nenhuma regra de dinheiro no cliente.
 

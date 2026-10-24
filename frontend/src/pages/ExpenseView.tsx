@@ -33,6 +33,9 @@ type ExpenseQuota = {
   date_expected: string;
   paid: boolean;
   payment_proof_url: string | null;
+  // Descrição do pagamento (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga);
+  // opcional: ausente em respostas/fixtures anteriores à feature.
+  payment_note?: string | null;
   // O cast `decimal:2` do backend serializa número como string ("292.40"),
   // mesmo caso de `total_value` abaixo — sempre passar por Number().
   value_quota: string | number;
@@ -63,6 +66,19 @@ const latestPaidProof = (quotas: ExpenseQuota[] | undefined): string | null => {
     .sort((a, b) => (a.date_expected < b.date_expected ? 1 : -1));
 
   return paidWithProof[0]?.payment_proof_url ?? null;
+};
+
+/**
+ * Mesmo critério de `latestPaidProof`, para a descrição do pagamento: a da
+ * quota paga mais recente que tem uma. Pode vir de uma quota diferente da do
+ * comprovante (uma foto numa parcela, só texto em outra).
+ */
+const latestPaidNote = (quotas: ExpenseQuota[] | undefined): string | null => {
+  const paidWithNote = (quotas ?? [])
+    .filter(q => q.paid && q.payment_note)
+    .sort((a, b) => (a.date_expected < b.date_expected ? 1 : -1));
+
+  return paidWithNote[0]?.payment_note ?? null;
 };
 
 /**
@@ -429,6 +445,7 @@ const ExpenseView: React.FC = () => {
     );
   } else {
     const proofUrl = latestPaidProof(expense.quotas);
+    const paymentNote = latestPaidNote(expense.quotas);
     // Só parcelada tem cronograma: IN_CASH tem uma quota só (o valor já está no
     // destaque do topo) e FIXED nasce sem Quota na competência — o `quotas[]`
     // dela é esparso (os meses em que alguém pagou), não um cronograma. A
@@ -513,7 +530,7 @@ const ExpenseView: React.FC = () => {
               no total da despesa — o valor por parcela já está em cada linha do
               cronograma acima, então nenhum número aparece duas vezes com base
               diferente. Ver specify.md §3.3. */}
-          <Box sx={{ mb: proofUrl ? 1 : 3 }}>
+          <Box sx={{ mb: proofUrl || paymentNote ? 1 : 3 }}>
             <Typography variant="body2" color="text.secondary" gutterBottom>
               Pagadores
             </Typography>
@@ -540,10 +557,16 @@ const ExpenseView: React.FC = () => {
           </Box>
 
           {proofUrl && (
-            <Typography sx={{ mb: 3 }}>
+            <Typography sx={{ mb: paymentNote ? 0.5 : 3 }}>
               <MuiLink href={proofUrl} target="_blank" rel="noreferrer">
                 Ver comprovante
               </MuiLink>
+            </Typography>
+          )}
+
+          {paymentNote && (
+            <Typography variant="body2" sx={{ mb: 3, overflowWrap: 'anywhere' }}>
+              Descrição do pagamento: {paymentNote}
             </Typography>
           )}
 

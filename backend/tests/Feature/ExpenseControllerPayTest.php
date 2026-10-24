@@ -13,11 +13,13 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\FailsToWriteProofs;
 use Tests\TestCase;
 
 class ExpenseControllerPayTest extends TestCase
 {
     use DatabaseTransactions;
+    use FailsToWriteProofs;
 
     protected function tearDown(): void
     {
@@ -774,5 +776,339 @@ class ExpenseControllerPayTest extends TestCase
         Log::shouldHaveReceived('warning')
             ->withArgs(fn ($message) => str_contains($message, 'falha'))
             ->atLeast()->once();
+    }
+
+    // --- Descrição do pagamento (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga) ---
+
+    /**
+     * Cria grupo, credor e uma despesa à vista com a quota de agosto/2026 ainda
+     * não paga (relógio fixado em 2026-08-19, dentro da competência da quota).
+     *
+     * @return array{0: User, 1: Group, 2: Expense}
+     */
+    private function unpaidCashExpense(): array
+    {
+        Carbon::setTestNow('2026-08-19');
+
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $group->members()->attach($creditor->id);
+
+        $expense = $this->createExpense($group, $creditor, ['date_payment' => '2026-08-10']);
+        $expense->payers()->attach($creditor->id);
+        $expense->quotas()->create(['date_expected' => '2026-08-10', 'number' => 1, 'paid' => false, 'value_quota' => 100]);
+
+        return [$creditor, $group, $expense];
+    }
+
+    public function test_pay_with_only_descricao_marks_paid_and_stores_the_note(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => 'Pago em dinheiro, recibo 123'])
+            ->assertStatus(200)
+            ->assertJsonPath('paid', true)
+            ->assertJsonPath('payment_note', 'Pago em dinheiro, recibo 123');
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertTrue((bool) $quota->paid);
+        $this->assertSame('Pago em dinheiro, recibo 123', $quota->payment_note);
+        $this->assertNull($quota->payment_proof_path);
+    }
+
+    public function test_pay_with_photo_and_descricao_stores_both(): void
+    {
+        Storage::fake('local');
+        [$creditor, $group, $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+                'descricao' => 'Pix agendado para sexta',
+            ])
+            ->assertStatus(200)
+            ->assertJsonPath('paid', true);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertStringStartsWith("comprovantes/{$group->id}/", $quota->payment_proof_path);
+        $this->assertSame('Pix agendado para sexta', $quota->payment_note);
+    }
+
+    public function test_pay_rejects_descricao_longer_than_500_characters(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => str_repeat('a', 501)])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('descricao');
+
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false, 'payment_note' => null]);
+    }
+
+    public function test_pay_accepts_descricao_of_exactly_500_characters_counting_chars_not_bytes(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $note = str_repeat('ã', 500);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => $note])
+            ->assertStatus(200);
+
+        $this->assertSame($note, Quota::where('expense_id', $expense->id)->firstOrFail()->payment_note);
+    }
+
+    public function test_pay_stores_a_whitespace_only_descricao_as_null(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => "   \t  "])
+            ->assertStatus(200)
+            ->assertJsonPath('paid', true);
+
+        $this->assertNull(Quota::where('expense_id', $expense->id)->firstOrFail()->payment_note);
+    }
+
+    public function test_pay_trims_the_descricao_before_storing(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => "  ref. 12345  \n"])
+            ->assertStatus(200);
+
+        $this->assertSame('ref. 12345', Quota::where('expense_id', $expense->id)->firstOrFail()->payment_note);
+    }
+
+    public function test_pay_without_body_still_succeeds_because_the_api_stays_permissive(): void
+    {
+        // Decisão D1 (specify §3.3): a regra "foto OU descrição" vale só na
+        // interface web. Tornar o servidor mais restritivo seria breaking
+        // (Constitution §4.1) — o app Flutter e qualquer outro cliente HTTP
+        // seguem podendo chamar /pay sem corpo. Não "conserte" este teste sem
+        // passar por uma decisão nova.
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay")
+            ->assertStatus(200)
+            ->assertJsonPath('paid', true)
+            ->assertJsonPath('payment_note', null);
+    }
+
+    public function test_repaying_without_descricao_keeps_the_existing_note(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+        $token = $this->tokenFor($creditor);
+
+        $this->withToken($token)
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => 'Pago em dinheiro'])
+            ->assertStatus(200);
+
+        $this->withToken($token)
+            ->postJson("/api/expenses/{$expense->id}/pay")
+            ->assertStatus(200);
+
+        $this->assertSame('Pago em dinheiro', Quota::where('expense_id', $expense->id)->firstOrFail()->payment_note);
+    }
+
+    public function test_pay_with_only_descricao_does_not_notify_by_whatsapp(): void
+    {
+        Http::fake();
+        $this->enableWhatsApp();
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+        $participant = $this->optedInUser('(11) 90000-0002');
+        $expense->payers()->attach($participant->id);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => 'Pago em dinheiro'])
+            ->assertStatus(200);
+
+        Http::assertNothingSent();
+    }
+
+    public function test_unpay_clears_the_note_together_with_the_proof(): void
+    {
+        Storage::fake('local');
+        [$creditor, $group, $expense] = $this->unpaidCashExpense();
+
+        // Quota já paga, com foto e nota gravadas direto no banco: o teste não
+        // depende do `pay()` para ter o que limpar.
+        $path = "comprovantes/{$group->id}/x.jpg";
+        Storage::disk('local')->put($path, 'img');
+        Quota::where('expense_id', $expense->id)->update([
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'payment_proof_path' => $path,
+            'payment_note' => 'Pix agendado para sexta',
+        ]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/unpay")
+            ->assertStatus(200)
+            ->assertJsonPath('payment_note', null)
+            ->assertJsonPath('payment_proof_url', null);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertNull($quota->payment_note);
+        $this->assertNull($quota->payment_proof_path);
+        Storage::disk('local')->assertMissing($path);
+    }
+
+    public function test_pay_stores_a_descricao_that_is_the_string_zero(): void
+    {
+        // `empty("0")` é verdadeiro em PHP: com o teste antigo a nota "0" era
+        // descartada e o pagamento seguia 200 sem nenhuma prova. Achado do
+        // security-reviewer na TASK-437.
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => '0'])
+            ->assertStatus(200)
+            ->assertJsonPath('payment_note', '0');
+
+        $this->assertSame('0', Quota::where('expense_id', $expense->id)->firstOrFail()->payment_note);
+    }
+
+    public function test_pay_rejects_descricao_sent_as_an_array_in_json(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => ['x']])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('descricao');
+
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false, 'payment_note' => null]);
+    }
+
+    public function test_pay_rejects_descricao_sent_as_an_array_in_multipart(): void
+    {
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", ['descricao' => ['x']], ['Accept' => 'application/json'])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('descricao');
+
+        $this->assertDatabaseHas('ex_quotas', ['expense_id' => $expense->id, 'paid' => false, 'payment_note' => null]);
+    }
+
+    // --- pay() repetido apaga a foto anterior (docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga, R9) ---
+
+    public function test_first_pay_with_a_photo_stores_exactly_one_file(): void
+    {
+        Storage::fake('local');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('primeira.jpg'),
+            ])->assertStatus(200);
+
+        $this->assertCount(1, Storage::disk('local')->allFiles());
+    }
+
+    public function test_repaying_with_a_new_photo_deletes_the_previous_photo(): void
+    {
+        Storage::fake('local');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+        $token = $this->tokenFor($creditor);
+
+        $this->withToken($token)
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('primeira.jpg'),
+            ])->assertStatus(200);
+
+        $first = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+        Storage::disk('local')->assertExists($first);
+
+        $this->withToken($token)
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('segunda.jpg'),
+            ])->assertStatus(200);
+
+        $second = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+
+        $this->assertNotSame($first, $second);
+        Storage::disk('local')->assertMissing($first);
+        Storage::disk('local')->assertExists($second);
+        $this->assertCount(1, Storage::disk('local')->allFiles());
+    }
+
+    public function test_repaying_without_a_photo_keeps_the_existing_photo(): void
+    {
+        Storage::fake('local');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+        $token = $this->tokenFor($creditor);
+
+        $this->withToken($token)
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('primeira.jpg'),
+            ])->assertStatus(200);
+
+        $first = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+
+        $this->withToken($token)
+            ->postJson("/api/expenses/{$expense->id}/pay", ['descricao' => 'só a descrição'])
+            ->assertStatus(200);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertSame($first, $quota->payment_proof_path);
+        Storage::disk('local')->assertExists($first);
+        $this->assertSame('só a descrição', $quota->payment_note);
+    }
+
+    public function test_repaying_with_a_new_photo_also_deletes_a_legacy_photo_from_the_public_disk(): void
+    {
+        // Comprovante anterior à convenção por grupo: path plano, disco `public`
+        // (ProofStorage::resolveDisk). A foto nova vai para o disco `local`.
+        Storage::fake('local');
+        Storage::fake('public');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        Storage::disk('public')->put('comprovantes/legado.jpg', 'img');
+        Quota::where('expense_id', $expense->id)->update([
+            'paid' => true,
+            'paid_at' => now(),
+            'paid_by' => $creditor->id,
+            'payment_proof_path' => 'comprovantes/legado.jpg',
+        ]);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('nova.jpg'),
+            ])->assertStatus(200);
+
+        Storage::disk('public')->assertMissing('comprovantes/legado.jpg');
+        $current = Quota::where('expense_id', $expense->id)->firstOrFail()->payment_proof_path;
+        $this->assertStringStartsWith('comprovantes/', $current);
+        Storage::disk('local')->assertExists($current);
+    }
+
+    // --- Disco que não grava (TASK-463, achado B3 da revisão de segurança) ---
+
+    public function test_pay_with_a_photo_that_the_disk_cannot_write_returns_500_and_leaves_the_quota_unpaid(): void
+    {
+        // Sem a guarda em `ProofStorage::store`, o `false` do disco ia direto
+        // para a coluna `payment_proof_path` e a quota ficava paga.
+        $this->failProofWrites();
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", [
+                'comprovante' => UploadedFile::fake()->image('comprovante.jpg'),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(500);
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertFalse((bool) $quota->paid);
+        $this->assertNull($quota->payment_proof_path);
+        $this->assertNull($quota->paid_at);
+        $this->assertCount(0, Storage::disk('local')->allFiles());
     }
 }

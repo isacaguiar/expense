@@ -62,6 +62,68 @@ describe('SimpleShellLayout', () => {
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
+  it('shows "Painel" as the first item, linking to /painel (TASK-422)', async () => {
+    render(
+      <MemoryRouter initialEntries={['/meus-grupos']}>
+        <Routes>
+          <Route element={<SimpleShellLayout />}>
+            <Route path="/meus-grupos" element={<div>Conteúdo Dashboard</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Conteúdo Dashboard');
+
+    const links = within(screen.getByRole('navigation')).getAllByRole('link');
+    expect(links[0]).toHaveTextContent('Painel');
+    expect(links[0]).toHaveAttribute('href', '/painel');
+  });
+
+  it('shows "Painel" in the header title when the route is /painel', async () => {
+    render(
+      <MemoryRouter initialEntries={['/painel']}>
+        <Routes>
+          <Route element={<SimpleShellLayout />}>
+            <Route path="/painel" element={<div>Conteúdo Painel</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Painel' })).toBeInTheDocument();
+  });
+
+  it('offers "Painel" in the mobile nav drawer too', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter initialEntries={['/meus-grupos']}>
+        <Routes>
+          <Route element={<SimpleShellLayout />}>
+            <Route path="/meus-grupos" element={<div>Conteúdo Dashboard</div>} />
+            <Route path="/painel" element={<div>Conteúdo Painel</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Conteúdo Dashboard');
+    await user.click(screen.getByRole('button', { name: 'Abrir menu de navegação' }));
+
+    const drawerPaper = await waitFor(() => {
+      const paper = document.querySelector('.MuiDrawer-paper');
+      expect(paper).not.toBeNull();
+      return paper as HTMLElement;
+    });
+    const drawerLink = within(drawerPaper).getByRole('link', { name: /Painel/ });
+    expect(drawerLink).toHaveAttribute('href', '/painel');
+
+    await user.click(drawerLink);
+
+    await screen.findByText('Conteúdo Painel');
+  });
+
   it('shows "Relatórios" as a top-level item linking to /reports', async () => {
     render(
       <MemoryRouter initialEntries={['/meus-grupos']}>

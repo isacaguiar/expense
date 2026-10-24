@@ -61,6 +61,8 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
       {settlements.map((settlement, index) => {
         const isDebtor = currentUserId !== null && currentUserId === settlement.from_user_id;
         const confirmed = Boolean(settlement.confirmedProofUrl);
+        // A nota só faz sentido junto de um comprovante enviado.
+        const note = confirmed ? settlement.confirmedNote : null;
 
         return (
           <Card key={`${settlement.from_user_id}-${settlement.to_user_id}-${index}`} variant="outlined" sx={{ p: 2 }}>
@@ -81,6 +83,19 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
 
               <UserAvatar name={nameFor(settlement.to_user_id)} avatarUrl={avatarFor(settlement.to_user_id)} />
             </Box>
+
+            {note && (
+              <Typography
+                data-testid="settlement-note"
+                variant="caption"
+                color="text.secondary"
+                display="block"
+                mt={1}
+                sx={{ overflowWrap: 'anywhere' }}
+              >
+                {note}
+              </Typography>
+            )}
 
             <Box display="flex" alignItems="center" justifyContent="flex-end" flexWrap="wrap" gap={1} mt={1.5}>
               {confirmed && (

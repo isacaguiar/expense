@@ -42,6 +42,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import UndoIcon from '@mui/icons-material/Undo';
+import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
@@ -52,6 +53,7 @@ import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import SummarySidePanel from '../components/SummarySidePanel';
 import CycleClosingAlert from '../components/CycleClosingAlert';
+import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import UserAvatar from '../components/UserAvatar';
@@ -129,7 +131,7 @@ const ExpenseManager: React.FC = () => {
   }, []);
 
   // Busca e filtros — client-side, sobre os dados da competência já carregada
-  // (docs/feature/20261010-filtros-credor-devedores-status-despesas/plan.md §2).
+  // (docs/feature/concluidas/202610/20261010-filtros-credor-devedores-status-despesas/plan.md §2).
   const [search, setSearch] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -169,14 +171,46 @@ const ExpenseManager: React.FC = () => {
     payError,
     paySuccess,
     unpaySuccess,
+    editSuccess,
     dismissPayError,
     dismissPaySuccess,
     dismissUnpaySuccess,
+    dismissEditSuccess,
     canPay,
     canUnpay,
+    canEditProof,
     handlePay,
-    handleUnpay
+    handleUnpay,
+    handleEditProof
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
+
+  // O ✓ "Marcar como paga" não paga direto: abre o popup de comprovante (foto
+  // ou descrição) — docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga.
+  const [payTargetId, setPayTargetId] = useState<number | null>(null);
+
+  const confirmPayment = ({ file, note }: PaymentProofValue) => {
+    if (payTargetId === null) return;
+    handlePay(payTargetId, file ? { proof: file, note } : { note });
+    setPayTargetId(null);
+  };
+
+  // "Editar comprovante" (despesa já paga): outro popup, com estado próprio —
+  // docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga. O id do alvo não é
+  // zerado ao fechar: o popup continua mostrando a mesma despesa durante a
+  // animação de saída. Quem manda abrir é `editProofOpen`.
+  const [editProofExpenseId, setEditProofExpenseId] = useState<number | null>(null);
+  const [editProofOpen, setEditProofOpen] = useState<boolean>(false);
+
+  const openEditProof = (expenseId: number) => {
+    setEditProofExpenseId(expenseId);
+    setEditProofOpen(true);
+  };
+
+  const confirmEditProof = ({ file, note, removeProof }: PaymentProofValue) => {
+    if (editProofExpenseId === null) return;
+    handleEditProof(editProofExpenseId, { proof: file ?? undefined, removeProof, note });
+    setEditProofOpen(false);
+  };
 
   // Fechar/reabrir a competência vigente
   const [closingMonth, setClosingMonth] = useState<boolean>(false);
@@ -272,6 +306,9 @@ const ExpenseManager: React.FC = () => {
   const removeExpense = expenses.find(exp => exp.id === removeExpenseId) ?? null;
   const deleteExpense = expenses.find(exp => exp.id === deleteExpenseId) ?? null;
   const detailExpense = expenses.find(exp => exp.id === detailExpenseId) ?? null;
+  // Sempre da lista atual (nunca um objeto guardado): depois de recarregar, o
+  // popup abre com a descrição e a foto que estão gravadas agora.
+  const editProofExpense = expenses.find(exp => exp.id === editProofExpenseId) ?? null;
 
   const closeDeleteDialog = () => {
     setDeleteExpenseId(null);
@@ -468,9 +505,21 @@ const ExpenseManager: React.FC = () => {
             aria-label="Marcar como paga"
             size="small"
             disabled={payingExpenseId === exp.id}
-            onClick={() => handlePay(exp.id)}
+            onClick={() => setPayTargetId(exp.id)}
           >
             <CheckCircleOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {canEditProof(exp) && (
+        <Tooltip title="Editar comprovante">
+          <IconButton
+            aria-label="Editar comprovante"
+            size="small"
+            disabled={payingExpenseId === exp.id}
+            onClick={() => openEditProof(exp.id)}
+          >
+            <AttachFileOutlinedIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       )}
@@ -829,6 +878,12 @@ const ExpenseManager: React.FC = () => {
                   Ver comprovante
                 </MuiLink>
               )}
+
+              {detailExpense.paid && detailExpense.paymentNote && (
+                <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+                  Descrição do pagamento: {detailExpense.paymentNote}
+                </Typography>
+              )}
             </Box>
           )}
         </DialogContent>
@@ -836,6 +891,31 @@ const ExpenseManager: React.FC = () => {
           <Button onClick={() => setDetailExpenseId(null)}>Fechar</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Popup de comprovante ao marcar como paga: foto OU descrição */}
+      <PaymentProofDialog
+        open={payTargetId !== null}
+        title="Confirmar pagamento"
+        description="Anexe uma foto do comprovante ou descreva o pagamento."
+        photoLabel="Selecionar foto"
+        requirePhoto={false}
+        onClose={() => setPayTargetId(null)}
+        onConfirm={confirmPayment}
+      />
+
+      {/* Popup de edição do comprovante de uma despesa já paga */}
+      <PaymentProofDialog
+        open={editProofOpen && editProofExpense !== null}
+        title="Editar comprovante"
+        description="Troque a foto, remova-a ou ajuste a descrição. O pagamento continua marcado como pago."
+        photoLabel={editProofExpense?.paymentProofUrl ? 'Trocar a foto' : 'Selecionar foto'}
+        requirePhoto={false}
+        confirmLabel="Salvar"
+        initialNote={editProofExpense?.paymentNote ?? ''}
+        currentProofUrl={editProofExpense?.paymentProofUrl ?? null}
+        onClose={() => setEditProofOpen(false)}
+        onConfirm={confirmEditProof}
+      />
 
       {/* Diálogo de remoção de despesa Fixa */}
       <Dialog
@@ -948,6 +1028,17 @@ const ExpenseManager: React.FC = () => {
       >
         <Alert onClose={dismissUnpaySuccess} severity="success" variant="filled">
           Pagamento desfeito.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={editSuccess}
+        autoHideDuration={4000}
+        onClose={dismissEditSuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissEditSuccess} severity="success" variant="filled">
+          Comprovante atualizado.
         </Alert>
       </Snackbar>
 

@@ -74,6 +74,16 @@ describe('GroupShellLayout', () => {
     expect(screen.getByRole('link', { name: /Relatórios/ })).toHaveAttribute('href', '/groups/1/reports');
   });
 
+  it('puts "Painel" first in the group sidebar, linking to /painel (TASK-422)', async () => {
+    renderShell('/groups/1/summary');
+
+    await screen.findByText('Conteúdo Resumo');
+
+    const links = within(screen.getByRole('navigation')).getAllByRole('link');
+    expect(links[0]).toHaveTextContent('Painel');
+    expect(links[0]).toHaveAttribute('href', '/painel');
+  });
+
   it('nests "Meus Grupos", "Minha Conta" and "Alterar Senha" under "Configurações" instead of linking straight to the group edit page', async () => {
     const user = userEvent.setup();
     renderShell('/groups/1/summary');
