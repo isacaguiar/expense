@@ -19,7 +19,7 @@ use Tests\TestCase;
  * `GET /api/me/overview`: a visão pessoal por grupo, no ciclo em foco de cada
  * um. A derivação em si é coberta por PersonalOverviewServiceTest; aqui ficam o
  * contrato HTTP, a autenticação, o escopo (grupos alheios) e a ausência de
- * efeitos colaterais. Ver docs/feature/20261010-painel-financeiro-pessoal/plan.md §1.1 e §1.4.
+ * efeitos colaterais. Ver docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §1.1 e §1.4.
  *
  * "Agora" é 15/10/2026 com `closing_day` nulo: setembro (1 ciclo atrás) já
  * fechou por data em 05/10 e outubro é o ciclo vigente.

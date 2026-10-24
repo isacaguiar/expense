@@ -18,7 +18,7 @@ type UseMyOverviewResult = {
  * mensagem. `reload` é chamado depois de cada ação (comprovante enviado,
  * despesa marcada ou desmarcada) para os números virem de novo do servidor.
  *
- * docs/feature/20261010-painel-financeiro-pessoal/plan.md §2
+ * docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §2
  */
 export function useMyOverview(): UseMyOverviewResult {
   const navigate = useNavigate();

@@ -12,7 +12,7 @@ import DespesasThemeScope from '../theme/DespesasThemeScope';
  * exibe, na ordem que o servidor mandou (com algo em aberto primeiro), e
  * recarrega depois de cada ação.
  *
- * docs/feature/20261010-painel-financeiro-pessoal/plan.md §2
+ * docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §2
  */
 const MyPanel: React.FC = () => {
   const { data, error, reload } = useMyOverview();

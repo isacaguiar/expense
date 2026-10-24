@@ -1,7 +1,7 @@
 # Custo do `focus()` com ciclos quitados e nunca selados: 2.352 consultas e 7,4 s com 50 grupos
 
 ID: 093
-Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §29 (achado R1 da revisão final, medido pelo autor) e §9; `backend/app/Services/CycleSummaryService.php` (`focus()`, `FOCUS_LOOKBACK = 12`), `backend/app/Services/PersonalOverviewService.php`
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §29 (achado R1 da revisão final, medido pelo autor) e §9; `backend/app/Services/CycleSummaryService.php` (`focus()`, `FOCUS_LOOKBACK = 12`), `backend/app/Services/PersonalOverviewService.php`
 Criado em: 2026-10-22
 Prioridade: MEDIA
 Status: Aberto

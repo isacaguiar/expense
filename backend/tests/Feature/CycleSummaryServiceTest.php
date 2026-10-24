@@ -19,7 +19,7 @@ use Tests\TestCase;
  * CycleSummaryService: o lado de **leitura** do cálculo de ciclo (entradas,
  * totais, saldos, liquidação par-a-par e checagem de quitação), extraído do
  * ExpenseController sem mudar regra. Ver
- * docs/feature/20261010-painel-financeiro-pessoal/plan.md §0.2.
+ * docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §0.2.
  *
  * O comportamento em si já é coberto, via HTTP e via reflexão no controller,
  * por ExpenseControllerSummaryTest e ExpenseControllerCycleIsFullySettledTest;

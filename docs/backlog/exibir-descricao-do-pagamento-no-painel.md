@@ -1,7 +1,7 @@
 # Exibir a descrição do pagamento (`payment_note`, `confirmed_note`) nas listas do Painel
 
 ID: 094
-Origem: docs/feature/20261010-painel-financeiro-pessoal/specify.md §5 (decisão D14, 2026-10-22) e implementation.md §29 e §30; `backend/app/Services/PersonalOverviewService.php`, `backend/tests/Feature/OverviewControllerTest.php`
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/specify.md §5 (decisão D14, 2026-10-22) e implementation.md §29 e §30; `backend/app/Services/PersonalOverviewService.php`, `backend/tests/Feature/OverviewControllerTest.php`
 Criado em: 2026-10-22
 Prioridade: BAIXA
 Status: Aberto

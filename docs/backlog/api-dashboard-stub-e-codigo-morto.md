@@ -1,7 +1,7 @@
 # `GET /api/dashboard` é um stub com nome enganoso, e há código morto de navegação
 
 ID: 089
-Origem: docs/feature/20261010-painel-financeiro-pessoal/plan.md §9 e tasks.md (TASK-425); `backend/app/Http/Controllers/AuthController.php` (`dashboard()`), `backend/routes/api.php:39`, `frontend/src/components/Navbar.tsx`, `frontend/src/layouts/InternalLayout.tsx`
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §9 e tasks.md (TASK-425); `backend/app/Http/Controllers/AuthController.php` (`dashboard()`), `backend/routes/api.php:39`, `frontend/src/components/Navbar.tsx`, `frontend/src/layouts/InternalLayout.tsx`
 Criado em: 2026-10-22
 Prioridade: BAIXA
 Status: Aberto

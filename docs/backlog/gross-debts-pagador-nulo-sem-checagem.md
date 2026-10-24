@@ -1,7 +1,7 @@
 # `grossDebts` usa o pagador da despesa sem checar nulo
 
 ID: 087
-Origem: docs/feature/20261010-painel-financeiro-pessoal/plan.md §9 (achado tangencial) e tasks.md (TASK-425); `backend/app/Http/Controllers/ExpenseController.php` (`grossDebts()`, linhas 934-935 em 2026-10-22)
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §9 (achado tangencial) e tasks.md (TASK-425); `backend/app/Http/Controllers/ExpenseController.php` (`grossDebts()`, linhas 934-935 em 2026-10-22)
 Criado em: 2026-10-22
 Prioridade: BAIXA
 Status: Aberto

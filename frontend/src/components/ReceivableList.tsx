@@ -17,7 +17,7 @@ type ReceivableListProps = {
  * acerto líquido par a par) e se já mandou o comprovante. Só acompanhamento:
  * quem age é o devedor, do lado dele. O `SettlementList` de Resumo/Relatórios
  * não mostra confirmação e fica como está
- * (docs/feature/20261010-painel-financeiro-pessoal/plan.md §2).
+ * (docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §2).
  */
 const ReceivableList: React.FC<ReceivableListProps> = ({ receivables }) => {
   if (receivables.length === 0) {

@@ -17,7 +17,7 @@ use Tests\TestCase;
  * PersonalOverviewService::forUser(): a visão pessoal por grupo (o que o
  * usuário deve, o que tem a receber, os itens dele e as flags de ação), sobre o
  * ciclo em foco de cada grupo. Ver
- * docs/feature/20261010-painel-financeiro-pessoal/plan.md §1.3.
+ * docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §1.3.
  *
  * "Agora" é 15/10/2026 com `closing_day` nulo (mês calendário): outubro é o
  * ciclo vigente e setembro (1 ciclo atrás) já fechou por data em 05/10.

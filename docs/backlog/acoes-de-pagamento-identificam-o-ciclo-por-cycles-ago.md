@@ -1,7 +1,7 @@
 # Ações de pagamento identificam o ciclo por `cycles_ago` (relativo a "agora"), sem teto nem conferência
 
 ID: 090
-Origem: docs/feature/20261010-painel-financeiro-pessoal/implementation.md §8 (achado S5 da revisão de segurança da TASK-414) e §29; `backend/app/Http/Controllers/ExpenseController.php` (`pay`, `unpay`, `confirmSettlement`, `summary`, `grossDebts`)
+Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §8 (achado S5 da revisão de segurança da TASK-414) e §29; `backend/app/Http/Controllers/ExpenseController.php` (`pay`, `unpay`, `confirmSettlement`, `summary`, `grossDebts`)
 Criado em: 2026-10-22
 Prioridade: BAIXA
 Status: Aberto
