@@ -2,7 +2,7 @@
 
 > Como uma task de `03-tasks.md` vira código. Aplica-se a trabalho humano e a trabalho de IA da mesma forma.
 
-Versão: 1.3 · Última atualização: 2026-10-24
+Versão: 1.4 · Última atualização: 2026-10-24
 
 ## 1. Fluxo de execução de uma task
 
@@ -30,10 +30,10 @@ Versão: 1.3 · Última atualização: 2026-10-24
    git fetch origin
    git tag -a vX.Y.Z <sha-do-merge-commit-em-origin/main> -m "vX.Y.Z - <PRs/features incluídos>"
    git push origin vX.Y.Z          # só essa tag, nunca --tags
-   gh release create vX.Y.Z --verify-tag --generate-notes
+   gh release create vX.Y.Z --repo isacaguiar/expense --verify-tag --generate-notes
    ```
 
-   A tag não dispara deploy. Rollback de código: `workflow_dispatch` com o ref da tag; migrations não revertem.
+   O `--repo` é necessário porque o checkout tem dois remotos (`origin` e `composer`) e o `gh` não escolhe um padrão sozinho; alternativa: rodar uma vez `gh repo set-default isacaguiar/expense`. A tag não dispara deploy. Rollback de código: `workflow_dispatch` com o ref da tag; migrations não revertem.
 
 ## 2. O que muda quando quem executa é uma IA
 

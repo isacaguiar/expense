@@ -186,6 +186,33 @@ class CycleSummaryServiceTest extends TestCase
         $this->assertNotNull($settlements[1]['confirmedProofUrl']);
     }
 
+    /**
+     * O aviso de fechamento do frontend se apoia neste invariante
+     * (docs/bugfix/20261024-alerta-ciclo-fechado-apos-pagamento): `balances` é o
+     * rateio líquido da competência e não reage a pagamento de despesa nem a
+     * confirmação de acerto. Quem diz se ainda falta acertar é o `confirmedAt`
+     * de cada par de `settlements`.
+     */
+    public function test_balances_do_not_change_when_an_expense_is_paid_or_a_settlement_is_confirmed(): void
+    {
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $expense = $this->expenseBetween($group, $creditor, [$debtor], 200, false);
+
+        $before = $this->service()->compute($group, $this->start, $this->end);
+
+        $expense->quotas()->update(['paid' => true]);
+        $this->confirm($group, $debtor, $creditor, 100);
+
+        $after = $this->service()->compute($group, $this->start, $this->end);
+
+        $this->assertEquals($before['balances'], $after['balances']);
+        $this->assertEquals(-100.0, collect($after['balances'])->pluck('balance', 'user_id')[$debtor->id]);
+
+        $settlements = $this->service()->withConfirmations($group->id, $this->start, $after['settlements']);
+        $this->assertCount(1, $settlements);
+        $this->assertNotNull($settlements[0]['confirmedAt']);
+    }
+
     public function test_summary_is_not_settled_while_something_is_pending(): void
     {
         $summary = ['totals' => ['total' => 200.0, 'paid' => 0.0, 'pending' => 200.0], 'settlements' => []];

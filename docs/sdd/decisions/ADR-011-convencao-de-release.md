@@ -39,8 +39,10 @@ em produção", não "isto pretendemos subir".
 **4. Tag anotada.** Sempre `git tag -a`, com mensagem listando os PRs/features incluídos. Sem
 assinatura GPG por ora.
 
-**5. Notas de release no GitHub Release.** `gh release create vX.Y.Z --verify-tag
---generate-notes`. Não há `CHANGELOG.md`.
+**5. Notas de release no GitHub Release.** `gh release create vX.Y.Z --repo isacaguiar/expense
+--verify-tag --generate-notes`. Não há `CHANGELOG.md`. O `--repo` é necessário porque o checkout
+tem dois remotos (`origin` e `composer`) e o `gh` não escolhe um padrão; descoberto no release
+`v1.1.0`, em 2026-10-24.
 
 **6. Gate humano.** Criar e publicar tag de release em `main` exige aprovação humana
 (`00-constitution.md` §5.2). A IA prepara os comandos e para antes de `git push`.

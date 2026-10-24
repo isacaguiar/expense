@@ -17,6 +17,24 @@ const startOfToday = (): Date => {
 const formatDayMonth = (dateStr: string): string =>
   parseLocalDate(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
+/**
+ * Quem ainda deve um acerto: devedor de algum par de `settlements` sem
+ * confirmação do comprovante (`confirmedAt`) — o mesmo critério par-a-par com
+ * que o backend decide se o ciclo está quitado (`CycleSummaryService::
+ * summaryIsFullySettled`). Não dá para usar `balances`: é o rateio líquido da
+ * competência e não muda quando uma despesa é paga ou um acerto é confirmado
+ * (e é 0 numa dívida circular, ou positivo para quem ainda deve a um terceiro).
+ * O nome vem de `balances`; cada devedor aparece uma vez, na ordem dos acertos.
+ */
+const pendingDebtorNames = ({ balances, settlements }: Summary): string[] => {
+  const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
+  const debtorIds = new Set(
+    settlements.filter(settlement => !settlement.confirmedAt).map(settlement => settlement.from_user_id)
+  );
+
+  return [...debtorIds].map(userId => nameById.get(userId) ?? 'Desconhecido');
+};
+
 type CycleClosingAlertProps = { summary: Summary };
 
 /**
@@ -27,12 +45,14 @@ type CycleClosingAlertProps = { summary: Summary };
  *   fronteira (`cycle.end`) mas não chegou à data de corte (`cycle.closes_at`,
  *   = fronteira + carência de 5 dias) — janela em que o ciclo segue editável.
  * - PÓS-fechamento: depois que o ciclo fechou (`closed`/`closed_manually`),
- *   enquanto não está selado e ainda há devedor.
+ *   enquanto não está selado e ainda há acerto sem confirmação. Com todos os
+ *   acertos confirmados e só despesas por marcar como pagas, o aviso some: não
+ *   há mais devedor a cobrar (docs/bugfix/20261024-alerta-ciclo-fechado-apos-pagamento).
  *
  * As duas condições são disjuntas por `status`; fora delas não renderiza nada.
  */
 const CycleClosingAlert: React.FC<CycleClosingAlertProps> = ({ summary }) => {
-  const { cycle, balances } = summary;
+  const { cycle } = summary;
 
   const today = startOfToday().getTime();
   const end = cycle.end ? parseLocalDate(cycle.end).getTime() : NaN;
@@ -48,7 +68,7 @@ const CycleClosingAlert: React.FC<CycleClosingAlertProps> = ({ summary }) => {
   }
 
   const cycleClosed = cycle.status === 'closed' || cycle.status === 'closed_manually';
-  const debtors = balances.filter(balance => balance.balance < 0).map(balance => balance.name);
+  const debtors = pendingDebtorNames(summary);
 
   if (cycleClosed && !cycle.settled && debtors.length > 0) {
     return (

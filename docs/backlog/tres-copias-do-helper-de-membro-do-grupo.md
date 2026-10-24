@@ -1,7 +1,7 @@
 # Três cópias do helper que confere se o usuário é membro do grupo
 
 ID: 099
-Origem: docs/feature/20261023-members-index-checagem-de-membro/specify.md §2.2 e decisão D3 (fora de escopo); `backend/app/Http/Controllers/Controller.php:17`, `GroupController.php:136`, `GroupMemberController.php:96`
+Origem: docs/feature/concluidas/202610/20261023-members-index-checagem-de-membro/specify.md §2.2 e decisão D3 (fora de escopo); `backend/app/Http/Controllers/Controller.php:17`, `GroupController.php:136`, `GroupMemberController.php:96`
 Criado em: 2026-10-23
 Prioridade: BAIXA
 Status: Aberto
