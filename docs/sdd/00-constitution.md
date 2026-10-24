@@ -2,7 +2,7 @@
 
 > Este documento define as regras que **todo** trabalho no projeto (humano ou IA) deve seguir. Ele é o topo da hierarquia do SDD: Specify, Plan, Tasks e Implementation não podem contradizê-lo. Mudar a Constitution é sempre um **gate humano** (ver bloco Governança).
 
-Versão: 1.6 · Última atualização: 2026-10-08
+Versão: 1.7 · Última atualização: 2026-10-24
 
 ---
 
@@ -58,6 +58,8 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 
 1.1.1. **Arquivamento de feature concluída** (`ADR-009-arquivar-concluidos-por-anomes.md`): quando o PR único da feature é mergeado em `dev`, a pasta `docs/feature/<AAAAMMDD>-<slug>/` é movida para `docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/`, onde `<AAAAMM>` são os 6 primeiros dígitos do nome da pasta (mês de criação). `docs/feature/` na raiz passa a conter só features em andamento; o estado "concluída" é posicional, sem índice. A branch não muda de nome (derivada do nome na criação; o move é pós-merge).
 
+1.1.2. **Release e tag de versão** (`ADR-011-convencao-de-release.md`): cada promoção `dev` → `main` recebe uma tag anotada SemVer `vMAJOR.MINOR.PATCH` (uma só para API, web e site; `app-vX.Y.Z` fica reservado ao app Flutter). MINOR = promoção com feature nova; PATCH = só bugfix; MAJOR = quebra de contrato da API (§4.1) ou migration destrutiva aprovada. O PR de promoção declara a versão proposta; a tag é criada no merge commit de `main` **depois** do merge e do deploy verde, e as notas vão no GitHub Release (`gh release create --generate-notes`). Criar e publicar a tag é gate humano (§5.2). `v1.0.0` é a baseline retroativa (`01dcb406e7`, estado de produção antes da primeira promoção sob esta regra). Passo a passo: `04-implementation.md` §1.9.
+
 1.2. **Fluxo de correção de bug (BFF)**: correção de defeito em comportamento já existente pode seguir o **Bug-Fix Flow** — artefato único em `docs/bugfix/<AAAAMMDD>-<slug>.md`, branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` — em vez das 5 fases e da pasta `docs/feature/`, **desde que** a Triagem de `docs/bugfix/README.md` não marque nenhum gatilho de escalação. Marcou qualquer um → segue o fluxo SDD completo (`docs/feature/`). Gatilhos e critério: `docs/bugfix/README.md`; o porquê do fluxo: `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`. Ao concluir, o arquivo vai para `docs/bugfix/concluidos/<AAAAMM>/<AAAAMMDD>-<slug>.md` (`<AAAAMM>` = mês de criação — `ADR-009`, `docs/bugfix/README.md` §Fechamento).
 
 1.3. **Condição de parada do loop de execução**: consolidada, com o desenho do loop, em `agent-architecture.md` §3.
@@ -79,6 +81,7 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 | Merge de PR de bugfix em `dev` | ❌ | ✅ (revisão humana do PR) |
 | Abrir PR de promoção (`dev` → `main`), após validação/teste em `dev` | ✅ | — |
 | Merge em `main` (produção) | ❌ | ✅ (revisão humana do PR de promoção) |
+| Criar e publicar tag de release (`vX.Y.Z`) em `main`, depois do merge de promoção | ❌ | ✅ |
 | Deploy (workflow `deploy-backend.yml`) | ❌ | ✅ — na prática, o próprio merge em `main` já dispara `deploy-backend.yml`; não fazer merge em `main` sem essa consequência estar clara |
 | Rotacionar, expor ou remover segredo/credencial | ❌ | ✅ |
 | Apagar dado definitivamente (hard delete) | ❌ | ✅ |
