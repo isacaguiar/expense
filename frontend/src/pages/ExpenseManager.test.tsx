@@ -2246,3 +2246,98 @@ describe('ExpenseManager - viewport estreito (cartões)', () => {
     expect(body).toEqual({ cycles_ago: 0, descricao: 'Pago no cartão' });
   });
 });
+
+describe('ExpenseManager - aviso de fechamento depois de pagar em ciclo fechado', () => {
+  // docs/bugfix/20261024-alerta-ciclo-fechado-apos-pagamento: o aviso lista quem tem acerto sem
+  // confirmação e acompanha o resumo recarregado da competência que está na tela.
+  const unpaid: SummaryExpenseFixture = {
+    id: 70,
+    description: 'Aluguel',
+    value: 300,
+    date: '2026-07-10',
+    payerName: 'Carla',
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+  };
+  const closedCycle = { start: '2026-07-01', end: '2026-07-31', closes_at: '2026-08-05', status: 'closed' };
+  const balances = [
+    { user_id: 1, name: 'Ana', balance: -100 },
+    { user_id: 2, name: 'Bruno', balance: -100 },
+    { user_id: 3, name: 'Carla', balance: 200 },
+  ];
+  const settlement = (from: number, confirmed: boolean) => ({
+    from_user_id: from,
+    to_user_id: 3,
+    amount: 100,
+    confirmedProofUrl: confirmed ? 'https://example.test/comprovante.jpg' : null,
+    confirmedAt: confirmed ? '2026-10-20T10:00:00-03:00' : null,
+  });
+
+  const summaryCalls = () =>
+    vi.mocked(axios.get).mock.calls.filter(([url]) => String(url).includes('/expenses/summary'));
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+  });
+
+  it('refetches the same cycle after paying and drops the debtor confirmed in the new summary', async () => {
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/focus-cycle')) {
+        return Promise.resolve({ data: { cycles_ago: 1 } });
+      }
+      if (url.includes('/expenses/summary')) {
+        // 1ª leitura: Ana e Bruno devem; na 2ª (depois do pagamento) o acerto da Ana já está confirmado.
+        const settlements =
+          summaryCalls().length === 1
+            ? [settlement(1, false), settlement(2, false)]
+            : [settlement(1, true), settlement(2, false)];
+        return Promise.resolve({
+          data: summaryResponse([unpaid], closedCycle, { balances, settlements, totals: { total: 300, paid: 0, pending: 300 } }),
+        });
+      }
+      if (url.includes('/api/me')) {
+        return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+    const user = userEvent.setup();
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText(/falta acertar: Ana, Bruno\./)).toBeInTheDocument();
+
+    await payThroughDialog(user);
+
+    await waitFor(() => expect(screen.getByText(/falta acertar: Bruno\./)).toBeInTheDocument());
+    expect(screen.queryByText(/falta acertar: Ana/)).not.toBeInTheDocument();
+
+    // O pagamento e o refetch miram a competência navegada (cycles_ago 1), não a vigente.
+    expect((vi.mocked(axios.post).mock.calls[0][1] as { cycles_ago: number }).cycles_ago).toBe(1);
+    const calls = summaryCalls();
+    expect(calls).toHaveLength(2);
+    expect((calls[1][1] as { params: { cycles_ago: number } }).params.cycles_ago).toBe(1);
+  });
+
+  it('shows no closing alert when every settlement is confirmed, even with expenses still pending', async () => {
+    mockGetResponses([unpaid], closedCycle, {
+      balances,
+      settlements: [settlement(1, true), settlement(2, true)],
+      totals: { total: 300, paid: 0, pending: 300 },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+    expect(screen.queryByText(/falta acertar/)).not.toBeInTheDocument();
+  });
+});
