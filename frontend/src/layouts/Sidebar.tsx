@@ -15,6 +15,7 @@ export default function Sidebar({ items }: SidebarProps) {
   return (
     <Box
       component="nav"
+      className="no-print"
       sx={{
         width: 280,
         flexShrink: 0,
