@@ -44,6 +44,7 @@ export default function GroupHeader({
   return (
     <Box
       component="header"
+      className="no-print"
       sx={{
         display: 'flex',
         alignItems: 'center',
