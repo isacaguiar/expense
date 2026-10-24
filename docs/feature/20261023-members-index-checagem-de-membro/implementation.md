@@ -25,6 +25,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-477 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-477`; só teste) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §5 | O teste de corpo idêntico nasceu verde; a mutação para `findOrFail` o derrubou e **confirmou a hipótese**: o `findOrFail` devolve `"No query results for model [App\\Models\\Group] N"` e o grupo alheio devolve `""`. Sonda em 4 endpoints: o padrão é **sistêmico**. Suíte 607 → **608** |
 | TASK-478 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-478`; só testes) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §6 | Duas travas, ambas nasceram verdes. **Três** mutações (duas do plano + uma extra para a asserção negativa), cada uma derrubando o teste certo. Suíte 608 → **610** |
 | TASK-479 | **Concluída** (revisão feita; **validação local confirmada por escrito pelo usuário em 2026-10-23**, §8) (branch `backend/20261023-members-index-checagem-de-membro-TASK-479`; só docs) | 2026-10-23 | Claude (IA), com aprovação do usuário para iniciar | Ver §7 | `security-reviewer`: **aprovado**, sem achado alto ou médio, itens (a), (b) e (c) confirmados; 4 observações informativas. `pr-readiness-checker`: **pronto com pendências** (610 passed, Pint, 8 arquivos, sem segredo nem migração). Três sondas descartáveis minhas medem o que o revisor só leu |
+| TASK-480 | Concluída (branch `docs/20261023-members-index-checagem-de-membro-TASK-480`; só docs) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §9 | 2 itens novos no backlog (**098**, 404 do `findOrFail`; **099**, três cópias do helper) e uma nota no **059** (Constitution e `01-specify` desatualizados). Um erro meu corrigido: nem todo endpoint usa `findOrFail` (os relatórios têm mensagem própria) |
 
 ## 3. Ambiente de teste (pré-condição da TASK-476)
 
@@ -197,3 +198,30 @@ Como a integração tocou comentários de backend, **refiz no estado final**: `p
 | Aba do Chrome | `tabs_close_mcp` | **Não consegui fechar**: a aba já não pertencia ao grupo de abas desta sessão. É só uma aba local de uma stack que já caiu |
 
 **Mantidos até o fim da feature:** o contêiner `mysql-members-test` (o PHPUnit usa o `ex-db` dele) e o `backend/.env.testing` (não rastreado; **nunca** `git add -A`). Ao fim (depois do merge do PR): `docker rm -f mysql-members-test` e apagar o `.env.testing`.
+
+## 9. Evidências da TASK-480 (achados tangenciais no backlog)
+
+Branch `docs/20261023-members-index-checagem-de-membro-TASK-480`, a partir de `45c7309455`. **Só documentação.**
+
+| Achado | Onde ficou | Prioridade |
+|---|---|---|
+| O corpo do `404` de `Group::findOrFail` confirma a existência do grupo e vaza o nome da classe interna (medido em 4 endpoints, TASK-477); variante com mensagem escrita à mão nos relatórios | **098** `corpo-do-404-do-find-or-fail-vaza-existencia-do-grupo.md` | MEDIA |
+| Três cópias do helper de membro (`Controller.php:17`, `GroupController.php:136`, `GroupMemberController.php:96`) | **099** `tres-copias-do-helper-de-membro-do-grupo.md` | BAIXA |
+| Constitution (§5 item 3 e §2 item 4) e `01-specify.md` (§3.3 e §3.4) descrevem como abertos achados já resolvidos | **nota no 059** (já trata do mesmo documento e da mesma correção: a linha 92 da Constitution) | BAIXA |
+| `GET /api/expenses` sem `index` (`500 "Server Error"` medido) | **nenhum item novo**: já é a TASK-016 do `03-tasks.md` e o `01-specify.md:58`; só citado na nota do 059 | — |
+| Observações #1 (tempo) e #4 (cabeçalhos no teste) do `security-reviewer` | **não viram item** (decisão do usuário em 2026-10-23: ficam só no log, §7.1) | — |
+
+Cada item segue o formato do `README.md` (ID, Origem, Criado em, Prioridade, Status, Descrição, Por que importa, Tipo) e, onde há decisão, `## Regras adotadas` e `## Decisões em aberto` em tabela, com opções, recomendação e motivo.
+
+| Verificação | Como | Resultado |
+|---|---|---|
+| Próximo ID livre, **conferido na hora** | `git fetch`; `git grep "^ID:"` em `origin/dev`; branches locais | Maior em `origin/dev` é **097**; nenhuma outra branch com backlog novo. Usei **098 e 099** |
+| Duplicidade | Busca no backlog por `findOrFail`, `ModelNotFound`, `No query results`, `enumera` | Só 085, 091 e 045 tocam no assunto de lado; nenhum cobre o corpo do `404`. Por isso o 098 é item novo |
+| Links do índice, IDs e arquivos sem linha | script em PowerShell sobre `docs/backlog/` | **62 links, 0 quebrados; 0 IDs duplicados; 0 arquivos sem linha no índice** |
+| Afirmações do 098 e da nota do 059 | `grep -n` e leitura no código de hoje (linhas de `findOrFail`, de `show/update/destroy`, rota do Pix, testes de não membro) e as sondas da TASK-477 e da TASK-479 | Conferidas; o que não medi está marcado como "inferido por leitura" no próprio item |
+
+**Dois erros meus, pegos ao conferir:**
+1. **O critério da TASK-480 previa 3 itens e saíram 2 mais uma nota.** O terceiro (Constitution e `01-specify` desatualizados) é o mesmo documento e a mesma correção do **059**, já existente; abrir outro item duplicaria. Estendi o 059 e achei **5** trechos desatualizados, não os 2 que eu tinha em mente (inclui `/pix/generate` fora do `jwt.auth` e o §2 item 4).
+2. **O 098 dizia que todo endpoint de grupo usa `findOrFail`.** Ao ler o `GroupExpenseReportController` vi que ele usa `Group::find` e devolve `404 {"message": "Grupo não encontrado"}` para grupo inexistente (contra `""` para alheio): também distinguíveis, por uma mensagem escrita à mão, e a correção no **handler global não os cobre**. Ajustei a descrição e a decisão D1 do 098. (A frase do `plan.md` §8, "todos usam `findOrFail`", ficou imprecisa pelo mesmo motivo; o plano é histórico e não foi reescrito.)
+
+**Observação fora do escopo, só para constar:** o item **097**, da outra feature, cita `cycles_ago` sem teto (`summary` dá `500`), o que se sobrepõe a parte do item **090** que escrevi na feature do Painel. Não tratei aqui.
