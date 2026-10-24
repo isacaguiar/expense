@@ -43,7 +43,7 @@ Tipo sugerido: backend
 
 ## Resolução
 Concluído em: 2026-10-23
-Feature: docs/feature/20261023-members-index-checagem-de-membro/   (migra para `docs/feature/concluidas/202610/20261023-members-index-checagem-de-membro/` quando o PR mergear em `dev`: `ADR-009`)
+Feature: docs/feature/concluidas/202610/20261023-members-index-checagem-de-membro/   (arquivada após o merge do PR #229 em `dev`: `ADR-009`)
 Tasks: TASK-476 a TASK-480
 PRs: https://github.com/isacaguiar/expense/pull/229
 
