@@ -240,3 +240,10 @@ Feito **depois** de integrar as 5 tasks, com a `dev` conferida de novo (`git fet
 | Segredos nas linhas adicionadas | `grep` por `JWT_SECRET=`, `APP_KEY=`, `DB_PASSWORD=`, chaves privadas, `ghp_`, `AKIA`, `sk-`, JWT | Nenhum |
 | Termos proibidos (`dd(`, `var_dump(`, `dump(`, `console.log`, TODO, FIXME) no código | `grep` nas linhas adicionadas de `backend/` | Nenhum |
 | Árvore | `git status --short` | Só `?? backend/.env.testing` (não rastreado; **nunca** `git add -A`) |
+
+## 11. PR aberto e fechamento do item 085 (2026-10-23)
+
+- **Push** só da branch da feature, com o nome explícito: `git push -u origin backend/20261023-members-index-checagem-de-membro` (o upstream herdado `origin/dev` ficou para trás). **PR único contra `dev`: [#229](https://github.com/isacaguiar/expense/pull/229).** Merge e promoção `dev` → `main` são gates humanos; não fiz nenhum.
+- **Fechamento do item de backlog** (`/promover-backlog`, passo 6): o item 085 ganhou a seção `## Resolução` (concluído em 2026-10-23, TASK-476 a TASK-480, link do PR e a divergência da D1), foi movido por `git mv` para `docs/backlog/concluidos/` e trocou de tabela no `README.md` (sai dos abertos, entra no topo dos concluídos). A referência do `specify.md` ao arquivo passou para o caminho novo.
+- **Verificação:** 98 links no índice, **0 quebrados**; 0 IDs duplicados (abertos e concluídos); 0 arquivos sem linha no índice.
+- **Depois do merge do PR:** mover `docs/feature/20261023-members-index-checagem-de-membro/` para `docs/feature/concluidas/202610/` (ADR-009), em PR próprio, e limpar o ambiente (`docker rm -f mysql-members-test`, apagar o `backend/.env.testing`).

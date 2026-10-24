@@ -40,3 +40,15 @@ A fechar na Triagem/Specify.
 Relacionado: 086 (inclusão de membro sem consentimento e sem como sair), que agrava a exposição, e 060 (log do `User` inteiro em `GroupController::store`).
 
 Tipo sugerido: backend
+
+## Resolução
+Concluído em: 2026-10-23
+Feature: docs/feature/20261023-members-index-checagem-de-membro/   (migra para `docs/feature/concluidas/202610/20261023-members-index-checagem-de-membro/` quando o PR mergear em `dev`: `ADR-009`)
+Tasks: TASK-476 a TASK-480
+PRs: https://github.com/isacaguiar/expense/pull/229
+
+Entregue como descrito: `GroupMemberController::index` passou a usar `Group::find` + `abort_if($group === null, 404)` + o `authorizeMembership` da própria classe; quem não é membro recebe `404`, e grupo inexistente e grupo alheio saem do mesmo `abort(404)` (corpo idêntico, provado por teste e por HTTP real). O payload para quem é membro não mudou (R3). Seis testes novos em `GroupMemberControllerTest`; backend 604 → 610 testes; `security-reviewer` aprovou sem achado alto ou médio; validação local confirmada por escrito pelo usuário.
+
+**Divergência da recomendação deste item:** a decisão D1 recomendava `404` também para membros de grupo excluído logicamente. A auditoria da feature mostrou que **toda leitura** de grupo excluído devolve `200` hoje (`show`, `indexByGroup`, `summary`) e só as escritas dão `404`; o usuário decidiu **manter `200`** (D1 = B), e um teste trava isso.
+
+Desdobramentos: o achado da TASK-477 (o corpo do `404` do `findOrFail` confirma a existência do grupo em quase todos os endpoints) virou o item **098**; o helper de membro triplicado, o **099**; a Constitution e o `01-specify.md` desatualizados, uma nota no **059**. O item **086** (membro adicionado sem consentimento e sem rota de saída), que agrava a exposição, segue aberto.

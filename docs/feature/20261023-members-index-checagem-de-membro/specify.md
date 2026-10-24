@@ -14,7 +14,7 @@ Há ainda um efeito lateral: hoje um `id` que não existe devolve `404` e um que
 
 A `00-constitution.md` §1 item 6 pede que toda rota autenticada defina "quem pode acessar o quê", e diz que isso ainda não vale em todos os endpoints: "é dívida a resolver, não padrão a repetir". Este item é um caso dessa dívida que a Constitution não lista (a lista de achados da §5 item 3 cita só `GroupController@show/update/destroy`, `GET /pix/generate` e o log de credenciais).
 
-Origem e reprodução: `docs/backlog/group-members-index-sem-checagem-de-membro.md`. Foi reproduzido em 2026-10-14 com uma sonda descartável: um usuário que não é membro do grupo `G` chama o endpoint com o próprio token e recebe `200` com os dados de cada membro. A reprodução será refeita como teste de regressão na primeira task (RED antes do conserto).
+Origem e reprodução: `docs/backlog/concluidos/group-members-index-sem-checagem-de-membro.md` (o item foi para `concluidos/` ao abrir o PR; ver a seção Resolução dele). Foi reproduzido em 2026-10-14 com uma sonda descartável: um usuário que não é membro do grupo `G` chama o endpoint com o próprio token e recebe `200` com os dados de cada membro. A reprodução será refeita como teste de regressão na primeira task (RED antes do conserto).
 
 ## 2. Achados confirmados (lidos no código em 2026-10-23, `origin/dev` em `e426f86914`)
 
