@@ -225,3 +225,18 @@ Cada item segue o formato do `README.md` (ID, Origem, Criado em, Prioridade, Sta
 2. **O 098 dizia que todo endpoint de grupo usa `findOrFail`.** Ao ler o `GroupExpenseReportController` vi que ele usa `Group::find` e devolve `404 {"message": "Grupo não encontrado"}` para grupo inexistente (contra `""` para alheio): também distinguíveis, por uma mensagem escrita à mão, e a correção no **handler global não os cobre**. Ajustei a descrição e a decisão D1 do 098. (A frase do `plan.md` §8, "todos usam `findOrFail`", ficou imprecisa pelo mesmo motivo; o plano é histórico e não foi reescrito.)
 
 **Observação fora do escopo, só para constar:** o item **097**, da outra feature, cita `cycles_ago` sem teto (`summary` dá `500`), o que se sobrepõe a parte do item **090** que escrevi na feature do Painel. Não tratei aqui.
+
+## 10. Checklist final na branch completa, antes do PR (2026-10-23)
+
+Feito **depois** de integrar as 5 tasks, com a `dev` conferida de novo (`git fetch`: **0 atrás, 15 à frente**). Complementa o `pr-readiness-checker` da TASK-479 (rodado no commit anterior; desde então só mudou documentação).
+
+| Item | Comando | Resultado |
+|---|---|---|
+| Estilo | `php vendor/bin/pint --test` | `PASS` 176 arquivos |
+| Suíte do backend | `php artisan test` | **610 passed (3758 asserções)**, 82,72 s (baseline da `dev` era 604) |
+| Frontend | — | N/A: o diff não toca `frontend/` (R6) |
+| Escopo | `git diff origin/dev --stat` | **11 arquivos, +684 −9**: 2 de backend (`GroupMemberController`, `GroupMemberControllerTest`), 5 de `docs/backlog` (2 novos, 3 alterados) e 4 da pasta da feature |
+| Migrações / apagados | `git diff origin/dev --name-only` e `--diff-filter=D` | **0 / 0** |
+| Segredos nas linhas adicionadas | `grep` por `JWT_SECRET=`, `APP_KEY=`, `DB_PASSWORD=`, chaves privadas, `ghp_`, `AKIA`, `sk-`, JWT | Nenhum |
+| Termos proibidos (`dd(`, `var_dump(`, `dump(`, `console.log`, TODO, FIXME) no código | `grep` nas linhas adicionadas de `backend/` | Nenhum |
+| Árvore | `git status --short` | Só `?? backend/.env.testing` (não rastreado; **nunca** `git add -A`) |
