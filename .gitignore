@@ -10,6 +10,7 @@ frontend/node_modules
 .env
 .env.backup
 .env.production
+.env.testing
 .env.example
 .phpunit.result.cache
 Homestead.json
