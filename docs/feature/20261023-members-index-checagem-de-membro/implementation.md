@@ -24,7 +24,7 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 | TASK-476 | Concluída (direto na branch da feature `backend/20261023-members-index-checagem-de-membro`, por ser a primeira task) | 2026-10-23 | Claude (IA), com aprovação do usuário (specify, plan e tasks aprovados) | Ver §4 | RED reproduziu o vazamento (`200` para não membro); conserto só no `index`; a mutação de remover `authorizeMembership` derruba só o teste do não membro; suíte 604 → **607** |
 | TASK-477 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-477`; só teste) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §5 | O teste de corpo idêntico nasceu verde; a mutação para `findOrFail` o derrubou e **confirmou a hipótese**: o `findOrFail` devolve `"No query results for model [App\\Models\\Group] N"` e o grupo alheio devolve `""`. Sonda em 4 endpoints: o padrão é **sistêmico**. Suíte 607 → **608** |
 | TASK-478 | Concluída (branch `backend/20261023-members-index-checagem-de-membro-TASK-478`; só testes) | 2026-10-23 | Claude (IA), com aprovação do usuário | Ver §6 | Duas travas, ambas nasceram verdes. **Três** mutações (duas do plano + uma extra para a asserção negativa), cada uma derrubando o teste certo. Suíte 608 → **610** |
-| TASK-479 | **Revisão feita; fecha depois da confirmação por escrito do usuário** (branch `backend/20261023-members-index-checagem-de-membro-TASK-479`; só docs) | 2026-10-23 | Claude (IA), com aprovação do usuário para iniciar | Ver §7 | `security-reviewer`: **aprovado**, sem achado alto ou médio, itens (a), (b) e (c) confirmados; 4 observações informativas. `pr-readiness-checker`: **pronto com pendências** (610 passed, Pint, 8 arquivos, sem segredo nem migração). Três sondas descartáveis minhas medem o que o revisor só leu |
+| TASK-479 | **Concluída** (revisão feita; **validação local confirmada por escrito pelo usuário em 2026-10-23**, §8) (branch `backend/20261023-members-index-checagem-de-membro-TASK-479`; só docs) | 2026-10-23 | Claude (IA), com aprovação do usuário para iniciar | Ver §7 | `security-reviewer`: **aprovado**, sem achado alto ou médio, itens (a), (b) e (c) confirmados; 4 observações informativas. `pr-readiness-checker`: **pronto com pendências** (610 passed, Pint, 8 arquivos, sem segredo nem migração). Três sondas descartáveis minhas medem o que o revisor só leu |
 
 ## 3. Ambiente de teste (pré-condição da TASK-476)
 
@@ -173,6 +173,27 @@ Como a integração tocou comentários de backend, **refiz no estado final**: `p
 
 **Pendências que não são de código, e o que está decidido ou não:**
 
-1. **Confirmação por escrito do usuário** de que validou o que precisa localmente. Sem ela, **o PR não é aberto nem enviado**, e a TASK-479 não fecha.
+1. ~~**Confirmação por escrito do usuário** de que validou o que precisa localmente.~~ **Recebida em 2026-10-23** (§8). A TASK-479 fecha.
 2. **TASK-480** (backlog) ainda não feita.
-3. As observações #1 e #4 do revisor: recomendação é **não fazer**; aguardam o usuário.
+3. ~~As observações #1 e #4 do revisor.~~ **Decidido pelo usuário em 2026-10-23: não fazer; ficam só registradas neste log** (não viram task nem item de backlog).
+
+## 8. Validação local do usuário e encerramento da stack (2026-10-23)
+
+**Stack de validação** (montada depois do aval do usuário para validar no web): backend `php artisan serve --env=testing --port=8002` e Vite na 3002, num banco descartável **`members_validacao`** dentro do contêiner `mysql-members-test` (separado do `ex-db`, que é o do PHPUnit). Alvo conferido antes de migrar (`127.0.0.1:3309`, `members_validacao`, 0 tabelas); 32 migrações, 0 pendentes. Semeado por script com trava de alvo (recusa rodar em outro banco ou porta): 5 usuários `@members.test` e 3 grupos (Casa da Praia com Ana, Beto e Caio; Grupo Alheio com Dora e Eva; Grupo Excluído com `deleted = 1`, com Ana e Beto) e uma despesa. As portas 3000 e 8000 **não foram tocadas**.
+
+| Verificação (minha, antes de entregar ao usuário) | Resultado |
+|---|---|
+| Por HTTP real, contra o backend da 8002 (`check_members.php`) | **7 de 7 como esperado**: Ana (membro) lista os 3 membros da Casa da Praia sem `password` nem `google_id`; Ana recebe `404` no Grupo Alheio; Dora (não membro) recebe `404` na Casa da Praia e no grupo `9999`, com o **mesmo corpo** `{"message":""}`; Ana segue com `200` no Grupo Excluído (D1 = B); sem token `401` |
+| No Chrome do usuário, logada como Ana | Tela **Participantes** da Casa da Praia mostra os 3 membros (Ana, Beto, Caio). A URL de um grupo alheio (`/app/groups/2/members`) mostra "Erro ao carregar informações do grupo." e "Nenhum membro cadastrado.", sem nenhum dado |
+
+**Confirmação do usuário, por escrito, em chat:** "validei, pode seguir". Antes dela deixei a aplicação **aberta e logada no Chrome dele**, na tela certa, e indiquei onde está a senha padrão (arquivo da `UserFactory`, sem repetir o valor), como a memória do projeto pede.
+
+**Encerramento da stack** (só depois da confirmação):
+
+| Passo | Como | Resultado |
+|---|---|---|
+| Processos | `TaskStop` nos dois shells em segundo plano e `Get-NetTCPConnection` em seguida | Portas **8002 e 3002 livres**; 8000 e 3000 também livres, nunca tocadas |
+| Banco | `SHOW DATABASES`, `DROP DATABASE members_validacao`, `SHOW DATABASES` (senha lida do `.env.testing` e passada por variável de ambiente, sem imprimir) | Antes: `ex-db` e `members_validacao`. Depois: só **`ex-db`** |
+| Aba do Chrome | `tabs_close_mcp` | **Não consegui fechar**: a aba já não pertencia ao grupo de abas desta sessão. É só uma aba local de uma stack que já caiu |
+
+**Mantidos até o fim da feature:** o contêiner `mysql-members-test` (o PHPUnit usa o `ex-db` dele) e o `backend/.env.testing` (não rastreado; **nunca** `git add -A`). Ao fim (depois do merge do PR): `docker rm -f mysql-members-test` e apagar o `.env.testing`.
