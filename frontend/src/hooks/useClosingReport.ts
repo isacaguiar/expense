@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import type { Summary, SummaryCycle } from './useGroupCycle';
 
-export type ClosingParty = { id: number; name: string; avatarUrl: string | null };
+// `id` é nulo quando o snapshot é antigo e o nome não casa com nenhum membro do grupo.
+export type ClosingParty = { id: number | null; name: string; avatarUrl: string | null };
 
 export type ClosingDebtor = ClosingParty & { amount: number };
 
