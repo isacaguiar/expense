@@ -13,14 +13,16 @@ use Illuminate\Support\Str;
 
 class GroupMemberController extends Controller
 {
-    // lista membros de um grupo
+    // lista membros de um grupo — só para quem é membro dele
     public function index($groupId)
     {
-        // $group = Group::with('members')->findOrFail($groupId);
-        /*return response()->json([
-            //'members' => $group->members
-        ], 200);*/
-        $group = Group::with('members')->findOrFail($groupId);
+        // Grupo inexistente e grupo alheio saem do MESMO `abort(404)` (não de um
+        // `findOrFail`, que passa pelo handler de ModelNotFoundException e pode
+        // devolver outra mensagem): a resposta não deve confirmar a existência do
+        // grupo a quem não é membro. Item 085 do backlog.
+        $group = Group::find($groupId);
+        abort_if($group === null, 404);
+        $this->authorizeMembership($group);
 
         return response()->json($group->members);
     }
