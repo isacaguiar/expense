@@ -17,7 +17,7 @@ IDs a partir de TASK-481: o maior em qualquer lugar do projeto é TASK-480 (feat
 | TASK-487 | Extrair `CycleTotalsCards` de `CycleDetailPanel` sem mudar o comportamento | frontend | plan.md §4 (item 2) | nenhum | Concluída (`implementation.md` §2) |
 | TASK-488 | Extrair `CycleExpenseList` de `CycleDetailPanel` e mostrar o `paymentNote` da despesa | frontend | plan.md §4 (item 5, D-N1) | nenhum | Concluída (`implementation.md` §2) |
 | TASK-489 | Acrescentar `showConfirmation` a `SettlementList` (chip de confirmação e `confirmedNote`) | frontend | plan.md §4 (item 4, D-N1) | nenhum | Concluída (`implementation.md` §2) |
-| TASK-490 | Criar `ClosingReportPanel` com o botão Imprimir / Salvar PDF | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-490 | Criar `ClosingReportPanel` com o botão Imprimir / Salvar PDF | frontend | plan.md §4 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-491 | Marcar `Sidebar` e `GroupHeader` com a classe `no-print` | frontend | plan.md §4 (Imprimir) | nenhum | Pendente |
 | TASK-492 | Criar `PendingCyclesList` | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-493 | Reescrever `GroupReports` com as abas Acompanhamento e Histórico e o estado na URL, ajustando os testes existentes | frontend | plan.md §3 | nenhum | Pendente |
