@@ -738,6 +738,21 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Aba Acompanhamento de Relatórios: os ciclos encerrados (ou em carência) que
+     * ainda aguardam quitação, do mais recente ao mais antigo. Só lê: não sela,
+     * não grava snapshot e não notifica. A varredura mora em
+     * `CycleSummaryService::pendingCycles`. Ver
+     * docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §1.
+     */
+    public function pendingCycles($groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        return response()->json(['data' => $this->cycles()->pendingCycles($group)]);
+    }
+
+    /**
      * Fechamento manual da competência vigente: congela a composição e os
      * valores considerados (inclusive de despesas FIXED, materializando a
      * Quota de cada ocorrência antes de calcular) num `GroupCycleSnapshot`.
