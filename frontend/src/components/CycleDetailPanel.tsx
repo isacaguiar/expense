@@ -1,8 +1,9 @@
 import React from 'react';
-import { Box, Card, CardContent, Typography, Grid, Paper, List, ListItem, ListItemIcon, ListItemText, Chip } from '@mui/material';
+import { Box, Typography, Grid, Paper, List, ListItem, ListItemIcon, ListItemText, Chip } from '@mui/material';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import { cycleStatusChip, Summary } from '../hooks/useGroupCycle';
+import CycleTotalsCards from './CycleTotalsCards';
 import SummarySidePanel from './SummarySidePanel';
 import UserAvatar from './UserAvatar';
 
@@ -16,9 +17,6 @@ const formatDate = (dateStr: string): string => {
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const percentOf = (part: number, total: number): number =>
-  total > 0 ? Math.round((part / total) * 100) : 0;
 
 type CycleDetailPanelProps = {
   summary: Summary;
@@ -43,51 +41,7 @@ const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary }) => (
       />
     </Box>
 
-    <Grid container spacing={2} mb={3}>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <Card>
-          <CardContent>
-            <Typography variant="body2" color="text.secondary">
-              Total de despesas
-            </Typography>
-            <Typography variant="h5">R$ {formatMoney(summary.totals.total)}</Typography>
-            <Typography variant="caption" color="text.secondary" textTransform="capitalize">
-              {formatDate(summary.cycle.start)} – {formatDate(summary.cycle.end)}
-            </Typography>
-          </CardContent>
-        </Card>
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <Card>
-          <CardContent>
-            <Typography variant="body2" color="text.secondary">
-              Pago
-            </Typography>
-            <Typography variant="h5" color="success.main">
-              R$ {formatMoney(summary.totals.paid)}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {percentOf(summary.totals.paid, summary.totals.total)}% do total
-            </Typography>
-          </CardContent>
-        </Card>
-      </Grid>
-      <Grid size={{ xs: 12, md: 4 }}>
-        <Card>
-          <CardContent>
-            <Typography variant="body2" color="text.secondary">
-              A pagar
-            </Typography>
-            <Typography variant="h5" color="warning.main">
-              R$ {formatMoney(summary.totals.pending)}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {percentOf(summary.totals.pending, summary.totals.total)}% do total
-            </Typography>
-          </CardContent>
-        </Card>
-      </Grid>
-    </Grid>
+    <CycleTotalsCards totals={summary.totals} cycle={summary.cycle} />
 
     <Grid container spacing={3}>
       <Grid size={{ xs: 12, sm: 12, lg: 8 }}>
