@@ -12,7 +12,7 @@ IDs a partir de TASK-481: o maior em qualquer lugar do projeto é TASK-480 (feat
 | TASK-482 | Criar `App\Support\ClosingBreakdown` (agregação credor → devedores) com testes unitários | backend | plan.md §2.2 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-483 | Criar `CycleSummaryService::pendingCycles` e o endpoint `GET /groups/{groupId}/expenses/pending-cycles`, com testes de feature | backend | plan.md §1 (D-N2) | nenhum | Concluída (`implementation.md` §2) |
 | TASK-484 | Criar o endpoint `GET /groups/{groupId}/expenses/closing-report`, com testes de feature | backend | plan.md §2.1 e §2.3 | nenhum | Concluída (`implementation.md` §2) |
-| TASK-485 | Criar o hook `useGroupPendingCycles` e o tipo `PendingCycle`, com testes | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-485 | Criar o hook `useGroupPendingCycles` e o tipo `PendingCycle`, com testes | frontend | plan.md §3 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-486 | Criar o hook `useClosingReport` e o tipo `ClosingReport`, com testes | frontend | plan.md §3 e §4 | nenhum | Pendente |
 | TASK-487 | Extrair `CycleTotalsCards` de `CycleDetailPanel` sem mudar o comportamento | frontend | plan.md §4 (item 2) | nenhum | Pendente |
 | TASK-488 | Extrair `CycleExpenseList` de `CycleDetailPanel` e mostrar o `paymentNote` da despesa | frontend | plan.md §4 (item 5, D-N1) | nenhum | Pendente |
