@@ -55,6 +55,10 @@ Quando alguém decide de fato executar um item do backlog, o slash command `/pro
 
 Além das skills, o projeto tem agents nativos do Claude Code em `.claude/agents/` (`security-reviewer`, `pr-readiness-checker`) — cada um construído só quando um gatilho concreto justificou. Ver `docs/sdd/agents-roadmap.md` para o que já existe e o que é candidato futuro.
 
+## Release (tag de versão)
+
+Cada promoção `dev` → `main` recebe uma tag `vX.Y.Z` (SemVer) e um GitHub Release; criar e publicar a tag é gate humano. Regra: `00-constitution.md` §5.1.1.2; passo a passo: `04-implementation.md` §1.9; porquê e alternativas: `docs/sdd/decisions/ADR-011-convencao-de-release.md`.
+
 ## Gates human-in-the-loop
 
 Tabela normativa: `00-constitution.md` §5.2. Desenho da fronteira de autonomia: `agent-architecture.md` §5.

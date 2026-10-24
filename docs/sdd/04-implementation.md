@@ -2,7 +2,7 @@
 
 > Como uma task de `03-tasks.md` vira código. Aplica-se a trabalho humano e a trabalho de IA da mesma forma.
 
-Versão: 1.2 · Última atualização: 2026-08-30
+Versão: 1.3 · Última atualização: 2026-10-24
 
 ## 1. Fluxo de execução de uma task
 
@@ -23,7 +23,17 @@ Versão: 1.2 · Última atualização: 2026-08-30
 5. **Quando a feature estiver pronta** (todas as tasks planejadas integradas, ou o subconjunto que o humano decidir promover): rodar o checklist do item 3 mais uma vez na branch da feature já integrada — pega problema de integração entre tasks que o checklist individual não pegaria.
 6. **Abrir um único PR** da branch da feature contra `dev` (não `main`), referenciando a feature e as tasks incluídas na descrição.
 7. **Gate humano de revisão**: merge em `dev` só acontece após aprovação humana do PR (Constitution, tabela de Governança) — mesmo que todo o checklist acima esteja verde. Esse gate é por feature, não por task. Depois que o PR mergeia em `dev`, mova `docs/feature/<AAAAMMDD>-<slug>/` → `docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/` (`<AAAAMM>` = mês de criação, os 6 primeiros dígitos do nome; `ADR-009`).
-8. **Promoção `dev` → `main`**: depois que a(s) feature(s) relevante(s) já estão em `dev` e validadas/testadas lá (manualmente ou via preview), abrir um PR de `dev` para `main`. Merge nesse PR é gate humano — e, na prática, também decide o deploy: push em `main` dispara `deploy-backend.yml` automaticamente (não existe hoje um passo de deploy manual separado do merge; `workflow_dispatch` é só para re-disparar sem novo push).
+8. **Promoção `dev` → `main`**: depois que a(s) feature(s) relevante(s) já estão em `dev` e validadas/testadas lá (manualmente ou via preview), abrir um PR de `dev` para `main`. Merge nesse PR é gate humano — e, na prática, também decide o deploy: push em `main` dispara `deploy-backend.yml` automaticamente (não existe hoje um passo de deploy manual separado do merge; `workflow_dispatch` é só para re-disparar sem novo push). O PR de promoção declara a versão proposta (`vX.Y.Z`, passo 9) no título ou na descrição.
+9. **Tag de release** (`00-constitution.md` §5.1.1.2, `ADR-011`): depois do merge de promoção **e** do deploy verde em Actions, criar a tag anotada no merge commit de `main` e publicar as notas. Gate humano (§5.2): a IA prepara os comandos e para antes do `git push`.
+
+   ```bash
+   git fetch origin
+   git tag -a vX.Y.Z <sha-do-merge-commit-em-origin/main> -m "vX.Y.Z - <PRs/features incluídos>"
+   git push origin vX.Y.Z          # só essa tag, nunca --tags
+   gh release create vX.Y.Z --verify-tag --generate-notes
+   ```
+
+   A tag não dispara deploy. Rollback de código: `workflow_dispatch` com o ref da tag; migrations não revertem.
 
 ## 2. O que muda quando quem executa é uma IA
 

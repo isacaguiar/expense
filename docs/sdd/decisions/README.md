@@ -48,3 +48,4 @@ Data: <AAAA-MM-DD>
 | [ADR-008](ADR-008-deploy-backend-ssh-rsync.md) | Deploy do backend via SSH/rsync em vez de FTP | Aceita |
 | [ADR-009](ADR-009-arquivar-concluidos-por-anomes.md) | Arquivar feature/bugfix concluídos em `concluidas`/`concluidos/<AAAAMM>/` | Aceita |
 | [ADR-010](ADR-010-app-movel-em-flutter.md) | App móvel em Flutter (substitui a migração para Expo do ADR-001) | Aceita |
+| [ADR-011](ADR-011-convencao-de-release.md) | Convenção de release (tag de versão em `main`) | Aceita |

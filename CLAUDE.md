@@ -29,8 +29,8 @@ Padrão de trabalho:
 ## Fronteira de autonomia (gates)
 
 Tabela normativa (o que é autônomo vs. o que exige aprovação humana): `docs/sdd/00-constitution.md` §5.2.
-Desenho: `docs/sdd/agent-architecture.md` §5. Nada de merge em `main`/`dev`, deploy, expor/rotacionar
-segredo, hard delete ou publicação do app na Google Play sem aprovação humana explícita.
+Desenho: `docs/sdd/agent-architecture.md` §5. Nada de merge em `main`/`dev`, deploy, publicar tag de release
+(`ADR-011`), expor/rotacionar segredo, hard delete ou publicação do app na Google Play sem aprovação humana explícita.
 
 ## Regras que nunca devem ser ignoradas
 
