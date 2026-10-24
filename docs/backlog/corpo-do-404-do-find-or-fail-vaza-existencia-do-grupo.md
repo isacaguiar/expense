@@ -1,7 +1,7 @@
 # O corpo do `404` de `Group::findOrFail` confirma a existência do grupo e vaza o nome da classe do model
 
 ID: 098
-Origem: docs/feature/20261023-members-index-checagem-de-membro/implementation.md §5 (TASK-477, hipótese confirmada por mutação e sonda) e §7; `backend/app/Exceptions/Handler.php`; 17 chamadas de `findOrFail` em `GroupController`, `GroupMemberController` e `ExpenseController`
+Origem: docs/feature/concluidas/202610/20261023-members-index-checagem-de-membro/implementation.md §5 (TASK-477, hipótese confirmada por mutação e sonda) e §7; `backend/app/Exceptions/Handler.php`; 17 chamadas de `findOrFail` em `GroupController`, `GroupMemberController` e `ExpenseController`
 Criado em: 2026-10-23
 Prioridade: MEDIA
 Status: Aberto
