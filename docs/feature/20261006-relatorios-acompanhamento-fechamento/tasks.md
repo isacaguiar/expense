@@ -8,7 +8,7 @@ IDs a partir de TASK-481: o maior em qualquer lugar do projeto é TASK-480 (feat
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-481 | Criar `CycleSummaryService::viewAt` e fazer `view()` delegar a ele, com testes PHPUnit | backend | plan.md §2.1 (D-N3) | nenhum | Pendente |
+| TASK-481 | Criar `CycleSummaryService::viewAt` e fazer `view()` delegar a ele, com testes PHPUnit | backend | plan.md §2.1 (D-N3) | nenhum | Concluída (`implementation.md` §2) |
 | TASK-482 | Criar `App\Support\ClosingBreakdown` (agregação credor → devedores) com testes unitários | backend | plan.md §2.2 | nenhum | Pendente |
 | TASK-483 | Criar `CycleSummaryService::pendingCycles` e o endpoint `GET /groups/{groupId}/expenses/pending-cycles`, com testes de feature | backend | plan.md §1 (D-N2) | nenhum | Pendente |
 | TASK-484 | Criar o endpoint `GET /groups/{groupId}/expenses/closing-report`, com testes de feature | backend | plan.md §2.1 e §2.3 | nenhum | Pendente |
