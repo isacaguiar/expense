@@ -19,7 +19,7 @@ IDs a partir de TASK-481: o maior em qualquer lugar do projeto é TASK-480 (feat
 | TASK-489 | Acrescentar `showConfirmation` a `SettlementList` (chip de confirmação e `confirmedNote`) | frontend | plan.md §4 (item 4, D-N1) | nenhum | Concluída (`implementation.md` §2) |
 | TASK-490 | Criar `ClosingReportPanel` com o botão Imprimir / Salvar PDF | frontend | plan.md §4 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-491 | Marcar `Sidebar` e `GroupHeader` com a classe `no-print` | frontend | plan.md §4 (Imprimir) | nenhum | Concluída (`implementation.md` §2) |
-| TASK-492 | Criar `PendingCyclesList` | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-492 | Criar `PendingCyclesList` | frontend | plan.md §3 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-493 | Reescrever `GroupReports` com as abas Acompanhamento e Histórico e o estado na URL, ajustando os testes existentes | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-494 | Atualizar `consultas-tela-relatorio.md` com as consultas das duas abas e do Fechamento | doc | plan.md §7 (item 8) | nenhum | Pendente |
 | TASK-495 | Registrar em `docs/backlog/` o achado tangencial do plan §8 (`update()`/`destroy()` não selam) | doc | plan.md §8 | nenhum | Pendente |
