@@ -1,8 +1,9 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
-import { MemoryRouter, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { Link, MemoryRouter, useLocation } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import GroupReports from './GroupReports';
 import type { ClosingReport } from '../hooks/useClosingReport';
 import type { PendingCycle } from '../hooks/useGroupPendingCycles';
@@ -123,13 +124,21 @@ const callsTo = (fragment: string) => vi.mocked(axios.get).mock.calls.filter(([u
 
 const LocationProbe = () => <output data-testid="search">{useLocation().search}</output>;
 
-const renderPage = (entry = '/') =>
+const renderPage = (entry = '/', extra: ReactNode = null) =>
   render(
     <MemoryRouter initialEntries={[entry]}>
       <GroupReports />
       <LocationProbe />
+      {extra}
     </MemoryRouter>
   );
+
+// CSS que o emotion injetou no documento, sem espaços (o jsdom não avalia `@media`).
+const emotionCss = (): string =>
+  Array.from(document.querySelectorAll('style[data-emotion]'))
+    .map(style => style.textContent ?? '')
+    .join('')
+    .replace(/\s+/g, '');
 
 const search = (): string => screen.getByTestId('search').textContent ?? '';
 const tab = (name: string) => screen.getByRole('tab', { name });
@@ -514,6 +523,161 @@ describe('GroupReports', () => {
 
       expect(list.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(screen.getByRole('tablist').compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    });
+  });
+
+  // Na aba Acompanhamento o relatório abre abaixo de até 13 cartões, fora da tela (visto na
+  // validação da TASK-497: a 1.791 px do topo numa janela de 900 px). Quem abre por clique
+  // precisa ser levado até ele; quem chega por link, Voltar ou recarga já escolheu onde está.
+  describe('scrolling to the closing report', () => {
+    const scrollMock = vi.fn();
+    const septemberButton = 'Ver fechamento do ciclo 01 de set. – 30 de set.';
+    const augustButton = 'Ver fechamento do ciclo 01 de ago. – 31 de ago.';
+    const scrolledTo = (call = 0) => scrollMock.mock.contexts[call] as HTMLElement;
+
+    beforeEach(() => {
+      scrollMock.mockClear();
+      // O jsdom não implementa `scrollIntoView`.
+      Element.prototype.scrollIntoView = scrollMock;
+    });
+
+    afterEach(() => {
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    });
+
+    it('brings the report into view when "Ver fechamento" opens it', async () => {
+      mockApi();
+      const user = userEvent.setup();
+
+      renderPage();
+      await user.click(await screen.findByRole('button', { name: septemberButton }));
+      await screen.findByRole('heading', { name: 'Casa da Praia' });
+
+      expect(scrollMock).toHaveBeenCalledTimes(1);
+      expect(scrollMock).toHaveBeenCalledWith({ block: 'start' });
+      const target = scrolledTo();
+      expect(within(target).getByRole('heading', { name: 'Casa da Praia' })).toBeInTheDocument();
+      // O alvo é o relatório, não a página inteira nem a lista.
+      expect(within(target).queryByRole('list', { name: 'Ciclos aguardando pagamento' })).not.toBeInTheDocument();
+      expect(within(target).queryByRole('tablist')).not.toBeInTheDocument();
+    });
+
+    it('reserves a screen of height under the report, on screen only, so the scroll can reach it before the answer arrives', async () => {
+      // Visto no Chrome: rolando para um relatório ainda no spinner, o documento é curto e o
+      // navegador limita a rolagem; quando o conteúdo chega, o título fica no rodapé da janela.
+      mockApi();
+      const user = userEvent.setup();
+
+      renderPage();
+      await user.click(await screen.findByRole('button', { name: septemberButton }));
+      await waitFor(() => expect(scrollMock).toHaveBeenCalled());
+
+      const wrapperClass = Array.from(scrolledTo().classList).find(name => name.startsWith('css-'));
+      expect(wrapperClass).toBeDefined();
+      expect(emotionCss()).toContain(`@mediascreen{.${wrapperClass}{min-height:100vh;}}`);
+    });
+
+    it('keeps the margin of the loading spinner inside the report container', async () => {
+      // Visto no Chrome: a margem de cima do spinner colapsava através do contêiner e o
+      // empurrava 16 px para baixo; ao chegar o conteúdo ele subia, e o título ficava
+      // 16 px acima do topo da janela. `flow-root` impede o colapso.
+      mockApi();
+      const user = userEvent.setup();
+
+      renderPage();
+      await user.click(await screen.findByRole('button', { name: septemberButton }));
+      await waitFor(() => expect(scrollMock).toHaveBeenCalled());
+
+      const wrapperClass = Array.from(scrolledTo().classList).find(name => name.startsWith('css-'));
+      expect(emotionCss()).toContain(`.${wrapperClass}{display:flow-root;}`);
+    });
+
+    it('does the same when a Histórico item opens the report', async () => {
+      mockApi();
+      const user = userEvent.setup();
+
+      renderPage('/?aba=historico');
+      await user.click(await screen.findByText(/jun.*jun/i));
+      await screen.findByRole('heading', { name: 'Casa da Praia' });
+
+      expect(scrollMock).toHaveBeenCalledTimes(1);
+      expect(within(scrolledTo()).getByRole('heading', { name: 'Casa da Praia' })).toBeInTheDocument();
+    });
+
+    it('does not scroll when the page loads with the cycle already in the URL', async () => {
+      mockApi();
+
+      renderPage('/?ciclo=2026-09-01');
+      await screen.findByRole('heading', { name: 'Casa da Praia' });
+
+      expect(scrollMock).not.toHaveBeenCalled();
+    });
+
+    it('does not scroll when the tab changes and the report goes away', async () => {
+      mockApi();
+      const user = userEvent.setup();
+
+      renderPage('/?aba=acompanhamento&ciclo=2026-09-01');
+      await screen.findByRole('heading', { name: 'Casa da Praia' });
+      await user.click(tab('Histórico'));
+      await screen.findByText('Total: R$ 300,00');
+
+      expect(scrollMock).not.toHaveBeenCalled();
+    });
+
+    it('does not scroll when the URL changes without a click on a card', async () => {
+      mockApi();
+      const user = userEvent.setup();
+
+      renderPage('/', <Link to="/?aba=historico&ciclo=2026-06-01">ir para o histórico</Link>);
+      await screen.findByRole('list', { name: 'Ciclos aguardando pagamento' });
+      await user.click(screen.getByRole('link', { name: 'ir para o histórico' }));
+      await screen.findByRole('heading', { name: 'Casa da Praia' });
+
+      expect(scrollMock).not.toHaveBeenCalled();
+    });
+
+    it('scrolls again when the card of the cycle that is already open is clicked', async () => {
+      mockApi();
+      const user = userEvent.setup();
+
+      renderPage();
+      await user.click(await screen.findByRole('button', { name: septemberButton }));
+      await screen.findByRole('heading', { name: 'Casa da Praia' });
+      await user.click(screen.getByRole('button', { name: septemberButton }));
+
+      expect(scrollMock).toHaveBeenCalledTimes(2);
+      expect(scrollMock).toHaveBeenNthCalledWith(2, { block: 'start' });
+      expect(search()).toBe('?aba=acompanhamento&ciclo=2026-09-01');
+      expect(within(scrolledTo(1)).getByRole('heading', { name: 'Casa da Praia' })).toBeInTheDocument();
+    });
+
+    it('scrolls once for each different cycle that is opened', async () => {
+      mockApi({ pending: [pendingSeptember, pendingAugust] });
+      const user = userEvent.setup();
+
+      renderPage();
+      await user.click(await screen.findByRole('button', { name: septemberButton }));
+      await screen.findByRole('heading', { name: 'Casa da Praia' });
+      await user.click(screen.getByRole('button', { name: augustButton }));
+      await waitFor(() => expect(search()).toBe('?aba=acompanhamento&ciclo=2026-08-01'));
+
+      await waitFor(() => expect(scrollMock).toHaveBeenCalledTimes(2));
+    });
+
+    it('does not carry a click over to a later URL change that did not come from a card', async () => {
+      mockApi();
+      const user = userEvent.setup();
+
+      renderPage('/', <Link to="/?aba=historico&ciclo=2026-06-01">ir para o histórico</Link>);
+      await user.click(await screen.findByRole('button', { name: septemberButton }));
+      await screen.findByRole('heading', { name: 'Casa da Praia' });
+      expect(scrollMock).toHaveBeenCalledTimes(1);
+
+      await user.click(screen.getByRole('link', { name: 'ir para o histórico' }));
+      await waitFor(() => expect(search()).toBe('?aba=historico&ciclo=2026-06-01'));
+
+      expect(scrollMock).toHaveBeenCalledTimes(1);
     });
   });
 });
