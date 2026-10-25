@@ -1,7 +1,7 @@
 # `update()`, `destroy()` e a edição de despesa `FIXED` não selam o ciclo que ficou quitado
 
 ID: 102
-Origem: docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §0.1 (ponto 2) e §8; `backend/app/Http/Controllers/ExpenseController.php` (`update`, `destroy`, `rejectIfCycleClosed`, `sealCycleIfSettled`)
+Origem: docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §0.1 (ponto 2) e §8; `backend/app/Http/Controllers/ExpenseController.php` (`update`, `destroy`, `rejectIfCycleClosed`, `sealCycleIfSettled`)
 Criado em: 2026-10-25
 Prioridade: BAIXA
 Status: Aberto
@@ -44,6 +44,6 @@ A fechar no specify, **depois de medir**. Se a medição mostrar poucos casos, a
 | D1 | Onde selar | A) chamar `sealCycleIfSettled` ao fim de `update()`, `destroy()` e da edição de `FIXED`<br>B) selar na virada para `closed`, fora da leitura (comando agendado, sem `Notifier` no retroativo), junto com a opção B do item 093<br>C) não selar e aceitar o estado "Quitado" sem selo, que o `awaiting_seal` já mostra | **B**, ou **C** se a medição mostrar poucos casos | A parece o caminho óbvio, mas a edição acontece **na carência**, enquanto o ciclo ainda é `open`; selar ali pode congelar um ciclo que a regra ainda trata como aberto (a verificar no specify), e faria uma edição disparar `Notifier::cycleSettled`. B também resolve o custo do 093 (caso 2) e o ciclo quitado antes da selagem existir, que A não alcança. C custa só o que a seção acima lista. |
 | D2 | Mudar a regra de selagem ou o aviso | A) manter a regra e o `Notifier` como estão, só mudando quem chama<br>B) rever quando o aviso de "ciclo quitado" sai | **A** | Mudar o aviso é outra decisão de produto. Esta é só sobre garantir a foto. |
 
-Relacionado: 093 (custo do `focus()` com os mesmos ciclos quitados e não selados; sua opção B atacaria esta origem), `docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md` §0.1 e §8.
+Relacionado: 093 (custo do `focus()` com os mesmos ciclos quitados e não selados; sua opção B atacaria esta origem), `docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md` §0.1 e §8.
 
 Tipo sugerido: backend

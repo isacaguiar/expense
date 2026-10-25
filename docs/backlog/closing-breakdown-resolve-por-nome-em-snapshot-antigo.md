@@ -1,7 +1,7 @@
 # `ClosingBreakdown` resolve credor e devedor por nome em snapshot antigo: com membros homônimos, o último vence
 
 ID: 103
-Origem: docs/feature/20261006-relatorios-acompanhamento-fechamento/implementation.md §3.2 (achado 7 da revisão de segurança da TASK-496); `backend/app/Support/ClosingBreakdown.php`
+Origem: docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/implementation.md §3.2 (achado 7 da revisão de segurança da TASK-496); `backend/app/Support/ClosingBreakdown.php`
 Criado em: 2026-10-25
 Prioridade: BAIXA
 Status: Aberto

@@ -16,7 +16,7 @@ use Tests\TestCase;
  * GET /api/groups/{groupId}/expenses/pending-cycles: a aba Acompanhamento de
  * Relatórios — ciclos encerrados (ou em carência) que ainda aguardam quitação.
  * Só lê: nunca sela, nunca grava snapshot, nunca notifica.
- * Ver docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §1.
+ * Ver docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §1.
  */
 class ExpenseControllerPendingCyclesTest extends TestCase
 {

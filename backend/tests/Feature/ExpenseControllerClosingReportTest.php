@@ -17,7 +17,7 @@ use Tests\TestCase;
  * Relatório de Fechamento de um ciclo (selado, fechado pendente ou vigente).
  * Só lê: nunca sela, nunca grava snapshot, nunca notifica — a diferença
  * deliberada em relação a `summary()`.
- * Ver docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §2.
+ * Ver docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §2.
  */
 class ExpenseControllerClosingReportTest extends TestCase
 {

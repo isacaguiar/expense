@@ -743,7 +743,7 @@ class ExpenseController extends Controller
      * ainda aguardam quitação, do mais recente ao mais antigo. Só lê: não sela,
      * não grava snapshot e não notifica. A varredura mora em
      * `CycleSummaryService::pendingCycles`. Ver
-     * docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §1.
+     * docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §1.
      */
     public function pendingCycles($groupId)
     {
@@ -763,7 +763,7 @@ class ExpenseController extends Controller
      * `cycle_start` que não abre um ciclo do grupo, ou de ciclo futuro, é `404`.
      * A checagem de membro vem antes da validação, para quem é de fora não
      * descobrir nada pelo `422`. Ver
-     * docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §2.
+     * docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §2.
      */
     public function closingReport($groupId, Request $request)
     {
