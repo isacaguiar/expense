@@ -11,11 +11,10 @@ type CycleDetailPanelProps = {
 
 /**
  * Chip de status + cards de totais + lista de despesas + painel lateral
- * (saldo/liquidação) de um ciclo — extraído de `GroupSummary.tsx` para ser
- * reaproveitado também pela tela de Relatórios (histórico de ciclos
- * fechados), que mostra o mesmo detalhe para um ciclo passado selecionado,
- * sem o cabeçalho de navegação por seta (que só faz sentido para a
- * competência vigente).
+ * (saldo/liquidação) de um ciclo — extraído de `GroupSummary.tsx`, que o usa
+ * na Home do grupo. A tela de Relatórios já o reaproveitou para o histórico
+ * de ciclos fechados; hoje o histórico abre o Relatório de Fechamento
+ * (`ClosingReportPanel`) e este painel ficou só com a Home.
  */
 const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary }) => (
   <>
