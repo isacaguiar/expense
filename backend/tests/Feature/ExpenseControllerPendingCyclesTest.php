@@ -396,4 +396,33 @@ class ExpenseControllerPendingCyclesTest extends TestCase
         $response->assertStatus(404);
         $this->assertStringNotContainsString('2026-09-01', $response->getContent());
     }
+
+    public function test_a_confirmation_from_another_group_of_the_same_members_does_not_settle_this_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        // Grupo A: tudo pago, mas o acerto Bruno -> Ana ainda NÃO foi confirmado.
+        [$groupA, $ana, $bruno] = $this->groupWithPair();
+        $this->expenseBetween($groupA, $ana, [$bruno], 200, true, '2026-09-10');
+
+        // Grupo B: os mesmos dois membros, o mesmo ciclo, e lá Bruno já confirmou o acerto.
+        $groupB = Group::create(['name' => 'Outro grupo']);
+        $groupB->members()->attach([$ana->id, $bruno->id]);
+        $this->expenseBetween($groupB, $ana, [$bruno], 200, true, '2026-09-10');
+        $this->confirm($groupB, $bruno, $ana, 100, '2026-09-01', '2026-09-30');
+
+        $dataA = $this->pendingCycles($ana, $groupA);
+
+        $this->assertCount(1, $dataA);
+        $this->assertFalse($dataA[0]['awaiting_seal'], 'A confirmação do outro grupo não quita este ciclo.');
+        $this->assertSame(1, $dataA[0]['settlements_total']);
+        $this->assertSame(0, $dataA[0]['settlements_confirmed']);
+
+        // Controle: no grupo B a mesma confirmação conta.
+        $dataB = $this->pendingCycles($ana, $groupB);
+
+        $this->assertCount(1, $dataB);
+        $this->assertTrue($dataB[0]['awaiting_seal']);
+        $this->assertSame(1, $dataB[0]['settlements_confirmed']);
+    }
 }

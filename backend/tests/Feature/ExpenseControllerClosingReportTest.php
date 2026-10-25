@@ -435,4 +435,140 @@ class ExpenseControllerClosingReportTest extends TestCase
         // A checagem de membro vem antes da validação: quem é de fora não descobre nada por um 422.
         $this->report($outsider, $group, 'abc')->assertStatus(404);
     }
+
+    private function installmentIn(Group $group, User $creditor, User $debtor, float $total, string $dueDate): Expense
+    {
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => $dueDate,
+            'description' => 'Parcelada do outro grupo',
+            'expense_type' => 'IN_INSTALLMENTS',
+            'installments' => 2,
+            'total_value' => $total,
+            'group_id' => $group->id,
+            'user_creator_id' => $creditor->id,
+            'user_payer_id' => $creditor->id,
+            'deleted' => false,
+        ]);
+        $expense->payers()->sync([$creditor->id, $debtor->id]);
+        $expense->quotas()->create([
+            'date_expected' => $dueDate,
+            'number' => 1,
+            'paid' => false,
+            'born_paid' => false,
+            'value_quota' => $total / 2,
+        ]);
+
+        return $expense;
+    }
+
+    private function fixedIn(Group $group, User $creditor, User $debtor, float $total, string $firstDate): Expense
+    {
+        $expense = Expense::create([
+            'create_date' => now(),
+            'date_payment' => $firstDate,
+            'description' => 'Fixa do outro grupo',
+            'expense_type' => 'FIXED',
+            'installments' => 1,
+            'total_value' => $total,
+            'group_id' => $group->id,
+            'user_creator_id' => $creditor->id,
+            'user_payer_id' => $creditor->id,
+            'deleted' => false,
+        ]);
+        $expense->payers()->sync([$creditor->id, $debtor->id]);
+
+        return $expense;
+    }
+
+    /**
+     * Os MESMOS dois membros em outro grupo, no mesmo ciclo: se um filtro por
+     * `group_id` sumisse (despesa, parcela, fixa, snapshot ou confirmação), os
+     * dados do outro grupo apareceriam aqui. Nada disso pode aparecer.
+     */
+    public function test_a_live_report_never_mixes_in_data_from_another_group_of_the_same_members(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$groupA, $ana, $bruno] = $this->groupWithPair();
+        $expenseA = $this->expenseBetween($groupA, $ana, [$bruno], 200, false, '2026-09-10');
+
+        $groupB = Group::create(['name' => 'Viagem do outro grupo']);
+        $groupB->members()->attach([$ana->id, $bruno->id]);
+        $this->expenseBetween($groupB, $ana, [$bruno], 999, false, '2026-09-11');
+        $this->installmentIn($groupB, $ana, $bruno, 300, '2026-09-12');
+        $this->fixedIn($groupB, $ana, $bruno, 55, '2026-08-05');
+        $this->confirm($groupB, $bruno, $ana, 499.5, '2026-09-01', '2026-09-30', 'nota do outro grupo');
+        GroupCycleSnapshot::create([
+            'group_id' => $groupB->id,
+            'cycle_start' => '2026-09-01',
+            'cycle_end' => '2026-09-30',
+            'totals' => ['total' => 777, 'paid' => 777, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'settlements' => [],
+            'settled_at' => now(),
+        ]);
+
+        $response = $this->report($ana, $groupA, '2026-09-01')->assertOk();
+
+        $response->assertJsonPath('group.id', $groupA->id)
+            ->assertJsonPath('cycle.settled', false);
+        $this->assertEquals(200.0, $response->json('totals.total'));
+        $this->assertEquals(200.0, $response->json('totals.pending'));
+        $this->assertSame([$expenseA->id], array_column($response->json('expenses'), 'id'));
+
+        $settlements = $response->json('settlements');
+        $this->assertCount(1, $settlements);
+        $this->assertNull($settlements[0]['confirmedAt'], 'A confirmação do outro grupo não decora o acerto deste.');
+        $this->assertNull($settlements[0]['confirmedNote']);
+        $this->assertNull($settlements[0]['confirmedProofUrl']);
+
+        $this->assertCount(1, $response->json('creditors'));
+        $this->assertEquals(200.0, $response->json('creditors.0.advanced_total'));
+
+        $raw = json_encode($response->json());
+        foreach (['Viagem do outro grupo', 'nota do outro grupo', 'Parcelada do outro grupo', 'Fixa do outro grupo', '999', '777'] as $foreign) {
+            $this->assertStringNotContainsString($foreign, $raw);
+        }
+    }
+
+    public function test_a_sealed_report_reads_this_groups_snapshot_and_confirmations_only(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$groupA, $ana, $bruno] = $this->groupWithPair();
+        GroupCycleSnapshot::create([
+            'group_id' => $groupA->id,
+            'cycle_start' => '2026-06-01',
+            'cycle_end' => '2026-06-30',
+            'totals' => ['total' => 80, 'paid' => 80, 'pending' => 0],
+            'expenses' => [['id' => 1, 'description' => 'Do grupo A', 'date' => '2026-06-10', 'value' => 80.0, 'paid' => true, 'bornPaid' => false, 'payerName' => 'Ana', 'participants' => ['Ana', 'Bruno'], 'userPayerId' => $ana->id]],
+            'balances' => [],
+            'settlements' => [['from_user_id' => $bruno->id, 'to_user_id' => $ana->id, 'amount' => 40.0]],
+            'settled_at' => now(),
+        ]);
+
+        $groupB = Group::create(['name' => 'Outro']);
+        $groupB->members()->attach([$ana->id, $bruno->id]);
+        GroupCycleSnapshot::create([
+            'group_id' => $groupB->id,
+            'cycle_start' => '2026-06-01',
+            'cycle_end' => '2026-06-30',
+            'totals' => ['total' => 999, 'paid' => 999, 'pending' => 0],
+            'expenses' => [['id' => 2, 'description' => 'Do grupo B', 'date' => '2026-06-11', 'value' => 999.0, 'paid' => true, 'bornPaid' => false, 'payerName' => 'Ana', 'participants' => ['Ana', 'Bruno'], 'userPayerId' => $ana->id]],
+            'balances' => [],
+            'settlements' => [],
+            'settled_at' => now(),
+        ]);
+        $this->confirm($groupB, $bruno, $ana, 40, '2026-06-01', '2026-06-30', 'nota do grupo B');
+
+        $response = $this->report($ana, $groupA, '2026-06-01')->assertOk();
+
+        $this->assertEquals(80.0, $response->json('totals.total'));
+        $this->assertSame(['Do grupo A'], array_column($response->json('expenses'), 'description'));
+        $this->assertNull($response->json('settlements.0.confirmedAt'));
+        $this->assertNull($response->json('settlements.0.confirmedNote'));
+        $this->assertStringNotContainsString('grupo B', json_encode($response->json()));
+    }
 }
