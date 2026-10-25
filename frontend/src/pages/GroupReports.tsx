@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Box, Typography, CircularProgress, List, ListItemButton, ListItemText, Paper, Pagination, Tab, Tabs } from '@mui/material';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { useGroupCycleHistory } from '../hooks/useGroupCycleHistory';
@@ -89,6 +89,10 @@ const CycleHistory: React.FC<CycleHistoryProps> = ({ groupId, selectedStart, onS
  * no Relatório de Fechamento, que aparece abaixo da lista. Trocar de aba
  * descarta o `ciclo`. Abas e listas levam `no-print`: na impressão só sobra o
  * Fechamento.
+ *
+ * Quem abre o Fechamento por um clique num cartão ou item é levado até ele, já
+ * que na aba Acompanhamento ele fica abaixo de até 13 cartões, fora da tela.
+ * Quem chega por link, recarga ou Voltar não é movido: já escolheu onde está.
  */
 const GroupReports: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
@@ -98,7 +102,28 @@ const GroupReports: React.FC = () => {
   // `?ciclo=` vazio vale como ausente: o `&&` abaixo não renderiza string vazia.
   const cycleStart = searchParams.get('ciclo');
 
-  const openClosing = (start: string) => setSearchParams({ aba: tab, ciclo: start });
+  const reportRef = useRef<HTMLDivElement>(null);
+  // Marcado só pelo clique num cartão ou item; o efeito abaixo consome a marca quando o
+  // Fechamento do ciclo novo já está montado. `scrollIntoView` não existe no jsdom.
+  const scrollToReport = useRef(false);
+
+  useEffect(() => {
+    if (!scrollToReport.current || !cycleStart) return;
+
+    scrollToReport.current = false;
+    reportRef.current?.scrollIntoView?.({ block: 'start' });
+  }, [cycleStart]);
+
+  const openClosing = (start: string) => {
+    // O ciclo já está aberto: a URL não muda, então o efeito não roda; rola na hora.
+    if (start === cycleStart) {
+      reportRef.current?.scrollIntoView?.({ block: 'start' });
+      return;
+    }
+
+    scrollToReport.current = true;
+    setSearchParams({ aba: tab, ciclo: start });
+  };
 
   return (
     <>
@@ -121,7 +146,16 @@ const GroupReports: React.FC = () => {
         )}
       </Box>
 
-      {cycleStart && <ClosingReportPanel groupId={groupId} cycleStart={cycleStart} />}
+      {cycleStart && (
+        // Na tela o contêiner reserva uma altura de janela: rolando para um relatório que ainda
+        // é um spinner, o documento é curto e o navegador limita a rolagem; quando o conteúdo
+        // chega, o título ficaria no rodapé da janela. Na impressão não reserva nada.
+        // `flow-root`: sem ele a margem de cima do spinner colapsa através do contêiner e o
+        // empurra 16 px para baixo; ao chegar o conteúdo ele sobe, e o título sai da janela.
+        <Box ref={reportRef} sx={{ display: 'flow-root', '@media screen': { minHeight: '100vh' } }}>
+          <ClosingReportPanel groupId={groupId} cycleStart={cycleStart} />
+        </Box>
+      )}
     </>
   );
 };

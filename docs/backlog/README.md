@@ -104,6 +104,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 101 | [use-group-cycle-resposta-fora-de-ordem.md](use-group-cycle-resposta-fora-de-ordem.md) | `useGroupCycle` não descarta resposta fora de ordem e mantém o resumo antigo (e o alerta) durante o reload. Latente, não reproduzido | alerta-ciclo-fechado-apos-pagamento (bugfix 20261024) | 2026-10-24 | BAIXA | Aberto |
 | 102 | [update-destroy-e-fixed-nao-selam-o-ciclo-quitado.md](update-destroy-e-fixed-nao-selam-o-ciclo-quitado.md) | `update()`, `destroy()` e a edição de despesa `FIXED` não selam o ciclo que ficou quitado: o ciclo fica sem foto até alguém abri-lo; reproduzido na carência, `FIXED` só por leitura de código | relatorios-acompanhamento-fechamento | 2026-10-25 | BAIXA | Aberto |
 | 103 | [closing-breakdown-resolve-por-nome-em-snapshot-antigo.md](closing-breakdown-resolve-por-nome-em-snapshot-antigo.md) | `ClosingBreakdown` resolve credor e devedor por nome em snapshot antigo: com membros homônimos, o último vence (efeito de exibição, não reproduzido) | relatorios-acompanhamento-fechamento (revisão de segurança, TASK-496) | 2026-10-25 | BAIXA | Aberto |
+| 104 | [pending-cycles-varredura-faz-127-a-182-consultas.md](pending-cycles-varredura-faz-127-a-182-consultas.md) | Acompanhamento: `pending-cycles` faz 127 a 182 consultas e leva 0,7 a 0,9 s por abertura da aba (medido em ambiente de teste, não em produção) | relatorios-acompanhamento-fechamento (validação, TASK-497) | 2026-10-25 | BAIXA | Aberto |
 
 ## Itens concluídos
 
