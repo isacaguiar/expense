@@ -523,7 +523,7 @@ class CycleSummaryService
      * Custo: ciclos que terminam antes da primeira entrada possível do grupo
      * (`firstPossibleEntryDate`) seriam descartados por vazios, então a varredura
      * para neles sem calculá-los.
-     * Ver docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §1 (D-N2).
+     * Ver docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §1 (D-N2).
      *
      * @return array<int, array{
      *     cycle: array{start: string, end: string, closes_at: string, status: string, settled: bool, in_grace: bool},
@@ -640,7 +640,7 @@ class CycleSummaryService
      * preguiçosa** (não grava snapshot nem dispara `Notifier::cycleSettled`).
      * É o que o Relatório de Fechamento usa, porque o cliente manda o
      * `cycle_start` que a lista devolveu em vez de contar `cycles_ago`
-     * (docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §2.1, D-N3).
+     * (docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §2.1, D-N3).
      *
      * O snapshot é procurado **primeiro**, pelo `cycle_start`: um ciclo selado
      * continua abrindo com o período gravado nele mesmo depois de o

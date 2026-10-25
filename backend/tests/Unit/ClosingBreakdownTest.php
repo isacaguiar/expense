@@ -10,7 +10,7 @@ use PHPUnit\Framework\TestCase;
  * Agregação "credor → devedores" do Relatório de Fechamento: valor **bruto por
  * despesa**, não o acerto líquido par-a-par de `settlements`. Classe pura: o
  * teste não sobe o framework nem toca em banco.
- * Ver docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §2.2.
+ * Ver docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §2.2.
  */
 class ClosingBreakdownTest extends TestCase
 {

@@ -859,7 +859,7 @@ class CycleSummaryServiceTest extends TestCase
     }
 
     // --- viewAt(): o mesmo que view(), mas resolvido pelo início do ciclo ---------
-    // Relatório de Fechamento (docs/feature/20261006-relatorios-acompanhamento-fechamento,
+    // Relatório de Fechamento (docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento,
     // plan.md §2.1, D-N3): o cliente manda o `cycle_start` que a lista devolveu, sem conta
     // de `cycles_ago`. Devolve `null` para ciclo futuro e para data que não abre um ciclo.
 

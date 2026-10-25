@@ -1,7 +1,7 @@
 # Acompanhamento: `pending-cycles` faz 127 a 182 consultas e leva 0,7 a 0,9 s por abertura da aba
 
 ID: 104
-Origem: docs/feature/20261006-relatorios-acompanhamento-fechamento/implementation.md §4.2 (medição da TASK-497) e §3.2 achado 1 (revisão de segurança da TASK-496); `backend/app/Services/CycleSummaryService.php` (`pendingCycles`, `view`, `viewAt`, `compute`, `entries`)
+Origem: docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/implementation.md §4.2 (medição da TASK-497) e §3.2 achado 1 (revisão de segurança da TASK-496); `backend/app/Services/CycleSummaryService.php` (`pendingCycles`, `view`, `viewAt`, `compute`, `entries`)
 Criado em: 2026-10-25
 Prioridade: BAIXA
 Status: Aberto

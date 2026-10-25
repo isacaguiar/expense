@@ -12,7 +12,7 @@ use Illuminate\Support\Collection;
  *
  * Classe pura (array entra, array sai), como `BillingCycle`: não consulta banco
  * nem HTTP, e a regra de divisão fica no backend, não no cliente.
- * Ver docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §2.2.
+ * Ver docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §2.2.
  */
 class ClosingBreakdown
 {
