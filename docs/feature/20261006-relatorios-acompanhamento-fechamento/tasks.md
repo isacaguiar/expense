@@ -24,7 +24,7 @@ IDs a partir de TASK-481: o maior em qualquer lugar do projeto é TASK-480 (feat
 | TASK-494 | Atualizar `consultas-tela-relatorio.md` com as consultas das duas abas e do Fechamento | doc | plan.md §7 (item 8) | nenhum | Concluída (`implementation.md` §2) |
 | TASK-495 | Registrar em `docs/backlog/` o achado tangencial do plan §8 (`update()`/`destroy()` não selam) | doc | plan.md §8 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-496 | Revisar as duas rotas novas com o `security-reviewer` e registrar os resultados | backend | plan.md §5 | nenhum | Concluída; decisões D-S1 a D-S3 tomadas em 2026-10-25 (`implementation.md` §2 e §3.3) |
-| TASK-497 | Validar ponta a ponta na stack isolada, medir o custo da varredura e encerrar o ambiente | infra | plan.md §6 | antes do merge | Pendente |
+| TASK-497 | Validar ponta a ponta na stack isolada, medir o custo da varredura e encerrar o ambiente | infra | plan.md §6 | antes do merge | Validação feita (`implementation.md` §4); **aguarda a confirmação por escrito do usuário**; limpeza do ambiente e merge só depois |
 | TASK-498 | Rodar o checklist pré-PR na branch integrada e abrir o PR único contra `dev` | infra | plan.md §5 e §7 (item 9) | antes do merge | Pendente |
 
 Ordem: TASK-481 → 482 → 483 → 484 → 485 → 486 → 487 → 488 → 489 → 490 → 491 → 492 → 493 → 494 → 495 → 496 → 497 → 498. Dependências reais:

@@ -45,6 +45,9 @@ const ConsentBanner: React.FC = () => {
   return (
     <Snackbar
       open={open}
+      // Fica de fora do papel: sendo `position: fixed`, repetiria em todas as páginas
+      // impressas do Relatório de Fechamento, por cima do conteúdo.
+      className="no-print"
       anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       // Sem `autoHideDuration`: sumir sozinho registraria uma não-escolha como
       // se fosse escolha, e o banner voltaria no próximo carregamento.
