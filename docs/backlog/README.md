@@ -102,6 +102,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 099 | [tres-copias-do-helper-de-membro-do-grupo.md](tres-copias-do-helper-de-membro-do-grupo.md) | Três cópias do helper que confere se o usuário é membro do grupo (`Controller`, `GroupController`, `GroupMemberController`): unificar sem mudar comportamento | members-index-checagem-de-membro (specify §2.2, D3) | 2026-10-23 | BAIXA | Aberto |
 | 100 | [status-do-ciclo-e-alerta-de-fechamento-visual.md](status-do-ciclo-e-alerta-de-fechamento-visual.md) | Status do ciclo e alerta de fechamento: distinguir fechado, revisável e quitado (hoje "quitado" não tem estado próprio), com status acima do alerta, ícone + texto e contraste medido | alerta-ciclo-fechado-apos-pagamento (bugfix 20261024) | 2026-10-24 | BAIXA | Aberto |
 | 101 | [use-group-cycle-resposta-fora-de-ordem.md](use-group-cycle-resposta-fora-de-ordem.md) | `useGroupCycle` não descarta resposta fora de ordem e mantém o resumo antigo (e o alerta) durante o reload. Latente, não reproduzido | alerta-ciclo-fechado-apos-pagamento (bugfix 20261024) | 2026-10-24 | BAIXA | Aberto |
+| 102 | [update-destroy-e-fixed-nao-selam-o-ciclo-quitado.md](update-destroy-e-fixed-nao-selam-o-ciclo-quitado.md) | `update()`, `destroy()` e a edição de despesa `FIXED` não selam o ciclo que ficou quitado: o ciclo fica sem foto até alguém abri-lo; reproduzido na carência, `FIXED` só por leitura de código | relatorios-acompanhamento-fechamento | 2026-10-25 | BAIXA | Aberto |
 
 ## Itens concluídos
 

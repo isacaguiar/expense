@@ -22,7 +22,7 @@ IDs a partir de TASK-481: o maior em qualquer lugar do projeto é TASK-480 (feat
 | TASK-492 | Criar `PendingCyclesList` | frontend | plan.md §3 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-493 | Reescrever `GroupReports` com as abas Acompanhamento e Histórico e o estado na URL, ajustando os testes existentes | frontend | plan.md §3 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-494 | Atualizar `consultas-tela-relatorio.md` com as consultas das duas abas e do Fechamento | doc | plan.md §7 (item 8) | nenhum | Concluída (`implementation.md` §2) |
-| TASK-495 | Registrar em `docs/backlog/` o achado tangencial do plan §8 (`update()`/`destroy()` não selam) | doc | plan.md §8 | nenhum | Pendente |
+| TASK-495 | Registrar em `docs/backlog/` o achado tangencial do plan §8 (`update()`/`destroy()` não selam) | doc | plan.md §8 | nenhum | Concluída (`implementation.md` §2) |
 | TASK-496 | Revisar as duas rotas novas com o `security-reviewer` e registrar os resultados | backend | plan.md §5 | nenhum | Pendente |
 | TASK-497 | Validar ponta a ponta na stack isolada, medir o custo da varredura e encerrar o ambiente | infra | plan.md §6 | antes do merge | Pendente |
 | TASK-498 | Rodar o checklist pré-PR na branch integrada e abrir o PR único contra `dev` | infra | plan.md §5 e §7 (item 9) | antes do merge | Pendente |
