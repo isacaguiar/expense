@@ -71,6 +71,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/groups/{groupId}/expenses/close', [ExpenseController::class, 'close']);
     Route::post('/groups/{groupId}/expenses/reopen', [ExpenseController::class, 'reopen']);
     Route::get('/groups/{groupId}/expenses/cycles', [ExpenseController::class, 'cycleHistory']);
+    Route::get('/groups/{groupId}/expenses/pending-cycles', [ExpenseController::class, 'pendingCycles']);
+    Route::get('/groups/{groupId}/expenses/closing-report', [ExpenseController::class, 'closingReport']);
     Route::get('/groups/{groupId}/expenses/gross-debts', [ExpenseController::class, 'grossDebts']);
 
     Route::get('/groups/{groupId}/expenses/report/{year}', [GroupExpenseReportController::class, 'reportByGroupAndYear']);

@@ -504,6 +504,96 @@ class CycleSummaryService
     }
 
     /**
+     * Acompanhamento de Relatórios: os ciclos **encerrados que ainda aguardam
+     * quitação**, do mais recente ao mais antigo, varrendo até `FOCUS_LOOKBACK`
+     * ciclos para trás (a mesma janela de `focus()`, então no máximo 13 itens).
+     *
+     * Entra o ciclo que não está selado e está fechado (por data, ou por
+     * fechamento manual ainda ativo) ou em carência (`open` com a fronteira no
+     * passado). Ficam de fora o selado (é do Histórico), o vigente ainda aberto,
+     * o futuro e o **vazio**: sem despesa real (`bornPaid` não conta) e sem
+     * acerto, não há o que acompanhar (mesma regra de `sealCycleIfSettled`).
+     *
+     * `awaiting_seal` marca o ciclo que já está todo quitado mas ainda não foi
+     * selado, caso raro que só nasce quando a quitação muda sem passar por
+     * `pay()`, `confirmSettlement()`, `close()` ou `summary()` (plan.md §0.1.2).
+     * A listagem **não sela** nem grava: usa `view()`, que lê sem a selagem
+     * preguiçosa.
+     *
+     * Custo: ciclos que terminam antes da primeira entrada possível do grupo
+     * (`firstPossibleEntryDate`) seriam descartados por vazios, então a varredura
+     * para neles sem calculá-los.
+     * Ver docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §1 (D-N2).
+     *
+     * @return array<int, array{
+     *     cycle: array{start: string, end: string, closes_at: string, status: string, settled: bool, in_grace: bool},
+     *     totals: array,
+     *     settlements_total: int,
+     *     settlements_confirmed: int,
+     *     pending_expenses_count: int,
+     *     awaiting_seal: bool
+     * }>
+     */
+    public function pendingCycles(Group $group): array
+    {
+        $firstEntryDate = $this->firstPossibleEntryDate($group);
+
+        // Sem despesa viva não há entrada em ciclo nenhum.
+        if ($firstEntryDate === null) {
+            return [];
+        }
+
+        $items = [];
+
+        for ($ago = 0; $ago <= self::FOCUS_LOOKBACK; $ago++) {
+            $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $ago);
+
+            // Os ciclos recuam no tempo: se este já termina antes da primeira
+            // entrada possível, os seguintes também.
+            if ($cycle['end']->toDateString() < $firstEntryDate->toDateString()) {
+                break;
+            }
+
+            $view = $this->view($group, $ago);
+
+            if ($view['sealed']) {
+                continue;
+            }
+
+            $closed = in_array($view['cycle']['status'], ['closed', 'closed_manually'], true);
+
+            // O vigente ainda aberto (e o futuro) não são "encerrados".
+            if (! $closed && ! $view['cycle']['in_grace']) {
+                continue;
+            }
+
+            $summary = $view['summary'];
+            $hasRealExpense = collect($summary['expenses'])->contains(fn (array $expense) => empty($expense['bornPaid']));
+
+            if (! $hasRealExpense && empty($summary['settlements'])) {
+                continue;
+            }
+
+            $items[] = [
+                'cycle' => $view['cycle'],
+                'totals' => $summary['totals'],
+                'settlements_total' => count($summary['settlements']),
+                'settlements_confirmed' => count(array_filter(
+                    $summary['settlements'],
+                    fn (array $settlement) => $settlement['confirmedAt'] !== null
+                )),
+                'pending_expenses_count' => count(array_filter(
+                    $summary['expenses'],
+                    fn (array $expense) => empty($expense['bornPaid']) && ! $expense['paid']
+                )),
+                'awaiting_seal' => $this->summaryIsFullySettled($summary, $group->id, $cycle['start']),
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
      * O ciclo `$cyclesAgo` de um grupo como o `summary()` o serviria — ciclo,
      * totais, despesas, saldos e acertos com as confirmações — **sem a selagem
      * preguiçosa**: quem só quer ler (a visão pessoal do Painel) não pode gravar
@@ -518,6 +608,10 @@ class CycleSummaryService
      * ciclo fechado que já esteja todo quitado. `in_grace` é novo: a fronteira
      * já passou e o ciclo ainda está `open` (a carência de `BillingCycle`).
      *
+     * Resolve o ciclo por `cycles_ago` (`>= 0`: nunca cai num ciclo futuro) e
+     * delega a `viewAt()`, que é quem escolhe a fonte — uma só regra para o
+     * Painel e para o Relatório de Fechamento.
+     *
      * @return array{
      *     cycle: array{start: string, end: string, closes_at: string, status: string, settled: bool, in_grace: bool},
      *     summary: array{totals: array, expenses: array, balances: array, settlements: array},
@@ -527,9 +621,46 @@ class CycleSummaryService
     public function view(Group $group, int $cyclesAgo): array
     {
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $cyclesAgo);
-        $start = $cycle['start'];
-        $end = $cycle['end'];
-        $status = $cycle['status'];
+
+        $view = $this->viewAt($group, $cycle['start']);
+
+        // O início vem do próprio `cycleFor` e `$cyclesAgo >= 0` nunca é futuro,
+        // então `viewAt()` não tem motivo para recusar. Se recusar, é erro de uso
+        // (por exemplo, um `$cyclesAgo` negativo), não um ciclo sem dados.
+        if ($view === null) {
+            throw new \LogicException("Sem ciclo para cycles_ago={$cyclesAgo}.");
+        }
+
+        return $view;
+    }
+
+    /**
+     * O ciclo que **começa** em `$start`, lido como `view()` o lê: a foto
+     * imutável se estiver selado, o cálculo ao vivo nos demais, **sem a selagem
+     * preguiçosa** (não grava snapshot nem dispara `Notifier::cycleSettled`).
+     * É o que o Relatório de Fechamento usa, porque o cliente manda o
+     * `cycle_start` que a lista devolveu em vez de contar `cycles_ago`
+     * (docs/feature/20261006-relatorios-acompanhamento-fechamento/plan.md §2.1, D-N3).
+     *
+     * O snapshot é procurado **primeiro**, pelo `cycle_start`: um ciclo selado
+     * continua abrindo com o período gravado nele mesmo depois de o
+     * `closing_day` do grupo mudar (recalcular os limites daria um ciclo
+     * diferente e esconderia um snapshot legítimo). Só sem snapshot selado entra
+     * `BillingCycle`, e aí `$start` precisa ser o primeiro dia de um ciclo.
+     *
+     * Devolve `null`, e o chamador responde `404`, quando `$start` não abre um
+     * ciclo do grupo (cai no meio de um) ou o ciclo que abre ainda é futuro.
+     * Mesmo formato de retorno de `view()`.
+     *
+     * @return array{
+     *     cycle: array{start: string, end: string, closes_at: string, status: string, settled: bool, in_grace: bool},
+     *     summary: array{totals: array, expenses: array, balances: array, settlements: array},
+     *     sealed: bool
+     * }|null
+     */
+    public function viewAt(Group $group, Carbon $start): ?array
+    {
+        $start = $start->copy()->startOfDay();
 
         $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
             ->where('cycle_start', $start->toDateString())
@@ -539,7 +670,8 @@ class CycleSummaryService
         $inGrace = false;
 
         if ($sealed) {
-            // Ciclo totalmente quitado → foto imutável.
+            // Ciclo totalmente quitado → foto imutável, com o fim gravado nela.
+            $end = $snapshot->cycle_end->copy()->startOfDay();
             $status = 'closed';
             $summary = [
                 'totals' => $snapshot->totals,
@@ -548,6 +680,20 @@ class CycleSummaryService
                 'settlements' => $snapshot->settlements,
             ];
         } else {
+            // O ciclo que contém `$start` só vale se for `$start` quem o abre.
+            $cycle = BillingCycle::cycleFor($group->closing_day, $start);
+
+            if ($cycle['start']->toDateString() !== $start->toDateString()) {
+                return null;
+            }
+
+            $end = $cycle['end'];
+            $status = BillingCycle::statusFor($group->closing_day, $start, Carbon::now());
+
+            if ($status === 'future') {
+                return null;
+            }
+
             $inGrace = $status === 'open' && Carbon::now()->startOfDay()->gt($end);
 
             if ($status === 'open' && $snapshot && $snapshot->isManuallyClosedAndActive()) {
