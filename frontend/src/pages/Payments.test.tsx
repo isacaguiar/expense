@@ -29,6 +29,7 @@ type SummaryExpenseFixture = {
   paymentNote?: string | null;
   payerName?: string | null;
   participants?: string[];
+  participantDetails?: { id: number; name: string; avatarUrl: string | null }[];
   isFixed?: boolean;
   expenseType?: 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
   installmentNumber?: number | null;
@@ -1167,5 +1168,341 @@ describe('Payments - ordem e data das despesas', () => {
     expect(screen.getAllByText('Geladeira')).toHaveLength(2);
     expect(consoleError.mock.calls.flat().join(' ')).not.toMatch(/same key/i);
     consoleError.mockRestore();
+  });
+});
+
+describe('Payments - filtros da lista de despesas', () => {
+  const isac = { id: CURRENT_USER_ID, name: 'Isac', avatarUrl: null };
+  const joao = { id: 501, name: 'João', avatarUrl: null };
+  const maria = { id: 502, name: 'Maria', avatarUrl: null };
+
+  // Competência atual — Isac (o usuário logado) é credor de Aluguel e Internet; João, de Mercado:
+  //   Aluguel   fixa      credor Isac  Isac, João, Maria  paga
+  //   Mercado   variável  credor João  João, Maria        pendente
+  //   Internet  variável  credor Isac  Isac, João         pendente
+  const currentCycle: SummaryExpenseFixture[] = [
+    {
+      id: 9,
+      description: 'Aluguel',
+      value: 1200,
+      date: '2026-08-01',
+      payerName: 'Isac',
+      userPayerId: CURRENT_USER_ID,
+      isFixed: true,
+      paid: true,
+      paymentNote: 'Pix agendado',
+      participants: ['Isac', 'João', 'Maria'],
+      participantDetails: [isac, joao, maria],
+    },
+    {
+      id: 10,
+      description: 'Mercado',
+      value: 150,
+      date: '2026-08-05',
+      payerName: 'João',
+      userPayerId: 501,
+      isFixed: false,
+      participants: ['João', 'Maria'],
+      participantDetails: [joao, maria],
+    },
+    {
+      id: 11,
+      description: 'Internet',
+      value: 100,
+      date: '2026-08-10',
+      payerName: 'Isac',
+      userPayerId: CURRENT_USER_ID,
+      isFixed: false,
+      participants: ['Isac', 'João'],
+      participantDetails: [isac, joao],
+    },
+  ];
+
+  // Competência anterior — Maria não aparece em nenhuma despesa.
+  const previousCycle: SummaryExpenseFixture[] = [
+    {
+      id: 20,
+      description: 'Condomínio',
+      value: 400,
+      date: '2026-07-05',
+      payerName: 'Isac',
+      userPayerId: CURRENT_USER_ID,
+      isFixed: false,
+      participants: ['Isac', 'João'],
+      participantDetails: [isac, joao],
+    },
+    {
+      id: 21,
+      description: 'Seguro',
+      value: 90,
+      date: '2026-07-12',
+      payerName: 'João',
+      userPayerId: 501,
+      isFixed: false,
+      participants: ['João'],
+      participantDetails: [joao],
+    },
+  ];
+
+  const balances = [
+    { user_id: CURRENT_USER_ID, name: 'Isac', balance: 100 },
+    { user_id: 501, name: 'João', balance: -60 },
+    { user_id: 502, name: 'Maria', balance: -40 },
+  ];
+  const settlements = [
+    { from_user_id: 501, to_user_id: CURRENT_USER_ID, amount: 60 },
+    { from_user_id: 502, to_user_id: CURRENT_USER_ID, amount: 40 },
+  ];
+
+  // `shown()` devolve os que aparecem na tela na ordem desta lista, que é a do DOM (data
+  // decrescente): competência atual Internet 10/08, Mercado 05/08, Aluguel 01/08; anterior Seguro 12/07, Condomínio 05/07.
+  const allDescriptions = ['Internet', 'Mercado', 'Aluguel', 'Seguro', 'Condomínio'];
+  const shown = () => allDescriptions.filter(description => screen.queryByText(description) !== null);
+
+  type User = ReturnType<typeof userEvent.setup>;
+
+  const renderScreen = async (waitForText = 'Aluguel') => {
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+    await screen.findByText(waitForText);
+  };
+
+  // Abre o select múltiplo, escolhe as opções e fecha a lista (o Autocomplete mantém a lista aberta).
+  const pick = async (user: User, field: 'Credor' | 'Devedores', ...names: string[]) => {
+    await user.click(screen.getByRole('combobox', { name: field }));
+    for (const name of names) {
+      await user.click(await screen.findByRole('option', { name }));
+    }
+    await user.keyboard('{Escape}');
+  };
+
+  const group = (name: 'Tipo' | 'Status') => within(screen.getByRole('group', { name }));
+  const cardOf = (title: string) => screen.getByText(title).closest('[class*="MuiCard-root"]') as HTMLElement;
+  const selectedChips = (field: 'Credor' | 'Devedores') =>
+    screen.getByRole('combobox', { name: field }).closest('.MuiAutocomplete-root')!.querySelectorAll('.MuiAutocomplete-tag');
+  const getCalls = (part: string) =>
+    vi.mocked(axios.get).mock.calls.filter(call => String(call[0]).includes(part)).length;
+
+  // Devolve a competência anterior quando o hook pede `cycles_ago=1`.
+  const mockTwoCycles = () => {
+    vi.mocked(axios.get).mockImplementation((url: string, config?: { params?: { cycles_ago?: number } }) => {
+      if (url.includes('/expenses/summary')) {
+        const list = config?.params?.cycles_ago === 1 ? previousCycle : currentCycle;
+        return Promise.resolve({ data: summaryResponse(list) });
+      }
+      if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      if (url.includes('/members')) return Promise.resolve({ data: [] });
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+  };
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    mockGetResponses(currentCycle, { balances, settlements });
+  });
+
+  it('mostra busca, Credor, Devedores, Tipo e Status, com os mesmos rótulos de Despesas', async () => {
+    await renderScreen();
+
+    expect(screen.getByLabelText('Buscar despesa')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Credor' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Devedores' })).toBeInTheDocument();
+    expect(group('Tipo').getByRole('button', { name: 'Fixas' })).toBeInTheDocument();
+    expect(group('Status').getByRole('button', { name: 'Pendentes' })).toBeInTheDocument();
+    expect(shown()).toEqual(['Internet', 'Mercado', 'Aluguel']);
+  });
+
+  it('filtra por Credor, e dois credores valem como OU', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await pick(user, 'Credor', 'João');
+    expect(shown()).toEqual(['Mercado']);
+
+    await pick(user, 'Credor', 'Isac');
+    expect(shown()).toEqual(['Internet', 'Mercado', 'Aluguel']);
+  });
+
+  it('filtra por Devedores, contando o credor como devedor da própria despesa', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await pick(user, 'Devedores', 'Maria');
+    expect(shown()).toEqual(['Mercado', 'Aluguel']);
+
+    await pick(user, 'Devedores', 'João');
+    expect(shown()).toEqual(['Internet', 'Mercado', 'Aluguel']);
+  });
+
+  it('filtra por Status: Pagas, Pendentes e de volta a Todas', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await user.click(group('Status').getByRole('button', { name: 'Pagas' }));
+    expect(shown()).toEqual(['Aluguel']);
+
+    await user.click(group('Status').getByRole('button', { name: 'Pendentes' }));
+    expect(shown()).toEqual(['Internet', 'Mercado']);
+
+    await user.click(group('Status').getByRole('button', { name: 'Todas' }));
+    expect(shown()).toEqual(['Internet', 'Mercado', 'Aluguel']);
+  });
+
+  it('ordena antes de filtrar: com um filtro ativo a lista segue em data decrescente, mesmo chegando crescente', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+    // `currentCycle` chega da API em data crescente (Aluguel, Mercado, Internet).
+    const domOrder = () => screen.getAllByText(/^(Internet|Mercado|Aluguel)$/).map(title => title.textContent);
+
+    await user.click(group('Status').getByRole('button', { name: 'Pendentes' }));
+
+    expect(domOrder()).toEqual(['Internet', 'Mercado']);
+  });
+
+  it('combina Credor, Status, Tipo e busca: só passa quem atende a todos', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await pick(user, 'Credor', 'Isac');
+    expect(shown()).toEqual(['Internet', 'Aluguel']);
+
+    await user.click(group('Status').getByRole('button', { name: 'Pendentes' }));
+    expect(shown()).toEqual(['Internet']);
+
+    await user.click(group('Tipo').getByRole('button', { name: 'Fixas' }));
+    expect(shown()).toEqual([]);
+    expect(screen.getByText('Nenhuma despesa encontrada para esse filtro.')).toBeInTheDocument();
+
+    await user.click(group('Tipo').getByRole('button', { name: 'Todas' }));
+    await user.type(screen.getByLabelText('Buscar despesa'), 'net');
+    expect(shown()).toEqual(['Internet']);
+  });
+
+  it('filtra Devedores por nome numa competência de ciclo selado, sem participantDetails', async () => {
+    const user = userEvent.setup();
+    mockGetResponses(currentCycle.map(exp => ({ ...exp, participantDetails: undefined })));
+    await renderScreen();
+
+    await pick(user, 'Devedores', 'Maria');
+
+    expect(shown()).toEqual(['Mercado', 'Aluguel']);
+  });
+
+  it('filtrar não faz nenhuma chamada nova à API', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+    const snapshot = () => ({
+      focus: getCalls('/expenses/focus-cycle'),
+      summary: getCalls('/expenses/summary'),
+      members: getCalls('/members'),
+      me: getCalls('/api/me'),
+    });
+    const before = snapshot();
+    expect(before.summary).toBe(1);
+
+    await pick(user, 'Credor', 'João');
+    await pick(user, 'Devedores', 'Maria');
+    await user.click(group('Status').getByRole('button', { name: 'Pendentes' }));
+    await user.type(screen.getByLabelText('Buscar despesa'), 'mer');
+
+    expect(snapshot()).toEqual(before);
+  });
+
+  it('ignora um devedor que não existe na competência navegada: some do campo e não restringe a lista', async () => {
+    const user = userEvent.setup();
+    mockTwoCycles();
+    await renderScreen();
+
+    await pick(user, 'Devedores', 'Maria');
+    expect(shown()).toEqual(['Mercado', 'Aluguel']);
+    expect(selectedChips('Devedores')).toHaveLength(1);
+
+    await user.click(screen.getByRole('button', { name: 'Ciclo anterior' }));
+    await screen.findByText('Condomínio');
+
+    expect(shown()).toEqual(['Seguro', 'Condomínio']);
+    expect(selectedChips('Devedores')).toHaveLength(0);
+  });
+
+  it('mantém o filtro de Credor ao navegar para uma competência em que a pessoa também aparece', async () => {
+    const user = userEvent.setup();
+    mockTwoCycles();
+    await renderScreen();
+
+    await pick(user, 'Credor', 'Isac');
+    expect(shown()).toEqual(['Internet', 'Aluguel']);
+
+    await user.click(screen.getByRole('button', { name: 'Ciclo anterior' }));
+    await screen.findByText('Condomínio');
+
+    expect(shown()).toEqual(['Condomínio']);
+  });
+
+  it('mostra a barra mesmo numa competência sem despesas, com o texto próprio de competência vazia', async () => {
+    mockGetResponses([]);
+    await renderScreen('Nenhuma despesa nesta competência.');
+
+    expect(screen.getByRole('combobox', { name: 'Credor' })).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma despesa encontrada para esse filtro.')).not.toBeInTheDocument();
+  });
+
+  it('não filtra os acertos, os saldos nem as ações: "Valores a pagar" mostra o mesmo com filtro ativo', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+    const acertos = () => screen.getAllByText(/deve pagar/).map(el => el.textContent);
+    const semFiltro = acertos();
+    expect(semFiltro).toEqual(['João deve pagar R$ 60,00 a Isac', 'Maria deve pagar R$ 40,00 a Isac']);
+
+    await pick(user, 'Credor', 'João');
+    await user.click(group('Status').getByRole('button', { name: 'Pendentes' }));
+
+    expect(shown()).toEqual(['Mercado']);
+    expect(acertos()).toEqual(semFiltro);
+  });
+
+  it('abre "Editar comprovante" com um filtro ativo, já preenchido com a descrição atual', async () => {
+    const user = userEvent.setup();
+    await renderScreen();
+
+    await pick(user, 'Credor', 'Isac');
+    await user.click(group('Status').getByRole('button', { name: 'Pagas' }));
+    expect(shown()).toEqual(['Aluguel']);
+
+    await user.click(within(cardOf('Aluguel')).getByRole('button', { name: 'Editar comprovante' }));
+    const dialog = await screen.findByRole('dialog');
+
+    expect(within(dialog).getByLabelText('Descrição')).toHaveValue('Pix agendado');
+  });
+
+  it('desfaz o pagamento com o filtro "Pagas" ativo: a despesa sai da lista filtrada sem erro', async () => {
+    const user = userEvent.setup();
+    let unpaid = false;
+    vi.mocked(axios.post).mockImplementation(() => {
+      unpaid = true;
+      return Promise.resolve({ data: {} });
+    });
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/summary')) {
+        const list = currentCycle.map(exp => (exp.id === 9 && unpaid ? { ...exp, paid: false } : exp));
+        return Promise.resolve({ data: summaryResponse(list, { balances, settlements }) });
+      }
+      if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      if (url.includes('/members')) return Promise.resolve({ data: [] });
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+    await renderScreen();
+
+    await user.click(group('Status').getByRole('button', { name: 'Pagas' }));
+    expect(shown()).toEqual(['Aluguel']);
+
+    await user.click(within(cardOf('Aluguel')).getByRole('button', { name: 'Desfazer pagamento' }));
+
+    expect(await screen.findByText('Nenhuma despesa encontrada para esse filtro.')).toBeInTheDocument();
+    expect(screen.queryByText('Aluguel')).not.toBeInTheDocument();
+    expect(await screen.findByText('Pagamento desfeito.')).toBeInTheDocument();
   });
 });
