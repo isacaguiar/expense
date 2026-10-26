@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { useGroupCycle } from '../hooks/useGroupCycle';
+import { useCurrentUserId } from '../hooks/useCurrentUserId';
 import CycleDetailPanel from '../components/CycleDetailPanel';
 import CycleClosingAlert from '../components/CycleClosingAlert';
 import { formatShortDate } from '../utils/dates';
@@ -11,6 +12,7 @@ import { formatShortDate } from '../utils/dates';
 const GroupSummary: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const { summary, loading, error, goToPreviousCycle, goToNextCycle } = useGroupCycle(groupId);
+  const currentUserId = useCurrentUserId();
 
   return (
     <>
@@ -48,7 +50,7 @@ const GroupSummary: React.FC = () => {
 
           <CycleClosingAlert summary={summary} />
 
-          <CycleDetailPanel summary={summary} />
+          <CycleDetailPanel summary={summary} currentUserId={currentUserId} />
         </>
       ) : null}
     </>

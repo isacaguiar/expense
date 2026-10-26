@@ -117,6 +117,57 @@ describe('GroupSummary', () => {
     expect(screen.getByText(/R\$ 550,00 a pagar/)).toBeInTheDocument();
   });
 
+  describe('aba Saldo com o usuário logado primeiro', () => {
+    // O mock padrão devolve `/api/me` sem `id`; aqui a resposta traz o id de um dos membros.
+    const mockMeWithId = (id: number) => {
+      vi.mocked(axios.get).mockImplementation((url: string) => {
+        if (url.includes('/expenses/summary')) return Promise.resolve({ data: summaryResponse });
+        if (url.includes('/api/groups')) return Promise.resolve({ data: groups });
+        if (url.includes('/api/me')) return Promise.resolve({ data: { ...currentUser, id } });
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      });
+    };
+    const shownOrder = () => screen.getAllByText(/^QA (Resumo|Membro 2)$/).map(el => el.textContent);
+
+    it('abre o Saldo com o usuário logado em primeiro, mesmo com o menor saldo', async () => {
+      mockMeWithId(534);
+
+      render(
+        <MemoryRouter>
+          <GroupSummary />
+        </MemoryRouter>
+      );
+
+      await screen.findByText(/R\$ 550,00 a receber/);
+      await waitFor(() => expect(shownOrder()).toEqual(['QA Membro 2', 'QA Resumo']));
+    });
+
+    it('pede /api/me uma única vez para isso', async () => {
+      mockMeWithId(534);
+
+      render(
+        <MemoryRouter>
+          <GroupSummary />
+        </MemoryRouter>
+      );
+
+      await screen.findByText(/R\$ 550,00 a receber/);
+      await waitFor(() => expect(shownOrder()).toEqual(['QA Membro 2', 'QA Resumo']));
+      expect(vi.mocked(axios.get).mock.calls.filter(([url]) => String(url).includes('/api/me'))).toHaveLength(1);
+    });
+
+    it('sem id na resposta de /api/me mantém a ordem dos demais (maior saldo primeiro)', async () => {
+      render(
+        <MemoryRouter>
+          <GroupSummary />
+        </MemoryRouter>
+      );
+
+      await screen.findByText(/R\$ 550,00 a receber/);
+      expect(shownOrder()).toEqual(['QA Resumo', 'QA Membro 2']);
+    });
+  });
+
   it('requests the previous cycle when the back arrow is clicked', async () => {
     const user = userEvent.setup();
 

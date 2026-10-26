@@ -2528,3 +2528,31 @@ describe('ExpenseManager - ordem e data das despesas', () => {
     });
   });
 });
+
+describe('ExpenseManager - aba Saldo com o usuário logado primeiro', () => {
+  // Isac (500) é o usuário logado do mock de /api/me e tem o menor saldo.
+  const balances = [
+    { user_id: 501, name: 'Bia', balance: 100 },
+    { user_id: 502, name: 'Caio', balance: 60 },
+    { user_id: 500, name: 'Isac', balance: -160 },
+  ];
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+  });
+
+  it('abre o Saldo com o usuário logado primeiro e os demais por saldo decrescente', async () => {
+    mockGetResponses([], {}, { balances });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/R\$ 100,00 a receber/);
+    await waitFor(() =>
+      expect(screen.getAllByText(/^(Bia|Caio|Isac)$/).map(el => el.textContent)).toEqual(['Isac', 'Bia', 'Caio'])
+    );
+  });
+});
