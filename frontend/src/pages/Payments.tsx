@@ -31,6 +31,8 @@ import UserAvatar from '../components/UserAvatar';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { formatShortDate } from '../utils/dates';
 import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
+import ExpenseFilterBar from '../components/ExpenseFilterBar';
+import { useExpenseFilters } from '../hooks/useExpenseFilters';
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -186,6 +188,11 @@ const Payments: React.FC = () => {
   // alimentando o estado vazio e a busca por id do popup de comprovante
   // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §5).
   const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);
+
+  // Busca, tipo, credor, devedores e status: os mesmos de Despesas (mesmo hook e mesma barra),
+  // sobre a lista já ordenada e só para ela — estado local desta tela, sem persistência (plan.md §4).
+  const filters = useExpenseFilters(sortedExpenses);
+  const { filteredExpenses } = filters;
   // Sempre da lista atual (nunca um objeto guardado): depois de recarregar, o
   // popup abre com a descrição e a foto que estão gravadas agora.
   const editProofExpense = expenses.find(exp => exp.id === editProofExpenseId) ?? null;
@@ -231,11 +238,16 @@ const Payments: React.FC = () => {
                 Despesas do ciclo
               </Typography>
 
+              {/* Os filtros só afetam esta lista: os acertos e os saldos ao lado seguem representando a competência inteira. */}
+              <ExpenseFilterBar filters={filters} />
+
               {expenses.length === 0 ? (
                 <Typography color="text.secondary">Nenhuma despesa nesta competência.</Typography>
+              ) : filteredExpenses.length === 0 ? (
+                <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
               ) : (
                 <Stack spacing={2}>
-                  {sortedExpenses.map((exp: SummaryExpense) => (
+                  {filteredExpenses.map((exp: SummaryExpense) => (
                     <Card key={expenseRowKey(exp)} variant="outlined">
                       <CardContent>
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
