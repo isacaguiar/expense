@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
@@ -10,7 +10,6 @@ import {
   Typography,
   CircularProgress,
   Alert,
-  Autocomplete,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -27,9 +26,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   useMediaQuery,
   useTheme
@@ -46,7 +42,6 @@ import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SavingsOutlinedIcon from '@mui/icons-material/SavingsOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
@@ -57,25 +52,10 @@ import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProo
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import UserAvatar from '../components/UserAvatar';
-import {
-  buildCreditorOptions,
-  buildDebtorOptions,
-  filterExpenses,
-  type FilterOption,
-  type StatusFilter,
-  type TypeFilter
-} from '../utils/expenseFilters';
+import ExpenseFilterBar from '../components/ExpenseFilterBar';
+import { useExpenseFilters } from '../hooks/useExpenseFilters';
 import { formatShortDate } from '../utils/dates';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
-
-// O projeto não configura o locale do MUI; sem estes textos o Autocomplete
-// aparece em inglês ("No options", "Clear").
-const AUTOCOMPLETE_TEXTS = {
-  noOptionsText: 'Nenhuma opção',
-  clearText: 'Limpar',
-  openText: 'Abrir',
-  closeText: 'Fechar'
-};
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -117,27 +97,11 @@ const ExpenseManager: React.FC = () => {
 
   const currentUserId = useCurrentUserId();
 
-  // Busca e filtros — client-side, sobre os dados da competência já carregada
-  // (docs/feature/concluidas/202610/20261010-filtros-credor-devedores-status-despesas/plan.md §2).
-  const [search, setSearch] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [creditorKeys, setCreditorKeys] = useState<string[]>([]);
-  const [debtorKeys, setDebtorKeys] = useState<string[]>([]);
-
-  // As opções saem das despesas da competência carregada. A seleção é derivada
-  // delas na renderização: quem não aparece na competência navegada some do
-  // campo e do critério, e o Autocomplete nunca recebe valor fora das opções.
-  const creditorOptions = useMemo(() => buildCreditorOptions(expenses), [expenses]);
-  const debtorOptions = useMemo(() => buildDebtorOptions(expenses), [expenses]);
-  const selectedCreditors = useMemo(
-    () => creditorOptions.filter(option => creditorKeys.includes(option.key)),
-    [creditorOptions, creditorKeys]
-  );
-  const selectedDebtors = useMemo(
-    () => debtorOptions.filter(option => debtorKeys.includes(option.key)),
-    [debtorOptions, debtorKeys]
-  );
+  // Busca e filtros — client-side, sobre os dados da competência já carregada;
+  // o mesmo hook e a mesma barra servem a Pagamentos
+  // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §4).
+  const filters = useExpenseFilters(expenses);
+  const { filteredExpenses } = filters;
 
   // Modal de detalhamento da despesa
   const [detailExpenseId, setDetailExpenseId] = useState<number | null>(null);
@@ -328,14 +292,6 @@ const ExpenseManager: React.FC = () => {
       .finally(() => setDeleting(false));
   };
 
-  const filteredExpenses = filterExpenses(expenses, {
-    search,
-    type: typeFilter,
-    status: statusFilter,
-    creditorKeys: selectedCreditors.map(option => option.key),
-    debtorKeys: selectedDebtors.map(option => option.key)
-  });
-
   // Ações de EDIÇÃO/exclusão de despesa só existem enquanto a competência
   // selecionada está aberta — inclui a janela de carência, em que o ciclo
   // ainda é `open` (só trava em `closes_at`). Competência fechada (por data ou
@@ -414,30 +370,6 @@ const ExpenseManager: React.FC = () => {
       </Box>
     );
   };
-
-  // Select múltiplo de pessoas, igual para Credor e Devedores. Em tela estreita
-  // ocupa a linha inteira, em vez de espremer os chips ao lado da busca.
-  const renderPersonFilter = (
-    label: string,
-    options: FilterOption[],
-    selected: FilterOption[],
-    onChange: (keys: string[]) => void
-  ) => (
-    <Autocomplete
-      multiple
-      size="small"
-      limitTags={1}
-      disableCloseOnSelect
-      {...AUTOCOMPLETE_TEXTS}
-      options={options}
-      value={selected}
-      getOptionLabel={option => option.name}
-      isOptionEqualToValue={(option, value) => option.key === value.key}
-      onChange={(_, values) => onChange(values.map(value => value.key))}
-      renderInput={params => <TextField {...params} label={label} />}
-      sx={{ width: { xs: '100%', sm: 240 } }}
-    />
-  );
 
   const renderExpenseActions = (exp: SummaryExpense) => (
     <Box display="flex" gap={0.5} justifyContent="flex-end" flexWrap="wrap">
@@ -653,42 +585,7 @@ const ExpenseManager: React.FC = () => {
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 12, lg: 8 }}>
             {/* Busca e filtros (credor, devedores, tipo, status) */}
-            <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
-              <TextField
-                label="Buscar despesa"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                size="small"
-                sx={{ minWidth: 240 }}
-                InputProps={{
-                  startAdornment: <SearchOutlinedIcon fontSize="small" sx={{ color: 'text.secondary', mr: 1 }} />
-                }}
-              />
-              {renderPersonFilter('Credor', creditorOptions, selectedCreditors, setCreditorKeys)}
-              {renderPersonFilter('Devedores', debtorOptions, selectedDebtors, setDebtorKeys)}
-              <ToggleButtonGroup
-                aria-label="Tipo"
-                value={typeFilter}
-                exclusive
-                size="small"
-                onChange={(_, value) => value && setTypeFilter(value)}
-              >
-                <ToggleButton value="all">Todas</ToggleButton>
-                <ToggleButton value="fixed">Fixas</ToggleButton>
-                <ToggleButton value="variable">Variáveis</ToggleButton>
-              </ToggleButtonGroup>
-              <ToggleButtonGroup
-                aria-label="Status"
-                value={statusFilter}
-                exclusive
-                size="small"
-                onChange={(_, value) => value && setStatusFilter(value)}
-              >
-                <ToggleButton value="all">Todas</ToggleButton>
-                <ToggleButton value="paid">Pagas</ToggleButton>
-                <ToggleButton value="pending">Pendentes</ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
+            <ExpenseFilterBar filters={filters} />
 
             {expenses.length === 0 ? (
               <Box display="flex" flexDirection="column" alignItems="center" textAlign="center" py={6} gap={2}>
