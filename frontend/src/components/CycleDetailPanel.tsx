@@ -4,6 +4,7 @@ import { cycleStatusChip, Summary } from '../hooks/useGroupCycle';
 import CycleExpenseList from './CycleExpenseList';
 import CycleTotalsCards from './CycleTotalsCards';
 import SummarySidePanel from './SummarySidePanel';
+import { sortExpensesByOccurrence } from '../utils/cycleOrdering';
 
 type CycleDetailPanelProps = {
   summary: Summary;
@@ -33,7 +34,9 @@ const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary, currentUse
 
     <Grid container spacing={3}>
       <Grid size={{ xs: 12, sm: 12, lg: 8 }}>
-        <CycleExpenseList expenses={summary.expenses} />
+        {/* Data da ocorrência, mais recente primeiro: a ordem da API (pendentes primeiro) e o
+            snapshot congelado de um ciclo selado ficam como estão, só a exibição reordena. */}
+        <CycleExpenseList expenses={sortExpensesByOccurrence(summary.expenses)} />
       </Grid>
 
       <Grid size={{ xs: 12, sm: 12, lg: 4 }}>

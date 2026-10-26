@@ -117,6 +117,22 @@ describe('GroupSummary', () => {
     expect(screen.getByText(/R\$ 550,00 a pagar/)).toBeInTheDocument();
   });
 
+  it('lists the cycle expenses by date, newest first, instead of the order the API sent', async () => {
+    // O mock entrega Geladeira (20/07) antes de Mercado (01/08).
+    render(
+      <MemoryRouter>
+        <GroupSummary />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/Geladeira/);
+
+    expect(screen.getAllByText(/^(Geladeira|Mercado) — R\$/).map(item => item.textContent?.split(' — ')[0])).toEqual([
+      'Mercado',
+      'Geladeira'
+    ]);
+  });
+
   describe('aba Saldo com o usuário logado primeiro', () => {
     // O mock padrão devolve `/api/me` sem `id`; aqui a resposta traz o id de um dos membros.
     const mockMeWithId = (id: number) => {

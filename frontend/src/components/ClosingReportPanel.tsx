@@ -9,6 +9,7 @@ import CycleExpenseList from './CycleExpenseList';
 import CycleTotalsCards from './CycleTotalsCards';
 import SettlementList from './SettlementList';
 import UserAvatar from './UserAvatar';
+import { sortExpensesByOccurrence } from '../utils/cycleOrdering';
 
 // new Date('YYYY-MM-DD') interpreta a string como UTC-meia-noite, o que desloca
 // a data em 1 dia para trás em fusos negativos (ex.: America/Sao_Paulo) —
@@ -206,7 +207,9 @@ const ReportBody: React.FC<ReportBodyProps> = ({ report, grossId, settlementsId 
       </Box>
 
       <Box component="section" aria-label="Despesas do ciclo">
-        <CycleExpenseList expenses={report.expenses} />
+        {/* O snapshot de um ciclo selado está congelado em ordem crescente; a exibição reordena
+            pela data da ocorrência, mais recente primeiro, sem tocar nele. */}
+        <CycleExpenseList expenses={sortExpensesByOccurrence(report.expenses)} />
       </Box>
     </>
   );

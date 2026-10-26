@@ -102,6 +102,18 @@ describe('ClosingReportPanel', () => {
     vi.restoreAllMocks();
   });
 
+  describe('expense list order', () => {
+    it('lists the expenses by date, newest first, even when the frozen snapshot arrives oldest first', async () => {
+      // `closingReport()` entrega Aluguel (05/09) antes de Luz (10/09), como um snapshot selado.
+      await renderPanel();
+
+      expect(screen.getAllByText(/^(Aluguel|Luz) — R\$/).map(item => item.textContent)).toEqual([
+        'Luz — R$ 90,00',
+        'Aluguel — R$ 300,00',
+      ]);
+    });
+  });
+
   describe('loading and errors', () => {
     it('asks the API for the report of the cycle it was given', async () => {
       await renderPanel();
