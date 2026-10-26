@@ -30,6 +30,14 @@ export const sortExpensesByOccurrence = (expenses: readonly SummaryExpense[]): S
   });
 
 /**
+ * Chave de React de uma linha de despesa. O `id` é o da despesa e se repete quando
+ * a mesma despesa tem duas parcelas na competência: o número da parcela e a data
+ * entram para a chave continuar única.
+ */
+export const expenseRowKey = (expense: SummaryExpense): string =>
+  `${expense.id}-${expense.installmentNumber ?? 0}-${expense.date}`;
+
+/**
  * Saldos com o usuário logado primeiro; os demais por saldo decrescente (positivos,
  * zero, depois negativos do menos para o mais negativo), com empate por nome e
  * por `user_id`. Sem usuário logado, ou fora da lista, vale só a regra dos demais.

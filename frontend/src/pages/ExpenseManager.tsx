@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
@@ -55,6 +55,7 @@ import UserAvatar from '../components/UserAvatar';
 import ExpenseFilterBar from '../components/ExpenseFilterBar';
 import { useExpenseFilters } from '../hooks/useExpenseFilters';
 import { formatShortDate } from '../utils/dates';
+import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
@@ -97,10 +98,15 @@ const ExpenseManager: React.FC = () => {
 
   const currentUserId = useCurrentUserId();
 
-  // Busca e filtros — client-side, sobre os dados da competência já carregada;
-  // o mesmo hook e a mesma barra servem a Pagamentos
-  // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §4).
-  const filters = useExpenseFilters(expenses);
+  // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Vale
+  // para cards e tabela e substitui o "pendentes primeiro" que a API devolve; a
+  // lista da API (`expenses`) segue intacta para as buscas por id abaixo
+  // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §5).
+  const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);
+
+  // Busca e filtros — client-side, sobre os dados da competência já carregada e
+  // já ordenada; o mesmo hook e a mesma barra servem a Pagamentos (plan.md §4).
+  const filters = useExpenseFilters(sortedExpenses);
   const { filteredExpenses } = filters;
 
   // Modal de detalhamento da despesa
@@ -460,7 +466,7 @@ const ExpenseManager: React.FC = () => {
   const renderExpenseCards = (list: SummaryExpense[]) => (
     <Stack spacing={1.5}>
       {list.map(exp => (
-        <Card key={exp.id} variant="outlined">
+        <Card key={expenseRowKey(exp)} variant="outlined">
           <CardContent sx={{ '&:last-child': { pb: 2 } }}>
             <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1}>
               <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0 }}>
@@ -481,6 +487,9 @@ const ExpenseManager: React.FC = () => {
               />
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Data: {formatShortDate(exp.date)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Valor: R$ {formatValue(exp.value)}
             </Typography>
             <Box display="flex" alignItems="center" gap={1} sx={{ mt: 0.5 }}>
@@ -630,6 +639,7 @@ const ExpenseManager: React.FC = () => {
                 <Table>
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'grey.50' }}>
+                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Data</TableCell>
                       <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Tipo</TableCell>
                       <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Despesa</TableCell>
                       <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Valor</TableCell>
@@ -642,7 +652,8 @@ const ExpenseManager: React.FC = () => {
                   </TableHead>
                   <TableBody>
                     {filteredExpenses.map(exp => (
-                      <TableRow key={exp.id} hover>
+                      <TableRow key={expenseRowKey(exp)} hover>
+                        <TableCell>{formatShortDate(exp.date)}</TableCell>
                         <TableCell>
                           {renderTypeIcon(exp)}
                         </TableCell>

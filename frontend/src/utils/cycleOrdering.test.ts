@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { SummaryBalance, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import {
+  expenseRowKey,
   isSettlementConfirmed,
   orderSettlementsForViewer,
   sortBalancesForViewer,
@@ -337,5 +338,22 @@ describe('orderSettlementsForViewer', () => {
       [5, 2],
       [3, 1]
     ]);
+  });
+});
+
+describe('expenseRowKey', () => {
+  it('distingue duas parcelas da mesma despesa que vencem na mesma competência', () => {
+    const parcela1 = makeExpense({ id: 40, date: '2026-10-03', installmentNumber: 1 });
+    const parcela2 = makeExpense({ id: 40, date: '2026-10-03', installmentNumber: 2 });
+
+    expect(expenseRowKey(parcela1)).not.toBe(expenseRowKey(parcela2));
+  });
+
+  it('é estável para a mesma despesa, parcela e data, e muda com o id ou com a data', () => {
+    const base = makeExpense({ id: 40, date: '2026-10-03' });
+
+    expect(expenseRowKey(makeExpense({ id: 40, date: '2026-10-03' }))).toBe(expenseRowKey(base));
+    expect(expenseRowKey(makeExpense({ id: 41, date: '2026-10-03' }))).not.toBe(expenseRowKey(base));
+    expect(expenseRowKey(makeExpense({ id: 40, date: '2026-10-04' }))).not.toBe(expenseRowKey(base));
   });
 });
