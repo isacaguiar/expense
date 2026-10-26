@@ -65,6 +65,7 @@ import {
   type StatusFilter,
   type TypeFilter
 } from '../utils/expenseFilters';
+import { formatShortDate } from '../utils/dates';
 
 // O projeto não configura o locale do MUI; sem estes textos o Autocomplete
 // aparece em inglês ("No options", "Clear").
@@ -81,13 +82,6 @@ const AUTOCOMPLETE_TEXTS = {
 const formatDate = (dateStr: string): string => {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
-};
-
-// Rótulo curto (dia + mês abreviado) pro cabeçalho de competência — mesmo
-// formato usado em GroupSummary, pra não ter duas convenções de data na UI.
-const formatCycleBoundary = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 };
 
 /**
@@ -636,7 +630,7 @@ const ExpenseManager: React.FC = () => {
           textTransform="capitalize"
           sx={{ flexGrow: 1, minWidth: 0, textAlign: 'center', fontSize: { xs: '1rem', md: '1.25rem' } }}
         >
-          {summary ? `${formatCycleBoundary(summary.cycle.start)} – ${formatCycleBoundary(summary.cycle.end)}` : ''}
+          {summary ? `${formatShortDate(summary.cycle.start)} – ${formatShortDate(summary.cycle.end)}` : ''}
         </Typography>
         <IconButton onClick={goToNextCycle} aria-label="Próxima competência">
           <ArrowForwardIosIcon />
