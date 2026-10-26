@@ -23,6 +23,7 @@ import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
+import { useCurrentUserId } from '../hooks/useCurrentUserId';
 import PayableSettlementList from '../components/PayableSettlementList';
 import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
@@ -39,15 +40,7 @@ const Payments: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
 
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    axios
-      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers: { Authorization: token ? `Bearer ${token}` : '' } })
-      .then(res => setCurrentUserId(res.data.id))
-      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
-  }, []);
+  const currentUserId = useCurrentUserId();
 
   // Membros do grupo com email/chave Pix — usado só pra resolver, ao clicar
   // num valor a pagar, se o credor tem Pix cadastrado e qual o e-mail pra
