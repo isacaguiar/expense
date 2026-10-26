@@ -9,6 +9,7 @@ use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Services\CycleSummaryService;
 use App\Support\BillingCycle;
+use App\Support\ClosingBreakdown;
 use App\Support\InstallmentSchedule;
 use App\Support\Notifier;
 use App\Support\ProofStorage;
@@ -735,6 +736,63 @@ class ExpenseController extends Controller
         $this->authorizeGroupMembership($group);
 
         return response()->json(['cycles_ago' => $this->cycles()->focus($group)]);
+    }
+
+    /**
+     * Aba Acompanhamento de Relatórios: os ciclos encerrados (ou em carência) que
+     * ainda aguardam quitação, do mais recente ao mais antigo. Só lê: não sela,
+     * não grava snapshot e não notifica. A varredura mora em
+     * `CycleSummaryService::pendingCycles`. Ver
+     * docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §1.
+     */
+    public function pendingCycles($groupId)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        return response()->json(['data' => $this->cycles()->pendingCycles($group)]);
+    }
+
+    /**
+     * Relatório de Fechamento de um ciclo, pelo `cycle_start` que a lista devolveu:
+     * o `summary` (totais, despesas, saldos e acertos com as confirmações) mais
+     * `creditors`, a agregação credor → devedores em valor bruto por despesa
+     * (`ClosingBreakdown`). Serve o ciclo selado, o fechado pendente e o vigente
+     * (Prévia). Só lê: ao contrário de `summary()`, **não sela**, não grava
+     * snapshot e não notifica — a escolha de fonte é `CycleSummaryService::viewAt`.
+     * `cycle_start` que não abre um ciclo do grupo, ou de ciclo futuro, é `404`.
+     * A checagem de membro vem antes da validação, para quem é de fora não
+     * descobrir nada pelo `422`. Ver
+     * docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento/plan.md §2.
+     */
+    public function closingReport($groupId, Request $request)
+    {
+        $group = Group::findOrFail($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $data = $request->validate([
+            'cycle_start' => 'required|date_format:Y-m-d',
+        ]);
+
+        $view = $this->cycles()->viewAt($group, Carbon::createFromFormat('Y-m-d', $data['cycle_start']));
+
+        abort_if($view === null, 404);
+
+        $members = $group->members->map(fn ($member) => [
+            'id' => $member->id,
+            'name' => $member->name,
+            'avatarUrl' => $member->avatar_url,
+        ]);
+
+        return response()->json([
+            'group' => ['id' => $group->id, 'name' => $group->name],
+            'cycle' => $view['cycle'],
+            'totals' => $view['summary']['totals'],
+            'expenses' => $view['summary']['expenses'],
+            'balances' => $view['summary']['balances'],
+            'settlements' => $view['summary']['settlements'],
+            'creditors' => ClosingBreakdown::build($view['summary']['expenses'], $members)['creditors'],
+        ]);
     }
 
     /**

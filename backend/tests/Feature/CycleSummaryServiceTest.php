@@ -857,4 +857,205 @@ class CycleSummaryServiceTest extends TestCase
         $this->assertEquals($pick($http['settlements']), $pick($view['summary']['settlements']));
         $this->assertCount(2, $view['summary']['settlements']);
     }
+
+    // --- viewAt(): o mesmo que view(), mas resolvido pelo início do ciclo ---------
+    // Relatório de Fechamento (docs/feature/concluidas/202610/20261006-relatorios-acompanhamento-fechamento,
+    // plan.md §2.1, D-N3): o cliente manda o `cycle_start` que a lista devolveu, sem conta
+    // de `cycles_ago`. Devolve `null` para ciclo futuro e para data que não abre um ciclo.
+
+    public function test_view_at_serves_the_snapshot_of_a_sealed_cycle_even_after_the_closing_day_changed(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-09-01',
+            'cycle_end' => '2026-09-30',
+            'totals' => ['total' => 777.0, 'paid' => 777.0, 'pending' => 0.0],
+            'expenses' => [],
+            'balances' => [],
+            'settlements' => [['from_user_id' => $debtor->id, 'to_user_id' => $creditor->id, 'amount' => 50.0]],
+            'settled_at' => now(),
+        ]);
+        $this->confirmFor($group, $debtor, $creditor, 50, '2026-09-01', '2026-09-30');
+
+        // Com o dia 15 como fronteira, 01/09 deixa de abrir um ciclo (o ciclo que o contém
+        // vai de 16/08 a 15/09): só o snapshot, procurado pelo `cycle_start`, o encontra.
+        $group->update(['closing_day' => 15]);
+
+        $view = $this->service()->viewAt($group->fresh(), Carbon::parse('2026-09-01'));
+
+        $this->assertNotNull($view);
+        $this->assertTrue($view['sealed']);
+        $this->assertSame('closed', $view['cycle']['status']);
+        $this->assertTrue($view['cycle']['settled']);
+        $this->assertFalse($view['cycle']['in_grace']);
+        $this->assertSame('2026-09-01', $view['cycle']['start']);
+        $this->assertSame('2026-09-30', $view['cycle']['end']);
+        $this->assertSame('2026-10-05', $view['cycle']['closes_at']);
+        $this->assertEquals(777.0, $view['summary']['totals']['total']);
+        $this->assertNotNull($view['summary']['settlements'][0]['confirmedAt']);
+    }
+
+    public function test_view_at_computes_live_a_closed_cycle_that_is_not_sealed(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200, false, '2026-09-10');
+
+        $view = $this->service()->viewAt($group, Carbon::parse('2026-09-01'));
+
+        $this->assertNotNull($view);
+        $this->assertFalse($view['sealed']);
+        $this->assertSame('closed', $view['cycle']['status']);
+        $this->assertFalse($view['cycle']['settled']);
+        $this->assertFalse($view['cycle']['in_grace']);
+        $this->assertSame('2026-09-01', $view['cycle']['start']);
+        $this->assertSame('2026-09-30', $view['cycle']['end']);
+        $this->assertSame('2026-10-05', $view['cycle']['closes_at']);
+        $this->assertEquals(200.0, $view['summary']['totals']['pending']);
+        $this->assertCount(1, $view['summary']['settlements']);
+        $this->assertNull($view['summary']['settlements'][0]['confirmedAt']);
+    }
+
+    public function test_view_at_computes_live_the_open_current_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200, false, '2026-10-10');
+
+        $view = $this->service()->viewAt($group, Carbon::parse('2026-10-01'));
+
+        $this->assertNotNull($view);
+        $this->assertFalse($view['sealed']);
+        $this->assertSame('open', $view['cycle']['status']);
+        $this->assertFalse($view['cycle']['settled']);
+        $this->assertFalse($view['cycle']['in_grace']);
+        $this->assertSame('2026-11-05', $view['cycle']['closes_at']);
+        $this->assertEquals(200.0, $view['summary']['totals']['total']);
+    }
+
+    public function test_view_at_marks_an_active_manual_closing_and_treats_a_reopened_one_as_open(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200, false, '2026-10-10');
+        $snapshot = GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-10-01',
+            'cycle_end' => '2026-10-31',
+            'totals' => ['total' => 0, 'paid' => 0, 'pending' => 0],
+            'expenses' => [],
+            'balances' => [],
+            'closed_manually_at' => now(),
+        ]);
+
+        $manual = $this->service()->viewAt($group, Carbon::parse('2026-10-01'));
+
+        $this->assertSame('closed_manually', $manual['cycle']['status']);
+        $this->assertFalse($manual['cycle']['settled']);
+        $this->assertFalse($manual['sealed']);
+        // Ao vivo, não o snapshot manual vazio: a despesa de outubro aparece.
+        $this->assertCount(1, $manual['summary']['expenses']);
+
+        $snapshot->update(['closed_manually_at' => now()->subMinute(), 'reopened_at' => now()]);
+
+        $this->assertSame('open', $this->service()->viewAt($group, Carbon::parse('2026-10-01'))['cycle']['status']);
+    }
+
+    public function test_view_at_flags_a_cycle_whose_boundary_passed_but_is_still_open_as_in_grace(): void
+    {
+        // O ciclo de janeiro tem fronteira em 31/01 e só fecha em 05/02.
+        Carbon::setTestNow('2026-02-02');
+
+        [$group] = $this->groupWithPair();
+
+        $view = $this->service()->viewAt($group, Carbon::parse('2026-01-01'));
+
+        $this->assertSame('open', $view['cycle']['status']);
+        $this->assertTrue($view['cycle']['in_grace']);
+        $this->assertSame('2026-01-31', $view['cycle']['end']);
+        $this->assertSame('2026-02-05', $view['cycle']['closes_at']);
+    }
+
+    public function test_view_at_ignores_the_time_of_day_of_the_start(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group] = $this->groupWithPair();
+
+        $view = $this->service()->viewAt($group, Carbon::parse('2026-09-01 15:30:00'));
+
+        $this->assertNotNull($view);
+        $this->assertSame('2026-09-01', $view['cycle']['start']);
+    }
+
+    public function test_view_at_returns_null_for_a_future_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group] = $this->groupWithPair();
+
+        // 01/11 abre o ciclo seguinte ao vigente, que ainda não começou.
+        $this->assertNull($this->service()->viewAt($group, Carbon::parse('2026-11-01')));
+    }
+
+    public function test_view_at_returns_null_for_a_date_that_does_not_start_a_cycle(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group] = $this->groupWithPair();
+
+        // Dentro de setembro (um ciclo existe), mas nenhum deles começa nesse dia.
+        $this->assertNull($this->service()->viewAt($group, Carbon::parse('2026-09-15')));
+        $this->assertNull($this->service()->viewAt($group, Carbon::parse('2026-09-02')));
+        $this->assertNull($this->service()->viewAt($group, Carbon::parse('2026-09-30')));
+    }
+
+    public function test_view_at_does_not_seal_a_settled_cycle_nor_write_anything(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        // Setembro fechado por data, todo pago e com o único acerto confirmado,
+        // mas sem snapshot: o caso "quitado e não selado" do plan.md §0.1.2.
+        [$group, $creditor, $debtor] = $this->groupWithPair();
+        $this->expenseBetween($group, $creditor, [$debtor], 200, true, '2026-09-10');
+        $this->confirmFor($group, $debtor, $creditor, 100, '2026-09-01', '2026-09-30');
+
+        $snapshotsBefore = GroupCycleSnapshot::count();
+        $notificationsBefore = Notification::count();
+        $confirmationsBefore = SettlementConfirmation::count();
+
+        $view = $this->service()->viewAt($group, Carbon::parse('2026-09-01'));
+
+        $this->assertNotNull($view);
+        $this->assertFalse($view['cycle']['settled']);
+        $this->assertFalse($view['sealed']);
+        $this->assertSame($snapshotsBefore, GroupCycleSnapshot::count());
+        $this->assertSame($notificationsBefore, Notification::count());
+        $this->assertSame($confirmationsBefore, SettlementConfirmation::count());
+    }
+
+    public function test_view_delegates_to_view_at_and_gives_the_same_answer(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        $creditor = User::factory()->create();
+        $debtorA = User::factory()->create();
+        $debtorB = User::factory()->create();
+        $group = Group::create(['name' => 'Grupo']);
+        $group->members()->attach([$creditor->id, $debtorA->id, $debtorB->id]);
+
+        $this->expenseBetween($group, $creditor, [$debtorA, $debtorB], 300, false, '2026-09-10');
+        $this->confirmFor($group, $debtorA, $creditor, 100, '2026-09-01', '2026-09-30');
+
+        $this->assertEquals(
+            $this->service()->view($group, 1),
+            $this->service()->viewAt($group, Carbon::parse('2026-09-01'))
+        );
+    }
 }
