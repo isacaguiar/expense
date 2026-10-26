@@ -699,6 +699,7 @@ const ExpenseManager: React.FC = () => {
                 balances={summary.balances}
                 settlements={summary.settlements}
                 cycleStatus={summary.cycle.status}
+                currentUserId={currentUserId}
               />
             )}
           </Grid>

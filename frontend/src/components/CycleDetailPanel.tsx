@@ -7,6 +7,8 @@ import SummarySidePanel from './SummarySidePanel';
 
 type CycleDetailPanelProps = {
   summary: Summary;
+  // Usuário logado, para a aba Saldo abrir com ele em primeiro (opcional).
+  currentUserId?: number | null;
 };
 
 /**
@@ -16,7 +18,7 @@ type CycleDetailPanelProps = {
  * de ciclos fechados; hoje o histórico abre o Relatório de Fechamento
  * (`ClosingReportPanel`) e este painel ficou só com a Home.
  */
-const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary }) => (
+const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary, currentUserId }) => (
   <>
     <Box display="flex" justifyContent="center" mb={3}>
       <Chip
@@ -39,6 +41,7 @@ const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary }) => (
           balances={summary.balances}
           settlements={summary.settlements}
           cycleStatus={summary.cycle.status}
+          currentUserId={currentUserId}
         />
       </Grid>
     </Grid>

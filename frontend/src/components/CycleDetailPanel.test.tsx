@@ -33,4 +33,27 @@ describe('CycleDetailPanel', () => {
     const totals = screen.getByText('Total de despesas');
     expect(chip.compareDocumentPosition(totals) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  describe('aba Saldo', () => {
+    const withBalances: Summary = {
+      ...summary,
+      balances: [
+        { user_id: 1, name: 'Ana', balance: 50 },
+        { user_id: 2, name: 'Bruno', balance: -50 }
+      ]
+    };
+    const shownOrder = () => screen.getAllByText(/^(Ana|Bruno)$/).map(el => el.textContent);
+
+    it('põe primeiro o usuário logado recebido em currentUserId', () => {
+      render(<CycleDetailPanel summary={withBalances} currentUserId={2} />);
+
+      expect(shownOrder()).toEqual(['Bruno', 'Ana']);
+    });
+
+    it('sem currentUserId mantém só a regra dos demais (maior saldo primeiro)', () => {
+      render(<CycleDetailPanel summary={withBalances} />);
+
+      expect(shownOrder()).toEqual(['Ana', 'Bruno']);
+    });
+  });
 });
