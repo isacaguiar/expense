@@ -2,7 +2,7 @@
 
 > Traduz `specify.md` em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
 
-Versão: 1.0 · Criado em: 20261026
+Versão: 1.1 · Criado em: 20261026 · Revisado em: 20261026 (§2: contagem de cópias da data curta e fuso, descobertos na TASK-500)
 
 ---
 
@@ -32,9 +32,11 @@ Como a função recebe uma aba por vez, "total da respectiva aba" sai de graça:
 
 ## 2. Data curta compartilhada (specify §2.3, D11)
 
-Quatro cópias idênticas de "dia + mês abreviado" existem hoje: `GroupSummary.tsx:13`, `CycleExpenseList.tsx:11`, `Payments.tsx:32` e `formatCycleBoundary` em `ExpenseManager.tsx:88`. Novo `frontend/src/utils/dates.ts` exporta `formatShortDate(dateStr)` com o mesmo corpo e o mesmo comentário sobre o deslocamento de fuso de `new Date('YYYY-MM-DD')`. As quatro cópias passam a importá-lo. O `formatDate` de `dd/mm/aaaa` do `ExpenseManager` (usado no detalhe) fica como está.
+Existem **nove** cópias idênticas de "dia + mês abreviado" (contagem feita na TASK-500; a v1.0 deste plan dizia quatro). Quatro estão em arquivos que esta feature toca e passam a importar o util: `GroupSummary.tsx`, `CycleExpenseList.tsx`, `Payments.tsx` e `formatCycleBoundary` em `ExpenseManager.tsx`. As outras cinco ficam **fora do escopo**, em áreas que a feature não altera: `CycleTotalsCards.tsx`, `GroupGrossDebtsPanel.tsx`, `MyItemsList.tsx`, `PendingCyclesList.tsx` e `GroupReports.tsx`. Trocá-las é limpeza sem relação com ordem ou filtros (`04-implementation.md` §1 item 2: trabalho extra vira task nova), e mexeria no Painel e no Dashboard, que a D3 e a D6 deixam intactos. Fica como candidato a backlog.
 
-**Testes** — `utils/dates.test.ts`: `2026-10-03` contém `03` e `out` (sem fixar a pontuação do ICU), e um caso em fuso negativo que prova que o dia não recua (o teste fixa `TZ` ou compara com o construtor por componentes).
+Novo `frontend/src/utils/dates.ts` exporta `formatShortDate(dateStr)` com o mesmo corpo e o mesmo comentário sobre o deslocamento de fuso de `new Date('YYYY-MM-DD')`. O `formatDate` de `dd/mm/aaaa` do `ExpenseManager` (usado no detalhe) fica como está.
+
+**Testes** — `utils/dates.test.ts`: `2026-10-03` vira "03 de out." (casado por expressão regular, sem fixar a pontuação do ICU), e os casos de virada de mês e de ano provam que o dia não recua. O fuso negativo vem da própria suíte: `vite.config.js:46` fixa `TZ: 'America/Sao_Paulo'`, com guarda em `src/suiteTimezone.test.ts`, então o teste não mexe em `process.env.TZ`.
 
 ## 3. Usuário logado como hook (specify §2.5, D5, R14)
 

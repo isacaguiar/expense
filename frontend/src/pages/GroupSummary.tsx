@@ -6,14 +6,7 @@ import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import { useGroupCycle } from '../hooks/useGroupCycle';
 import CycleDetailPanel from '../components/CycleDetailPanel';
 import CycleClosingAlert from '../components/CycleClosingAlert';
-
-// new Date('YYYY-MM-DD') interpreta a string como UTC-meia-noite, o que desloca
-// a data em 1 dia para trás em fusos negativos (ex.: America/Sao_Paulo) —
-// construímos a partir dos componentes locais para evitar isso.
-const formatDate = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-};
+import { formatShortDate } from '../utils/dates';
 
 const GroupSummary: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
@@ -43,7 +36,7 @@ const GroupSummary: React.FC = () => {
               <ArrowBackIosNewIcon />
             </IconButton>
             <Typography variant="h6" textTransform="capitalize">
-              {formatDate(summary.cycle.start)} – {formatDate(summary.cycle.end)}
+              {formatShortDate(summary.cycle.start)} – {formatShortDate(summary.cycle.end)}
             </Typography>
             <IconButton
               onClick={goToNextCycle}

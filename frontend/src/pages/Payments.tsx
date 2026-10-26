@@ -28,11 +28,7 @@ import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProo
 import PixPaymentDialog from '../components/PixPaymentDialog';
 import UserAvatar from '../components/UserAvatar';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
-
-const formatDate = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-};
+import { formatShortDate } from '../utils/dates';
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -213,7 +209,7 @@ const Payments: React.FC = () => {
               textTransform="capitalize"
               sx={{ flexGrow: 1, minWidth: 0, textAlign: 'center', fontSize: { xs: '1rem', md: '1.25rem' } }}
             >
-              {formatDate(summary.cycle.start)} – {formatDate(summary.cycle.end)}
+              {formatShortDate(summary.cycle.start)} – {formatShortDate(summary.cycle.end)}
             </Typography>
             <IconButton onClick={goToNextCycle} aria-label="Próximo ciclo">
               <ArrowForwardIosIcon />

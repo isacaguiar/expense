@@ -2,7 +2,7 @@
 
 > Formato igual ao usado no SDD geral — ver `docs/sdd/03-tasks.md` para a definição completa do formato e a regra de atomicidade ("se a descrição tem 'e' ligando duas entregas independentes, é duas tasks").
 
-Versão: 1.0 · Criado em: 20261026
+Versão: 1.1 · Criado em: 20261026 · Revisado em: 20261026 (TASK-500: critério ajustado à contagem real de cópias)
 
 IDs a partir de TASK-499: o maior em qualquer branch do repositório e em `docs/` é TASK-498 (feature `20261006-relatorios-acompanhamento-fechamento`), conferido em 2026-10-26 com `grep` nos documentos e nas mensagens de commit de todas as branches. Reconfirmar a numeração se outra feature em andamento reservar IDs antes do merge.
 
@@ -10,8 +10,8 @@ Escopo: **só `frontend/` e documentação**. Nenhuma task toca `backend/` (spec
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-499 | Criar o utilitário puro `cycleOrdering.ts` (ordem de despesas, saldos e acertos, critério `confirmedAt`) com testes unitários | frontend | plan.md §1 | nenhum | Concluída (2026-10-26, sem commit) |
-| TASK-500 | Extrair `formatShortDate` para `utils/dates.ts` e substituir as quatro cópias locais | frontend | plan.md §2 | nenhum | Pendente |
+| TASK-499 | Criar o utilitário puro `cycleOrdering.ts` (ordem de despesas, saldos e acertos, critério `confirmedAt`) com testes unitários | frontend | plan.md §1 | nenhum | Concluída (2026-10-26) |
+| TASK-500 | Extrair `formatShortDate` para `utils/dates.ts` e substituir as quatro cópias locais | frontend | plan.md §2 | nenhum | Concluída (2026-10-26) |
 | TASK-501 | Criar o hook `useCurrentUserId` e adotá-lo em `ExpenseManager` e `Payments` | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-502 | Extrair a interface de filtros de `ExpenseManager` para `useExpenseFilters` e `ExpenseFilterBar`, sem alterar os testes existentes | frontend | plan.md §4 | nenhum | Pendente |
 | TASK-503 | Ordenar as despesas de Despesas por data da ocorrência e mostrar a data em cards e tabela | frontend | plan.md §5 | nenhum | Pendente |
@@ -62,8 +62,8 @@ Cada task, antes de integrar: `cd frontend && npx vitest run <arquivos tocados>`
   - `npx tsc --noEmit` sem erro; o arquivo não importa React nem usa `any`.
   - Nenhum outro arquivo de `frontend/src/` foi alterado nesta task.
 - **TASK-500**:
-  - `cd frontend && npx vitest run src/utils/dates.test.ts` verde: `formatShortDate('2026-10-03')` contém `03` e `out`, e um caso com `process.env.TZ = 'America/Sao_Paulo'` prova que o dia **não recua** (`new Date('2026-10-03')` viraria dia 02).
-  - `grep -rn "month: 'short'" frontend/src` só encontra `utils/dates.ts` (e testes); as quatro cópias (`GroupSummary.tsx`, `CycleExpenseList.tsx`, `Payments.tsx`, `formatCycleBoundary` em `ExpenseManager.tsx`) importam `formatShortDate`. O `formatDate` de `dd/mm/aaaa` do `ExpenseManager` continua local.
+  - `cd frontend && npx vitest run src/utils/dates.test.ts` verde: `formatShortDate('2026-10-03')` casa com `03 … out`, e os casos de virada de mês e de ano provam que o dia **não recua** no fuso da suíte (`America/Sao_Paulo`, fixado em `vite.config.js:46`); com a versão ingênua `new Date(string)` o teste falha (`02 de out.`).
+  - As quatro cópias planejadas (`GroupSummary.tsx`, `CycleExpenseList.tsx`, `Payments.tsx`, `formatCycleBoundary` em `ExpenseManager.tsx`) importam `formatShortDate`; `grep -rn "month: 'short'" frontend/src` encontra só `utils/dates.ts` e as **cinco cópias fora do escopo** (`CycleTotalsCards`, `GroupGrossDebtsPanel`, `MyItemsList`, `PendingCyclesList`, `GroupReports`, ver plan.md §2). O `formatDate` de `dd/mm/aaaa` do `ExpenseManager` continua local.
   - `npm test` (suíte completa) verde **sem edição** de nenhum teste existente: o comportamento é idêntico.
 - **TASK-501**:
   - `cd frontend && npx vitest run src/hooks/useCurrentUserId.test.tsx` verde: `id` numérico é devolvido; resposta sem `id` dá `null`; erro de rede dá `null` e chama `console.error('Erro ao carregar usuário autenticado:', …)`.
