@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
@@ -66,6 +66,7 @@ import {
   type TypeFilter
 } from '../utils/expenseFilters';
 import { formatShortDate } from '../utils/dates';
+import { useCurrentUserId } from '../hooks/useCurrentUserId';
 
 // O projeto não configura o locale do MUI; sem estes textos o Autocomplete
 // aparece em inglês ("No options", "Clear").
@@ -114,15 +115,7 @@ const ExpenseManager: React.FC = () => {
   const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
   const expenses = summary?.expenses ?? [];
 
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
-
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    axios
-      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers: { Authorization: token ? `Bearer ${token}` : '' } })
-      .then(res => setCurrentUserId(res.data.id))
-      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
-  }, []);
+  const currentUserId = useCurrentUserId();
 
   // Busca e filtros — client-side, sobre os dados da competência já carregada
   // (docs/feature/concluidas/202610/20261010-filtros-credor-devedores-status-despesas/plan.md §2).
