@@ -14,7 +14,7 @@ Escopo: **só `frontend/` e documentação**. Nenhuma task toca `backend/` (spec
 | TASK-500 | Extrair `formatShortDate` para `utils/dates.ts` e substituir as quatro cópias locais | frontend | plan.md §2 | nenhum | Concluída (2026-10-26) |
 | TASK-501 | Criar o hook `useCurrentUserId` e adotá-lo em `ExpenseManager` e `Payments` | frontend | plan.md §3 | nenhum | Concluída (2026-10-26) |
 | TASK-502 | Extrair a interface de filtros de `ExpenseManager` para `useExpenseFilters` e `ExpenseFilterBar`, sem alterar os testes existentes | frontend | plan.md §4 | nenhum | Concluída (2026-10-26) |
-| TASK-503 | Ordenar as despesas de Despesas por data da ocorrência e mostrar a data em cards e tabela | frontend | plan.md §5 | nenhum | Pendente |
+| TASK-503 | Ordenar as despesas de Despesas por data da ocorrência e mostrar a data em cards e tabela | frontend | plan.md §5 | nenhum | Concluída (2026-10-26) |
 | TASK-504 | Mostrar o usuário logado primeiro na aba Saldo, em Despesas e na Home do grupo | frontend | plan.md §6 | nenhum | Pendente |
 | TASK-505 | Ordenar as despesas da Home do grupo e do Relatório de fechamento por data da ocorrência | frontend | plan.md §5 | nenhum | Pendente |
 | TASK-506 | Ajustar `PayableSettlementList`: critério `confirmedAt`, chip sem link quebrado, rótulos de valor a receber e mensagem de vazio | frontend | plan.md §7 | nenhum | Pendente |
