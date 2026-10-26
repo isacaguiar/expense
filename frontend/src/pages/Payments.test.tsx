@@ -30,6 +30,9 @@ type SummaryExpenseFixture = {
   payerName?: string | null;
   participants?: string[];
   isFixed?: boolean;
+  expenseType?: 'IN_CASH' | 'IN_INSTALLMENTS' | 'FIXED';
+  installmentNumber?: number | null;
+  installmentsTotal?: number;
   userPayerId?: number;
   userCreatorId?: number;
 };
@@ -1049,5 +1052,120 @@ describe('Payments - editar comprovante depois de paga', () => {
       expect(dialog.querySelector('img')).toBeNull();
       expect(dialog.querySelector('b')).toBeNull();
     });
+  });
+});
+
+describe('Payments - ordem e data das despesas', () => {
+  // Chega na ordem de hoje do backend (pendentes primeiro, data crescente): é a ordem
+  // que a tela deve DESFAZER. Specify §5.1 de organizacao-despesas-pagamentos.
+  const doBackend: SummaryExpenseFixture[] = [
+    {
+      id: 25,
+      description: 'Sofá 3/6',
+      value: 300,
+      date: '2026-09-20',
+      payerName: 'Isac',
+      paid: false,
+      expenseType: 'IN_INSTALLMENTS',
+      installmentNumber: 3,
+      installmentsTotal: 6,
+    },
+    { id: 31, description: 'Mercado', value: 150, date: '2026-10-03', payerName: 'João', paid: false },
+    { id: 30, description: 'Luz', value: 90, date: '2026-09-12', payerName: 'Isac', paid: true },
+    { id: 28, description: 'Internet', value: 120, date: '2026-10-03', payerName: 'Isac', paid: true, isFixed: true },
+  ];
+  const overrides: SummaryOverrides = { cycle: { start: '2026-09-06', end: '2026-10-05' } };
+  const NAMES = /^(Sofá 3\/6|Mercado|Luz|Internet)$/;
+
+  const renderPayments = () =>
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+  // Descrições na ordem em que os cards aparecem no DOM.
+  const shownOrder = () => screen.getAllByText(NAMES).map(title => title.textContent);
+  const cardOf = (title: string) => screen.getByText(title).closest('[class*="MuiCard-root"]') as HTMLElement;
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+  });
+
+  it('ordena os cards por data da ocorrência decrescente, desempata pelo id e não prioriza pendentes', async () => {
+    mockGetResponses(doBackend, overrides);
+    renderPayments();
+
+    await screen.findByText('Mercado');
+
+    expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+    // Pendente e paga intercaladas: o status não decide a posição.
+    expect(screen.getAllByText(/^(Paga|Pendente)$/).map(chip => chip.textContent)).toEqual([
+      'Pendente',
+      'Paga',
+      'Pendente',
+      'Paga',
+    ]);
+  });
+
+  it('mostra a mesma ordem quando o resumo chega em ordem crescente, como um ciclo selado', async () => {
+    mockGetResponses([...doBackend].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id), overrides);
+    renderPayments();
+
+    await screen.findByText('Mercado');
+
+    expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+  });
+
+  it('não altera a lista recebida da API (o resumo é estado do hook)', async () => {
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/summary')) {
+        const data = summaryResponse(doBackend, overrides);
+        Object.freeze(data.expenses);
+        return Promise.resolve({ data });
+      }
+      if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      if (url.includes('/members')) return Promise.resolve({ data: [] });
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+    renderPayments();
+
+    await screen.findByText('Mercado');
+
+    expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+  });
+
+  it('mostra a linha "Data:" em cada card', async () => {
+    mockGetResponses(doBackend, overrides);
+    renderPayments();
+
+    await screen.findByText('Mercado');
+
+    expect(within(cardOf('Mercado')).getByText(/^Data:\s*03\b.*out/i)).toBeInTheDocument();
+    expect(within(cardOf('Sofá 3/6')).getByText(/^Data:\s*20\b.*set/i)).toBeInTheDocument();
+    expect(within(cardOf('Luz')).getByText(/^Data:\s*12\b.*set/i)).toBeInTheDocument();
+  });
+
+  it('renderiza duas parcelas da mesma despesa sem aviso de chave duplicada', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const parcela = (installmentNumber: number): SummaryExpenseFixture => ({
+      id: 40,
+      description: 'Geladeira',
+      value: 200,
+      date: '2026-10-03',
+      payerName: 'Isac',
+      expenseType: 'IN_INSTALLMENTS',
+      installmentNumber,
+      installmentsTotal: 6,
+    });
+    mockGetResponses([parcela(1), parcela(2)], overrides);
+    renderPayments();
+
+    await screen.findAllByText('Geladeira');
+
+    expect(screen.getAllByText('Geladeira')).toHaveLength(2);
+    expect(consoleError.mock.calls.flat().join(' ')).not.toMatch(/same key/i);
+    consoleError.mockRestore();
   });
 });
