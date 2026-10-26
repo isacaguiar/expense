@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -30,6 +30,7 @@ import PixPaymentDialog from '../components/PixPaymentDialog';
 import UserAvatar from '../components/UserAvatar';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { formatShortDate } from '../utils/dates';
+import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -179,6 +180,12 @@ const Payments: React.FC = () => {
   };
 
   const expenses = summary?.expenses ?? [];
+
+  // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Substitui o
+  // "pendentes primeiro" que a API devolve; `expenses` (a lista da API, sem ordenar) segue
+  // alimentando o estado vazio e a busca por id do popup de comprovante
+  // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §5).
+  const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);
   // Sempre da lista atual (nunca um objeto guardado): depois de recarregar, o
   // popup abre com a descrição e a foto que estão gravadas agora.
   const editProofExpense = expenses.find(exp => exp.id === editProofExpenseId) ?? null;
@@ -228,8 +235,8 @@ const Payments: React.FC = () => {
                 <Typography color="text.secondary">Nenhuma despesa nesta competência.</Typography>
               ) : (
                 <Stack spacing={2}>
-                  {expenses.map((exp: SummaryExpense) => (
-                    <Card key={exp.id} variant="outlined">
+                  {sortedExpenses.map((exp: SummaryExpense) => (
+                    <Card key={expenseRowKey(exp)} variant="outlined">
                       <CardContent>
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
                           <Typography variant="subtitle1" fontWeight="bold">
@@ -241,6 +248,10 @@ const Payments: React.FC = () => {
                             size="small"
                           />
                         </Box>
+
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          Data: {formatShortDate(exp.date)}
+                        </Typography>
 
                         <Box display="flex" alignItems="center" gap={1} sx={{ my: 0.5 }}>
                           <Typography variant="body2" color="text.secondary">

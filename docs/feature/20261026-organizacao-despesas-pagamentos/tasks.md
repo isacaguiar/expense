@@ -18,7 +18,7 @@ Escopo: **só `frontend/` e documentação**. Nenhuma task toca `backend/` (spec
 | TASK-504 | Mostrar o usuário logado primeiro na aba Saldo, em Despesas e na Home do grupo | frontend | plan.md §6 | nenhum | Concluída (2026-10-26) |
 | TASK-505 | Ordenar as despesas da Home do grupo e do Relatório de fechamento por data da ocorrência | frontend | plan.md §5 | nenhum | Concluída (2026-10-26) |
 | TASK-506 | Ajustar `PayableSettlementList`: critério `confirmedAt`, chip sem link quebrado, rótulos de valor a receber e mensagem de vazio | frontend | plan.md §7 | nenhum | Concluída (2026-10-26) |
-| TASK-507 | Ordenar as despesas de Pagamentos por data da ocorrência e mostrar a data nos cards | frontend | plan.md §5 | nenhum | Pendente |
+| TASK-507 | Ordenar as despesas de Pagamentos por data da ocorrência e mostrar a data nos cards | frontend | plan.md §5 | nenhum | Concluída (2026-10-26) |
 | TASK-508 | Acrescentar os filtros de Despesas a Pagamentos, afetando só a lista de despesas | frontend | plan.md §4 | nenhum | Pendente |
 | TASK-509 | Criar `PaymentSettlementsPanel` com as abas "Valores a pagar" e "Valores pagos" e a ordem dos acertos, e integrá-lo em Pagamentos | frontend | plan.md §8 | nenhum | Pendente |
 | TASK-510 | Registrar a convenção de ordem de apresentação em `05-context-frontend.md` e `07-context-mobile.md` | doc | plan.md §9 | nenhum | Pendente |
