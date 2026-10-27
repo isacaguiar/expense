@@ -33,6 +33,7 @@ Esses mockups são **referência de layout e fluxo**, não a implementação atu
 - O cliente só consome a API — não duplique regra de negócio (cálculo de divisão de despesa, apuração de saldo) que já existe no backend.
 - O web e o app móvel devem consumir o mesmo contrato de API sem divergir — se uma tela precisar de um campo novo, isso é mudança de API (backend), não workaround no cliente.
 - O `frontend/` continua sendo o cliente web em produção; o app móvel não o substitui (`decisions/ADR-010`).
+- Ordem e agrupamento de **apresentação** de despesas, saldos e acertos de um ciclo (despesas por data da ocorrência decrescente, saldo com o usuário logado primeiro, acertos repartidos em "a pagar" e "pagos" por `confirmedAt` e ordenados por devedor) ficam em `frontend/src/utils/cycleOrdering.ts`, não no backend: é apresentação, não cálculo, e vale também para snapshot de ciclo selado, que não é regravado. As regras são R1, R5 e R8–R10 de `docs/feature/20261026-organizacao-despesas-pagamentos/specify.md`; valores, saldos e acertos continuam vindo da API.
 
 ## Gates human-in-the-loop
 
