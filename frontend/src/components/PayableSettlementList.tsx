@@ -4,8 +4,10 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CallReceivedOutlinedIcon from '@mui/icons-material/CallReceivedOutlined';
 import UserAvatar from './UserAvatar';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
+import { isSettlementConfirmed } from '../utils/cycleOrdering';
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -18,6 +20,9 @@ type PayableSettlementListProps = {
   cycleSettled: boolean;
   onPayWithPix: (settlement: SummarySettlement) => void;
   onSendProof: (settlement: SummarySettlement) => void;
+  // Texto de lista vazia. O padrão serve a Pagamentos sem abas e ao Painel; as abas
+  // "Valores a pagar"/"Valores pagos" passam o delas.
+  emptyMessage?: string;
 };
 
 /**
@@ -41,7 +46,8 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   canConfirm,
   cycleSettled,
   onPayWithPix,
-  onSendProof
+  onSendProof,
+  emptyMessage = 'Ninguém deve nada a ninguém neste ciclo.'
 }) => {
   const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
   const nameFor = (userId: number): string => nameById.get(userId) ?? 'Desconhecido';
@@ -51,7 +57,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   if (settlements.length === 0) {
     return (
       <Typography color="text.secondary" textAlign="center" py={4}>
-        Ninguém deve nada a ninguém neste ciclo.
+        {emptyMessage}
       </Typography>
     );
   }
@@ -60,7 +66,11 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
     <Stack spacing={1.5}>
       {settlements.map((settlement, index) => {
         const isDebtor = currentUserId !== null && currentUserId === settlement.from_user_id;
-        const confirmed = Boolean(settlement.confirmedProofUrl);
+        // "Pago" é o acerto ter `confirmedAt`; a URL do comprovante não decide (expira no
+        // snapshot e pode faltar). docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §7.
+        const confirmed = isSettlementConfirmed(settlement);
+        // Valor que o usuário logado tem a receber: marcado com texto, sem botões de devedor.
+        const isReceiver = currentUserId !== null && currentUserId === settlement.to_user_id;
         // A nota só faz sentido junto de um comprovante enviado.
         const note = confirmed ? settlement.confirmedNote : null;
 
@@ -98,20 +108,40 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
             )}
 
             <Box display="flex" alignItems="center" justifyContent="flex-end" flexWrap="wrap" gap={1} mt={1.5}>
-              {confirmed && (
+              {isReceiver && (
                 <Chip
-                  icon={<CheckCircleOutlineIcon fontSize="small" />}
-                  label="Comprovante enviado"
-                  color="success"
+                  icon={<CallReceivedOutlinedIcon fontSize="small" />}
+                  label={confirmed ? 'Pagou a você' : 'Deve pagar a você'}
+                  color="info"
                   size="small"
                   variant="outlined"
-                  component="a"
-                  href={settlement.confirmedProofUrl ?? undefined}
-                  target="_blank"
-                  rel="noreferrer"
-                  clickable
                 />
               )}
+
+              {confirmed &&
+                (settlement.confirmedProofUrl ? (
+                  <Chip
+                    icon={<CheckCircleOutlineIcon fontSize="small" />}
+                    label="Comprovante enviado"
+                    color="success"
+                    size="small"
+                    variant="outlined"
+                    component="a"
+                    href={settlement.confirmedProofUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    clickable
+                  />
+                ) : (
+                  // Confirmado sem URL (o arquivo foi removido): o estado aparece, sem link quebrado.
+                  <Chip
+                    icon={<CheckCircleOutlineIcon fontSize="small" />}
+                    label="Comprovante enviado"
+                    color="success"
+                    size="small"
+                    variant="outlined"
+                  />
+                ))}
 
               {isDebtor && canConfirm && (
                 <>

@@ -198,11 +198,12 @@ const PaymentProofDialog: React.FC<PaymentProofDialogProps> = ({
 
         <Button variant="outlined" component="label" fullWidth startIcon={<PhotoCameraOutlinedIcon />}>
           {file ? file.name : photoLabel}
+          {/* Sem `capture`: no Safari do iOS ele abre só a câmera, sem biblioteca de fotos nem
+              arquivos (docs/bugfix/concluidos/202610/20261027-comprovante-iphone-so-camera.md). */}
           <input
             key={inputKey}
             type="file"
             accept="image/*"
-            capture="environment"
             hidden
             onChange={handleFileChange}
           />

@@ -66,6 +66,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/202610/20261027-comprovante-iphone-so-camera.md](concluidos/202610/20261027-comprovante-iphone-so-camera.md) | Comprovante no iPhone abre só a câmera e não deixa escolher foto da galeria nem arquivo | 2026-10-27 | #246 |
 | [concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md](concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md) | Alerta "ainda falta acertar" incoerente depois de pagamentos em ciclo fechado | 2026-10-24 | #234 |
 | [concluidos/202610/20261006-acerto-comprovante-sem-cycles-ago.md](concluidos/202610/20261006-acerto-comprovante-sem-cycles-ago.md) | Acerto do devedor: comprovante de ciclo anterior recusado por falta de `cycles_ago` | 2026-10-06 | #207 |
 | [concluidos/202610/20261006-cadastro-fetch-sem-accept-json.md](concluidos/202610/20261006-cadastro-fetch-sem-accept-json.md) | Cadastro: erro de validação (422) vira redirecionamento bloqueado por CORS | 2026-10-06 | #206 |

@@ -535,4 +535,17 @@ describe('PaymentProofDialog', () => {
     renderDialog({ open: false });
     expect(screen.queryByText('Confirmar pagamento')).not.toBeInTheDocument();
   });
+
+  // Regressão de docs/bugfix/concluidos/202610/20261027-comprovante-iphone-so-camera.md: no Safari do iOS o
+  // atributo `capture` faz o seletor abrir só a câmera, sem biblioteca de fotos nem arquivos.
+  // Sem ele, o iOS oferece câmera, biblioteca e arquivos.
+  it.each([
+    ['default flow', {}],
+    ['mandatory photo (settlement proof)', { requirePhoto: true }]
+  ])('lets the user pick an existing image: the file input has no capture attribute (%s)', (_name, props) => {
+    renderDialog(props);
+
+    expect(fileInput()).toHaveAttribute('accept', 'image/*');
+    expect(fileInput()).not.toHaveAttribute('capture');
+  });
 });

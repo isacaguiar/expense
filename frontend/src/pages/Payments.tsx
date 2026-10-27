@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -23,16 +23,16 @@ import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
-import PayableSettlementList from '../components/PayableSettlementList';
+import { useCurrentUserId } from '../hooks/useCurrentUserId';
+import PaymentSettlementsPanel, { SettlementsTab } from '../components/PaymentSettlementsPanel';
 import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
 import UserAvatar from '../components/UserAvatar';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
-
-const formatDate = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-};
+import { formatShortDate } from '../utils/dates';
+import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
+import ExpenseFilterBar from '../components/ExpenseFilterBar';
+import { useExpenseFilters } from '../hooks/useExpenseFilters';
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -43,15 +43,13 @@ const Payments: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
 
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const currentUserId = useCurrentUserId();
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    axios
-      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers: { Authorization: token ? `Bearer ${token}` : '' } })
-      .then(res => setCurrentUserId(res.data.id))
-      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
-  }, []);
+  // Aba de acertos escolhida. Mora aqui, e não no painel, porque `useGroupCycle` marca
+  // `loading` a cada busca (navegar de ciclo, recarregar) e a página troca o conteúdo
+  // por um spinner: um estado do painel se perderia
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §8).
+  const [settlementsTab, setSettlementsTab] = useState<SettlementsTab>('toPay');
 
   // Membros do grupo com email/chave Pix — usado só pra resolver, ao clicar
   // num valor a pagar, se o credor tem Pix cadastrado e qual o e-mail pra
@@ -190,6 +188,17 @@ const Payments: React.FC = () => {
   };
 
   const expenses = summary?.expenses ?? [];
+
+  // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Substitui o
+  // "pendentes primeiro" que a API devolve; `expenses` (a lista da API, sem ordenar) segue
+  // alimentando o estado vazio e a busca por id do popup de comprovante
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §5).
+  const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);
+
+  // Busca, tipo, credor, devedores e status: os mesmos de Despesas (mesmo hook e mesma barra),
+  // sobre a lista já ordenada e só para ela — estado local desta tela, sem persistência (plan.md §4).
+  const filters = useExpenseFilters(sortedExpenses);
+  const { filteredExpenses } = filters;
   // Sempre da lista atual (nunca um objeto guardado): depois de recarregar, o
   // popup abre com a descrição e a foto que estão gravadas agora.
   const editProofExpense = expenses.find(exp => exp.id === editProofExpenseId) ?? null;
@@ -213,7 +222,7 @@ const Payments: React.FC = () => {
               textTransform="capitalize"
               sx={{ flexGrow: 1, minWidth: 0, textAlign: 'center', fontSize: { xs: '1rem', md: '1.25rem' } }}
             >
-              {formatDate(summary.cycle.start)} – {formatDate(summary.cycle.end)}
+              {formatShortDate(summary.cycle.start)} – {formatShortDate(summary.cycle.end)}
             </Typography>
             <IconButton onClick={goToNextCycle} aria-label="Próximo ciclo">
               <ArrowForwardIosIcon />
@@ -235,12 +244,17 @@ const Payments: React.FC = () => {
                 Despesas do ciclo
               </Typography>
 
+              {/* Os filtros só afetam esta lista: os acertos e os saldos ao lado seguem representando a competência inteira. */}
+              <ExpenseFilterBar filters={filters} />
+
               {expenses.length === 0 ? (
                 <Typography color="text.secondary">Nenhuma despesa nesta competência.</Typography>
+              ) : filteredExpenses.length === 0 ? (
+                <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
               ) : (
                 <Stack spacing={2}>
-                  {expenses.map((exp: SummaryExpense) => (
-                    <Card key={exp.id} variant="outlined">
+                  {filteredExpenses.map((exp: SummaryExpense) => (
+                    <Card key={expenseRowKey(exp)} variant="outlined">
                       <CardContent>
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
                           <Typography variant="subtitle1" fontWeight="bold">
@@ -252,6 +266,10 @@ const Payments: React.FC = () => {
                             size="small"
                           />
                         </Box>
+
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          Data: {formatShortDate(exp.date)}
+                        </Typography>
 
                         <Box display="flex" alignItems="center" gap={1} sx={{ my: 0.5 }}>
                           <Typography variant="body2" color="text.secondary">
@@ -333,11 +351,7 @@ const Payments: React.FC = () => {
             </Grid>
 
             <Grid size={{ xs: 12, md: 5 }}>
-              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                Valores a pagar
-              </Typography>
-
-              <PayableSettlementList
+              <PaymentSettlementsPanel
                 settlements={summary.settlements}
                 balances={summary.balances}
                 currentUserId={currentUserId}
@@ -346,6 +360,8 @@ const Payments: React.FC = () => {
                   !summary.cycle.settled
                 }
                 cycleSettled={summary.cycle.settled}
+                tab={settlementsTab}
+                onTabChange={setSettlementsTab}
                 onPayWithPix={handleSelectSettlement}
                 onSendProof={openConfirmSettlementDialog}
               />

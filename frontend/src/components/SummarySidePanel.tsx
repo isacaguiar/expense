@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Box, Card, CardContent, Chip, Tabs, Tab, Typography } from '@mui/material';
 import UpdateIcon from '@mui/icons-material/Update';
 import PaidOutlinedIcon from '@mui/icons-material/PaidOutlined';
 import BalanceCards from './BalanceCards';
 import SettlementList from './SettlementList';
 import type { CycleStatus, SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
+import { sortBalancesForViewer } from '../utils/cycleOrdering';
 
 type SummarySidePanelProps = {
   balances: SummaryBalance[];
   settlements: SummarySettlement[];
   cycleStatus: CycleStatus;
+  // Usuário logado: aparece primeiro na aba Saldo. Opcional — sem ele (ainda não
+  // carregou, ou quem monta o painel não o conhece) vale só a ordem dos demais.
+  currentUserId?: number | null;
 };
 
 type PanelTab = 'balance' | 'settlement';
@@ -20,8 +24,13 @@ type PanelTab = 'balance' | 'settlement';
  * no lugar dos dois blocos empilhados que existiam antes desta feature
  * (`docs/feature/concluidas/202608/20260822-reestruturacao-resumo/`).
  */
-const SummarySidePanel: React.FC<SummarySidePanelProps> = ({ balances, settlements, cycleStatus }) => {
+const SummarySidePanel: React.FC<SummarySidePanelProps> = ({ balances, settlements, cycleStatus, currentUserId }) => {
   const [tab, setTab] = useState<PanelTab>('balance');
+
+  // O usuário logado primeiro, os demais por saldo decrescente — só apresentação,
+  // `balances` continua como o backend calculou
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §6).
+  const orderedBalances = useMemo(() => sortBalancesForViewer(balances, currentUserId), [balances, currentUserId]);
 
   // 'open'/'future': GroupSummary.tsx expõe status calculado ao vivo a cada
   // request (ExpenseController::computeCycleSummary), muda até o ciclo
@@ -57,7 +66,7 @@ const SummarySidePanel: React.FC<SummarySidePanelProps> = ({ balances, settlemen
         </Tabs>
 
         {tab === 'balance' ? (
-          <BalanceCards balances={balances} />
+          <BalanceCards balances={orderedBalances} />
         ) : settlements.length > 0 ? (
           <SettlementList settlements={settlements} balances={balances} />
         ) : (
