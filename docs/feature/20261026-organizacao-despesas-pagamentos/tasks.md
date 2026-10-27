@@ -22,7 +22,7 @@ Escopo: **só `frontend/` e documentação**. Nenhuma task toca `backend/` (spec
 | TASK-508 | Acrescentar os filtros de Despesas a Pagamentos, afetando só a lista de despesas | frontend | plan.md §4 | nenhum | Concluída (2026-10-26) |
 | TASK-509 | Criar `PaymentSettlementsPanel` com as abas "Valores a pagar" e "Valores pagos" e a ordem dos acertos, e integrá-lo em Pagamentos | frontend | plan.md §8 | nenhum | Concluída (2026-10-26) |
 | TASK-510 | Registrar a convenção de ordem de apresentação em `05-context-frontend.md` e `07-context-mobile.md` | doc | plan.md §9 | nenhum | Concluída (2026-10-26) |
-| TASK-511 | Validar a feature localmente na stack isolada e registrar o resultado | frontend | plan.md §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
+| TASK-511 | Validar a feature localmente na stack isolada e registrar o resultado | frontend | plan.md §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Em andamento (2026-10-26) |
 
 ## Dependências e ordem
 
