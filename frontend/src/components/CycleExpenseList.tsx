@@ -4,14 +4,7 @@ import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import type { SummaryExpense } from '../hooks/useGroupCycle';
 import UserAvatar from './UserAvatar';
-
-// new Date('YYYY-MM-DD') interpreta a string como UTC-meia-noite, o que desloca
-// a data em 1 dia para trás em fusos negativos (ex.: America/Sao_Paulo) —
-// construímos a partir dos componentes locais para evitar isso.
-const formatDate = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-};
+import { formatShortDate } from '../utils/dates';
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -52,7 +45,7 @@ const CycleExpenseList: React.FC<CycleExpenseListProps> = ({ expenses }) => (
                 primary={`${expense.description} — R$ ${formatMoney(expense.value)}`}
                 secondary={
                   <>
-                    {`${formatDate(expense.date)} · Pago por ${expense.payerName ?? '-'} · ` +
+                    {`${formatShortDate(expense.date)} · Pago por ${expense.payerName ?? '-'} · ` +
                       `Dividido entre ${expense.participants.length} pessoa${expense.participants.length === 1 ? '' : 's'}`}
                     {expense.paid && expense.paymentNote && (
                       <Box component="span" display="block" sx={{ overflowWrap: 'anywhere' }}>

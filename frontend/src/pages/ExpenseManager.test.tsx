@@ -173,7 +173,9 @@ describe('ExpenseManager - listagem em cards', () => {
     expect(proofLinks).toHaveLength(1);
     expect(proofLinks[0]).toHaveAttribute('href', '/api/groups/1/proofs/quota/9?signature=stub');
 
-    await user.click(screen.getAllByRole('button', { name: 'Ver detalhes' })[0]);
+    // A despesa com comprovante é o Aluguel; a posição dele na lista não importa aqui.
+    const aluguelRow = screen.getByRole('link', { name: 'Aluguel' }).closest('tr') as HTMLElement;
+    await user.click(within(aluguelRow).getByRole('button', { name: 'Ver detalhes' }));
 
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('link', { name: 'Ver comprovante' })).toHaveAttribute(
@@ -2339,5 +2341,218 @@ describe('ExpenseManager - aviso de fechamento depois de pagar em ciclo fechado'
 
     await screen.findByText('Aluguel');
     expect(screen.queryByText(/falta acertar/)).not.toBeInTheDocument();
+  });
+});
+
+describe('ExpenseManager - ordem e data das despesas', () => {
+  // Chega na ordem de hoje do backend (pendentes primeiro, data crescente): é a ordem
+  // que a tela deve DESFAZER. Specify §5.1 de organizacao-despesas-pagamentos.
+  const doBackend: SummaryExpenseFixture[] = [
+    {
+      id: 25,
+      description: 'Sofá 3/6',
+      value: 300,
+      date: '2026-09-20',
+      payerName: 'Isac',
+      paid: false,
+      expenseType: 'IN_INSTALLMENTS',
+      installmentNumber: 3,
+      installmentsTotal: 6,
+    },
+    { id: 31, description: 'Mercado', value: 150, date: '2026-10-03', payerName: 'João', paid: false },
+    { id: 30, description: 'Luz', value: 90, date: '2026-09-12', payerName: 'Isac', paid: true },
+    { id: 28, description: 'Internet', value: 120, date: '2026-10-03', payerName: 'Isac', paid: true, isFixed: true },
+  ];
+  const cycle = { start: '2026-09-06', end: '2026-10-05' };
+  const NAMES = /^(Sofá 3\/6|Mercado|Luz|Internet)$/;
+
+  const renderManager = () =>
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+  // Descrições na ordem em que aparecem no DOM (cada despesa tem um link com o nome dela).
+  const shownOrder = () => screen.getAllByRole('link', { name: NAMES }).map(link => link.textContent);
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+  });
+
+  describe('tabela (desktop)', () => {
+    it('ordena por data da ocorrência decrescente, desempata pelo id e não prioriza pendentes', async () => {
+      mockGetResponses(doBackend, cycle);
+      renderManager();
+
+      await screen.findByText('Mercado');
+
+      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+      // Pendente e paga intercaladas: o status não decide a posição.
+      expect(screen.getAllByText(/^(Paga|Pendente)$/).map(chip => chip.textContent)).toEqual([
+        'Pendente',
+        'Paga',
+        'Pendente',
+        'Paga',
+      ]);
+    });
+
+    it('mostra a mesma ordem quando o resumo chega em ordem crescente, como um ciclo selado', async () => {
+      mockGetResponses([...doBackend].sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id), cycle);
+      renderManager();
+
+      await screen.findByText('Mercado');
+
+      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+    });
+
+    it('não altera a lista recebida da API (o resumo é estado do hook)', async () => {
+      vi.mocked(axios.get).mockImplementation((url: string) => {
+        if (url.includes('/expenses/summary')) {
+          const data = summaryResponse(doBackend, cycle);
+          Object.freeze(data.expenses);
+          return Promise.resolve({ data });
+        }
+        if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+        return Promise.reject(new Error(`unexpected GET ${url}`));
+      });
+      renderManager();
+
+      await screen.findByText('Mercado');
+
+      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+    });
+
+    it('mantém a ordem com um filtro ativo', async () => {
+      const user = userEvent.setup();
+      mockGetResponses(doBackend, cycle);
+      renderManager();
+
+      await screen.findByText('Mercado');
+      await user.click(within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: 'Pendentes' }));
+
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6']);
+    });
+
+    it('tem a coluna "Data" como primeira, com o dia e o mês de cada despesa', async () => {
+      mockGetResponses(doBackend, cycle);
+      renderManager();
+
+      await screen.findByText('Mercado');
+
+      expect(screen.getAllByRole('columnheader')[0]).toHaveTextContent('Data');
+      const mercadoRow = screen.getByRole('link', { name: 'Mercado' }).closest('tr') as HTMLElement;
+      expect(within(mercadoRow).getByText(/^03\b.*out/i)).toBeInTheDocument();
+      const luzRow = screen.getByRole('link', { name: 'Luz' }).closest('tr') as HTMLElement;
+      expect(within(luzRow).getByText(/^12\b.*set/i)).toBeInTheDocument();
+    });
+
+    it('renderiza duas parcelas da mesma despesa sem aviso de chave duplicada', async () => {
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+      mockGetResponses(
+        [
+          {
+            id: 40,
+            description: 'Geladeira',
+            value: 200,
+            date: '2026-10-03',
+            payerName: 'Isac',
+            expenseType: 'IN_INSTALLMENTS',
+            installmentNumber: 1,
+            installmentsTotal: 6,
+          },
+          {
+            id: 40,
+            description: 'Geladeira',
+            value: 200,
+            date: '2026-10-03',
+            payerName: 'Isac',
+            expenseType: 'IN_INSTALLMENTS',
+            installmentNumber: 2,
+            installmentsTotal: 6,
+          },
+        ],
+        cycle
+      );
+      renderManager();
+
+      await screen.findAllByText('Geladeira');
+
+      expect(screen.getAllByText('Geladeira')).toHaveLength(2);
+      expect(consoleError.mock.calls.flat().join(' ')).not.toMatch(/same key/i);
+      consoleError.mockRestore();
+    });
+  });
+
+  describe('cards (viewport estreito)', () => {
+    beforeEach(() => {
+      vi.stubGlobal(
+        'matchMedia',
+        vi.fn().mockReturnValue({
+          matches: true,
+          media: '',
+          onchange: null,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        })
+      );
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('ordena os cards pela mesma regra da tabela', async () => {
+      mockGetResponses(doBackend, cycle);
+      renderManager();
+
+      await screen.findByText('Mercado');
+
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+    });
+
+    it('mostra a linha "Data:" em cada card', async () => {
+      mockGetResponses(doBackend, cycle);
+      renderManager();
+
+      await screen.findByText('Mercado');
+
+      const mercadoCard = screen.getByRole('link', { name: 'Mercado' }).closest('[class*="MuiCard-root"]') as HTMLElement;
+      expect(within(mercadoCard).getByText(/Data:\s*03\b.*out/i)).toBeInTheDocument();
+      const sofaCard = screen.getByRole('link', { name: 'Sofá 3/6' }).closest('[class*="MuiCard-root"]') as HTMLElement;
+      expect(within(sofaCard).getByText(/Data:\s*20\b.*set/i)).toBeInTheDocument();
+    });
+  });
+});
+
+describe('ExpenseManager - aba Saldo com o usuário logado primeiro', () => {
+  // Isac (500) é o usuário logado do mock de /api/me e tem o menor saldo.
+  const balances = [
+    { user_id: 501, name: 'Bia', balance: 100 },
+    { user_id: 502, name: 'Caio', balance: 60 },
+    { user_id: 500, name: 'Isac', balance: -160 },
+  ];
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+  });
+
+  it('abre o Saldo com o usuário logado primeiro e os demais por saldo decrescente', async () => {
+    mockGetResponses([], {}, { balances });
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText(/R\$ 100,00 a receber/);
+    await waitFor(() =>
+      expect(screen.getAllByText(/^(Bia|Caio|Isac)$/).map(el => el.textContent)).toEqual(['Isac', 'Bia', 'Caio'])
+    );
   });
 });
