@@ -36,7 +36,7 @@ export type ExpenseFilterControls = {
  * do campo e do critério, e o `Autocomplete` nunca recebe valor fora das opções.
  * `filteredExpenses` preserva a ordem de entrada: quem chama ordena antes.
  *
- * docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §4, que herda
+ * docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §4, que herda
  * docs/feature/concluidas/202610/20261010-filtros-credor-devedores-status-despesas/plan.md §2.
  */
 export function useExpenseFilters(expenses: SummaryExpense[]): ExpenseFilterControls {

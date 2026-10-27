@@ -67,7 +67,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
       {settlements.map((settlement, index) => {
         const isDebtor = currentUserId !== null && currentUserId === settlement.from_user_id;
         // "Pago" é o acerto ter `confirmedAt`; a URL do comprovante não decide (expira no
-        // snapshot e pode faltar). docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §7.
+        // snapshot e pode faltar). docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §7.
         const confirmed = isSettlementConfirmed(settlement);
         // Valor que o usuário logado tem a receber: marcado com texto, sem botões de devedor.
         const isReceiver = currentUserId !== null && currentUserId === settlement.to_user_id;

@@ -48,7 +48,7 @@ const Payments: React.FC = () => {
   // Aba de acertos escolhida. Mora aqui, e não no painel, porque `useGroupCycle` marca
   // `loading` a cada busca (navegar de ciclo, recarregar) e a página troca o conteúdo
   // por um spinner: um estado do painel se perderia
-  // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §8).
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §8).
   const [settlementsTab, setSettlementsTab] = useState<SettlementsTab>('toPay');
 
   // Membros do grupo com email/chave Pix — usado só pra resolver, ao clicar
@@ -192,7 +192,7 @@ const Payments: React.FC = () => {
   // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Substitui o
   // "pendentes primeiro" que a API devolve; `expenses` (a lista da API, sem ordenar) segue
   // alimentando o estado vazio e a busca por id do popup de comprovante
-  // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §5).
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §5).
   const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);
 
   // Busca, tipo, credor, devedores e status: os mesmos de Despesas (mesmo hook e mesma barra),

@@ -36,7 +36,7 @@ const NO_SETTLEMENTS_MESSAGE = 'Ninguém deve nada a ninguém neste ciclo.';
  * Cada aba mostra as saídas do usuário logado primeiro e, depois, os demais devedores
  * pelo total da própria aba. Só repartição e ordem: valores, Pix e envio de
  * comprovante são os de `PayableSettlementList`.
- * docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §8.
+ * docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §8.
  */
 const PaymentSettlementsPanel: React.FC<PaymentSettlementsPanelProps> = ({
   settlements,

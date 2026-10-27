@@ -1,4 +1,4 @@
-// Datas curtas da interface. docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §2.
+// Datas curtas da interface. docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §2.
 
 /**
  * 'YYYY-MM-DD' → dia com dois dígitos + mês abreviado em pt-BR ("03 de out.").

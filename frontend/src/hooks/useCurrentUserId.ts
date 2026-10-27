@@ -7,7 +7,7 @@ import { API_BASE_URL } from '../config';
  * resposta não traz um id numérico ou se a chamada falha. Substitui as cópias
  * que `ExpenseManager` e `Payments` tinham desse mesmo efeito e serve a
  * `GroupSummary`, que precisa do id para pôr o usuário logado primeiro no Saldo
- * (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §3).
+ * (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §3).
  */
 export function useCurrentUserId(): number | null {
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);

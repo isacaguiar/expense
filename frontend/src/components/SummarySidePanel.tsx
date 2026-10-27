@@ -29,7 +29,7 @@ const SummarySidePanel: React.FC<SummarySidePanelProps> = ({ balances, settlemen
 
   // O usuário logado primeiro, os demais por saldo decrescente — só apresentação,
   // `balances` continua como o backend calculou
-  // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §6).
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §6).
   const orderedBalances = useMemo(() => sortBalancesForViewer(balances, currentUserId), [balances, currentUserId]);
 
   // 'open'/'future': GroupSummary.tsx expõe status calculado ao vivo a cada
