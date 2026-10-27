@@ -24,7 +24,7 @@ import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
-import PayableSettlementList from '../components/PayableSettlementList';
+import PaymentSettlementsPanel, { SettlementsTab } from '../components/PaymentSettlementsPanel';
 import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
 import UserAvatar from '../components/UserAvatar';
@@ -44,6 +44,12 @@ const Payments: React.FC = () => {
   const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
 
   const currentUserId = useCurrentUserId();
+
+  // Aba de acertos escolhida. Mora aqui, e não no painel, porque `useGroupCycle` marca
+  // `loading` a cada busca (navegar de ciclo, recarregar) e a página troca o conteúdo
+  // por um spinner: um estado do painel se perderia
+  // (docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §8).
+  const [settlementsTab, setSettlementsTab] = useState<SettlementsTab>('toPay');
 
   // Membros do grupo com email/chave Pix — usado só pra resolver, ao clicar
   // num valor a pagar, se o credor tem Pix cadastrado e qual o e-mail pra
@@ -345,11 +351,7 @@ const Payments: React.FC = () => {
             </Grid>
 
             <Grid size={{ xs: 12, md: 5 }}>
-              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                Valores a pagar
-              </Typography>
-
-              <PayableSettlementList
+              <PaymentSettlementsPanel
                 settlements={summary.settlements}
                 balances={summary.balances}
                 currentUserId={currentUserId}
@@ -358,6 +360,8 @@ const Payments: React.FC = () => {
                   !summary.cycle.settled
                 }
                 cycleSettled={summary.cycle.settled}
+                tab={settlementsTab}
+                onTabChange={setSettlementsTab}
                 onPayWithPix={handleSelectSettlement}
                 onSendProof={openConfirmSettlementDialog}
               />

@@ -40,10 +40,19 @@ type SummaryExpenseFixture = {
 
 const CURRENT_USER_ID = 700;
 
+type SettlementFixture = {
+  from_user_id: number;
+  to_user_id: number;
+  amount: number;
+  confirmedAt?: string | null;
+  confirmedProofUrl?: string | null;
+  confirmedNote?: string | null;
+};
+
 type SummaryOverrides = {
   cycle?: Record<string, unknown>;
   balances?: { user_id: number; name: string; balance: number }[];
-  settlements?: { from_user_id: number; to_user_id: number; amount: number }[];
+  settlements?: SettlementFixture[];
 };
 
 function summaryResponse(expensesList: SummaryExpenseFixture[] = [], overrides: SummaryOverrides = {}) {
@@ -1504,5 +1513,352 @@ describe('Payments - filtros da lista de despesas', () => {
     expect(await screen.findByText('Nenhuma despesa encontrada para esse filtro.')).toBeInTheDocument();
     expect(screen.queryByText('Aluguel')).not.toBeInTheDocument();
     expect(await screen.findByText('Pagamento desfeito.')).toBeInTheDocument();
+  });
+});
+
+describe('Payments - abas de valores a pagar e pagos', () => {
+  const CONFIRMED_AT = '2026-08-20T10:00:00-03:00';
+  const PROOF_URL = 'https://api.exemplo.com/api/proofs/9?signature=abc';
+  const MARIA = 999;
+  const JOAO = 501;
+
+  const balances = [
+    { user_id: CURRENT_USER_ID, name: 'Isac', balance: -30 },
+    { user_id: MARIA, name: 'Maria', balance: 50 },
+    { user_id: JOAO, name: 'João', balance: -20 },
+  ];
+  const members: MemberFixture[] = [
+    { id: MARIA, name: 'Maria', email: 'maria@example.com', pix: 'maria@pix.com' },
+    { id: JOAO, name: 'João', email: 'joao@example.com', pix: 'joao@pix.com' },
+  ];
+  const closed = { status: 'closed' };
+
+  // Ordem do servidor propositalmente "errada": a tela reordena (logado primeiro).
+  //   a pagar: João → Maria 20 (terceiros) e Isac → Maria 50 (saída do logado)
+  //   pagos:   João → Isac 30 (a receber do logado, confirmado)
+  const toPayMine = { from_user_id: CURRENT_USER_ID, to_user_id: MARIA, amount: 50 };
+  const toPayOthers = { from_user_id: JOAO, to_user_id: MARIA, amount: 20 };
+  const paidToMe = {
+    from_user_id: JOAO,
+    to_user_id: CURRENT_USER_ID,
+    amount: 30,
+    confirmedAt: CONFIRMED_AT,
+    confirmedProofUrl: PROOF_URL,
+  };
+  const paidByMe = {
+    from_user_id: CURRENT_USER_ID,
+    to_user_id: JOAO,
+    amount: 25,
+    confirmedAt: CONFIRMED_AT,
+    confirmedProofUrl: PROOF_URL,
+  };
+
+  type User = ReturnType<typeof userEvent.setup>;
+
+  const renderScreen = () =>
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+  const tabNamed = (name: RegExp) => screen.getByRole('tab', { name });
+  const shownSettlements = () =>
+    screen
+      .queryAllByText(/deve pagar/)
+      .map(el => (el.closest('p')?.textContent ?? '').replace(/\s+/g, ' ').trim());
+
+  // Um resumo por `cycles_ago`; o que não estiver no mapa devolve o ciclo corrente.
+  const mockCycles = (byCyclesAgo: Record<number, SummaryOverrides>, expensesList: SummaryExpenseFixture[] = []) => {
+    vi.mocked(axios.get).mockImplementation((url: string, config?: { params?: { cycles_ago?: number } }) => {
+      if (url.includes('/expenses/summary')) {
+        const ago = config?.params?.cycles_ago ?? 0;
+        return Promise.resolve({ data: summaryResponse(expensesList, byCyclesAgo[ago] ?? byCyclesAgo[0]) });
+      }
+      if (url.includes('/pix/generate')) {
+        return Promise.resolve({ data: { qrcode: 'data:image/png;base64,abc', copiacola: '00020126...6304ABCD' } });
+      }
+      if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      if (url.includes('/members')) return Promise.resolve({ data: members });
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+  };
+
+  // Envia um comprovante pelo popup do devedor e espera a confirmação do envio.
+  const sendProof = async (user: User, buttonName: 'Enviar comprovante' | 'Reenviar comprovante') => {
+    await user.click(await screen.findByRole('button', { name: buttonName }));
+    const dialog = await screen.findByRole('dialog');
+    await user.upload(
+      dialog.querySelector('input[type="file"]') as HTMLInputElement,
+      new File(['foto'], 'pix.png', { type: 'image/png' })
+    );
+    await user.click(within(dialog).getByRole('button', { name: 'Confirmar' }));
+    expect(await screen.findByText('Comprovante enviado.')).toBeInTheDocument();
+  };
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+  });
+
+  it('abre em "Valores a pagar", com contadores e a saída do logado antes dos demais', async () => {
+    mockCycles({ 0: { balances, settlements: [toPayOthers, paidToMe, toPayMine], cycle: closed } });
+    renderScreen();
+
+    await screen.findByRole('tab', { name: /Valores a pagar/ });
+
+    expect(tabNamed(/Valores a pagar/)).toHaveAttribute('aria-selected', 'true');
+    expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (2)');
+    expect(tabNamed(/Valores pagos/)).toHaveTextContent('Valores pagos (1)');
+    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria', 'João deve pagar R$ 20,00 a Maria']);
+  });
+
+  it('"Valores pagos" mostra o acerto confirmado, marcado como recebido pelo logado', async () => {
+    const user = userEvent.setup();
+    mockCycles({ 0: { balances, settlements: [toPayMine, paidToMe], cycle: closed } });
+    renderScreen();
+
+    await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
+
+    expect(shownSettlements()).toEqual(['João deve pagar R$ 30,00 a Isac']);
+    expect(screen.getByText('Pagou a você')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Comprovante enviado' })).toHaveAttribute('href', PROOF_URL);
+  });
+
+  it('separa os acertos pelos dados de confirmação, e não pelo status Paga/Pendente da despesa', async () => {
+    const user = userEvent.setup();
+    const expensesList: SummaryExpenseFixture[] = [
+      { id: 1, description: 'Mercado', date: '2026-08-10', value: 100, paid: true, userPayerId: MARIA },
+      { id: 2, description: 'Internet', date: '2026-08-05', value: 80, paid: false, userPayerId: MARIA },
+    ];
+    // A despesa paga tem acerto sem confirmação; a pendente tem acerto confirmado.
+    mockCycles({ 0: { balances, settlements: [toPayMine, paidToMe], cycle: closed } }, expensesList);
+    renderScreen();
+
+    await screen.findByText('Mercado');
+    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria']);
+
+    await user.click(tabNamed(/Valores pagos/));
+    expect(shownSettlements()).toEqual(['João deve pagar R$ 30,00 a Isac']);
+  });
+
+  it('um acerto confirmado sem URL de comprovante também é "pago"', async () => {
+    const user = userEvent.setup();
+    mockCycles({
+      0: { balances, settlements: [{ ...paidByMe, confirmedProofUrl: null }], cycle: closed },
+    });
+    renderScreen();
+
+    await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
+
+    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']);
+    expect(screen.getByText('Comprovante enviado')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Comprovante enviado' })).not.toBeInTheDocument();
+  });
+
+  it('mantém a aba escolhida ao navegar para outro ciclo', async () => {
+    const user = userEvent.setup();
+    mockCycles({
+      0: { balances, settlements: [toPayMine, paidToMe], cycle: closed },
+      1: {
+        balances,
+        settlements: [{ from_user_id: MARIA, to_user_id: JOAO, amount: 10 }, paidByMe],
+        cycle: { start: '2026-07-01', end: '2026-07-31', status: 'closed' },
+      },
+    });
+    renderScreen();
+
+    await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
+    await user.click(screen.getByRole('button', { name: 'Ciclo anterior' }));
+
+    await waitFor(() => expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']));
+    expect(tabNamed(/Valores pagos/)).toHaveAttribute('aria-selected', 'true');
+    expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (1)');
+  });
+
+  it('mantém a aba escolhida depois de enviar um comprovante e recarregar o resumo', async () => {
+    const user = userEvent.setup();
+    let reloads = 0;
+    mockCycles({ 0: { balances, settlements: [paidByMe], cycle: closed } });
+    const baseGet = vi.mocked(axios.get).getMockImplementation()!;
+    vi.mocked(axios.get).mockImplementation(((url: string, config?: unknown) => {
+      if (url.includes('/expenses/summary')) reloads += 1;
+      return baseGet(url, config as never);
+    }) as never);
+    renderScreen();
+
+    await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
+    const before = reloads;
+    await sendProof(user, 'Reenviar comprovante');
+
+    await waitFor(() => expect(reloads).toBeGreaterThan(before));
+    await waitFor(() => expect(tabNamed(/Valores pagos/)).toHaveAttribute('aria-selected', 'true'));
+    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']);
+  });
+
+  it('o acerto muda de "Valores a pagar" para "Valores pagos" depois do comprovante enviado', async () => {
+    const user = userEvent.setup();
+    let confirmed = false;
+    vi.mocked(axios.post).mockImplementation(() => {
+      confirmed = true;
+      return Promise.resolve({ data: {} });
+    });
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/summary')) {
+        const settlement = confirmed ? { ...toPayMine, confirmedAt: CONFIRMED_AT, confirmedProofUrl: PROOF_URL } : toPayMine;
+        return Promise.resolve({ data: summaryResponse([], { balances, settlements: [settlement], cycle: closed }) });
+      }
+      if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      if (url.includes('/members')) return Promise.resolve({ data: members });
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+    renderScreen();
+
+    await screen.findByRole('tab', { name: /Valores a pagar/ });
+    expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (1)');
+    expect(tabNamed(/Valores pagos/)).toHaveTextContent('Valores pagos (0)');
+
+    await sendProof(user, 'Enviar comprovante');
+
+    await waitFor(() => expect(tabNamed(/Valores pagos/)).toHaveTextContent('Valores pagos (1)'));
+    expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (0)');
+    expect(screen.getByText('Nenhum valor a pagar neste ciclo.')).toBeInTheDocument();
+
+    await user.click(tabNamed(/Valores pagos/));
+    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria']);
+    expect(screen.getByRole('button', { name: 'Reenviar comprovante' })).toBeInTheDocument();
+  });
+
+  it('o Pix e o envio de comprovante fazem os mesmos pedidos de antes', async () => {
+    const user = userEvent.setup();
+    mockCycles(
+      { 0: { balances, settlements: [toPayMine], cycle: closed }, 1: { balances, settlements: [toPayMine], cycle: closed } }
+    );
+    renderScreen();
+
+    await user.click(await screen.findByRole('button', { name: 'Pagar com Pix' }));
+    expect(await screen.findByRole('img', { name: /QR Code Pix para pagar Maria/ })).toBeInTheDocument();
+    const [, config] = vi.mocked(axios.get).mock.calls.find(call => String(call[0]).includes('/pix/generate'))!;
+    expect((config as { params?: Record<string, unknown> }).params).toMatchObject({
+      email: 'maria@example.com',
+      valor: '50.00',
+    });
+    await user.keyboard('{Escape}');
+
+    await sendProof(user, 'Enviar comprovante');
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/groups/1/settlements/confirm');
+    expect((body as FormData).get('to_user_id')).toBe(String(MARIA));
+    expect((body as FormData).get('cycles_ago')).toBe('0');
+  });
+
+  it('reenviar da aba "Valores pagos" de um ciclo anterior manda o cycles_ago do ciclo na tela', async () => {
+    const user = userEvent.setup();
+    mockCycles({
+      0: { balances, settlements: [toPayMine], cycle: closed },
+      1: { balances, settlements: [paidByMe], cycle: { start: '2026-07-01', end: '2026-07-31', status: 'closed' } },
+    });
+    renderScreen();
+
+    await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
+    await user.click(screen.getByRole('button', { name: 'Ciclo anterior' }));
+    await waitFor(() => expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']));
+
+    await sendProof(user, 'Reenviar comprovante');
+
+    const [url, body] = vi.mocked(axios.post).mock.calls[0];
+    expect(url).toContain('/api/groups/1/settlements/confirm');
+    expect((body as FormData).get('to_user_id')).toBe(String(JOAO));
+    expect((body as FormData).get('cycles_ago')).toBe('1');
+  });
+
+  it('o Pix também sai da aba "Valores pagos", para o acerto do logado já confirmado', async () => {
+    const user = userEvent.setup();
+    mockCycles({ 0: { balances, settlements: [paidByMe], cycle: closed } });
+    renderScreen();
+
+    await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
+    await user.click(screen.getByRole('button', { name: 'Pagar com Pix' }));
+
+    expect(await screen.findByRole('img', { name: /QR Code Pix para pagar João/ })).toBeInTheDocument();
+    const [, config] = vi.mocked(axios.get).mock.calls.find(call => String(call[0]).includes('/pix/generate'))!;
+    expect((config as { params?: Record<string, unknown> }).params).toMatchObject({
+      email: 'joao@example.com',
+      valor: '25.00',
+    });
+  });
+
+  it('um ciclo selado mostra as duas abas, sem botões de ação', async () => {
+    const user = userEvent.setup();
+    mockCycles({
+      0: {
+        balances,
+        settlements: [toPayMine, paidByMe],
+        cycle: { status: 'closed', settled: true },
+      },
+    });
+    renderScreen();
+
+    await screen.findByRole('tab', { name: /Valores a pagar/ });
+    expect(tabNamed(/Valores a pagar/)).toHaveTextContent('(1)');
+    expect(tabNamed(/Valores pagos/)).toHaveTextContent('(1)');
+    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria']);
+    expect(screen.getByText('Ciclo encerrado.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Pagar com Pix' })).not.toBeInTheDocument();
+
+    await user.click(tabNamed(/Valores pagos/));
+    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']);
+    expect(screen.queryByRole('button', { name: 'Reenviar comprovante' })).not.toBeInTheDocument();
+  });
+
+  it('snapshot antigo com settlements nulo mostra a mensagem de ninguém dever, sem erro', async () => {
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/summary')) {
+        return Promise.resolve({ data: { ...summaryResponse([], { balances }), settlements: null } });
+      }
+      if (url.includes('/api/me')) return Promise.resolve({ data: { id: CURRENT_USER_ID } });
+      if (url.includes('/members')) return Promise.resolve({ data: members });
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+    renderScreen();
+
+    expect(await screen.findByText('Ninguém deve nada a ninguém neste ciclo.')).toBeInTheDocument();
+    expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (0)');
+    expect(tabNamed(/Valores pagos/)).toHaveTextContent('Valores pagos (0)');
+  });
+
+  it('com um filtro de despesas ativo, as abas e os contadores continuam os da competência inteira', async () => {
+    const user = userEvent.setup();
+    const expensesList: SummaryExpenseFixture[] = [
+      {
+        id: 1,
+        description: 'Mercado',
+        date: '2026-08-10',
+        value: 100,
+        payerName: 'Maria',
+        userPayerId: MARIA,
+        participantDetails: [{ id: MARIA, name: 'Maria', avatarUrl: null }],
+      },
+      {
+        id: 2,
+        description: 'Internet',
+        date: '2026-08-05',
+        value: 80,
+        payerName: 'João',
+        userPayerId: JOAO,
+        participantDetails: [{ id: JOAO, name: 'João', avatarUrl: null }],
+      },
+    ];
+    mockCycles({ 0: { balances, settlements: [toPayMine, toPayOthers, paidToMe], cycle: closed } }, expensesList);
+    renderScreen();
+
+    await screen.findByText('Mercado');
+    await user.click(within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: 'Pagas' }));
+    expect(screen.getByText('Nenhuma despesa encontrada para esse filtro.')).toBeInTheDocument();
+
+    expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (2)');
+    expect(tabNamed(/Valores pagos/)).toHaveTextContent('Valores pagos (1)');
+    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria', 'João deve pagar R$ 20,00 a Maria']);
   });
 });
