@@ -47,7 +47,7 @@ type ExpenseFilterBarProps = {
  * Busca e filtros da lista de despesas (credor, devedores, tipo, status), os mesmos
  * em Despesas e em Pagamentos. Só desenha e repassa os `onChange` ao estado de
  * `useExpenseFilters`; quem filtra é `utils/expenseFilters.ts`.
- * docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §4
+ * docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §4
  */
 const ExpenseFilterBar: React.FC<ExpenseFilterBarProps> = ({ filters }) => (
   <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">

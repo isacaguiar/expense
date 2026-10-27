@@ -3,7 +3,7 @@
 // não liquidam nada (isso é do backend), só decidem a ordem em que o que ele
 // devolveu aparece e a que aba cada acerto pertence. Nunca alteram o argumento:
 // o `summary` é estado de `useGroupCycle`, e o `sort` nativo reordena no lugar.
-// docs/feature/20261026-organizacao-despesas-pagamentos/plan.md §1.
+// docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §1.
 
 import type { SummaryBalance, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 

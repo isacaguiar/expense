@@ -10,7 +10,7 @@ import {
 } from './cycleOrdering';
 
 // Valores esperados abaixo foram derivados à mão dos exemplos do specify
-// (docs/feature/20261026-organizacao-despesas-pagamentos/specify.md §5.1 a §5.3),
+// (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/specify.md §5.1 a §5.3),
 // nunca calculados pelo código sob teste.
 
 const makeExpense = (overrides: Partial<SummaryExpense> = {}): SummaryExpense => ({
