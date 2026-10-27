@@ -1,6 +1,6 @@
 # Specify — Organização de Despesas e Pagamentos
 
-> Feature: reorganizar as telas de despesas e pagamentos do grupo — despesas ordenadas pela data da ocorrência (mais recente primeiro), aba **Saldo** com o usuário logado em primeiro, **filtros de Despesas** também em Pagamentos e os acertos entre membros separados em **"Valores a pagar"** e **"Valores pagos"**. Pedido novo do usuário (2026-10-26), sem task prévia em `docs/sdd/03-tasks.md` e sem item equivalente no backlog (001–104 conferidos), por isso `/nova-feature`. Cumpre o que o specify de `20261010-filtros-credor-devedores-status-despesas` deixou fora de escopo (§6: "Outras telas (Pagamentos…)"). Plano da rodada: `C:\Users\Isac Aguiar\.claude\plans\pasted-content-id-b857-revise-e-precious-island.md`.
+> Feature: reorganizar as telas de despesas e pagamentos do grupo — despesas ordenadas pela data da ocorrência (mais recente primeiro), aba **Saldo** com o usuário logado em primeiro, **filtros de Despesas** também em Pagamentos e os acertos entre membros separados em **"Valores a pagar"** e **"Valores pagos"**. Pedido novo do usuário (2026-10-26), sem task prévia em `docs/sdd/03-tasks.md` e sem item equivalente no backlog (001–104 conferidos), por isso `/nova-feature`. Cumpre o que o specify de `20261010-filtros-credor-devedores-status-despesas` deixou fora de escopo (§6: "Outras telas (Pagamentos…)"). Plano da rodada: arquivo local do modo de planejamento, fora do repositório.
 
 Versão: 1.0 · Criado em: 20261026
 
