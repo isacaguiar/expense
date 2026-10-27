@@ -61,12 +61,12 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 | [20260901-expense-store-update-422.md](20260901-expense-store-update-422.md) | Testes de despesa (store/update/destroy) falham com 422 após virada de mês | 2026-09-01 | `fix/20260901-expense-store-update-422` | Aberto |
 | [20260921-cadastro-codigo-email-nao-chega.md](20260921-cadastro-codigo-email-nao-chega.md) | Código de confirmação do cadastro não chega ao e-mail (produção) | 2026-09-21 | `fix/20260921-cadastro-codigo-email-nao-chega` | Aberto |
-| [20261027-comprovante-iphone-so-camera.md](20261027-comprovante-iphone-so-camera.md) | Comprovante no iPhone abre só a câmera e não deixa escolher foto da galeria nem arquivo | 2026-10-27 | `fix/20261027-comprovante-iphone-so-camera` | Aberto |
 
 ## Concluídos
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/202610/20261027-comprovante-iphone-so-camera.md](concluidos/202610/20261027-comprovante-iphone-so-camera.md) | Comprovante no iPhone abre só a câmera e não deixa escolher foto da galeria nem arquivo | 2026-10-27 | #246 |
 | [concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md](concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md) | Alerta "ainda falta acertar" incoerente depois de pagamentos em ciclo fechado | 2026-10-24 | #234 |
 | [concluidos/202610/20261006-acerto-comprovante-sem-cycles-ago.md](concluidos/202610/20261006-acerto-comprovante-sem-cycles-ago.md) | Acerto do devedor: comprovante de ciclo anterior recusado por falta de `cycles_ago` | 2026-10-06 | #207 |
 | [concluidos/202610/20261006-cadastro-fetch-sem-accept-json.md](concluidos/202610/20261006-cadastro-fetch-sem-accept-json.md) | Cadastro: erro de validação (422) vira redirecionamento bloqueado por CORS | 2026-10-06 | #206 |

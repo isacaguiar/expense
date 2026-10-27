@@ -46,3 +46,8 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-10-27 | `cd frontend && npx vitest run src/pages/RegisterPage.test.tsx` (isolado, logo depois) | `Test Files 1 passed (1)`, `Tests 22 passed (22)`. A falha só aparece com a máquina sob carga (a execução da suíte levou 1382 s, contra 513 s da última vez), o mesmo padrão já registrado na feature `20261010-filtros-credor-devedores-status-despesas` (TASK-407) e na TASK-504 de `20261026-organizacao-despesas-pagamentos` |
 | 2026-10-27 | `git diff --stat origin/dev HEAD -- backend/` | vazio: backend intacto, `pint`/`phpunit` N/A |
 | 2026-10-27 | Conferência em iPhone real (o bug "não reproduz mais") | **Pendente.** Não verificada: não há iPhone nesta sessão e o teste só prova que o atributo saiu. O mantenedor confere depois do merge (Safari do iOS: o toque no botão de foto deve oferecer câmera, biblioteca e arquivos) e, se ainda falhar, reabre este bug ou escala para feature |
+
+## Resolução
+Concluído em: 2026-10-27
+Branch: fix/20261027-comprovante-iphone-so-camera
+PR: https://github.com/isacaguiar/expense/pull/246
