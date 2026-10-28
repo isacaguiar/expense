@@ -1113,11 +1113,13 @@ class ExpenseController extends Controller
         // Foto trocada num `pay()` repetido: o arquivo anterior sai do disco só
         // depois de o banco apontar para o novo (nunca perde o comprovante se a
         // gravação falhar). Sem isto o antigo ficava órfão no disco privado
-        // (feature `20261022-editar-comprovante-depois-de-paga`, R9).
+        // (feature `20261022-editar-comprovante-depois-de-paga`, R9). Só sai se
+        // nenhuma outra quota o usa: uma compra paga no cadastro aponta várias
+        // quotas para o mesmo arquivo (feature `20261027-pagamento-no-cadastro-despesa`, R18).
         if (array_key_exists('payment_proof_path', $update)
             && $previousProofPath
             && $previousProofPath !== $update['payment_proof_path']) {
-            ProofStorage::delete($previousProofPath);
+            ProofStorage::deleteIfUnreferenced($previousProofPath);
         }
 
         $this->sealCycleIfSettled($group, $group->id, $cycle['start'], $cycle['end']);
@@ -1185,7 +1187,7 @@ class ExpenseController extends Controller
             return response()->json(['error' => 'Esta despesa não está paga nessa competência.'], 422);
         }
 
-        ProofStorage::delete($quota->payment_proof_path);
+        $previousProofPath = $quota->payment_proof_path;
 
         $quota->update([
             'paid' => false,
@@ -1194,6 +1196,11 @@ class ExpenseController extends Controller
             'payment_proof_path' => null,
             'payment_note' => null,
         ]);
+
+        // O arquivo só sai do disco depois de o banco deixar de apontar para ele, e
+        // só se nenhuma outra quota da compra o usa (feature
+        // `20261027-pagamento-no-cadastro-despesa`, R18).
+        ProofStorage::deleteIfUnreferenced($previousProofPath);
 
         $this->unsealIfBroken($group, $group->id, $cycle['start'], $cycle['end']);
 
@@ -1314,11 +1321,12 @@ class ExpenseController extends Controller
         [$quota, $previousPath, $update] = $outcome;
 
         // Só depois do commit: se a transação desse rollback, o arquivo antigo
-        // continuaria referenciado e não pode ter sido apagado.
+        // continuaria referenciado e não pode ter sido apagado. E só se nenhuma
+        // outra quota o usa (compra paga no cadastro, R18).
         if (array_key_exists('payment_proof_path', $update)
             && $previousPath
             && $previousPath !== $update['payment_proof_path']) {
-            ProofStorage::delete($previousPath);
+            ProofStorage::deleteIfUnreferenced($previousPath);
         }
 
         return response()->json($quota->fresh());
