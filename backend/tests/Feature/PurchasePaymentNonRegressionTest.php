@@ -371,4 +371,206 @@ class PurchasePaymentNonRegressionTest extends TestCase
             $this->assertEquals($output, $paid[$name], "a resposta '{$name}' mudou quando as compras foram marcadas como pagas");
         }
     }
+
+    /**
+     * Setembro de 2026, fechado por data em "2026-10-19": uma compra À Vista de
+     * 90,00 dividida por 3 (cada devedor deve 30,00 ao credor), ainda pendente e
+     * sem acerto confirmado.
+     *
+     * @return array{group: Group, users: list<User>, expense: \App\Models\Expense}
+     */
+    private function closedSeptemberScenario(): array
+    {
+        Carbon::setTestNow('2026-10-19 12:00:00');
+
+        ['group' => $group, 'users' => $users] = $this->makeGroup(3);
+        $expense = $this->makePurchase($group, $users[0], $users, 'IN_CASH', 90.0, '2026-09-10');
+
+        return ['group' => $group, 'users' => $users, 'expense' => $expense];
+    }
+
+    private function confirmSeptemberSettlements(Group $group, array $users): void
+    {
+        foreach ([$users[1], $users[2]] as $debtor) {
+            SettlementConfirmation::create([
+                'group_id' => $group->id,
+                'cycle_start' => '2026-09-01',
+                'cycle_end' => '2026-09-30',
+                'from_user_id' => $debtor->id,
+                'to_user_id' => $users[0]->id,
+                'amount' => 30,
+                'proof_path' => "comprovantes/{$group->id}/acerto-{$debtor->id}.jpg",
+                'confirmed_at' => now(),
+            ]);
+        }
+    }
+
+    /**
+     * Item de `pendingCycles` do ciclo que começa em `$start`, ou null.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function pendingCycleItem(Group $group, string $start): ?array
+    {
+        foreach ($this->service()->pendingCycles($group) as $item) {
+            if ($item['cycle']['start'] === $start) {
+                return $item;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * NR-04. Pagar a compra só tira o pendente; o ciclo continua precisando dos
+     * acertos confirmados para ficar quitado, e só a leitura de `summary()` o
+     * sela. A compra paga leva ao mesmo estado final que `pay()` levaria.
+     */
+    public function test_settlement_and_sealing_follow_the_equivalent_state(): void
+    {
+        ['group' => $group, 'users' => $users, 'expense' => $expense] = $this->closedSeptemberScenario();
+        $start = Carbon::parse('2026-09-01');
+        $end = Carbon::parse('2026-09-30');
+        $token = auth('api')->login($users[0]);
+        $sealed = fn () => (bool) \App\Models\GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', '2026-09-01')->whereNotNull('settled_at')->exists();
+
+        // 1. Pendente e sem acerto confirmado.
+        $item = $this->pendingCycleItem($group, '2026-09-01');
+        $this->assertSame(1, $item['pending_expenses_count']);
+        $this->assertSame([2, 0, false], [$item['settlements_total'], $item['settlements_confirmed'], $item['awaiting_seal']]);
+        $this->assertFalse($this->service()->isFullySettled($group, $start, $end));
+
+        // 2. Acertos confirmados, compra ainda pendente: não está quitado.
+        $this->confirmSeptemberSettlements($group, $users);
+        $item = $this->pendingCycleItem($group, '2026-09-01');
+        $this->assertSame([1, 2, false], [$item['pending_expenses_count'], $item['settlements_confirmed'], $item['awaiting_seal']]);
+        $this->assertFalse($this->service()->isFullySettled($group, $start, $end));
+        $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")->assertOk();
+        $this->assertFalse($sealed(), 'a compra pendente impede a selagem');
+
+        // 3. Compra paga: quitado, mas ainda não selado (pendingCycles e isFullySettled só leem).
+        $this->markPaid($expense);
+        $item = $this->pendingCycleItem($group, '2026-09-01');
+        $this->assertSame([0, true], [$item['pending_expenses_count'], $item['awaiting_seal']]);
+        $this->assertTrue($this->service()->isFullySettled($group, $start, $end));
+        $this->assertFalse($sealed());
+
+        // 4. A leitura de summary() sela o ciclo e ele sai da lista de pendentes.
+        $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")
+            ->assertOk()->assertJsonPath('cycle.settled', true);
+        $this->assertTrue($sealed());
+        $this->assertNull($this->pendingCycleItem($group, '2026-09-01'));
+    }
+
+    /**
+     * NR-04. `focus()` dá a mesma resposta da varredura completa (a que olha ciclo
+     * a ciclo, sem atalho) com a compra pendente, paga com acertos pendentes e
+     * paga com acertos confirmados. O teste existente de
+     * `CycleSummaryServiceTest.php:516` não é editado.
+     */
+    public function test_focus_gives_the_same_answer_for_a_fully_paid_purchase(): void
+    {
+        ['group' => $group, 'users' => $users, 'expense' => $expense] = $this->closedSeptemberScenario();
+
+        $fullScan = function () use ($group): int {
+            for ($ago = 0; $ago <= CycleSummaryService::FOCUS_LOOKBACK; $ago++) {
+                $cycle = \App\Support\BillingCycle::cycleFor($group->closing_day, Carbon::now(), $ago);
+                $snapshot = \App\Models\GroupCycleSnapshot::where('group_id', $group->id)
+                    ->where('cycle_start', $cycle['start']->toDateString())->first();
+
+                if ($snapshot && $snapshot->isSealed()) {
+                    continue;
+                }
+
+                $closedOrInGrace = $cycle['status'] === 'closed'
+                    || ($cycle['status'] === 'open' && Carbon::now()->startOfDay()->gt($cycle['end']));
+
+                if ($closedOrInGrace && ! $this->service()->isFullySettled($group, $cycle['start'], $cycle['end'])) {
+                    return $ago;
+                }
+            }
+
+            return 0;
+        };
+
+        $this->assertSame($fullScan(), $this->service()->focus($group));
+        $this->assertSame(1, $this->service()->focus($group), 'compra pendente em setembro: o foco volta um ciclo');
+
+        $this->markPaid($expense);
+        $this->assertSame($fullScan(), $this->service()->focus($group));
+        $this->assertSame(1, $this->service()->focus($group), 'paga, mas com acertos por confirmar: continua em setembro');
+
+        $this->confirmSeptemberSettlements($group, $users);
+        $this->assertSame($fullScan(), $this->service()->focus($group));
+        $this->assertSame(0, $this->service()->focus($group), 'paga e com acertos confirmados: nada pendente');
+    }
+
+    /**
+     * NR-05. `ClosingBreakdown` e o relatório de fechamento leem só `bornPaid`:
+     * credores, devedores e valores brutos não mudam com o pagamento.
+     */
+    public function test_closing_breakdown_and_closing_report_are_identical(): void
+    {
+        ['group' => $group, 'users' => $users, 'expense' => $expense] = $this->closedSeptemberScenario();
+        $token = auth('api')->login($users[0]);
+        $uri = "/api/groups/{$group->id}/expenses/closing-report?cycle_start=2026-09-01";
+
+        $unpaid = $this->fetch($token, $uri);
+
+        $this->markPaid($expense, "comprovantes/{$group->id}/compra.jpg", 'Pago no débito');
+
+        $paid = $this->fetch($token, $uri);
+
+        $this->assertNotEmpty($unpaid['creditors']);
+        $this->assertEquals($unpaid['creditors'], $paid['creditors']);
+        $this->assertEquals($unpaid['balances'], $paid['balances']);
+        $this->assertEquals($unpaid['settlements'], $paid['settlements']);
+        $this->assertEquals($unpaid['totals']['total'], $paid['totals']['total']);
+    }
+
+    /**
+     * NR-06. O snapshot selado e o histórico de ciclos têm as mesmas chaves de
+     * hoje: nada novo entra na cópia congelada (R14). Um snapshot antigo, sem
+     * `paymentNote` nem os campos aditivos, continua sendo lido.
+     */
+    public function test_cycle_history_and_snapshot_keep_the_same_keys(): void
+    {
+        ['group' => $group, 'users' => $users, 'expense' => $expense] = $this->closedSeptemberScenario();
+        $token = auth('api')->login($users[0]);
+
+        $this->markPaid($expense, "comprovantes/{$group->id}/compra.jpg", 'Pago no débito');
+        $this->confirmSeptemberSettlements($group, $users);
+
+        $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")->assertOk();
+
+        $history = $this->fetch($token, "/api/groups/{$group->id}/expenses/cycles");
+        $this->assertCount(1, $history['data']);
+        $item = $history['data'][0];
+
+        $this->assertSame(['cycle', 'totals', 'expenses', 'balances', 'settlements'], array_keys($item));
+
+        $expectedKeys = [
+            'id', 'description', 'date', 'value', 'valuePerPerson', 'paid', 'bornPaid', 'paymentProofUrl',
+            'paymentNote', 'payerName', 'payerAvatarUrl', 'participants', 'participantDetails', 'isFixed',
+            'expenseType', 'installmentNumber', 'installmentsTotal', 'totalValue', 'userPayerId', 'userCreatorId',
+        ];
+        $snapshotExpense = $item['expenses'][0];
+        $this->assertEqualsCanonicalizing($expectedKeys, array_keys($snapshotExpense));
+        $this->assertTrue($snapshotExpense['paid']);
+        $this->assertSame('Pago no débito', $snapshotExpense['paymentNote']);
+        $this->assertNotNull($snapshotExpense['paymentProofUrl']);
+
+        // Snapshot antigo: a despesa sem `paymentNote` e sem os campos aditivos.
+        $old = $item['expenses'][0];
+        unset($old['paymentNote'], $old['payerAvatarUrl'], $old['participantDetails'], $old['expenseType'], $old['installmentNumber'], $old['installmentsTotal'], $old['totalValue']);
+        \App\Models\GroupCycleSnapshot::where('group_id', $group->id)->where('cycle_start', '2026-09-01')
+            ->update(['expenses' => json_encode([$old])]);
+
+        $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")
+            ->assertOk()->assertJsonPath('cycle.settled', true);
+        $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/cycles")->assertOk();
+        $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/closing-report?cycle_start=2026-09-01")->assertOk();
+        $this->withToken($token)->getJson('/api/me/overview')->assertOk();
+    }
 }
