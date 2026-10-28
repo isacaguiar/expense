@@ -16,7 +16,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-513 | Testar que `paid_at` e `paid_by` não alteram nenhuma saída e que relatórios anuais, mensal e `indexByGroup` ignoram o pagamento (NR-03, NR-09) | backend | plan.md §1 | nenhum | Concluída (2026-10-27) |
 | TASK-514 | Testar quitação, selagem, `focus`, `pendingCycles`, `ClosingBreakdown` e histórico de ciclos com a compra paga (NR-04, NR-05, NR-06) | backend | plan.md §1 | nenhum | Concluída (2026-10-27) |
 | TASK-515 | Fixar o comportamento de `grossDebts` e do Painel (`me/overview`) com a compra paga (NR-07, NR-08) | backend | plan.md §1 | nenhum | Concluída (2026-10-27) |
-| TASK-516 | Criar a migration de `client_request_id` e `request_fingerprint` em `ex_expenses` e liberar as colunas no model | backend | plan.md §2 | antes do deploy/migration em produção | Pendente |
+| TASK-516 | Criar a migration de `client_request_id` e `request_fingerprint` em `ex_expenses` e liberar as colunas no model | backend | plan.md §2 | antes do deploy/migration em produção | Concluída (2026-10-27) |
 | TASK-517 | Criar `ExpenseRequestFingerprint` com testes unitários (CA-34) | backend | plan.md §2 | nenhum | Pendente |
 | TASK-518 | Criar `ProofStorage::deleteIfUnreferenced` com testes (CA-28, parte do método) | backend | plan.md §3 | nenhum | Pendente |
 | TASK-519 | Usar `deleteIfUnreferenced` em `unpay`, `pay` repetido e `updatePaymentProof`, atualizando o banco antes de apagar o arquivo (CA-28) | backend | plan.md §3 | nenhum | Pendente |

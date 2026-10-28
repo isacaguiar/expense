@@ -23,6 +23,8 @@ class Expense extends Model
         'user_payer_id',
         'deleted',
         'fixed_recurrence_ends_at',
+        'client_request_id',
+        'request_fingerprint',
     ];
 
     protected $casts = [
