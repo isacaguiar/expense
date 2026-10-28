@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Expense;
 use App\Models\Group;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
@@ -9,6 +10,8 @@ use App\Models\User;
 use App\Services\CycleSummaryService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\Concerns\BuildsPurchaseScenarios;
 use Tests\TestCase;
 
@@ -296,6 +299,27 @@ class PurchasePaymentNonRegressionTest extends TestCase
     public function test_changing_paid_at_and_paid_by_changes_no_output(): void
     {
         ['group' => $group, 'users' => $users, 'expenses' => $expenses] = $this->reportingScenario();
+
+        $this->assertOutputsIgnorePaidAtAndPaidBy($group, $users, $expenses);
+    }
+
+    /**
+     * TASK-530: as mesmas compras e as mesmas respostas, mas cadastradas já pagas, com foto e
+     * descrição, pelo `POST /api/expenses` (cada uma no mês em que o cadastro ainda é aceito).
+     */
+    public function test_changing_paid_at_and_paid_by_changes_no_output_for_purchases_registered_paid_through_the_api(): void
+    {
+        ['group' => $group, 'users' => $users, 'expenses' => $expenses] = $this->reportingScenarioViaApi();
+
+        $this->assertOutputsIgnorePaidAtAndPaidBy($group, $users, $expenses);
+    }
+
+    /**
+     * @param  list<User>  $users
+     * @param  list<\App\Models\Expense>  $expenses
+     */
+    private function assertOutputsIgnorePaidAtAndPaidBy(Group $group, array $users, array $expenses): void
+    {
         $token = auth('api')->login($users[0]);
         $g = $group->id;
 
@@ -651,5 +675,227 @@ class PurchasePaymentNonRegressionTest extends TestCase
         $summary = $this->fetch($token, "/api/groups/{$group->id}/expenses/summary?cycles_ago={$debtorAfter['cycle']['cycles_ago']}");
         $fromDebtor = collect($summary['settlements'])->where('from_user_id', $debtor->id)->sum('amount');
         $this->assertEqualsWithDelta($fromDebtor, $debtorAfter['owe']['total'], 0.001);
+    }
+
+    // --- TASK-530: as mesmas verificações com as compras cadastradas pelo POST /api/expenses -----
+
+    /**
+     * Cadastra pelo `POST /api/expenses` (JSON, ou multipart com foto) uma compra do `$creditor`
+     * dividida entre `$participants`, já paga (com descrição) ou pendente.
+     *
+     * @param  list<User>  $participants
+     */
+    private function registerPurchase(
+        Group $group,
+        User $creditor,
+        array $participants,
+        string $type,
+        float $total,
+        string $start,
+        int $n = 1,
+        bool $paid = true,
+        bool $withPhoto = false
+    ): Expense {
+        $body = [
+            'date_payment' => $start,
+            'description' => 'Compra de teste',
+            'expense_type' => $type,
+            'installments' => $type === 'IN_INSTALLMENTS' ? $n : 1,
+            'total_value' => $total,
+            'group_id' => $group->id,
+            'user_creator_id' => $creditor->id,
+            'user_payer_id' => $creditor->id,
+            'payers' => array_map(fn (User $user) => $user->id, $participants),
+        ];
+
+        if ($paid) {
+            $body['descricao_pagamento'] = 'Pago no débito';
+        }
+
+        $request = $this->withToken(auth('api')->login($creditor));
+        $response = $withPhoto
+            ? $request->post('/api/expenses', $body + ['comprovante' => UploadedFile::fake()->image('compra.jpg')], ['Accept' => 'application/json'])
+            : $request->postJson('/api/expenses', $body);
+
+        return Expense::findOrFail($response->assertStatus(201)->json('expense_id'));
+    }
+
+    /** O resumo de um ciclo sem os ids das despesas, que mudam de um grupo para o outro. */
+    private function withoutExpenseIds(array $summary): array
+    {
+        $summary['expenses'] = array_map(function (array $expense) {
+            unset($expense['id']);
+
+            return $expense;
+        }, $summary['expenses']);
+
+        return $summary;
+    }
+
+    /**
+     * Equivalência de estado, forma por forma: uma compra cadastrada JÁ paga pelo `POST` fica
+     * exatamente como outra cadastrada pendente e marcada paga na sequência (o estado que
+     * NR-01 a NR-09 já provam). Compara quota a quota e o `compute()` de cada ciclo, em dois
+     * grupos gêmeos com os mesmos membros.
+     *
+     * @dataProvider shapes
+     */
+    public function test_a_purchase_registered_paid_has_the_same_state_as_one_registered_then_marked_paid(
+        string $now,
+        int $members,
+        bool $creditorParticipates,
+        string $type,
+        float $total,
+        string $start,
+        int $n,
+        int $cycleCount
+    ): void {
+        Carbon::setTestNow($now);
+
+        ['group' => $groupA, 'users' => $users] = $this->makeGroup($members);
+        $groupB = Group::create(['name' => 'Grupo gêmeo']);
+        $groupB->members()->attach(array_map(fn (User $user) => $user->id, $users));
+        $creditor = $users[0];
+        $participants = $creditorParticipates ? $users : array_slice($users, 1);
+
+        $viaApi = $this->registerPurchase($groupA, $creditor, $participants, $type, $total, $start, $n);
+        $twin = $this->registerPurchase($groupB, $creditor, $participants, $type, $total, $start, $n, paid: false);
+        $this->markPaid($twin, null, 'Pago no débito');
+
+        $stateOf = fn (Expense $expense) => $expense->quotas()->orderBy('number')->get()->map(fn (Quota $quota) => [
+            'number' => $quota->number,
+            'date' => $quota->date_expected->toDateString(),
+            'value' => (float) $quota->value_quota,
+            'paid' => $quota->paid,
+            'paid_by' => $quota->paid_by,
+            'born_paid' => $quota->born_paid,
+            'note' => $quota->payment_note,
+            'proof' => $quota->payment_proof_path,
+        ])->all();
+
+        $this->assertEquals($stateOf($twin), $stateOf($viaApi), 'as quotas ficam iguais');
+
+        foreach ($this->cyclesFrom($groupA, $start, $cycleCount) as $cycle) {
+            $this->assertEquals(
+                $this->withoutExpenseIds($this->service()->compute($groupB, $cycle['start'], $cycle['end'])),
+                $this->withoutExpenseIds($this->service()->compute($groupA, $cycle['start'], $cycle['end'])),
+                "o compute() do ciclo {$cycle['start']->toDateString()} fica igual"
+            );
+        }
+    }
+
+    /**
+     * O cenário de `reportingScenario()` (agosto selado, setembro fechado, outubro vigente),
+     * com cada compra cadastrada pelo `POST` no mês dela e já paga, com foto e descrição.
+     * "Agora" termina em 2026-10-19.
+     *
+     * @return array{group: Group, users: list<User>, expenses: list<Expense>}
+     */
+    private function reportingScenarioViaApi(): array
+    {
+        Storage::fake('local');
+        Carbon::setTestNow('2026-08-19 12:00:00');
+
+        ['group' => $group, 'users' => $users] = $this->makeGroup(3);
+        [$creditor, $debtorA, $debtorB] = $users;
+
+        $august = $this->registerPurchase($group, $creditor, $users, 'IN_CASH', 120.0, '2026-08-10', withPhoto: true);
+
+        Carbon::setTestNow('2026-09-19 12:00:00');
+        $september = $this->registerPurchase($group, $creditor, $users, 'IN_CASH', 90.0, '2026-09-10', withPhoto: true);
+
+        Carbon::setTestNow('2026-10-19 12:00:00');
+        $october = $this->registerPurchase($group, $creditor, $users, 'IN_INSTALLMENTS', 300.0, '2026-10-05', 3, withPhoto: true);
+
+        foreach ([$debtorA, $debtorB] as $debtor) {
+            SettlementConfirmation::create([
+                'group_id' => $group->id,
+                'cycle_start' => '2026-08-01',
+                'cycle_end' => '2026-08-31',
+                'from_user_id' => $debtor->id,
+                'to_user_id' => $creditor->id,
+                'amount' => 40,
+                'proof_path' => "comprovantes/{$group->id}/acerto-{$debtor->id}.jpg",
+                'confirmed_at' => now(),
+            ]);
+        }
+
+        return ['group' => $group, 'users' => $users, 'expenses' => [$august, $september, $october]];
+    }
+
+    /**
+     * Setembro de 2026 como em `closedSeptemberScenario()`, mas a compra de 90,00 é cadastrada
+     * pelo `POST` em 19/09, já paga. Depois o relógio vai para 2026-10-19 (setembro fechado).
+     *
+     * @return array{group: Group, users: list<User>, expense: Expense}
+     */
+    private function septemberRegisteredPaid(): array
+    {
+        Carbon::setTestNow('2026-09-19 12:00:00');
+
+        ['group' => $group, 'users' => $users] = $this->makeGroup(3);
+        $expense = $this->registerPurchase($group, $users[0], $users, 'IN_CASH', 90.0, '2026-09-10');
+
+        Carbon::setTestNow('2026-10-19 12:00:00');
+
+        return ['group' => $group, 'users' => $users, 'expense' => $expense];
+    }
+
+    /** NR-04 com a compra cadastrada já paga: quitada só com os acertos confirmados; selada pela leitura de `summary()`. */
+    public function test_settlement_and_sealing_with_a_purchase_registered_paid_through_the_api(): void
+    {
+        ['group' => $group, 'users' => $users] = $this->septemberRegisteredPaid();
+        $start = Carbon::parse('2026-09-01');
+        $end = Carbon::parse('2026-09-30');
+        $token = auth('api')->login($users[0]);
+        $sealed = fn () => (bool) \App\Models\GroupCycleSnapshot::where('group_id', $group->id)
+            ->where('cycle_start', '2026-09-01')->whereNotNull('settled_at')->exists();
+
+        $item = $this->pendingCycleItem($group, '2026-09-01');
+        $this->assertSame([0, 2, 0, false], [$item['pending_expenses_count'], $item['settlements_total'], $item['settlements_confirmed'], $item['awaiting_seal']]);
+        $this->assertFalse($this->service()->isFullySettled($group, $start, $end), 'paga, mas os acertos seguem em aberto');
+        $this->assertFalse($sealed());
+
+        $this->confirmSeptemberSettlements($group, $users);
+
+        $item = $this->pendingCycleItem($group, '2026-09-01');
+        $this->assertSame([0, 2, true], [$item['pending_expenses_count'], $item['settlements_confirmed'], $item['awaiting_seal']]);
+        $this->assertTrue($this->service()->isFullySettled($group, $start, $end));
+        $this->assertFalse($sealed(), 'pendingCycles e isFullySettled só leem');
+
+        $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")
+            ->assertOk()->assertJsonPath('cycle.settled', true);
+        $this->assertTrue($sealed());
+        $this->assertNull($this->pendingCycleItem($group, '2026-09-01'));
+    }
+
+    /** NR-05, NR-07 e NR-08 com a compra cadastrada já paga. */
+    public function test_gross_debts_closing_report_and_overview_with_a_purchase_registered_paid_through_the_api(): void
+    {
+        ['group' => $group, 'users' => $users] = $this->septemberRegisteredPaid();
+        [$creditor, $debtorA, $debtorB] = $users;
+        $token = auth('api')->login($creditor);
+        $g = $group->id;
+
+        // NR-07: a árvore bruta pula a quota paga, e `settlements` segue cobrando (D13).
+        $this->assertSame([], $this->fetch($token, "/api/groups/{$g}/expenses/gross-debts?cycles_ago=1")['creditors']);
+        $settlements = $this->fetch($token, "/api/groups/{$g}/expenses/summary?cycles_ago=1")['settlements'];
+        $this->assertSame([30.0, 30.0], array_map(fn (array $settlement) => (float) $settlement['amount'], $settlements));
+
+        // NR-05: o credor adiantou 90,00 e cada devedor deve 30,00, pago ou não.
+        $creditors = $this->fetch($token, "/api/groups/{$g}/expenses/closing-report?cycle_start=2026-09-01")['creditors'];
+        $this->assertCount(1, $creditors);
+        $this->assertEqualsWithDelta(90.0, $creditors[0]['advanced_total'], 0.001);
+        $this->assertEqualsWithDelta(60.0, array_sum(array_column($creditors[0]['debtors'], 'amount')), 0.001);
+
+        // NR-08: o Painel mostra o que cada um deve e o item "Paga".
+        $debtorView = app(\App\Services\PersonalOverviewService::class)->forUser($debtorA)['groups'][0];
+        $this->assertEqualsWithDelta(30.0, $debtorView['owe']['total'], 0.001);
+        $this->assertSame([true, false, 0], [$debtorView['my_items'][0]['paid'], $debtorView['my_items'][0]['can_pay'], $debtorView['pending_items_count']]);
+
+        $creditorView = app(\App\Services\PersonalOverviewService::class)->forUser($creditor)['groups'][0];
+        $this->assertEqualsWithDelta(60.0, $creditorView['receive']['total'], 0.001);
+        $this->assertSame([true, false, true], [$creditorView['my_items'][0]['paid'], $creditorView['my_items'][0]['can_pay'], $creditorView['my_items'][0]['can_unpay']]);
+        $this->assertNotNull($debtorB);
     }
 }
