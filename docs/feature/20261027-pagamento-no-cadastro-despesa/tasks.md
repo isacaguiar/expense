@@ -35,7 +35,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-532 | Rodar o agent `security-reviewer` sobre `ExpenseController`, o serviço, a rota nova e o upload, e tratar os achados | backend | plan.md §8 | nenhum | Concluída (2026-10-28) |
 | TASK-533 | Criar os utilitários `requestKey.ts` e `expenseRequest.ts` com testes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
 | TASK-534 | Criar o utilitário `paymentOccurrence.ts` com testes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
-| TASK-535 | Extrair `PaymentProofFields` de `PaymentProofDialog` sem alterar os testes existentes | frontend | plan.md §6 | nenhum | Pendente |
+| TASK-535 | Extrair `PaymentProofFields` de `PaymentProofDialog` sem alterar os testes existentes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
 | TASK-536 | Acrescentar a seção "Pagamento (opcional)" ao `ExpenseForm` com envio em JSON ou multipart (CA-F1 a CA-F7, CA-F10, CA-F11) | frontend | plan.md §6 | nenhum | Pendente |
 | TASK-537 | Dar ao `ExpenseForm` chave estável, trava síncrona, timeout e mensagens de erro (CA-F8, CA-F9, CA-F15 a CA-F17) | frontend | plan.md §6 | nenhum | Pendente |
 | TASK-538 | Acrescentar `canUndoPurchase` ao tipo e `handleUndoPurchase` ao `usePaymentActions` | frontend | plan.md §7 | nenhum | Pendente |
@@ -179,6 +179,7 @@ Cada task, antes de integrar: backend, `cd backend && ./vendor/bin/pint --test` 
 - **TASK-535**:
   - `PaymentProofDialog.test.tsx` passa **sem edição** (`git diff` vazio nesse arquivo); `canConfirmPayment` e `NOTE_MAX_LENGTH` continuam exportados de `PaymentProofDialog.tsx`.
   - `PaymentProofFields.test.tsx` (novo): renderiza o seletor de foto **sem** `capture` e o campo de descrição com contador até 500; propaga `onFileChange` e `onNoteChange`; respeita `disabled`.
+  - `NOTE_MAX_LENGTH` é definido em `PaymentProofFields.tsx` e re-exportado por `PaymentProofDialog.tsx` (evita import circular; o que já importa do diálogo segue valendo).
 - **TASK-536**:
   - `ExpenseForm.test.tsx` ganha: `sends the same JSON as before when the section is empty` (CA-F1, e os testes atuais passam sem edição), `sends descricao_pagamento in JSON when only the note is filled` (CA-F2), `sends multipart with comprovante, payers[] and quotas[i][...] when there is a photo` (CA-F3), `does not send a whitespace-only note` (CA-F4), rótulos distintos e contador (CA-F5), `shows the occurrence text per type and the fixed warning, with no confirmation step` (CA-F6), `enables the section for another payer and says it is in their name` (CA-F7), foto fora do limite ou que não é imagem avisa antes de enviar (CA-F10) e `no capture on the file input` (CA-F11); a seção é usável em 360 px.
   - Foto escolhida e depois removida volta a enviar JSON, sem `comprovante`.
