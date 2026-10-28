@@ -20,7 +20,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-517 | Criar `ExpenseRequestFingerprint` com testes unitários (CA-34) | backend | plan.md §2 | nenhum | Concluída (2026-10-27) |
 | TASK-518 | Criar `ProofStorage::deleteIfUnreferenced` com testes (CA-28, parte do método) | backend | plan.md §3 | nenhum | Concluída (2026-10-27) |
 | TASK-519 | Usar `deleteIfUnreferenced` em `unpay`, `pay` repetido e `updatePaymentProof`, atualizando o banco antes de apagar o arquivo (CA-28) | backend | plan.md §3 | nenhum | Concluída (2026-10-27) |
-| TASK-520 | Criar `ExpensePaymentService` com `paidAttributes`, `earliestOccurrence` e `isFuture` | backend | plan.md §4 | nenhum | Pendente |
+| TASK-520 | Criar `ExpensePaymentService` com `paidAttributes`, `earliestOccurrence` e `isFuture` | backend | plan.md §4 | nenhum | Concluída (2026-10-27) |
 | TASK-521 | Estender `Notifier::expensePaid` com valor opcional e criar `Notifier::expensePaidOnBehalf` | backend | plan.md §4 | nenhum | Pendente |
 | TASK-522 | Registrar o pagamento no `store()` de À Vista e Fixa, com os campos novos e a recusa de ocorrência inicial futura (CA-01 a CA-06, CA-09, CA-12, CA-14 a CA-16, CA-27) | backend | plan.md §4 | nenhum | Pendente |
 | TASK-523 | Pagar no `store()` todas as parcelas não `born_paid` da Parcelada, inclusive a retroativa (CA-07, CA-08, CA-13) | backend | plan.md §4 | nenhum | Pendente |
