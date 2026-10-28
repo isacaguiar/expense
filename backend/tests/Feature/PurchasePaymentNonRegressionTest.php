@@ -573,4 +573,83 @@ class PurchasePaymentNonRegressionTest extends TestCase
         $this->withToken($token)->getJson("/api/groups/{$group->id}/expenses/closing-report?cycle_start=2026-09-01")->assertOk();
         $this->withToken($token)->getJson('/api/me/overview')->assertOk();
     }
+
+    /**
+     * NR-07. Fixa a decisão D13: `grossDebts` (a árvore credor→devedores do
+     * Dashboard) PULA a quota paga (`ExpenseController.php:987`), enquanto
+     * `settlements` continua cobrando a mesma dívida até o devedor confirmar o
+     * acerto. A divergência já existe hoje com o ✓ por parcela; este teste a
+     * documenta para a feature não mexer num lado sem querer. Backlog 111.
+     */
+    public function test_gross_debts_skips_a_paid_quota_and_lists_it_again_when_unpaid(): void
+    {
+        ['group' => $group, 'users' => $users, 'expense' => $expense] = $this->closedSeptemberScenario();
+        [$creditor, $debtorA, $debtorB] = $users;
+        $token = auth('api')->login($creditor);
+        $g = $group->id;
+
+        $debts = fn () => collect($this->fetch($token, "/api/groups/{$g}/expenses/gross-debts?cycles_ago=1")['creditors'])
+            ->flatMap(fn (array $node) => collect($node['debtors'])
+                ->map(fn (array $debtor) => [$node['creditor']['id'], $debtor['id'], (float) $debtor['amount']]))
+            ->sortBy(1)->values()->all();
+
+        $owedByEach = [[$creditor->id, $debtorA->id, 30.0], [$creditor->id, $debtorB->id, 30.0]];
+        $this->assertSame($owedByEach, $debts(), 'pendente: a árvore lista os dois devedores');
+
+        $this->markPaid($expense);
+
+        $this->assertSame([], $debts(), 'paga: a árvore não lista a quota');
+
+        // `settlements` segue cobrando a mesma dívida enquanto não houver confirmação.
+        $settlements = $this->fetch($token, "/api/groups/{$g}/expenses/summary?cycles_ago=1")['settlements'];
+        $this->assertCount(2, $settlements);
+        $this->assertSame([30.0, 30.0], array_map(fn (array $settlement) => (float) $settlement['amount'], $settlements));
+        $this->assertSame([null, null], array_column($settlements, 'confirmedAt'));
+
+        $expense->quotas()->update(['paid' => false, 'paid_at' => null, 'paid_by' => null]);
+
+        $this->assertSame($owedByEach, $debts(), 'desfeita: a árvore volta igual');
+    }
+
+    /**
+     * NR-08. No Painel, `owe`, `receive`, `to_pay` e `to_receive` vêm de
+     * `settlements` e não mudam com o pagamento; os itens seguem `paid`
+     * (`paid`, `can_pay`, `can_unpay`, `pending_items_count`). E a reconciliação
+     * `owe × settlements` do resumo continua fechando.
+     */
+    public function test_overview_owe_and_receive_are_identical_and_items_follow_paid(): void
+    {
+        ['group' => $group, 'users' => $users, 'expense' => $expense] = $this->closedSeptemberScenario();
+        [$creditor, $debtor] = $users;
+        $overview = app(\App\Services\PersonalOverviewService::class);
+        $groupOf = fn (User $user) => $overview->forUser($user)['groups'][0];
+
+        $debtorBefore = $groupOf($debtor);
+        $creditorBefore = $groupOf($creditor);
+
+        $this->markPaid($expense);
+
+        $debtorAfter = $groupOf($debtor);
+        $creditorAfter = $groupOf($creditor);
+
+        foreach (['owe', 'receive', 'to_pay', 'to_receive', 'has_open', 'cycle'] as $key) {
+            $this->assertEquals($debtorBefore[$key], $debtorAfter[$key], "'{$key}' do devedor mudou com o pagamento");
+            $this->assertEquals($creditorBefore[$key], $creditorAfter[$key], "'{$key}' do credor mudou com o pagamento");
+        }
+
+        $this->assertEqualsWithDelta(30.0, $debtorAfter['owe']['total'], 0.001);
+        $this->assertEqualsWithDelta(60.0, $creditorAfter['receive']['total'], 0.001);
+
+        // Os itens acompanham `paid`; quem é só devedor nunca pode pagar nem desfazer.
+        $this->assertSame([false, false, false, 1], [$debtorBefore['my_items'][0]['paid'], $debtorBefore['my_items'][0]['can_pay'], $debtorBefore['my_items'][0]['can_unpay'], $debtorBefore['pending_items_count']]);
+        $this->assertSame([true, false, false, 0], [$debtorAfter['my_items'][0]['paid'], $debtorAfter['my_items'][0]['can_pay'], $debtorAfter['my_items'][0]['can_unpay'], $debtorAfter['pending_items_count']]);
+        $this->assertSame([false, true, false, 1], [$creditorBefore['my_items'][0]['paid'], $creditorBefore['my_items'][0]['can_pay'], $creditorBefore['my_items'][0]['can_unpay'], $creditorBefore['pending_items_count']]);
+        $this->assertSame([true, false, true, 0], [$creditorAfter['my_items'][0]['paid'], $creditorAfter['my_items'][0]['can_pay'], $creditorAfter['my_items'][0]['can_unpay'], $creditorAfter['pending_items_count']]);
+
+        // Reconciliação: o `owe` do devedor é a soma dos acertos dele no resumo do mesmo ciclo.
+        $token = auth('api')->login($creditor);
+        $summary = $this->fetch($token, "/api/groups/{$group->id}/expenses/summary?cycles_ago={$debtorAfter['cycle']['cycles_ago']}");
+        $fromDebtor = collect($summary['settlements'])->where('from_user_id', $debtor->id)->sum('amount');
+        $this->assertEqualsWithDelta($fromDebtor, $debtorAfter['owe']['total'], 0.001);
+    }
 }
