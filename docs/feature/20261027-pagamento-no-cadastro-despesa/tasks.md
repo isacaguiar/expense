@@ -47,7 +47,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-544 | Validar a feature localmente na stack isolada, rodar o `pr-readiness-checker` e registrar o resultado | backend | plan.md §8, §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
 | TASK-545 | Atribuir os avisos de um cadastro com pagamento a quem cadastrou, e não ao credor, quando são pessoas diferentes; sem WhatsApp do comprovante nesse caso (achado N1 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
 | TASK-546 | Exigir uma única quota na data informada para À Vista e Fixa, e o teto de 120 quotas, quando há pagamento no cadastro (achados N2 e N3 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
-| TASK-547 | Converter para inteiro os ids do `store()` recebidos em multipart e esconder `client_request_id` e `request_fingerprint` da API (achados N5 e N4 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
+| TASK-547 | Converter para inteiro os ids do `store()` recebidos em multipart e esconder `client_request_id` e `request_fingerprint` da API (achados N5 e N4 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 
 ## Dependências e ordem
 
@@ -212,3 +212,4 @@ Cada task, antes de integrar: backend, `cd backend && ./vendor/bin/pint --test` 
 - **TASK-547**:
   - Teste com o corpo todo em **strings**, como o multipart real, e foto, criador = credor: nenhum `expense_paid_on_behalf` e nenhum `expense_paid` para o próprio credor (hoje o `store()` grava `user_payer_id` como string e as comparações estritas dos avisos falham).
   - `GET /api/expenses/{id}` e a resposta do `PUT` não trazem `client_request_id` nem `request_fingerprint`; o replay segue funcionando (lê os atributos direto).
+  - Feito com `$casts` `integer` para `group_id`, `user_creator_id` e `user_payer_id` e `$hidden` com as duas colunas no `Expense` (em vez de `(int)` no `store()`: a conversão vale para todo caminho que grave o model, e o `Notifier` lê pelo atributo). Teste de unidade do model em `tests/Unit/ExpenseModelIdentifiersTest.php`, porque reler a despesa do banco sempre devolve inteiro e não prova o cast.
