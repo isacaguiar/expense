@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Quota;
+use App\Models\SettlementConfirmation;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -73,5 +75,29 @@ class ProofStorage
         }
 
         Storage::disk(self::resolveDisk($path))->delete($path);
+    }
+
+    /**
+     * Remove o arquivo SÓ se nenhuma linha o referencia mais. Uma compra paga no
+     * cadastro aponta várias quotas para o mesmo arquivo (feature
+     * 20261027-pagamento-no-cadastro-despesa, R18): apagar pelo caminho, como
+     * `delete` faz, deixaria as outras quotas sem o comprovante. Olha também o
+     * comprovante de acerto do devedor, para nunca apagar arquivo de outro fluxo.
+     *
+     * Chamar DEPOIS de o banco deixar de apontar para o arquivo, senão a própria
+     * linha que está sendo atualizada ainda o referencia.
+     */
+    public static function deleteIfUnreferenced(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        if (Quota::where('payment_proof_path', $path)->exists()
+            || SettlementConfirmation::where('proof_path', $path)->exists()) {
+            return;
+        }
+
+        self::delete($path);
     }
 }
