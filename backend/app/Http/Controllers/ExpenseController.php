@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -628,29 +629,47 @@ class ExpenseController extends Controller
             }
 
             DB::commit();
-
-            // Fora da transação: uma falha aqui não desfaz a despesa criada.
-            Notifier::expenseCreated($expense);
-
-            // Parcela retroativa nasceu paga em nome do credor sem ele ter
-            // registrado a despesa — avisa ele (docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimento.md).
-            if ($bornPaidCount > 0) {
-                Notifier::expenseBornPaid($expense, $bornPaidCount);
-            }
-
-            return response()->json([
-                'message' => 'Despesa criada com sucesso',
-                'expense_id' => $expense->id,
-                'payment_registered' => $paidQuotasCount > 0,
-            ], 201);
-
         } catch (\Throwable $e) {
             DB::rollBack();
 
             // O banco não ficou com a despesa: a foto recém-gravada não pode ficar órfã.
             ProofStorage::delete($proofPath);
 
-            return response()->json(['error' => 'Erro ao criar despesa', 'details' => $e->getMessage()], 500);
+            // A mensagem da exceção fica no log e nunca na resposta (item 080 do backlog;
+            // feature 20261027-pagamento-no-cadastro-despesa, D10).
+            Log::error('Erro ao criar despesa', ['exception' => $e]);
+
+            return response()->json(['error' => 'Erro ao criar despesa'], 500);
+        }
+
+        // Daqui em diante a despesa já existe: nenhum passo pode virar erro para o cliente,
+        // senão a tela diria "falhou" com a despesa criada (R11). Cada um vai isolado.
+        $this->afterCommit('aviso de despesa criada', fn () => Notifier::expenseCreated($expense));
+
+        // Parcela retroativa nasceu paga em nome do credor sem ele ter registrado a
+        // despesa — avisa ele (docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimento.md).
+        if ($bornPaidCount > 0) {
+            $this->afterCommit('aviso de parcela já paga', fn () => Notifier::expenseBornPaid($expense, $bornPaidCount));
+        }
+
+        return response()->json([
+            'message' => 'Despesa criada com sucesso',
+            'expense_id' => $expense->id,
+            'payment_registered' => $paidQuotasCount > 0,
+        ], 201);
+    }
+
+    /**
+     * Executa um passo que vem DEPOIS do commit do `store()` (aviso, WhatsApp,
+     * limpeza). Falha vira `Log::warning` e a resposta de sucesso segue: a despesa
+     * já está criada, e o cliente não pode ver erro por causa de um aviso.
+     */
+    private function afterCommit(string $step, callable $fn): void
+    {
+        try {
+            $fn();
+        } catch (\Throwable $e) {
+            Log::warning("store: falha no passo pós-commit ({$step})", ['exception' => $e->getMessage()]);
         }
     }
 
