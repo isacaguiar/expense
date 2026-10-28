@@ -152,6 +152,31 @@ class ExpenseControllerStoreNoticesTest extends TestCase
         $this->assertSame(0, Notification::where('type', 'expense_paid_on_behalf')->count());
     }
 
+    /**
+     * Achado N5 da revisão de segurança (TASK-532): num `multipart` de verdade todo valor chega
+     * como string, e o `store()` gravava `user_payer_id` como veio. As comparações estritas do
+     * `Notifier` (`$id === $expense->user_creator_id`) falhavam, e o credor que cadastra com foto
+     * recebia avisos sobre ele mesmo. O harness de teste mantém os tipos, por isso o corpo aqui é
+     * convertido para string à mão.
+     */
+    public function test_a_creditor_registering_with_a_photo_through_a_real_multipart_form_is_not_told_about_themselves(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+
+        $form = array_map(
+            fn ($value) => is_array($value) ? array_map('strval', $value) : (string) $value,
+            $this->body($group, $creditor, $creditor, $debtor, ['descricao_pagamento' => 'Cartão'])
+        );
+
+        $this->withToken($this->token($creditor))
+            ->post('/api/expenses', $form + ['comprovante' => UploadedFile::fake()->image('cartao.jpg')], ['Accept' => 'application/json'])
+            ->assertStatus(201);
+
+        $this->assertSame(0, Notification::where('type', 'expense_paid_on_behalf')->count(), 'o credor não é avisado de que ele mesmo registrou');
+        $this->assertSame(0, Notification::where('type', 'expense_paid')->where('user_id', $creditor->id)->count(), 'nem recebe o aviso de despesa paga sobre ele mesmo');
+        $this->assertSame(1, Notification::where('type', 'expense_paid')->where('user_id', $debtor->id)->count());
+    }
+
     // --- CA-25: o WhatsApp do comprovante, uma vez ---------------------------------------
 
     public function test_the_whatsapp_proof_notice_is_sent_once_for_a_whole_installment_purchase_with_a_photo(): void

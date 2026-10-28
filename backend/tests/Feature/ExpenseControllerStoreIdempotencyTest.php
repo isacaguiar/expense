@@ -186,6 +186,26 @@ class ExpenseControllerStoreIdempotencyTest extends TestCase
         $this->assertSame(2, Expense::where('client_request_id', $key)->count());
     }
 
+    // --- Achado N4 da revisão de segurança: as colunas de idempotência não saem na API --------
+
+    public function test_the_idempotency_columns_are_not_exposed_by_the_api(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $token = $this->token($creditor);
+
+        $id = $this->withToken($token)
+            ->postJson('/api/expenses', $this->body($group, $creditor, $debtor, (string) Str::uuid()))
+            ->assertStatus(201)->json('expense_id');
+
+        $shown = $this->withToken($token)->getJson("/api/expenses/{$id}")->assertOk()->json();
+        $updated = $this->withToken($token)->putJson("/api/expenses/{$id}", ['description' => 'Outro nome'])->assertOk()->json();
+
+        foreach ([$shown, $updated] as $payload) {
+            $this->assertArrayNotHasKey('client_request_id', $payload);
+            $this->assertArrayNotHasKey('request_fingerprint', $payload);
+        }
+    }
+
     // --- CA-23: sem chave, o comportamento é o de hoje -------------------------------------
 
     public function test_without_a_key_every_call_creates_an_expense(): void
