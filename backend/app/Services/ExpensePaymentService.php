@@ -129,22 +129,19 @@ class ExpensePaymentService
      * (specify D11). Ciclo em carência e ciclo futuro não encerraram.
      *
      * @param  Collection<int, Quota>  $paidQuotas  as quotas pagas e não `born_paid` da compra
+     * @param  Collection<string, GroupCycleSnapshot>|null  $snapshots  snapshots já carregados por
+     *                                                                  `cycle_start` (versão em lote); null carrega aqui
      */
-    public function windowOpen(Group $group, Collection $paidQuotas): bool
+    public function windowOpen(Group $group, Collection $paidQuotas, ?Collection $snapshots = null): bool
     {
-        $startOf = fn (Quota $quota) => BillingCycle::cycleFor($group->closing_day, $quota->date_expected)['start']->toDateString();
-
-        $snapshots = GroupCycleSnapshot::where('group_id', $group->id)
-            ->whereIn('cycle_start', $paidQuotas->map($startOf)->unique()->values()->all())
-            ->get()
-            ->keyBy(fn (GroupCycleSnapshot $snapshot) => $snapshot->cycle_start->toDateString());
+        $snapshots ??= $this->snapshotsFor($group, $paidQuotas);
 
         foreach ($paidQuotas as $quota) {
             if (BillingCycle::statusFor($group->closing_day, $quota->date_expected, Carbon::now()) === 'closed') {
                 return false;
             }
 
-            $snapshot = $snapshots->get($startOf($quota));
+            $snapshot = $snapshots->get($this->cycleStartOf($group, $quota));
 
             if ($snapshot && ($snapshot->isManuallyClosedAndActive() || $snapshot->isSealed())) {
                 return false;
@@ -152,5 +149,59 @@ class ExpensePaymentService
         }
 
         return true;
+    }
+
+    /**
+     * Dentre `$expenseIds`, as despesas parceladas do grupo cujo desfazer da compra ainda é
+     * possível (tem quota paga e não `born_paid`, e a janela está aberta). Versão em lote para o
+     * `summary()`: uma consulta de quotas e uma de snapshots, qualquer que seja o número de
+     * compras. Não confere quem é o credor (isso é de quem chama).
+     *
+     * @param  array<int, int>  $expenseIds
+     * @return array<int, int>
+     */
+    public function undoableExpenseIds(Group $group, array $expenseIds): array
+    {
+        if ($expenseIds === []) {
+            return [];
+        }
+
+        $byExpense = Quota::whereIn('expense_id', $expenseIds)
+            ->where('paid', true)
+            ->where('born_paid', false)
+            ->whereHas('expense', fn ($query) => $query
+                ->where('group_id', $group->id)
+                ->where('deleted', false)
+                ->where('expense_type', 'IN_INSTALLMENTS'))
+            ->get()
+            ->groupBy('expense_id');
+
+        $snapshots = $this->snapshotsFor($group, $byExpense->flatten());
+
+        return $byExpense
+            ->filter(fn (Collection $quotas) => $this->windowOpen($group, $quotas, $snapshots))
+            ->keys()
+            ->map(fn ($id) => (int) $id)
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Os snapshots do grupo dos ciclos que contêm as quotas, indexados por `cycle_start`.
+     *
+     * @param  Collection<int, Quota>  $quotas
+     * @return Collection<string, GroupCycleSnapshot>
+     */
+    private function snapshotsFor(Group $group, Collection $quotas): Collection
+    {
+        return GroupCycleSnapshot::where('group_id', $group->id)
+            ->whereIn('cycle_start', $quotas->map(fn (Quota $quota) => $this->cycleStartOf($group, $quota))->unique()->values()->all())
+            ->get()
+            ->keyBy(fn (GroupCycleSnapshot $snapshot) => $snapshot->cycle_start->toDateString());
+    }
+
+    private function cycleStartOf(Group $group, Quota $quota): string
+    {
+        return BillingCycle::cycleFor($group->closing_day, $quota->date_expected)['start']->toDateString();
     }
 }

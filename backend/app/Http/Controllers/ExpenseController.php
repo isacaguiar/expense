@@ -902,10 +902,45 @@ class ExpenseController extends Controller
                 'settled' => $sealed,
             ],
             'totals' => $summary['totals'],
-            'expenses' => $summary['expenses'],
+            'expenses' => $this->withCanUndoPurchase($group, $summary['expenses']),
             'balances' => $summary['balances'],
             'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements']),
         ]);
+    }
+
+    /**
+     * Acrescenta `canUndoPurchase: true` às entradas de uma compra parcelada paga cujo desfazer
+     * ainda é possível para o usuário autenticado (feature 20261027-pagamento-no-cadastro-despesa,
+     * plan.md §5, P5): ele é o credor, a compra tem quota paga e não `born_paid`, e nenhuma delas
+     * está em ciclo encerrado. A chave só existe quando é verdadeira (ausente = falso), e só na
+     * resposta: nunca entra em `compute()` nem no snapshot, que seguem como estavam (R14).
+     *
+     * @param  array<int, array<string, mixed>>  $expenses
+     * @return array<int, array<string, mixed>>
+     */
+    private function withCanUndoPurchase(Group $group, array $expenses): array
+    {
+        $userId = auth()->id();
+
+        $isCandidate = fn (array $expense) => ($expense['expenseType'] ?? null) === 'IN_INSTALLMENTS'
+            && ! empty($expense['paid'])
+            && empty($expense['bornPaid'])
+            && ($expense['userPayerId'] ?? null) === $userId;
+
+        $candidateIds = collect($expenses)->filter($isCandidate)->pluck('id')->unique()->values()->all();
+
+        if ($candidateIds === []) {
+            return $expenses;
+        }
+
+        $undoable = $this->payments()->undoableExpenseIds($group, $candidateIds);
+
+        return array_map(
+            fn (array $expense) => $isCandidate($expense) && in_array($expense['id'], $undoable, true)
+                ? $expense + ['canUndoPurchase' => true]
+                : $expense,
+            $expenses
+        );
     }
 
     /**
