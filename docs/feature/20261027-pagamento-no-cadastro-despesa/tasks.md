@@ -32,7 +32,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-529 | Acrescentar `canUndoPurchase` ao `summary()` quando verdadeiro | backend | plan.md §5 | nenhum | Concluída (2026-10-27) |
 | TASK-530 | Repetir a suíte de não regressão com as compras cadastradas pelo `POST /api/expenses` e rodar a suíte completa (NR-10) | backend | plan.md §1, §8 | nenhum | Concluída (2026-10-27) |
 | TASK-531 | Investigar com teste se `store()` em ciclo já selado esconde a despesa nova (RK6) e registrar o resultado | backend | plan.md §8 | nenhum | Concluída (2026-10-27) |
-| TASK-532 | Rodar o agent `security-reviewer` sobre `ExpenseController`, o serviço, a rota nova e o upload, e tratar os achados | backend | plan.md §8 | nenhum | Pendente |
+| TASK-532 | Rodar o agent `security-reviewer` sobre `ExpenseController`, o serviço, a rota nova e o upload, e tratar os achados | backend | plan.md §8 | nenhum | Concluída (2026-10-28) |
 | TASK-533 | Criar os utilitários `requestKey.ts` e `expenseRequest.ts` com testes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
 | TASK-534 | Criar o utilitário `paymentOccurrence.ts` com testes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
 | TASK-535 | Extrair `PaymentProofFields` de `PaymentProofDialog` sem alterar os testes existentes | frontend | plan.md §6 | nenhum | Pendente |
@@ -45,6 +45,9 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-542 | Registrar os limites de upload (`post_max_size`, `upload_max_filesize`) do servidor de produção (RK8) | infra | plan.md §8 | depende de informação do usuário sobre o host | Pendente |
 | TASK-543 | Atualizar `MANUAL.md` e `MANUAL.pdf` (CA-D1) | doc | plan.md §8 | nenhum | Pendente |
 | TASK-544 | Validar a feature localmente na stack isolada, rodar o `pr-readiness-checker` e registrar o resultado | backend | plan.md §8, §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
+| TASK-545 | Atribuir os avisos de um cadastro com pagamento a quem cadastrou, e não ao credor, quando são pessoas diferentes; sem WhatsApp do comprovante nesse caso (achado N1 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
+| TASK-546 | Exigir uma única quota na data informada para À Vista e Fixa, e o teto de 120 quotas, quando há pagamento no cadastro (achados N2 e N3 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
+| TASK-547 | Converter para inteiro os ids do `store()` recebidos em multipart e esconder `client_request_id` e `request_fingerprint` da API (achados N5 e N4 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
 
 ## Dependências e ordem
 
@@ -84,7 +87,12 @@ Ordem de execução: **512 → 513 → 514 → 515 → 516 → 517 → 518 → 5
 | TASK-541 | 539 | Fixtures com a ação já integrada |
 | TASK-542 | — | Informação do usuário; não bloqueia código, bloqueia o PR |
 | TASK-543 | todas as de código | Escrita por último para citar o que de fato foi entregue |
+| TASK-545 | 527, 532 | Muda os avisos montados na TASK-527, a partir do achado da revisão |
+| TASK-546 | 522, 523, 532 | Estreita o `store()` das TASK-522 e 523, a partir do achado da revisão |
+| TASK-547 | 526, 532 | Corrige tipos no `store()` e o `$hidden` do model, a partir do achado da revisão |
 | TASK-544 | todas | Roda sobre a branch da feature com tudo integrado |
+
+**Tasks derivadas da revisão de segurança (TASK-532).** As TASK-545, 546 e 547 nasceram do relatório do agent `security-reviewer` (achados de severidade média ou alta viram task antes do PR; `implementation.md` tem o relatório e o tratamento de cada achado). Executam logo depois da TASK-534, antes de o frontend continuar, e **todas precisam estar concluídas antes da TASK-544**. A ordem real de execução ficou: 531 → 532 → 547 → 546 → 545 → 533 → 534 → 535 em diante.
 
 Não há paralelismo útil com um executor só: 522 a 527 editam o mesmo método, e 536 e 537 o mesmo componente.
 
@@ -195,3 +203,12 @@ Cada task, antes de integrar: backend, `cd backend && ./vendor/bin/pint --test` 
   - O agent `pr-readiness-checker` rodado antes do PR, com o resultado no `implementation.md`.
   - Stack isolada encerrada ao final (processos, banco de validação e `backend/.env.testing` removidos; arquivos de comprovante do seed apagados só pelos caminhos do banco descartável).
   - A aplicação fica aberta e logada no Chrome do usuário, na tela certa, antes de limpar a stack. O usuário confirma **por escrito** que validou; sem essa confirmação **não há push nem PR**.
+- **TASK-545**:
+  - Testes novos em `ExpenseControllerStoreNoticesTest.php` (acréscimo ao arquivo da feature): com criador ≠ credor e foto, os devedores recebem `expense_paid` com `actorName` = **o criador**, o criador **não** recebe `expense_paid` e o WhatsApp do comprovante **não sai** (`Http::assertNothingSent`); o credor continua recebendo `expense_paid_on_behalf`. Com criador = credor nada muda (o `actorName` é o credor e o WhatsApp sai uma vez).
+  - `Notifier::expensePaid` ganha o parâmetro opcional `?User $actor = null` (sem ele, comportamento de hoje); `NotifierTriggersTest` e `NotifierPaymentOnCreateTest` passam sem edição.
+- **TASK-546**:
+  - Com pagamento pedido, À Vista ou Fixa com `quotas` do cliente que não sejam exatamente uma, na data de `date_payment`, dão 422 e nada é criado; com uma só quota na data, 201. Com pagamento pedido, mais de 120 `quotas` dão 422 e nada é criado; 120 passam. Sem pagamento pedido, o contrato de hoje não muda (nenhum teste existente editado).
+  - `earliestOccurrence` continua sendo a menor `date_expected`.
+- **TASK-547**:
+  - Teste com o corpo todo em **strings**, como o multipart real, e foto, criador = credor: nenhum `expense_paid_on_behalf` e nenhum `expense_paid` para o próprio credor (hoje o `store()` grava `user_payer_id` como string e as comparações estritas dos avisos falham).
+  - `GET /api/expenses/{id}` e a resposta do `PUT` não trazem `client_request_id` nem `request_fingerprint`; o replay segue funcionando (lê os atributos direto).
