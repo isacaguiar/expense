@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\Group;
 use App\Models\Quota;
+use App\Models\SettlementConfirmation;
+use App\Models\User;
 use App\Services\CycleSummaryService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -233,5 +236,139 @@ class PurchasePaymentNonRegressionTest extends TestCase
         // Só `totals.pending` reage: 160,00 pendentes antes; pagas as 100,00 da compra da Ana, sobram 60,00.
         $this->assertEqualsWithDelta(160.0, $before['totals']['pending'], 0.001);
         $this->assertEqualsWithDelta(60.0, $after['totals']['pending'], 0.001);
+    }
+
+    /**
+     * Corpo JSON de um GET autenticado como `$user`.
+     *
+     * @return array<string, mixed>
+     */
+    private function fetch(string $token, string $uri): array
+    {
+        return $this->withToken($token)->getJson($uri)->assertOk()->json();
+    }
+
+    /**
+     * Grupo de 3 membros com um ciclo selado (agosto), um fechado e pendente de
+     * acerto (setembro) e o vigente (outubro, com uma Parcelada), tudo pago, com
+     * comprovante e descrição. "Agora" é 2026-10-19.
+     *
+     * @return array{group: Group, users: list<User>, expenses: list<\App\Models\Expense>}
+     */
+    private function reportingScenario(): array
+    {
+        Carbon::setTestNow('2026-10-19 12:00:00');
+
+        ['group' => $group, 'users' => $users] = $this->makeGroup(3);
+        [$creditor, $debtorA, $debtorB] = $users;
+
+        $august = $this->makePurchase($group, $creditor, $users, 'IN_CASH', 120.0, '2026-08-10');
+        $september = $this->makePurchase($group, $creditor, $users, 'IN_CASH', 90.0, '2026-09-10');
+        $october = $this->makePurchase($group, $creditor, $users, 'IN_INSTALLMENTS', 300.0, '2026-10-05', 3);
+
+        foreach ([$august, $september, $october] as $expense) {
+            $this->markPaid($expense, "comprovantes/{$group->id}/compra-{$expense->id}.jpg", 'Pago no débito');
+        }
+
+        // Agosto fica totalmente quitado (compra paga e os dois acertos confirmados).
+        foreach ([$debtorA, $debtorB] as $debtor) {
+            SettlementConfirmation::create([
+                'group_id' => $group->id,
+                'cycle_start' => '2026-08-01',
+                'cycle_end' => '2026-08-31',
+                'from_user_id' => $debtor->id,
+                'to_user_id' => $creditor->id,
+                'amount' => 40,
+                'proof_path' => "comprovantes/{$group->id}/acerto-{$debtor->id}.jpg",
+                'confirmed_at' => now(),
+            ]);
+        }
+
+        return ['group' => $group, 'users' => $users, 'expenses' => [$august, $september, $october]];
+    }
+
+    /**
+     * NR-03. Nenhum cálculo lê `paid_at` nem `paid_by` (só são gravados e
+     * zerados em `store`, `pay` e `unpay`): trocar os dois não muda nenhuma
+     * resposta. Cobre `summary` (selado, fechado e vigente), `gross-debts`,
+     * `pending-cycles`, `closing-report`, `cycles` e `me/overview`.
+     */
+    public function test_changing_paid_at_and_paid_by_changes_no_output(): void
+    {
+        ['group' => $group, 'users' => $users, 'expenses' => $expenses] = $this->reportingScenario();
+        $token = auth('api')->login($users[0]);
+        $g = $group->id;
+
+        $outputs = fn () => [
+            'summary vigente' => $this->fetch($token, "/api/groups/{$g}/expenses/summary?cycles_ago=0"),
+            'summary de setembro' => $this->fetch($token, "/api/groups/{$g}/expenses/summary?cycles_ago=1"),
+            'summary de agosto (selado)' => $this->fetch($token, "/api/groups/{$g}/expenses/summary?cycles_ago=2"),
+            'gross-debts vigente' => $this->fetch($token, "/api/groups/{$g}/expenses/gross-debts?cycles_ago=0"),
+            'gross-debts de setembro' => $this->fetch($token, "/api/groups/{$g}/expenses/gross-debts?cycles_ago=1"),
+            'pending-cycles' => $this->fetch($token, "/api/groups/{$g}/expenses/pending-cycles"),
+            'closing-report de setembro' => $this->fetch($token, "/api/groups/{$g}/expenses/closing-report?cycle_start=2026-09-01"),
+            'closing-report de agosto (selado)' => $this->fetch($token, "/api/groups/{$g}/expenses/closing-report?cycle_start=2026-08-01"),
+            'cycles (histórico)' => $this->fetch($token, "/api/groups/{$g}/expenses/cycles"),
+            'me/overview' => $this->fetch($token, '/api/me/overview'),
+        ];
+
+        // A primeira leitura sela agosto (summary sela na leitura); as medidas valem depois dela.
+        $outputs();
+
+        $baseline = $outputs();
+
+        Quota::whereIn('expense_id', array_map(fn ($expense) => $expense->id, $expenses))
+            ->update(['paid_at' => '2020-01-01 00:00:00', 'paid_by' => $users[2]->id]);
+
+        $changed = $outputs();
+
+        $this->assertNotEmpty($baseline['cycles (histórico)']['data'], 'o cenário precisa ter um ciclo selado no histórico');
+
+        foreach ($baseline as $name => $output) {
+            $this->assertEquals($output, $changed[$name], "a resposta '{$name}' mudou quando só paid_at e paid_by mudaram");
+        }
+    }
+
+    /**
+     * NR-09. Os relatórios anuais, o mensal, o resumo por mês e o `indexByGroup`
+     * não leem `paid` (o `GroupExpenseReportController` nem lê `Quota`): marcar as
+     * compras como pagas, com comprovante e descrição, não muda nenhuma resposta.
+     */
+    public function test_annual_reports_monthly_expenses_and_index_are_identical(): void
+    {
+        Carbon::setTestNow('2026-08-19 12:00:00');
+
+        ['group' => $group, 'users' => $users] = $this->makeGroup(3);
+        $creditor = $users[0];
+
+        $expenses = [
+            $this->makePurchase($group, $creditor, $users, 'IN_CASH', 120.0, '2026-08-10'),
+            $this->makePurchase($group, $creditor, $users, 'IN_INSTALLMENTS', 100.0, '2026-08-10', 3),
+            $this->makePurchase($group, $creditor, $users, 'FIXED', 60.0, '2026-08-12'),
+        ];
+
+        $token = auth('api')->login($creditor);
+        $g = $group->id;
+
+        $outputs = fn () => [
+            'report anual' => $this->fetch($token, "/api/groups/{$g}/expenses/report/2026"),
+            'report mensal com acerto' => $this->fetch($token, "/api/group/{$g}/report-monthly/2026"),
+            'despesas por mês' => $this->fetch($token, "/api/groups/{$g}/expenses/monthly"),
+            'índice de agosto' => $this->fetch($token, "/api/groups/{$g}/expenses?year=2026&month=8"),
+            'índice de setembro' => $this->fetch($token, "/api/groups/{$g}/expenses?year=2026&month=9"),
+            'índice de outubro' => $this->fetch($token, "/api/groups/{$g}/expenses?year=2026&month=10"),
+        ];
+
+        $unpaid = $outputs();
+
+        foreach ($expenses as $expense) {
+            $this->markPaid($expense, "comprovantes/{$g}/compra-{$expense->id}.jpg", 'Pago no débito');
+        }
+
+        $paid = $outputs();
+
+        foreach ($unpaid as $name => $output) {
+            $this->assertEquals($output, $paid[$name], "a resposta '{$name}' mudou quando as compras foram marcadas como pagas");
+        }
     }
 }
