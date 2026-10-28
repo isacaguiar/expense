@@ -561,6 +561,28 @@ class ExpenseController extends Controller
         $paymentNote = $request->input('descricao_pagamento');
         $paymentRequested = $request->hasFile('comprovante') || filled($paymentNote);
 
+        // `quotas` do cliente não podem contornar as regras do pagamento (achados N2 e N3 da
+        // revisão de segurança): À Vista e Fixa têm uma quota só, na data informada (senão a
+        // "ocorrência inicial" paga seria outra, e a trava de competência futura olharia a
+        // errada), e a Parcelada respeita o mesmo teto de parcelas do servidor. Sem pagamento
+        // pedido o contrato de `quotas` segue como sempre.
+        if ($paymentRequested) {
+            if ($request->expense_type === 'IN_INSTALLMENTS') {
+                if (count($quotas) > InstallmentSchedule::MAX_INSTALLMENTS) {
+                    return response()->json([
+                        'error' => 'Com pagamento no cadastro, o máximo é de '.InstallmentSchedule::MAX_INSTALLMENTS.' parcelas.',
+                    ], 422);
+                }
+            } elseif (
+                count($quotas) !== 1
+                || ! Carbon::parse($quotas[array_key_first($quotas)]['date_expected'])->isSameDay(Carbon::parse($request->date_payment))
+            ) {
+                return response()->json([
+                    'error' => 'Com pagamento no cadastro, uma despesa à vista ou fixa tem uma única quota, na data informada.',
+                ], 422);
+            }
+        }
+
         // Não existe pagamento antecipado: `pay()` só alcança a competência vigente ou
         // passada, então a ocorrência inicial não pode ser futura (R6). Recusa antes de
         // gravar qualquer coisa, para nunca ficar "despesa criada sem o pagamento pedido".
