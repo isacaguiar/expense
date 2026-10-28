@@ -29,7 +29,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-526 | Implementar a idempotência do `store()`: replay, `409`, corrida e `already_existed` (CA-20 a CA-23, CA-32, CA-33, CA-35) | backend | plan.md §4 | nenhum | Concluída (2026-10-27) |
 | TASK-527 | Disparar no `store()` os avisos de um cadastro (`expensePaid` uma vez, aviso ao credor, WhatsApp uma vez) e garantir que o ciclo não é selado (CA-24 a CA-26) | backend | plan.md §4 | nenhum | Concluída (2026-10-27) |
 | TASK-528 | Criar `POST /api/expenses/{id}/undo-purchase` com a janela de correção (CA-29, CA-30) | backend | plan.md §5 | nenhum | Concluída (2026-10-27) |
-| TASK-529 | Acrescentar `canUndoPurchase` ao `summary()` quando verdadeiro | backend | plan.md §5 | nenhum | Pendente |
+| TASK-529 | Acrescentar `canUndoPurchase` ao `summary()` quando verdadeiro | backend | plan.md §5 | nenhum | Concluída (2026-10-27) |
 | TASK-530 | Repetir a suíte de não regressão com as compras cadastradas pelo `POST /api/expenses` e rodar a suíte completa (NR-10) | backend | plan.md §1, §8 | nenhum | Pendente |
 | TASK-531 | Investigar com teste se `store()` em ciclo já selado esconde a despesa nova (RK6) e registrar o resultado | backend | plan.md §8 | nenhum | Pendente |
 | TASK-532 | Rodar o agent `security-reviewer` sobre `ExpenseController`, o serviço, a rota nova e o upload, e tratar os achados | backend | plan.md §8 | nenhum | Pendente |
