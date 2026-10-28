@@ -26,7 +26,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-523 | Pagar no `store()` todas as parcelas não `born_paid` da Parcelada, inclusive a retroativa (CA-07, CA-08, CA-13) | backend | plan.md §4 | nenhum | Concluída (2026-10-27) |
 | TASK-524 | Registrar o pagamento em nome do credor quando o criador é outro (CA-10, CA-11) | backend | plan.md §4 | nenhum | Concluída (2026-10-27) |
 | TASK-525 | Tornar o `store()` atômico: arquivo antes da transação, rollback com remoção do arquivo, `500` sem `details` e passos pós-commit protegidos (CA-17 a CA-19) | backend | plan.md §4 | nenhum | Concluída (2026-10-27) |
-| TASK-526 | Implementar a idempotência do `store()`: replay, `409`, corrida e `already_existed` (CA-20 a CA-23, CA-32, CA-33, CA-35) | backend | plan.md §4 | nenhum | Pendente |
+| TASK-526 | Implementar a idempotência do `store()`: replay, `409`, corrida e `already_existed` (CA-20 a CA-23, CA-32, CA-33, CA-35) | backend | plan.md §4 | nenhum | Concluída (2026-10-27) |
 | TASK-527 | Disparar no `store()` os avisos de um cadastro (`expensePaid` uma vez, aviso ao credor, WhatsApp uma vez) e garantir que o ciclo não é selado (CA-24 a CA-26) | backend | plan.md §4 | nenhum | Pendente |
 | TASK-528 | Criar `POST /api/expenses/{id}/undo-purchase` com a janela de correção (CA-29, CA-30) | backend | plan.md §5 | nenhum | Pendente |
 | TASK-529 | Acrescentar `canUndoPurchase` ao `summary()` quando verdadeiro | backend | plan.md §5 | nenhum | Pendente |

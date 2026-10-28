@@ -11,11 +11,13 @@ use App\Services\CycleSummaryService;
 use App\Services\ExpensePaymentService;
 use App\Support\BillingCycle;
 use App\Support\ClosingBreakdown;
+use App\Support\ExpenseRequestFingerprint;
 use App\Support\InstallmentSchedule;
 use App\Support\Notifier;
 use App\Support\ProofStorage;
 use App\Support\WhatsApp\WhatsAppNotifier;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
@@ -473,6 +475,23 @@ class ExpenseController extends Controller
             'client_request_id' => 'nullable|uuid',
         ]);
 
+        // Idempotência (feature 20261027-pagamento-no-cadastro-despesa, D7): o cliente manda uma
+        // chave por formulário. Reenvio idêntico devolve a despesa que já existe, antes de qualquer
+        // regra de competência e antes de gravar arquivo; a mesma chave com outros dados é 409.
+        $requestKey = $request->input('client_request_id');
+        $fingerprint = null;
+
+        if ($requestKey) {
+            $fingerprint = ExpenseRequestFingerprint::make(
+                $request->only(['group_id', 'date_payment', 'description', 'expense_type', 'installments', 'total_value', 'user_payer_id', 'payers', 'quotas', 'descricao_pagamento']),
+                $request->hasFile('comprovante') ? hash_file('sha256', $request->file('comprovante')->getRealPath()) : null
+            );
+
+            if ($existing = $this->expenseByRequestKey($requestKey)) {
+                return $this->replayResponse($existing, $fingerprint);
+            }
+        }
+
         // `quotas` é opcional: quem envia (o web hoje) vale como sempre; sem ele, o
         // servidor gera as parcelas com o mesmo rateio do web — À Vista e Fixa têm uma
         // só. As regras abaixo (competência fechada, retroativa, `born_paid`) rodam
@@ -577,6 +596,8 @@ class ExpenseController extends Controller
                 'user_creator_id' => auth()->id(),
                 'user_payer_id' => $request->user_payer_id,
                 'deleted' => false,
+                'client_request_id' => $requestKey ?: null,
+                'request_fingerprint' => $fingerprint,
             ]);
 
             // Pagadores
@@ -635,6 +656,12 @@ class ExpenseController extends Controller
             // O banco não ficou com a despesa: a foto recém-gravada não pode ficar órfã.
             ProofStorage::delete($proofPath);
 
+            // Corrida: outra requisição com a mesma chave confirmou entre a nossa busca e o
+            // nosso INSERT. A violação de unicidade vira "devolve a que existe", nunca um 500.
+            if ($requestKey && $this->isDuplicateRequestKey($e) && ($existing = $this->expenseByRequestKey($requestKey))) {
+                return $this->replayResponse($existing, $fingerprint);
+            }
+
             // A mensagem da exceção fica no log e nunca na resposta (item 080 do backlog;
             // feature 20261027-pagamento-no-cadastro-despesa, D10).
             Log::error('Erro ao criar despesa', ['exception' => $e]);
@@ -657,6 +684,49 @@ class ExpenseController extends Controller
             'expense_id' => $expense->id,
             'payment_registered' => $paidQuotasCount > 0,
         ], 201);
+    }
+
+    /** A despesa que o usuário autenticado já cadastrou com esta chave, ou null. */
+    private function expenseByRequestKey(string $requestKey): ?Expense
+    {
+        return Expense::where('user_creator_id', auth()->id())
+            ->where('client_request_id', $requestKey)
+            ->first();
+    }
+
+    /**
+     * Resposta de um cadastro cuja chave já foi usada. Despesa apagada ou dados diferentes
+     * são 409 (nunca recria nem sobrescreve); dados iguais são um reenvio e devolvem a
+     * despesa que existe, sem gravar arquivo, criar quotas nem notificar.
+     */
+    private function replayResponse(Expense $existing, string $fingerprint): \Illuminate\Http\JsonResponse
+    {
+        if ($existing->deleted) {
+            return response()->json([
+                'error' => 'Este cadastro já foi processado e a despesa foi apagada. Confira a lista antes de tentar de novo.',
+            ], 409);
+        }
+
+        if (! hash_equals((string) $existing->request_fingerprint, $fingerprint)) {
+            return response()->json([
+                'error' => 'Esta despesa já foi cadastrada com outros dados. Confira a lista antes de tentar de novo.',
+            ], 409);
+        }
+
+        return response()->json([
+            'message' => 'Despesa já cadastrada',
+            'expense_id' => $existing->id,
+            'payment_registered' => $existing->quotas()->where('paid', true)->where('born_paid', false)->exists(),
+            'already_existed' => true,
+        ]);
+    }
+
+    /** Se a exceção é a violação do índice único (criador, chave) de `ex_expenses`. */
+    private function isDuplicateRequestKey(\Throwable $e): bool
+    {
+        return $e instanceof QueryException
+            && ($e->errorInfo[1] ?? null) === 1062
+            && str_contains($e->getMessage(), 'ex_expenses_creator_request_unique');
     }
 
     /**
