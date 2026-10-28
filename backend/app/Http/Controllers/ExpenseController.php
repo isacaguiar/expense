@@ -604,9 +604,12 @@ class ExpenseController extends Controller
                     $bornPaidCount++;
                 }
 
-                // Pagamento registrado no cadastro (À Vista e Fixa: a única quota). A quota
-                // `born_paid` segue como sempre e nunca recebe o pagamento.
-                $payNow = $paymentRequested && ! $bornPaid && $request->expense_type !== 'IN_INSTALLMENTS';
+                // Pagamento registrado no cadastro (feature 20261027-pagamento-no-cadastro-despesa,
+                // R7): À Vista e Fixa têm uma quota só; a Parcelada é uma compra paga uma vez
+                // (cartão), então TODAS as parcelas ficam pagas, inclusive as futuras. A quota
+                // `born_paid` (parcela retroativa de ciclo já fechado) segue como sempre e
+                // nunca recebe o pagamento.
+                $payNow = $paymentRequested && ! $bornPaid;
 
                 if ($payNow) {
                     $paidQuotasCount++;
