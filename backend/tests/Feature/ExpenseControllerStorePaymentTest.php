@@ -804,4 +804,165 @@ class ExpenseControllerStorePaymentTest extends TestCase
 
         $this->assertSame($before, $this->counts());
     }
+
+    // --- Achados N2 e N3 da revisão de segurança (TASK-532 → TASK-546) -----------------------
+    // O cliente pode mandar `quotas` próprias. Com pagamento pedido, À Vista e Fixa têm uma
+    // quota só, na data informada (senão a "ocorrência inicial" paga contornaria a regra de
+    // competência futura, R6), e a Parcelada tem o mesmo teto de parcelas do servidor.
+
+    /** @return array<int, array{date_expected: string, number: int, value_quota: float}> */
+    private function monthlyQuotas(string $firstDate, int $count, float $value): array
+    {
+        return array_map(fn (int $i) => [
+            'date_expected' => Carbon::parse($firstDate)->addMonths($i)->toDateString(),
+            'number' => $i + 1,
+            'value_quota' => $value,
+        ], range(0, $count - 1));
+    }
+
+    public function test_an_in_cash_expense_with_payment_and_more_than_one_client_quota_is_refused(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $before = $this->counts();
+
+        $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                'descricao_pagamento' => 'Cartão',
+                'quotas' => [
+                    ['date_expected' => '2026-08-10', 'number' => 1, 'value_quota' => 75],
+                    ['date_expected' => '2026-10-10', 'number' => 2, 'value_quota' => 75],
+                ],
+            ]))
+            ->assertStatus(422)
+            ->assertJsonPath('error', 'Com pagamento no cadastro, uma despesa à vista ou fixa tem uma única quota, na data informada.');
+
+        $this->assertSame($before, $this->counts());
+    }
+
+    public function test_an_in_cash_expense_with_payment_cannot_hide_a_future_quota_behind_a_past_date(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $before = $this->counts();
+
+        // `date_payment` é de agosto (competência vigente), mas a única quota é de outubro:
+        // sem a regra, a competência futura receberia um pagamento.
+        $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                'comprovante' => UploadedFile::fake()->image('c.jpg'),
+                'quotas' => [['date_expected' => '2026-10-10', 'number' => 1, 'value_quota' => 150]],
+            ]))
+            ->assertStatus(422);
+
+        $this->assertSame($before, $this->counts());
+    }
+
+    public function test_a_fixed_expense_with_payment_and_a_quota_on_another_date_is_refused(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $before = $this->counts();
+
+        $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                'expense_type' => 'FIXED',
+                'descricao_pagamento' => 'Débito automático',
+                'quotas' => [['date_expected' => '2026-08-12', 'number' => 1, 'value_quota' => 150]],
+            ]))
+            ->assertStatus(422);
+
+        $this->assertSame($before, $this->counts());
+    }
+
+    public function test_one_client_quota_on_the_informed_date_is_accepted_with_payment(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+
+        foreach (['IN_CASH', 'FIXED'] as $type) {
+            $id = $this->withToken($this->token($creditor))
+                ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                    'expense_type' => $type,
+                    'descricao_pagamento' => 'Cartão',
+                    'quotas' => [['date_expected' => '2026-08-10', 'number' => 1, 'value_quota' => 150]],
+                ]))
+                ->assertStatus(201)
+                ->json('expense_id');
+
+            $this->assertTrue(Quota::where('expense_id', $id)->firstOrFail()->paid, $type);
+        }
+    }
+
+    public function test_the_quota_date_is_compared_as_a_date_not_as_a_string(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+
+        // O web manda 'YYYY-MM-DD'; um cliente pode mandar o mesmo dia com hora.
+        $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                'date_payment' => '2026-08-10',
+                'descricao_pagamento' => 'Cartão',
+                'quotas' => [['date_expected' => '2026-08-10 00:00:00', 'number' => 1, 'value_quota' => 150]],
+            ]))
+            ->assertStatus(201);
+    }
+
+    public function test_an_installment_expense_with_payment_and_more_than_120_quotas_is_refused(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $before = $this->counts();
+
+        $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 121,
+                'total_value' => 121,
+                'descricao_pagamento' => 'Cartão',
+                'quotas' => $this->monthlyQuotas('2026-08-10', 121, 1),
+            ]))
+            ->assertStatus(422)
+            ->assertJsonPath('error', 'Com pagamento no cadastro, o máximo é de 120 parcelas.');
+
+        $this->assertSame($before, $this->counts());
+    }
+
+    public function test_an_installment_expense_with_payment_and_exactly_120_client_quotas_is_accepted(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+
+        $id = $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 120,
+                'total_value' => 120,
+                'descricao_pagamento' => 'Cartão',
+                'quotas' => $this->monthlyQuotas('2026-08-10', 120, 1),
+            ]))
+            ->assertStatus(201)
+            ->json('expense_id');
+
+        $this->assertSame(120, Quota::where('expense_id', $id)->where('paid', true)->count());
+    }
+
+    public function test_without_payment_the_client_quota_contract_is_unchanged(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $token = $this->token($creditor);
+
+        // Hoje: À Vista com `quotas` próprias (quantas forem) e Parcelada com mais de 120.
+        $this->withToken($token)
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                'quotas' => [
+                    ['date_expected' => '2026-08-10', 'number' => 1, 'value_quota' => 75],
+                    ['date_expected' => '2026-10-10', 'number' => 2, 'value_quota' => 75],
+                ],
+            ]))
+            ->assertStatus(201);
+
+        $this->withToken($token)
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 121,
+                'total_value' => 121,
+                'quotas' => $this->monthlyQuotas('2026-08-10', 121, 1),
+            ]))
+            ->assertStatus(201);
+    }
 }

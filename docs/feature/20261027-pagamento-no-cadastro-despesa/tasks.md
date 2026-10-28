@@ -46,7 +46,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-543 | Atualizar `MANUAL.md` e `MANUAL.pdf` (CA-D1) | doc | plan.md §8 | nenhum | Pendente |
 | TASK-544 | Validar a feature localmente na stack isolada, rodar o `pr-readiness-checker` e registrar o resultado | backend | plan.md §8, §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
 | TASK-545 | Atribuir os avisos de um cadastro com pagamento a quem cadastrou, e não ao credor, quando são pessoas diferentes; sem WhatsApp do comprovante nesse caso (achado N1 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
-| TASK-546 | Exigir uma única quota na data informada para À Vista e Fixa, e o teto de 120 quotas, quando há pagamento no cadastro (achados N2 e N3 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
+| TASK-546 | Exigir uma única quota na data informada para À Vista e Fixa, e o teto de 120 quotas, quando há pagamento no cadastro (achados N2 e N3 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 | TASK-547 | Converter para inteiro os ids do `store()` recebidos em multipart e esconder `client_request_id` e `request_fingerprint` da API (achados N5 e N4 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 
 ## Dependências e ordem
@@ -209,6 +209,7 @@ Cada task, antes de integrar: backend, `cd backend && ./vendor/bin/pint --test` 
 - **TASK-546**:
   - Com pagamento pedido, À Vista ou Fixa com `quotas` do cliente que não sejam exatamente uma, na data de `date_payment`, dão 422 e nada é criado; com uma só quota na data, 201. Com pagamento pedido, mais de 120 `quotas` dão 422 e nada é criado; 120 passam. Sem pagamento pedido, o contrato de hoje não muda (nenhum teste existente editado).
   - `earliestOccurrence` continua sendo a menor `date_expected`.
+  - Feito dentro do `store()`, logo depois de `$paymentRequested`, comparando o **dia** (`isSameDay`) e não a string, porque um cliente pode mandar `2026-08-10 00:00:00`. O web (`ExpenseForm.tsx:103-105`) já manda uma quota só, na data informada, para À Vista e Fixa; o teto reaproveita `InstallmentSchedule::MAX_INSTALLMENTS`.
 - **TASK-547**:
   - Teste com o corpo todo em **strings**, como o multipart real, e foto, criador = credor: nenhum `expense_paid_on_behalf` e nenhum `expense_paid` para o próprio credor (hoje o `store()` grava `user_payer_id` como string e as comparações estritas dos avisos falham).
   - `GET /api/expenses/{id}` e a resposta do `PUT` não trazem `client_request_id` nem `request_fingerprint`; o replay segue funcionando (lê os atributos direto).
