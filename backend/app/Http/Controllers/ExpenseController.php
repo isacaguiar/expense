@@ -580,7 +580,7 @@ class ExpenseController extends Controller
         $paidAttributes = $paymentRequested
             ? $this->payments()->paidAttributes((int) $request->user_payer_id, $proofPath, $paymentNote)
             : null;
-        $paidQuotasCount = 0;
+        $paidQuotas = [];
 
         DB::beginTransaction();
 
@@ -633,11 +633,7 @@ class ExpenseController extends Controller
                 // nunca recebe o pagamento.
                 $payNow = $paymentRequested && ! $bornPaid;
 
-                if ($payNow) {
-                    $paidQuotasCount++;
-                }
-
-                $expense->quotas()->create([
+                $quota = $expense->quotas()->create([
                     'date_expected' => $quotaData['date_expected'],
                     'number' => $quotaData['number'],
                     'value_quota' => $quotaData['value_quota'],
@@ -647,6 +643,10 @@ class ExpenseController extends Controller
                     'paid_by' => $bornPaid ? $request->user_payer_id : null,
                     'born_paid' => $bornPaid,
                 ]));
+
+                if ($payNow) {
+                    $paidQuotas[] = $quota;
+                }
             }
 
             DB::commit();
@@ -679,11 +679,57 @@ class ExpenseController extends Controller
             $this->afterCommit('aviso de parcela já paga', fn () => Notifier::expenseBornPaid($expense, $bornPaidCount));
         }
 
+        // O cadastro NÃO sela o ciclo (D8): a selagem continua nos gatilhos de hoje (`pay`,
+        // `confirmSettlement`, `close` e a leitura de `summary()`), e o pagamento não quita
+        // nenhum acerto entre membros (R14).
+        if ($paidQuotas !== []) {
+            $this->noticePaymentRegistered($expense, $paidQuotas, $proofPath !== null);
+        }
+
         return response()->json([
             'message' => 'Despesa criada com sucesso',
             'expense_id' => $expense->id,
-            'payment_registered' => $paidQuotasCount > 0,
+            'payment_registered' => $paidQuotas !== [],
         ], 201);
+    }
+
+    /**
+     * Avisos de um cadastro com pagamento (feature 20261027-pagamento-no-cadastro-despesa, R21):
+     * UM conjunto por cadastro, nunca um por parcela. `expense_paid` leva o valor das quotas
+     * pagas somadas (a compra inteira, na Parcelada); o credor é avisado quando outra pessoa
+     * registrou o pagamento em nome dele; e o WhatsApp do comprovante sai uma vez, com a
+     * primeira parcela, depois da resposta, como em `pay()`.
+     *
+     * @param  array<int, Quota>  $paidQuotas
+     */
+    private function noticePaymentRegistered(Expense $expense, array $paidQuotas, bool $hasProof): void
+    {
+        $first = collect($paidQuotas)->sortBy('date_expected')->first();
+        $total = round(collect($paidQuotas)->sum(fn (Quota $quota) => (float) $quota->value_quota), 2);
+
+        $this->afterCommit('aviso de despesa paga', fn () => Notifier::expensePaid($expense, $first, $total));
+        $this->afterCommit('aviso ao credor', fn () => Notifier::expensePaidOnBehalf($expense, count($paidQuotas)));
+
+        if ($hasProof) {
+            $this->afterCommit('WhatsApp do comprovante', fn () => $this->dispatchProofNotice($first->id));
+        }
+    }
+
+    /**
+     * Avisa os pagadores por WhatsApp depois da resposta (no-op se a feature está desligada),
+     * como `pay()`. O fechamento fica num método próprio e não dentro de outra função: o
+     * serializador de closures do `dispatch` pegaria a função de fora e levaria o `$this` do
+     * controller junto (estouro de memória).
+     */
+    private function dispatchProofNotice(int $quotaId): void
+    {
+        dispatch(function () use ($quotaId) {
+            $quota = Quota::with('expense.payers', 'expense.payer')->find($quotaId);
+
+            if ($quota) {
+                WhatsAppNotifier::expenseProofPaid($quota);
+            }
+        })->afterResponse();
     }
 
     /** A despesa que o usuário autenticado já cadastrou com esta chave, ou null. */
