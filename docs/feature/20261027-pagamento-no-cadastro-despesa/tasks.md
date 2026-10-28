@@ -4,7 +4,7 @@
 
 Versão: 1.0 · Criado em: 20261027
 
-**Status: rascunho para revisão do usuário.** Nenhuma task foi iniciada. Só se começa a executar depois do aval a este documento.
+**Status: aprovado pelo usuário em 2026-10-27 ("Sim, siga as sugestões"); em execução.** Andamento no `implementation.md`.
 
 IDs a partir de TASK-512: o maior em qualquer branch do repositório e em `docs/` é TASK-511 (feature `20261026-organizacao-despesas-pagamentos`), conferido em 2026-10-27 com `grep` nos documentos e nas mensagens de commit de todas as branches. Reconfirmar a numeração se outra feature reservar IDs antes do merge.
 
@@ -12,7 +12,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-512 | Criar o trait `BuildsPurchaseScenarios` e os testes de caracterização de `compute()` e dos totais por ciclo (NR-01, NR-02) | backend | plan.md §1 | nenhum | Pendente |
+| TASK-512 | Criar o trait `BuildsPurchaseScenarios` e os testes de caracterização de `compute()` e dos totais por ciclo (NR-01, NR-02) | backend | plan.md §1 | nenhum | Concluída (2026-10-27) |
 | TASK-513 | Testar que `paid_at` e `paid_by` não alteram nenhuma saída e que relatórios anuais, mensal e `indexByGroup` ignoram o pagamento (NR-03, NR-09) | backend | plan.md §1 | nenhum | Pendente |
 | TASK-514 | Testar quitação, selagem, `focus`, `pendingCycles`, `ClosingBreakdown` e histórico de ciclos com a compra paga (NR-04, NR-05, NR-06) | backend | plan.md §1 | nenhum | Pendente |
 | TASK-515 | Fixar o comportamento de `grossDebts` e do Painel (`me/overview`) com a compra paga (NR-07, NR-08) | backend | plan.md §1 | nenhum | Pendente |
