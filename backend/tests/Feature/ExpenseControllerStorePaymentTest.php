@@ -11,7 +11,10 @@ use App\Services\CycleSummaryService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Tests\Concerns\FailsToWriteProofs;
 use Tests\TestCase;
 
 /**
@@ -26,10 +29,15 @@ use Tests\TestCase;
 class ExpenseControllerStorePaymentTest extends TestCase
 {
     use DatabaseTransactions;
+    use FailsToWriteProofs;
 
     protected function tearDown(): void
     {
         Carbon::setTestNow();
+
+        // Os ouvintes de eventos de modelo sobrevivem ao teste (a mesma aplicação é reaproveitada).
+        Event::forget('eloquent.creating: '.Quota::class);
+        Event::forget('eloquent.creating: '.Notification::class);
 
         parent::tearDown();
     }
@@ -684,6 +692,78 @@ class ExpenseControllerStorePaymentTest extends TestCase
             ->assertStatus(422)->assertJsonValidationErrors('user_payer_id');
 
         $this->assertSame($before, $this->counts());
+    }
+
+    // --- CA-17 a CA-19: falhas não deixam meio-termo --------------------------------------
+
+    public function test_a_failure_to_write_the_file_stops_before_the_database_and_nothing_is_created(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $this->failProofWrites();
+        $before = $this->counts();
+
+        $response = $this->withToken($this->token($creditor))
+            ->post('/api/expenses', $this->body($group, $creditor, $creditor, $debtor) + [
+                'comprovante' => UploadedFile::fake()->image('c.jpg'),
+                'descricao_pagamento' => 'Pago',
+            ], ['Accept' => 'application/json']);
+
+        $response->assertStatus(500);
+        $response->assertJsonMissingPath('details');
+        $this->assertSame($before, $this->counts());
+    }
+
+    public function test_a_database_failure_after_the_file_was_written_rolls_back_removes_the_file_and_hides_details(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $before = $this->counts();
+
+        Event::listen('eloquent.creating: '.Quota::class, fn () => throw new \RuntimeException('falha forçada no banco'));
+        Log::spy();
+
+        $response = $this->withToken($this->token($creditor))
+            ->post('/api/expenses', $this->body($group, $creditor, $creditor, $debtor) + [
+                'comprovante' => UploadedFile::fake()->image('c.jpg'),
+                'descricao_pagamento' => 'Pago',
+            ], ['Accept' => 'application/json']);
+
+        $response->assertStatus(500)->assertJsonPath('error', 'Erro ao criar despesa');
+        $response->assertJsonMissingPath('details');
+        $this->assertStringNotContainsString('falha forçada', $response->getContent(), 'a mensagem da exceção não vaza');
+
+        $this->assertSame($before, $this->counts(), 'rollback: nem despesa, nem quota, nem arquivo órfão');
+        Log::shouldHaveReceived('error')->once();
+    }
+
+    public function test_a_database_failure_without_payment_also_hides_details(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $before = $this->counts();
+
+        Event::listen('eloquent.creating: '.Quota::class, fn () => throw new \RuntimeException('falha forçada no banco'));
+
+        $response = $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor));
+
+        $response->assertStatus(500)->assertJsonPath('error', 'Erro ao criar despesa');
+        $response->assertJsonMissingPath('details');
+        $this->assertSame($before, $this->counts());
+    }
+
+    public function test_a_failure_in_a_step_after_the_commit_keeps_the_expense_and_the_payment(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+
+        Event::listen('eloquent.creating: '.Notification::class, fn () => throw new \RuntimeException('notificação fora do ar'));
+
+        $response = $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor, ['descricao_pagamento' => 'Pago']))
+            ->assertStatus(201)
+            ->assertJsonPath('payment_registered', true);
+
+        $quota = Quota::where('expense_id', $response->json('expense_id'))->firstOrFail();
+        $this->assertTrue($quota->paid);
+        $this->assertSame('Pago', $quota->payment_note);
     }
 
     // --- CA-12 e CA-14 também valem para a Parcelada -------------------------------------
