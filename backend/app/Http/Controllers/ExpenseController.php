@@ -8,6 +8,7 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Services\CycleSummaryService;
+use App\Services\ExpensePaymentService;
 use App\Support\BillingCycle;
 use App\Support\ClosingBreakdown;
 use App\Support\InstallmentSchedule;
@@ -461,6 +462,14 @@ class ExpenseController extends Controller
             'quotas.*.date_expected' => 'required|date',
             'quotas.*.number' => 'required|integer',
             'quotas.*.value_quota' => 'required|numeric|min:0',
+            // Pagamento registrado junto do cadastro (feature
+            // 20261027-pagamento-no-cadastro-despesa): foto e descrição são opcionais e
+            // independentes; `descricao_pagamento` NÃO é a `description` da despesa. Trim
+            // e "" → null vêm dos middlewares globais (`Http/Kernel.php`), que já tratam
+            // NBSP, U+200B e U+FEFF.
+            'comprovante' => 'nullable|image|max:5120',
+            'descricao_pagamento' => 'nullable|string|max:500',
+            'client_request_id' => 'nullable|uuid',
         ]);
 
         // `quotas` é opcional: quem envia (o web hoje) vale como sempre; sem ele, o
@@ -526,6 +535,33 @@ class ExpenseController extends Controller
             }
         }
 
+        // Pagamento pedido = há foto OU descrição do pagamento não vazia (R1/R2). Foto
+        // inválida já deu 422 na validação acima: nunca é descartada para pagar só com o texto.
+        $paymentNote = $request->input('descricao_pagamento');
+        $paymentRequested = $request->hasFile('comprovante') || filled($paymentNote);
+
+        // Não existe pagamento antecipado: `pay()` só alcança a competência vigente ou
+        // passada, então a ocorrência inicial não pode ser futura (R6). Recusa antes de
+        // gravar qualquer coisa, para nunca ficar "despesa criada sem o pagamento pedido".
+        if ($paymentRequested && $this->payments()->isFuture(
+            $group,
+            $this->payments()->earliestOccurrence($request->expense_type, $request->date_payment, $quotas)
+        )) {
+            return response()->json([
+                'error' => 'Não é possível registrar o pagamento de uma competência que ainda não começou. Retire o comprovante e a descrição do pagamento ou use uma data de hoje ou anterior.',
+            ], 422);
+        }
+
+        // A foto é gravada depois de todas as recusas, e antes da transação: se o banco
+        // falhar, o `catch` abaixo a remove.
+        $proofPath = $request->hasFile('comprovante')
+            ? ProofStorage::store($request->file('comprovante'), $group->id)
+            : null;
+        $paidAttributes = $paymentRequested
+            ? $this->payments()->paidAttributes((int) $request->user_payer_id, $proofPath, $paymentNote)
+            : null;
+        $paidQuotasCount = 0;
+
         DB::beginTransaction();
 
         try {
@@ -568,15 +604,24 @@ class ExpenseController extends Controller
                     $bornPaidCount++;
                 }
 
+                // Pagamento registrado no cadastro (À Vista e Fixa: a única quota). A quota
+                // `born_paid` segue como sempre e nunca recebe o pagamento.
+                $payNow = $paymentRequested && ! $bornPaid && $request->expense_type !== 'IN_INSTALLMENTS';
+
+                if ($payNow) {
+                    $paidQuotasCount++;
+                }
+
                 $expense->quotas()->create([
                     'date_expected' => $quotaData['date_expected'],
                     'number' => $quotaData['number'],
+                    'value_quota' => $quotaData['value_quota'],
+                ] + ($payNow ? $paidAttributes : [
                     'paid' => $bornPaid,
                     'paid_at' => $bornPaid ? now() : null,
                     'paid_by' => $bornPaid ? $request->user_payer_id : null,
                     'born_paid' => $bornPaid,
-                    'value_quota' => $quotaData['value_quota'],
-                ]);
+                ]));
             }
 
             DB::commit();
@@ -590,10 +635,17 @@ class ExpenseController extends Controller
                 Notifier::expenseBornPaid($expense, $bornPaidCount);
             }
 
-            return response()->json(['message' => 'Despesa criada com sucesso', 'expense_id' => $expense->id], 201);
+            return response()->json([
+                'message' => 'Despesa criada com sucesso',
+                'expense_id' => $expense->id,
+                'payment_registered' => $paidQuotasCount > 0,
+            ], 201);
 
         } catch (\Throwable $e) {
             DB::rollBack();
+
+            // O banco não ficou com a despesa: a foto recém-gravada não pode ficar órfã.
+            ProofStorage::delete($proofPath);
 
             return response()->json(['error' => 'Erro ao criar despesa', 'details' => $e->getMessage()], 500);
         }
@@ -1468,6 +1520,16 @@ class ExpenseController extends Controller
     private function cycles(): CycleSummaryService
     {
         return app(CycleSummaryService::class);
+    }
+
+    /**
+     * Regras do pagamento registrado no cadastro (feature
+     * 20261027-pagamento-no-cadastro-despesa). Resolvido pelo container, sem
+     * construtor, pelo mesmo motivo de `cycles()`.
+     */
+    private function payments(): ExpensePaymentService
+    {
+        return app(ExpensePaymentService::class);
     }
 
     /**
