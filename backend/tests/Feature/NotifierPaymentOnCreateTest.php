@@ -120,4 +120,37 @@ class NotifierPaymentOnCreateTest extends TestCase
 
         $this->assertSame(0, Notification::where('type', 'expense_paid_on_behalf')->whereIn('user_id', [$creator->id, $debtor->id])->count());
     }
+
+    // --- Achado N1 da revisão de segurança (TASK-532 → TASK-545) --------------------------
+    // Quando outra pessoa registra o pagamento em nome do credor, o aviso aos devedores não
+    // pode dizer que foi o credor quem pagou: leva o nome de quem registrou, e quem registrou
+    // não recebe aviso do que ele mesmo fez.
+
+    public function test_expense_paid_with_an_actor_names_the_actor_and_skips_them(): void
+    {
+        ['creator' => $creator, 'creditor' => $creditor, 'debtor' => $debtor, 'expense' => $expense, 'quota' => $quota] = $this->scenario();
+        $expense->payers()->syncWithoutDetaching([$creator->id]);
+
+        Notifier::expensePaid($expense, $quota, 300.0, $creator);
+
+        $rows = Notification::where('type', 'expense_paid')->get();
+
+        $this->assertSame([$debtor->id], $rows->pluck('user_id')->all(), 'só o devedor: nem o credor nem quem registrou');
+        $this->assertSame($creator->name, $rows->first()->data['actorName']);
+        $this->assertNotSame($creditor->name, $rows->first()->data['actorName']);
+        $this->assertSame('300.00', $rows->first()->data['amount']);
+    }
+
+    public function test_expense_paid_without_an_actor_still_names_the_creditor_and_keeps_every_other_payer(): void
+    {
+        ['creator' => $creator, 'creditor' => $creditor, 'debtor' => $debtor, 'expense' => $expense, 'quota' => $quota] = $this->scenario();
+        $expense->payers()->syncWithoutDetaching([$creator->id]);
+
+        Notifier::expensePaid($expense, $quota);
+
+        $rows = Notification::where('type', 'expense_paid')->get();
+
+        $this->assertEqualsCanonicalizing([$debtor->id, $creator->id], $rows->pluck('user_id')->all());
+        $this->assertSame($creditor->name, $rows->first()->data['actorName']);
+    }
 }

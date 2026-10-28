@@ -723,17 +723,23 @@ class ExpenseController extends Controller
      * registrou o pagamento em nome dele; e o WhatsApp do comprovante sai uma vez, com a
      * primeira parcela, depois da resposta, como em `pay()`.
      *
+     * Quando quem cadastra não é o credor, os demais devedores são avisados em nome de quem
+     * registrou (o credor não pagou nada no app) e o WhatsApp do comprovante não sai, porque
+     * o texto dele diz "<pagador> pagou" (achado N1 da revisão de segurança, TASK-545).
+     *
      * @param  array<int, Quota>  $paidQuotas
      */
     private function noticePaymentRegistered(Expense $expense, array $paidQuotas, bool $hasProof): void
     {
         $first = collect($paidQuotas)->sortBy('date_expected')->first();
         $total = round(collect($paidQuotas)->sum(fn (Quota $quota) => (float) $quota->value_quota), 2);
+        $onBehalf = $expense->user_creator_id !== $expense->user_payer_id;
+        $actor = $onBehalf ? $expense->creator : null;
 
-        $this->afterCommit('aviso de despesa paga', fn () => Notifier::expensePaid($expense, $first, $total));
+        $this->afterCommit('aviso de despesa paga', fn () => Notifier::expensePaid($expense, $first, $total, $actor));
         $this->afterCommit('aviso ao credor', fn () => Notifier::expensePaidOnBehalf($expense, count($paidQuotas)));
 
-        if ($hasProof) {
+        if ($hasProof && ! $onBehalf) {
             $this->afterCommit('WhatsApp do comprovante', fn () => $this->dispatchProofNotice($first->id));
         }
     }
