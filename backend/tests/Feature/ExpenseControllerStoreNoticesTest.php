@@ -177,6 +177,56 @@ class ExpenseControllerStoreNoticesTest extends TestCase
         $this->assertSame(1, Notification::where('type', 'expense_paid')->where('user_id', $debtor->id)->count());
     }
 
+    /**
+     * Achado N1 da revisão de segurança (TASK-532 → TASK-545): quem cadastra em nome do credor
+     * é quem os outros devedores devem ver como autor do registro, e ele mesmo não recebe o
+     * aviso do que fez. O credor continua sabendo pelo `expense_paid_on_behalf`.
+     */
+    public function test_when_someone_else_registers_the_payment_the_debtors_are_told_it_was_them_not_the_creditor(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $creator] = $this->scenario();
+        $third = User::factory()->create();
+        $group->members()->attach($third->id);
+
+        $this->withToken($this->token($creator))
+            ->postJson('/api/expenses', [
+                'user_payer_id' => $creditor->id,
+                'payers' => [$creditor->id, $creator->id, $third->id],
+                'descricao_pagamento' => 'Cartão da Ana',
+            ] + $this->body($group, $creator, $creditor, $creator))
+            ->assertStatus(201);
+
+        $rows = Notification::where('type', 'expense_paid')->get();
+
+        $this->assertSame([$third->id], $rows->pluck('user_id')->all(), 'só o terceiro: nem o credor nem quem registrou');
+        $this->assertSame($creator->name, $rows->first()->data['actorName']);
+        $this->assertSame('300.00', $rows->first()->data['amount']);
+        $this->assertSame(1, Notification::where('type', 'expense_paid_on_behalf')->where('user_id', $creditor->id)->count());
+    }
+
+    public function test_no_whatsapp_proof_notice_when_someone_else_registers_the_payment(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $creator] = $this->scenario();
+        $third = User::factory()->create();
+        $group->members()->attach($third->id);
+        Http::fake();
+        $this->enableWhatsApp();
+        $this->optIn($third, '(11) 90000-0003');
+
+        $this->withToken($this->token($creator))
+            ->post('/api/expenses', [
+                'user_payer_id' => $creditor->id,
+                'payers' => [$creditor->id, $creator->id, $third->id],
+            ] + $this->body($group, $creator, $creditor, $creator) + [
+                'comprovante' => UploadedFile::fake()->image('cartao.jpg'),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(201);
+
+        // O texto do WhatsApp diz "<pagador> pagou": seria o credor, que não pagou nada.
+        Http::assertNothingSent();
+        $this->assertSame(1, Notification::where('type', 'expense_paid')->where('user_id', $third->id)->count(), 'o aviso dentro do app segue saindo');
+    }
+
     // --- CA-25: o WhatsApp do comprovante, uma vez ---------------------------------------
 
     public function test_the_whatsapp_proof_notice_is_sent_once_for_a_whole_installment_purchase_with_a_photo(): void

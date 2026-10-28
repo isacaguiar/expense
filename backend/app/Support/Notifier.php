@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Models\Group;
 use App\Models\Notification;
 use App\Models\Quota;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -124,14 +125,18 @@ class Notifier
      * as parcelas de uma vez e avisa uma só vez, com o valor da compra inteira
      * (feature 20261027-pagamento-no-cadastro-despesa, R21); sem ele vale o valor
      * da quota.
+     *
+     * `$actor` é quem registrou o pagamento quando não foi o credor (cadastro em
+     * nome de outra pessoa, mesma feature, D4): o aviso leva o nome dele, e ele
+     * não recebe o aviso do que fez. Sem `$actor` o autor é o credor, como em `pay()`.
      */
-    public static function expensePaid(Expense $expense, Quota $quota, float|string|null $amount = null): void
+    public static function expensePaid(Expense $expense, Quota $quota, float|string|null $amount = null, ?User $actor = null): void
     {
-        self::guard('expense_paid', function () use ($expense, $quota, $amount) {
+        self::guard('expense_paid', function () use ($expense, $quota, $amount, $actor) {
             $expense->loadMissing('payers', 'payer', 'group');
 
             $recipients = $expense->payers
-                ->reject(fn ($u) => $u->id === $expense->user_payer_id)
+                ->reject(fn ($u) => $u->id === $expense->user_payer_id || $u->id === $actor?->id)
                 ->pluck('id');
 
             if ($recipients->isEmpty()) {
@@ -139,7 +144,7 @@ class Notifier
             }
 
             self::fanOut($recipients, 'expense_paid', $expense->group_id, [
-                'actorName' => $expense->payer?->name,
+                'actorName' => ($actor ?? $expense->payer)?->name,
                 'groupId' => $expense->group_id,
                 'groupName' => $expense->group?->name,
                 'expenseId' => $expense->id,

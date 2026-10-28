@@ -45,7 +45,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-542 | Registrar os limites de upload (`post_max_size`, `upload_max_filesize`) do servidor de produção (RK8) | infra | plan.md §8 | depende de informação do usuário sobre o host | Pendente |
 | TASK-543 | Atualizar `MANUAL.md` e `MANUAL.pdf` (CA-D1) | doc | plan.md §8 | nenhum | Pendente |
 | TASK-544 | Validar a feature localmente na stack isolada, rodar o `pr-readiness-checker` e registrar o resultado | backend | plan.md §8, §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Pendente |
-| TASK-545 | Atribuir os avisos de um cadastro com pagamento a quem cadastrou, e não ao credor, quando são pessoas diferentes; sem WhatsApp do comprovante nesse caso (achado N1 da TASK-532) | backend | plan.md §4 | nenhum | Pendente |
+| TASK-545 | Atribuir os avisos de um cadastro com pagamento a quem cadastrou, e não ao credor, quando são pessoas diferentes; sem WhatsApp do comprovante nesse caso (achado N1 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 | TASK-546 | Exigir uma única quota na data informada para À Vista e Fixa, e o teto de 120 quotas, quando há pagamento no cadastro (achados N2 e N3 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 | TASK-547 | Converter para inteiro os ids do `store()` recebidos em multipart e esconder `client_request_id` e `request_fingerprint` da API (achados N5 e N4 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 
@@ -206,6 +206,7 @@ Cada task, antes de integrar: backend, `cd backend && ./vendor/bin/pint --test` 
 - **TASK-545**:
   - Testes novos em `ExpenseControllerStoreNoticesTest.php` (acréscimo ao arquivo da feature): com criador ≠ credor e foto, os devedores recebem `expense_paid` com `actorName` = **o criador**, o criador **não** recebe `expense_paid` e o WhatsApp do comprovante **não sai** (`Http::assertNothingSent`); o credor continua recebendo `expense_paid_on_behalf`. Com criador = credor nada muda (o `actorName` é o credor e o WhatsApp sai uma vez).
   - `Notifier::expensePaid` ganha o parâmetro opcional `?User $actor = null` (sem ele, comportamento de hoje); `NotifierTriggersTest` e `NotifierPaymentOnCreateTest` passam sem edição.
+  - Feito: a decisão `$onBehalf = user_creator_id !== user_payer_id` fica no `noticePaymentRegistered()` do controller, e o `Notifier` só recebe o `$actor`. `plan.md` P10 e a linha do `Notifier` em §4, e `specify.md` R21, foram atualizados no mesmo commit. Os testes novos de unidade entraram no fim de `NotifierPaymentOnCreateTest.php` (acréscimo; nenhum teste existente foi tocado).
 - **TASK-546**:
   - Com pagamento pedido, À Vista ou Fixa com `quotas` do cliente que não sejam exatamente uma, na data de `date_payment`, dão 422 e nada é criado; com uma só quota na data, 201. Com pagamento pedido, mais de 120 `quotas` dão 422 e nada é criado; 120 passam. Sem pagamento pedido, o contrato de hoje não muda (nenhum teste existente editado).
   - `earliestOccurrence` continua sendo a menor `date_expected`.
