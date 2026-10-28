@@ -2,9 +2,15 @@
 
 namespace App\Services;
 
+use App\Exceptions\PurchaseUndoRefused;
+use App\Models\Expense;
 use App\Models\Group;
+use App\Models\GroupCycleSnapshot;
+use App\Models\Quota;
 use App\Support\BillingCycle;
 use Carbon\Carbon;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Regras do pagamento registrado junto do cadastro da despesa
@@ -64,5 +70,87 @@ class ExpensePaymentService
     public function isFuture(Group $group, Carbon $date): bool
     {
         return BillingCycle::statusFor($group->closing_day, $date, Carbon::now()) === 'future';
+    }
+
+    /**
+     * Desfaz de uma vez o pagamento de uma compra parcelada (specify R19, D11): zera `paid`,
+     * `paid_at`, `paid_by`, comprovante e descrição de todas as quotas pagas que não nasceram
+     * `born_paid`. Atômico, com lock de linha nas quotas: se uma ação concorrente (✓, `unpay`,
+     * edição de comprovante) estiver no meio, esta espera e relê o estado.
+     *
+     * Devolve quantas quotas limpou e os caminhos de arquivo que ficaram soltos; **quem chama
+     * remove os arquivos depois do commit** (`ProofStorage::deleteIfUnreferenced`), nunca aqui
+     * dentro da transação.
+     *
+     * @return array{cleared: int, paths: list<string>}
+     *
+     * @throws PurchaseUndoRefused tipo diferente de Parcelada, nada a desfazer, ou ciclo encerrado
+     */
+    public function undoPurchase(Expense $expense): array
+    {
+        if ($expense->expense_type !== 'IN_INSTALLMENTS') {
+            throw new PurchaseUndoRefused('O desfazer da compra vale só para despesa parcelada. Use "Desfazer pagamento" na ocorrência.');
+        }
+
+        return DB::transaction(function () use ($expense) {
+            $eligible = $expense->quotas()->lockForUpdate()->get()
+                ->filter(fn (Quota $quota) => $quota->paid && ! $quota->born_paid)
+                ->values();
+
+            if ($eligible->isEmpty()) {
+                throw new PurchaseUndoRefused('Esta despesa não tem pagamento a desfazer.');
+            }
+
+            if (! $this->windowOpen($expense->group, $eligible)) {
+                throw new PurchaseUndoRefused('O ciclo desta compra já foi encerrado; o pagamento não pode mais ser desfeito.');
+            }
+
+            $paths = $eligible->pluck('payment_proof_path')->filter()->unique()->values()->all();
+
+            // Uma a uma, e não num `update` em massa: dispara os eventos do modelo e mantém o
+            // comportamento igual ao de `unpay()` por parcela.
+            foreach ($eligible as $quota) {
+                $quota->update([
+                    'paid' => false,
+                    'paid_at' => null,
+                    'paid_by' => null,
+                    'payment_proof_path' => null,
+                    'payment_note' => null,
+                ]);
+            }
+
+            return ['cleared' => $eligible->count(), 'paths' => $paths];
+        });
+    }
+
+    /**
+     * A janela de correção está aberta enquanto NENHUMA das quotas pagas está em ciclo
+     * encerrado: fechado por data (`closed`), com fechamento manual ainda ativo ou selado
+     * (specify D11). Ciclo em carência e ciclo futuro não encerraram.
+     *
+     * @param  Collection<int, Quota>  $paidQuotas  as quotas pagas e não `born_paid` da compra
+     */
+    public function windowOpen(Group $group, Collection $paidQuotas): bool
+    {
+        $startOf = fn (Quota $quota) => BillingCycle::cycleFor($group->closing_day, $quota->date_expected)['start']->toDateString();
+
+        $snapshots = GroupCycleSnapshot::where('group_id', $group->id)
+            ->whereIn('cycle_start', $paidQuotas->map($startOf)->unique()->values()->all())
+            ->get()
+            ->keyBy(fn (GroupCycleSnapshot $snapshot) => $snapshot->cycle_start->toDateString());
+
+        foreach ($paidQuotas as $quota) {
+            if (BillingCycle::statusFor($group->closing_day, $quota->date_expected, Carbon::now()) === 'closed') {
+                return false;
+            }
+
+            $snapshot = $snapshots->get($startOf($quota));
+
+            if ($snapshot && ($snapshot->isManuallyClosedAndActive() || $snapshot->isSealed())) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

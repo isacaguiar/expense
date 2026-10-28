@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\PurchaseUndoRefused;
 use App\Models\Expense;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
@@ -1395,6 +1396,39 @@ class ExpenseController extends Controller
         $this->unsealIfBroken($group, $group->id, $cycle['start'], $cycle['end']);
 
         return response()->json($quota->fresh());
+    }
+
+    /**
+     * Desfaz de uma vez o pagamento de uma compra parcelada paga no cadastro (feature
+     * 20261027-pagamento-no-cadastro-despesa, R19 e D11). Só o credor, e só enquanto nenhuma
+     * parcela paga estiver em ciclo encerrado; depois disso a compra é histórico e nada muda.
+     * O `unpay` por parcela segue como sempre e não alcança parcelas futuras; este alcança.
+     *
+     * O arquivo de comprovante, compartilhado pelas parcelas, só sai do disco depois do commit
+     * e só se nenhuma outra quota o usa (R18).
+     */
+    public function undoPurchase($expenseId)
+    {
+        $expense = $this->findExpenseForMember($expenseId);
+
+        if (auth()->id() !== $expense->user_payer_id) {
+            abort(403, 'Só o credor pode desfazer o pagamento desta compra.');
+        }
+
+        try {
+            $result = $this->payments()->undoPurchase($expense);
+        } catch (PurchaseUndoRefused $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        foreach ($result['paths'] as $path) {
+            ProofStorage::deleteIfUnreferenced($path);
+        }
+
+        return response()->json([
+            'message' => 'Pagamento da compra desfeito.',
+            'quotas_cleared' => $result['cleared'],
+        ]);
     }
 
     /**
