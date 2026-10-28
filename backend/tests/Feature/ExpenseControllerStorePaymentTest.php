@@ -592,6 +592,100 @@ class ExpenseControllerStorePaymentTest extends TestCase
         $this->assertSame([true, true, true, false], $stored->pluck('paid')->all());
     }
 
+    // --- CA-10 e CA-11: quem cadastra pode não ser o credor ------------------------------
+
+    public function test_a_creator_who_is_not_the_creditor_registers_the_payment_in_the_creditors_name(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $creator] = $this->scenario();
+
+        $response = $this->withToken($this->token($creator))
+            ->postJson('/api/expenses', $this->body($group, $creator, $creditor, $creator, [
+                'descricao_pagamento' => 'Ana pagou no cartão',
+            ]))
+            ->assertStatus(201)
+            ->assertJsonPath('payment_registered', true);
+
+        $expense = Expense::findOrFail($response->json('expense_id'));
+        $quota = $expense->quotas()->firstOrFail();
+
+        // O pagamento é do credor; o criador continua sendo só o criador da despesa.
+        $this->assertSame($creator->id, $expense->user_creator_id);
+        $this->assertSame($creditor->id, $expense->user_payer_id);
+        $this->assertTrue($quota->paid);
+        $this->assertSame($creditor->id, $quota->paid_by, 'paid_by é o credor, não quem cadastrou');
+        $this->assertSame('Ana pagou no cartão', $quota->payment_note);
+    }
+
+    public function test_a_creator_who_is_not_the_creditor_also_pays_every_installment_in_the_creditors_name(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $creator] = $this->scenario();
+
+        $response = $this->withToken($this->token($creator))
+            ->postJson('/api/expenses', $this->body($group, $creator, $creditor, $creator, [
+                'expense_type' => 'IN_INSTALLMENTS',
+                'installments' => 3,
+                'total_value' => 300,
+                'descricao_pagamento' => 'Cartão da Ana',
+            ]))
+            ->assertStatus(201);
+
+        $quotas = Expense::findOrFail($response->json('expense_id'))->quotas;
+
+        $this->assertSame(3, $quotas->where('paid', true)->count());
+        $this->assertSame([$creditor->id], $quotas->pluck('paid_by')->unique()->values()->all());
+    }
+
+    public function test_a_creator_who_is_not_the_creditor_without_payment_data_is_the_expense_of_today(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $creator] = $this->scenario();
+
+        $response = $this->withToken($this->token($creator))
+            ->postJson('/api/expenses', $this->body($group, $creator, $creditor, $creator))
+            ->assertStatus(201)
+            ->assertJsonPath('payment_registered', false);
+
+        $quota = Quota::where('expense_id', $response->json('expense_id'))->firstOrFail();
+
+        $this->assertFalse($quota->paid);
+        $this->assertNull($quota->paid_by);
+        $this->assertSame(0, Notification::where('type', 'expense_paid_on_behalf')->count());
+    }
+
+    public function test_a_non_member_gets_the_same_refusal_with_payment_and_nothing_is_stored(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $outsider = User::factory()->create();
+        $before = $this->counts();
+
+        $body = $this->body($group, $outsider, $creditor, $debtor);
+
+        $withoutPayment = $this->withToken($this->token($outsider))->postJson('/api/expenses', $body)->getStatusCode();
+        $withPayment = $this->withToken($this->token($outsider))
+            ->post('/api/expenses', $body + [
+                'comprovante' => UploadedFile::fake()->image('c.jpg'),
+                'descricao_pagamento' => 'Pago',
+            ], ['Accept' => 'application/json'])->getStatusCode();
+
+        $this->assertSame(404, $withoutPayment);
+        $this->assertSame($withoutPayment, $withPayment);
+        $this->assertSame($before, $this->counts(), 'nenhum arquivo gravado para quem não é do grupo');
+    }
+
+    public function test_a_payer_outside_the_group_is_refused_with_payment_and_nothing_is_stored(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $outsider = User::factory()->create();
+        $before = $this->counts();
+
+        $this->withToken($this->token($creditor))
+            ->post('/api/expenses', $this->body($group, $creditor, $outsider, $debtor) + [
+                'comprovante' => UploadedFile::fake()->image('c.jpg'),
+            ], ['Accept' => 'application/json'])
+            ->assertStatus(422)->assertJsonValidationErrors('user_payer_id');
+
+        $this->assertSame($before, $this->counts());
+    }
+
     // --- CA-12 e CA-14 também valem para a Parcelada -------------------------------------
 
     public function test_an_installment_expense_that_starts_in_a_future_competence_with_payment_is_refused(): void
