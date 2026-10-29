@@ -2,9 +2,9 @@
 
 > Traduz `specify.md` (v1.3) em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
 
-Versão: 1.0 · Criado em: 20261027
+Versão: 1.1 · Criado em: 20261027
 
-**Status: rascunho para revisão do usuário.** `tasks.md` só depois da aprovação deste plano (`docs/sdd/README.md`, gates entre etapas). Nenhum código foi escrito.
+**Status: aprovado pelo usuário em 2026-10-27 ("aprovo"); implementado conforme `tasks.md`.** v1.1: o P10 (§0) e a linha do `Notifier` em §4 foram ajustados pela TASK-545, depois da aprovação, a partir do achado N1 da revisão de segurança; o ajuste aguarda a confirmação do usuário.
 
 ---
 
