@@ -4,7 +4,7 @@
 
 Versão: 1.0 · Criado em: 20261027
 
-**Status: aprovado pelo usuário em 2026-10-27 ("Sim, siga as sugestões"); em execução.** Andamento no `implementation.md`.
+**Status: aprovado pelo usuário em 2026-10-27 ("Sim, siga as sugestões"); executado.** Todas as tasks concluídas, exceto a TASK-542 (depende de informação do usuário sobre o host de produção e vai declarada no PR). Log no `implementation.md`.
 
 IDs a partir de TASK-512: o maior em qualquer branch do repositório e em `docs/` é TASK-511 (feature `20261026-organizacao-despesas-pagamentos`), conferido em 2026-10-27 com `grep` nos documentos e nas mensagens de commit de todas as branches. Reconfirmar a numeração se outra feature reservar IDs antes do merge.
 
@@ -44,7 +44,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-541 | Testar a apresentação de totais, filtros e chips com fixture de compra paga (CA-F13) | frontend | plan.md §7 | nenhum | Concluída (2026-10-29) |
 | TASK-542 | Registrar os limites de upload (`post_max_size`, `upload_max_filesize`) do servidor de produção (RK8) | infra | plan.md §8 | depende de informação do usuário sobre o host | Pendente |
 | TASK-543 | Atualizar `MANUAL.md` e `MANUAL.pdf` (CA-D1) | doc | plan.md §8 | nenhum | Concluída (2026-10-29) |
-| TASK-544 | Validar a feature localmente na stack isolada, rodar o `pr-readiness-checker` e registrar o resultado | backend | plan.md §8, §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Em andamento (roteiro executado em 2026-10-29; falta a validação e a confirmação escrita do usuário) |
+| TASK-544 | Validar a feature localmente na stack isolada, rodar o `pr-readiness-checker` e registrar o resultado | backend | plan.md §8, §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Concluída (2026-10-29; usuário validou e autorizou o PR por escrito) |
 | TASK-545 | Atribuir os avisos de um cadastro com pagamento a quem cadastrou, e não ao credor, quando são pessoas diferentes; sem WhatsApp do comprovante nesse caso (achado N1 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 | TASK-546 | Exigir uma única quota na data informada para À Vista e Fixa, e o teto de 120 quotas, quando há pagamento no cadastro (achados N2 e N3 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 | TASK-547 | Converter para inteiro os ids do `store()` recebidos em multipart e esconder `client_request_id` e `request_fingerprint` da API (achados N5 e N4 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
