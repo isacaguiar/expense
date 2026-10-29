@@ -9,6 +9,26 @@ import type { InstallmentQuota } from './installments';
  */
 export const EXPENSE_SAVE_TIMEOUT_MS = 60_000;
 
+/** Tamanho máximo da foto do comprovante; o servidor valida o mesmo valor (`max:5120`, em KB). */
+export const PROOF_MAX_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Aviso de UX antes de enviar: o motivo de uma foto que o servidor recusaria, ou `null` se
+ * ela passa. O servidor segue sendo a autoridade (CA-F10); aqui só se evita subir 5 MB
+ * para receber um 422.
+ */
+export function proofFileProblem(file: File): string | null {
+  if (!file.type.startsWith('image/')) {
+    return 'Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.';
+  }
+
+  if (file.size > PROOF_MAX_BYTES) {
+    return 'A foto passa de 5 MB. Escolha uma menor ou reduza a qualidade.';
+  }
+
+  return null;
+}
+
 /** Corpo de `POST /api/expenses`: o de sempre mais os campos opcionais do pagamento no cadastro. */
 export type ExpensePayload = {
   date_payment: string;

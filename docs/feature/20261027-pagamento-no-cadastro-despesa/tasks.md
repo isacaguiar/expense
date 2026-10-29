@@ -36,7 +36,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-533 | Criar os utilitários `requestKey.ts` e `expenseRequest.ts` com testes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
 | TASK-534 | Criar o utilitário `paymentOccurrence.ts` com testes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
 | TASK-535 | Extrair `PaymentProofFields` de `PaymentProofDialog` sem alterar os testes existentes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
-| TASK-536 | Acrescentar a seção "Pagamento (opcional)" ao `ExpenseForm` com envio em JSON ou multipart (CA-F1 a CA-F7, CA-F10, CA-F11) | frontend | plan.md §6 | nenhum | Pendente |
+| TASK-536 | Acrescentar a seção "Pagamento (opcional)" ao `ExpenseForm` com envio em JSON ou multipart (CA-F1 a CA-F7, CA-F10, CA-F11) | frontend | plan.md §6 | nenhum | Concluída (2026-10-29) |
 | TASK-537 | Dar ao `ExpenseForm` chave estável, trava síncrona, timeout e mensagens de erro (CA-F8, CA-F9, CA-F15 a CA-F17) | frontend | plan.md §6 | nenhum | Pendente |
 | TASK-538 | Acrescentar `canUndoPurchase` ao tipo e `handleUndoPurchase` ao `usePaymentActions` | frontend | plan.md §7 | nenhum | Pendente |
 | TASK-539 | Acrescentar a ação "Desfazer pagamento da compra" ao `ExpenseManager` (CA-F12) | frontend | plan.md §7 | nenhum | Pendente |
@@ -183,6 +183,7 @@ Cada task, antes de integrar: backend, `cd backend && ./vendor/bin/pint --test` 
 - **TASK-536**:
   - `ExpenseForm.test.tsx` ganha: `sends the same JSON as before when the section is empty` (CA-F1, e os testes atuais passam sem edição), `sends descricao_pagamento in JSON when only the note is filled` (CA-F2), `sends multipart with comprovante, payers[] and quotas[i][...] when there is a photo` (CA-F3), `does not send a whitespace-only note` (CA-F4), rótulos distintos e contador (CA-F5), `shows the occurrence text per type and the fixed warning, with no confirmation step` (CA-F6), `enables the section for another payer and says it is in their name` (CA-F7), foto fora do limite ou que não é imagem avisa antes de enviar (CA-F10) e `no capture on the file input` (CA-F11); a seção é usável em 360 px.
   - Foto escolhida e depois removida volta a enviar JSON, sem `comprovante`.
+  - O texto de ocorrência, o "em nome de {Pagador}" e o aviso do fechamento do ciclo aparecem quando há foto ou descrição não vazia; com a seção vazia só há o convite a registrar o pagamento. O "usável em 360 px" (CA-F11) é verificado no navegador, na TASK-544; o teste automatizado cobre o `capture`.
 - **TASK-537**:
   - `ExpenseForm.test.tsx` ganha: `keeps fields, photo and key after 422, 413, 409, 500, network error and timeout` (CA-F8, `trackEvent` não chamado), `a double click sends one request` (CA-F9, trava síncrona), `the key is the same after editing and resending` (CA-F15), `timeout message asks to check the list` (CA-F16) e `body always carries client_request_id` em JSON e em multipart (CA-F17).
   - A requisição usa `timeout: EXPENSE_SAVE_TIMEOUT_MS`; a chave é gerada uma vez por `useRef`.
