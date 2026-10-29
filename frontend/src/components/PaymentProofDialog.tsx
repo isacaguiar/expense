@@ -10,13 +10,13 @@ import {
   DialogContentText,
   DialogTitle,
   FormControlLabel,
-  Link as MuiLink,
-  TextField
+  Link as MuiLink
 } from '@mui/material';
-import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
+import PaymentProofFields, { NOTE_MAX_LENGTH } from './PaymentProofFields';
 
-/** Limite da descrição; o servidor valida o mesmo valor (`max:500`). */
-export const NOTE_MAX_LENGTH = 500;
+// Continua exportado daqui para quem já importa do diálogo; a definição vive em
+// `PaymentProofFields`, que o cadastro de despesa também usa (sem import circular).
+export { NOTE_MAX_LENGTH };
 
 type CanConfirmInput = {
   requirePhoto: boolean;
@@ -156,8 +156,7 @@ const PaymentProofDialog: React.FC<PaymentProofDialogProps> = ({
     onConfirm({ file, note: note.trim(), ...(editing ? { removeProof } : {}) });
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const chosen = e.target.files?.[0] ?? null;
+  const handleFileChange = (chosen: File | null) => {
     setFile(chosen);
     // Escolher uma foto nova e remover a atual não se combinam: o backend recusa.
     if (chosen) setRemoveProof(false);
@@ -196,30 +195,14 @@ const PaymentProofDialog: React.FC<PaymentProofDialogProps> = ({
           </Box>
         )}
 
-        <Button variant="outlined" component="label" fullWidth startIcon={<PhotoCameraOutlinedIcon />}>
-          {file ? file.name : photoLabel}
-          {/* Sem `capture`: no Safari do iOS ele abre só a câmera, sem biblioteca de fotos nem
-              arquivos (docs/bugfix/concluidos/202610/20261027-comprovante-iphone-so-camera.md). */}
-          <input
-            key={inputKey}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={handleFileChange}
-          />
-        </Button>
-
-        <TextField
-          label={requirePhoto ? 'Descrição (opcional)' : 'Descrição'}
-          value={note}
-          onChange={e => setNote(e.target.value)}
-          multiline
-          minRows={2}
-          maxRows={5}
-          fullWidth
-          margin="normal"
-          inputProps={{ maxLength: NOTE_MAX_LENGTH }}
-          helperText={`${note.length}/${NOTE_MAX_LENGTH}`}
+        <PaymentProofFields
+          file={file}
+          onFileChange={handleFileChange}
+          note={note}
+          onNoteChange={setNote}
+          photoLabel={photoLabel}
+          noteLabel={requirePhoto ? 'Descrição (opcional)' : 'Descrição'}
+          inputKey={inputKey}
         />
 
         {error && (

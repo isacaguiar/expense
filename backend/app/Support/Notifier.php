@@ -6,6 +6,7 @@ use App\Models\Expense;
 use App\Models\Group;
 use App\Models\Notification;
 use App\Models\Quota;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 
@@ -88,17 +89,54 @@ class Notifier
     }
 
     /**
+     * Outra pessoa registrou o pagamento da despesa em nome do credor, no próprio
+     * cadastro (`ExpenseController@store`, feature
+     * 20261027-pagamento-no-cadastro-despesa, D4) → avisa o credor, só quando
+     * quem registrou não foi ele mesmo (se foi, ele já sabe). `$quotasCount` é
+     * quantas quotas ficaram pagas (uma compra parcelada paga todas de uma vez).
+     */
+    public static function expensePaidOnBehalf(Expense $expense, int $quotasCount): void
+    {
+        self::guard('expense_paid_on_behalf', function () use ($expense, $quotasCount) {
+            $recipients = collect([$expense->user_payer_id])
+                ->reject(fn ($id) => $id === $expense->user_creator_id);
+
+            if ($recipients->isEmpty()) {
+                return;
+            }
+
+            $expense->loadMissing('creator', 'group');
+
+            self::fanOut($recipients, 'expense_paid_on_behalf', $expense->group_id, [
+                'actorName' => $expense->creator?->name,
+                'groupId' => $expense->group_id,
+                'groupName' => $expense->group?->name,
+                'expenseId' => $expense->id,
+                'expenseDescription' => $expense->description,
+                'quotasCount' => $quotasCount,
+            ]);
+        });
+    }
+
+    /**
      * O credor marcou a ocorrência de uma despesa como paga
      * (`ExpenseController@pay`) → avisa os pagadores dela, menos o próprio
-     * credor.
+     * credor. `$amount` é opcional: o cadastro de uma compra parcelada paga todas
+     * as parcelas de uma vez e avisa uma só vez, com o valor da compra inteira
+     * (feature 20261027-pagamento-no-cadastro-despesa, R21); sem ele vale o valor
+     * da quota.
+     *
+     * `$actor` é quem registrou o pagamento quando não foi o credor (cadastro em
+     * nome de outra pessoa, mesma feature, D4): o aviso leva o nome dele, e ele
+     * não recebe o aviso do que fez. Sem `$actor` o autor é o credor, como em `pay()`.
      */
-    public static function expensePaid(Expense $expense, Quota $quota): void
+    public static function expensePaid(Expense $expense, Quota $quota, float|string|null $amount = null, ?User $actor = null): void
     {
-        self::guard('expense_paid', function () use ($expense, $quota) {
+        self::guard('expense_paid', function () use ($expense, $quota, $amount, $actor) {
             $expense->loadMissing('payers', 'payer', 'group');
 
             $recipients = $expense->payers
-                ->reject(fn ($u) => $u->id === $expense->user_payer_id)
+                ->reject(fn ($u) => $u->id === $expense->user_payer_id || $u->id === $actor?->id)
                 ->pluck('id');
 
             if ($recipients->isEmpty()) {
@@ -106,12 +144,12 @@ class Notifier
             }
 
             self::fanOut($recipients, 'expense_paid', $expense->group_id, [
-                'actorName' => $expense->payer?->name,
+                'actorName' => ($actor ?? $expense->payer)?->name,
                 'groupId' => $expense->group_id,
                 'groupName' => $expense->group?->name,
                 'expenseId' => $expense->id,
                 'expenseDescription' => $expense->description,
-                'amount' => self::amount($quota->value_quota),
+                'amount' => self::amount($amount ?? $quota->value_quota),
                 'cycleLabel' => self::cycleLabel($quota->date_expected),
             ]);
         });

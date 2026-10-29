@@ -44,6 +44,7 @@ type SummaryExpenseFixture = {
   totalValue?: number;
   userPayerId?: number;
   userCreatorId?: number;
+  canUndoPurchase?: boolean;
 };
 
 const CURRENT_USER_ID = 500;
@@ -1338,6 +1339,203 @@ describe('ExpenseManager - marcar como paga / desfazer pagamento', () => {
     await payThroughDialog(userEvent.setup());
 
     expect(await screen.findByText('Não é possível alterar dados de uma competência já fechada.')).toBeInTheDocument();
+  });
+});
+
+// Compra parcelada registrada já paga no cadastro: a lista só mostra o que o servidor manda
+// (docs/feature/20261027-pagamento-no-cadastro-despesa, CA-F13).
+describe('ExpenseManager - compra paga no cadastro: chip e filtro de Status', () => {
+  const paidPurchase: SummaryExpenseFixture = {
+    id: 80,
+    description: 'Geladeira',
+    value: 100,
+    totalValue: 300,
+    date: '2026-08-10',
+    payerName: 'Isac',
+    paid: true,
+    isFixed: false,
+    expenseType: 'IN_INSTALLMENTS',
+    installmentNumber: 1,
+    installmentsTotal: 3,
+    paymentNote: 'Cartão de crédito',
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+  };
+
+  const pendingExpense: SummaryExpenseFixture = {
+    id: 81,
+    description: 'Mercado',
+    value: 200,
+    date: '2026-08-12',
+    payerName: 'Isac',
+    paid: false,
+    isFixed: false,
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+  };
+
+  const shown = () => ['Geladeira', 'Mercado'].filter(description => screen.queryByText(description) !== null);
+  const statusButton = (name: 'Todas' | 'Pagas' | 'Pendentes') =>
+    within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name });
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    mockGetResponses([paidPurchase, pendingExpense]);
+  });
+
+  it('shows the chip Paga for the purchase and Pendente for the other expense', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+    await screen.findByText('Geladeira');
+
+    expect(screen.getAllByText('Paga')).toHaveLength(1);
+    expect(screen.getAllByText('Pendente')).toHaveLength(1);
+    expect(screen.getByText('Paga').closest('tr')).toHaveTextContent('Geladeira');
+    expect(screen.getByText('Pendente').closest('tr')).toHaveTextContent('Mercado');
+  });
+
+  it('puts the purchase under Pagas and not under Pendentes, and brings it back with Todas', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+    await screen.findByText('Geladeira');
+
+    await user.click(statusButton('Pagas'));
+    expect(shown()).toEqual(['Geladeira']);
+
+    await user.click(statusButton('Pendentes'));
+    expect(shown()).toEqual(['Mercado']);
+
+    await user.click(statusButton('Todas'));
+    expect(shown()).toEqual(['Geladeira', 'Mercado']);
+  });
+});
+
+// Desfazer de uma vez o pagamento de uma compra parcelada registrada no cadastro
+// (docs/feature/20261027-pagamento-no-cadastro-despesa, plan §7, R19, CA-F12).
+describe('ExpenseManager - desfazer pagamento da compra', () => {
+  const purchase: SummaryExpenseFixture = {
+    id: 70,
+    description: 'Geladeira',
+    value: 100,
+    totalValue: 300,
+    date: '2026-08-10',
+    payerName: 'Isac',
+    paid: true,
+    isFixed: false,
+    expenseType: 'IN_INSTALLMENTS',
+    installmentNumber: 1,
+    installmentsTotal: 3,
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+    canUndoPurchase: true,
+  };
+
+  const undoAction = () => screen.findByRole('button', { name: 'Desfazer pagamento da compra' });
+
+  const renderManager = () =>
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    vi.mocked(axios.post).mockReset();
+    vi.mocked(axios.post).mockResolvedValue({ data: {} });
+  });
+
+  it('shows the undo-purchase action only when the server says so', async () => {
+    mockGetResponses([purchase]);
+    renderManager();
+
+    expect(await undoAction()).toBeInTheDocument();
+    // Ao lado do "Desfazer pagamento" da parcela, que segue como sempre.
+    expect(screen.getByRole('button', { name: 'Desfazer pagamento' })).toBeInTheDocument();
+  });
+
+  it('does not show it when the server did not send canUndoPurchase', async () => {
+    mockGetResponses([{ ...purchase, canUndoPurchase: undefined }]);
+    renderManager();
+
+    await screen.findByText('Geladeira');
+    expect(screen.queryByRole('button', { name: 'Desfazer pagamento da compra' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Desfazer pagamento' })).toBeInTheDocument();
+  });
+
+  it('hides it for other users', async () => {
+    mockGetResponses([{ ...purchase, userPayerId: CURRENT_USER_ID + 1 }]);
+    renderManager();
+
+    await screen.findByText('Geladeira');
+    expect(screen.queryByRole('button', { name: 'Desfazer pagamento da compra' })).not.toBeInTheDocument();
+  });
+
+  it('asks for confirmation, saying what will happen, before calling the route', async () => {
+    mockGetResponses([purchase]);
+    renderManager();
+
+    await userEvent.click(await undoAction());
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Desfazer pagamento da compra')).toBeInTheDocument();
+    expect(dialog).toHaveTextContent('Todas as parcelas de "Geladeira" voltarão a ficar pendentes');
+    expect(dialog).toHaveTextContent('o comprovante e a descrição do pagamento serão removidos');
+    expect(dialog).toHaveTextContent('Depois que o ciclo da compra encerrar, isto não poderá mais ser feito.');
+    expect(axios.post).not.toHaveBeenCalled();
+
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(axios.post).not.toHaveBeenCalled();
+  });
+
+  it('calls POST .../undo-purchase after confirming, reloads the list and the chip goes back to Pendente (CA-F12)', async () => {
+    mockGetResponses([purchase]);
+    vi.mocked(axios.post).mockImplementation(async () => {
+      // O servidor já limpou as parcelas: o recarregamento traz a compra pendente e sem a ação.
+      mockGetResponses([{ ...purchase, paid: false, canUndoPurchase: undefined }]);
+      return { data: {} };
+    });
+    renderManager();
+
+    expect(await screen.findByText('Paga')).toBeInTheDocument();
+
+    await userEvent.click(await undoAction());
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desfazer' }));
+
+    await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(axios.post).mock.calls[0][0]).toMatch(/\/api\/expenses\/70\/undo-purchase$/);
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(await screen.findByText('Pagamento da compra desfeito.')).toBeInTheDocument();
+    expect(await screen.findByText('Pendente')).toBeInTheDocument();
+    expect(screen.queryByText('Paga')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Desfazer pagamento da compra' })).not.toBeInTheDocument();
+  });
+
+  it('shows the reason the server gave when the undo is refused, and keeps the list as it was', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    mockGetResponses([purchase]);
+    vi.mocked(axios.post).mockRejectedValue({
+      response: { data: { error: 'O ciclo desta compra já foi encerrado; o pagamento não pode mais ser desfeito.' } },
+    });
+    renderManager();
+
+    await userEvent.click(await undoAction());
+    await userEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desfazer' }));
+
+    expect(
+      await screen.findByText('O ciclo desta compra já foi encerrado; o pagamento não pode mais ser desfeito.')
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Pagamento da compra desfeito.')).not.toBeInTheDocument();
+    expect(screen.getByText('Paga')).toBeInTheDocument();
   });
 });
 

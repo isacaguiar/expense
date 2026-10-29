@@ -2,22 +2,27 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\PurchaseUndoRefused;
 use App\Models\Expense;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Services\CycleSummaryService;
+use App\Services\ExpensePaymentService;
 use App\Support\BillingCycle;
 use App\Support\ClosingBreakdown;
+use App\Support\ExpenseRequestFingerprint;
 use App\Support\InstallmentSchedule;
 use App\Support\Notifier;
 use App\Support\ProofStorage;
 use App\Support\WhatsApp\WhatsAppNotifier;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -461,7 +466,32 @@ class ExpenseController extends Controller
             'quotas.*.date_expected' => 'required|date',
             'quotas.*.number' => 'required|integer',
             'quotas.*.value_quota' => 'required|numeric|min:0',
+            // Pagamento registrado junto do cadastro (feature
+            // 20261027-pagamento-no-cadastro-despesa): foto e descrição são opcionais e
+            // independentes; `descricao_pagamento` NÃO é a `description` da despesa. Trim
+            // e "" → null vêm dos middlewares globais (`Http/Kernel.php`), que já tratam
+            // NBSP, U+200B e U+FEFF.
+            'comprovante' => 'nullable|image|max:5120',
+            'descricao_pagamento' => 'nullable|string|max:500',
+            'client_request_id' => 'nullable|uuid',
         ]);
+
+        // Idempotência (feature 20261027-pagamento-no-cadastro-despesa, D7): o cliente manda uma
+        // chave por formulário. Reenvio idêntico devolve a despesa que já existe, antes de qualquer
+        // regra de competência e antes de gravar arquivo; a mesma chave com outros dados é 409.
+        $requestKey = $request->input('client_request_id');
+        $fingerprint = null;
+
+        if ($requestKey) {
+            $fingerprint = ExpenseRequestFingerprint::make(
+                $request->only(['group_id', 'date_payment', 'description', 'expense_type', 'installments', 'total_value', 'user_payer_id', 'payers', 'quotas', 'descricao_pagamento']),
+                $request->hasFile('comprovante') ? hash_file('sha256', $request->file('comprovante')->getRealPath()) : null
+            );
+
+            if ($existing = $this->expenseByRequestKey($requestKey)) {
+                return $this->replayResponse($existing, $fingerprint);
+            }
+        }
 
         // `quotas` é opcional: quem envia (o web hoje) vale como sempre; sem ele, o
         // servidor gera as parcelas com o mesmo rateio do web — À Vista e Fixa têm uma
@@ -526,6 +556,55 @@ class ExpenseController extends Controller
             }
         }
 
+        // Pagamento pedido = há foto OU descrição do pagamento não vazia (R1/R2). Foto
+        // inválida já deu 422 na validação acima: nunca é descartada para pagar só com o texto.
+        $paymentNote = $request->input('descricao_pagamento');
+        $paymentRequested = $request->hasFile('comprovante') || filled($paymentNote);
+
+        // `quotas` do cliente não podem contornar as regras do pagamento (achados N2 e N3 da
+        // revisão de segurança): À Vista e Fixa têm uma quota só, na data informada (senão a
+        // "ocorrência inicial" paga seria outra, e a trava de competência futura olharia a
+        // errada), e a Parcelada respeita o mesmo teto de parcelas do servidor. Sem pagamento
+        // pedido o contrato de `quotas` segue como sempre.
+        if ($paymentRequested) {
+            if ($request->expense_type === 'IN_INSTALLMENTS') {
+                if (count($quotas) > InstallmentSchedule::MAX_INSTALLMENTS) {
+                    return response()->json([
+                        'error' => 'Com pagamento no cadastro, o máximo é de '.InstallmentSchedule::MAX_INSTALLMENTS.' parcelas.',
+                    ], 422);
+                }
+            } elseif (
+                count($quotas) !== 1
+                || ! Carbon::parse($quotas[array_key_first($quotas)]['date_expected'])->isSameDay(Carbon::parse($request->date_payment))
+            ) {
+                return response()->json([
+                    'error' => 'Com pagamento no cadastro, uma despesa à vista ou fixa tem uma única quota, na data informada.',
+                ], 422);
+            }
+        }
+
+        // Não existe pagamento antecipado: `pay()` só alcança a competência vigente ou
+        // passada, então a ocorrência inicial não pode ser futura (R6). Recusa antes de
+        // gravar qualquer coisa, para nunca ficar "despesa criada sem o pagamento pedido".
+        if ($paymentRequested && $this->payments()->isFuture(
+            $group,
+            $this->payments()->earliestOccurrence($request->expense_type, $request->date_payment, $quotas)
+        )) {
+            return response()->json([
+                'error' => 'Não é possível registrar o pagamento de uma competência que ainda não começou. Retire o comprovante e a descrição do pagamento ou use uma data de hoje ou anterior.',
+            ], 422);
+        }
+
+        // A foto é gravada depois de todas as recusas, e antes da transação: se o banco
+        // falhar, o `catch` abaixo a remove.
+        $proofPath = $request->hasFile('comprovante')
+            ? ProofStorage::store($request->file('comprovante'), $group->id)
+            : null;
+        $paidAttributes = $paymentRequested
+            ? $this->payments()->paidAttributes((int) $request->user_payer_id, $proofPath, $paymentNote)
+            : null;
+        $paidQuotas = [];
+
         DB::beginTransaction();
 
         try {
@@ -540,6 +619,8 @@ class ExpenseController extends Controller
                 'user_creator_id' => auth()->id(),
                 'user_payer_id' => $request->user_payer_id,
                 'deleted' => false,
+                'client_request_id' => $requestKey ?: null,
+                'request_fingerprint' => $fingerprint,
             ]);
 
             // Pagadores
@@ -568,34 +649,172 @@ class ExpenseController extends Controller
                     $bornPaidCount++;
                 }
 
-                $expense->quotas()->create([
+                // Pagamento registrado no cadastro (feature 20261027-pagamento-no-cadastro-despesa,
+                // R7): À Vista e Fixa têm uma quota só; a Parcelada é uma compra paga uma vez
+                // (cartão), então TODAS as parcelas ficam pagas, inclusive as futuras. A quota
+                // `born_paid` (parcela retroativa de ciclo já fechado) segue como sempre e
+                // nunca recebe o pagamento.
+                $payNow = $paymentRequested && ! $bornPaid;
+
+                $quota = $expense->quotas()->create([
                     'date_expected' => $quotaData['date_expected'],
                     'number' => $quotaData['number'],
+                    'value_quota' => $quotaData['value_quota'],
+                ] + ($payNow ? $paidAttributes : [
                     'paid' => $bornPaid,
                     'paid_at' => $bornPaid ? now() : null,
                     'paid_by' => $bornPaid ? $request->user_payer_id : null,
                     'born_paid' => $bornPaid,
-                    'value_quota' => $quotaData['value_quota'],
-                ]);
+                ]));
+
+                if ($payNow) {
+                    $paidQuotas[] = $quota;
+                }
             }
 
             DB::commit();
-
-            // Fora da transação: uma falha aqui não desfaz a despesa criada.
-            Notifier::expenseCreated($expense);
-
-            // Parcela retroativa nasceu paga em nome do credor sem ele ter
-            // registrado a despesa — avisa ele (docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimento.md).
-            if ($bornPaidCount > 0) {
-                Notifier::expenseBornPaid($expense, $bornPaidCount);
-            }
-
-            return response()->json(['message' => 'Despesa criada com sucesso', 'expense_id' => $expense->id], 201);
-
         } catch (\Throwable $e) {
             DB::rollBack();
 
-            return response()->json(['error' => 'Erro ao criar despesa', 'details' => $e->getMessage()], 500);
+            // O banco não ficou com a despesa: a foto recém-gravada não pode ficar órfã.
+            ProofStorage::delete($proofPath);
+
+            // Corrida: outra requisição com a mesma chave confirmou entre a nossa busca e o
+            // nosso INSERT. A violação de unicidade vira "devolve a que existe", nunca um 500.
+            if ($requestKey && $this->isDuplicateRequestKey($e) && ($existing = $this->expenseByRequestKey($requestKey))) {
+                return $this->replayResponse($existing, $fingerprint);
+            }
+
+            // A mensagem da exceção fica no log e nunca na resposta (item 080 do backlog;
+            // feature 20261027-pagamento-no-cadastro-despesa, D10).
+            Log::error('Erro ao criar despesa', ['exception' => $e]);
+
+            return response()->json(['error' => 'Erro ao criar despesa'], 500);
+        }
+
+        // Daqui em diante a despesa já existe: nenhum passo pode virar erro para o cliente,
+        // senão a tela diria "falhou" com a despesa criada (R11). Cada um vai isolado.
+        $this->afterCommit('aviso de despesa criada', fn () => Notifier::expenseCreated($expense));
+
+        // Parcela retroativa nasceu paga em nome do credor sem ele ter registrado a
+        // despesa — avisa ele (docs/backlog/expense-parcela-retroativa-paid-by-sem-consentimento.md).
+        if ($bornPaidCount > 0) {
+            $this->afterCommit('aviso de parcela já paga', fn () => Notifier::expenseBornPaid($expense, $bornPaidCount));
+        }
+
+        // O cadastro NÃO sela o ciclo (D8): a selagem continua nos gatilhos de hoje (`pay`,
+        // `confirmSettlement`, `close` e a leitura de `summary()`), e o pagamento não quita
+        // nenhum acerto entre membros (R14).
+        if ($paidQuotas !== []) {
+            $this->noticePaymentRegistered($expense, $paidQuotas, $proofPath !== null);
+        }
+
+        return response()->json([
+            'message' => 'Despesa criada com sucesso',
+            'expense_id' => $expense->id,
+            'payment_registered' => $paidQuotas !== [],
+        ], 201);
+    }
+
+    /**
+     * Avisos de um cadastro com pagamento (feature 20261027-pagamento-no-cadastro-despesa, R21):
+     * UM conjunto por cadastro, nunca um por parcela. `expense_paid` leva o valor das quotas
+     * pagas somadas (a compra inteira, na Parcelada); o credor é avisado quando outra pessoa
+     * registrou o pagamento em nome dele; e o WhatsApp do comprovante sai uma vez, com a
+     * primeira parcela, depois da resposta, como em `pay()`.
+     *
+     * Quando quem cadastra não é o credor, os demais devedores são avisados em nome de quem
+     * registrou (o credor não pagou nada no app) e o WhatsApp do comprovante não sai, porque
+     * o texto dele diz "<pagador> pagou" (achado N1 da revisão de segurança, TASK-545).
+     *
+     * @param  array<int, Quota>  $paidQuotas
+     */
+    private function noticePaymentRegistered(Expense $expense, array $paidQuotas, bool $hasProof): void
+    {
+        $first = collect($paidQuotas)->sortBy('date_expected')->first();
+        $total = round(collect($paidQuotas)->sum(fn (Quota $quota) => (float) $quota->value_quota), 2);
+        $onBehalf = $expense->user_creator_id !== $expense->user_payer_id;
+        $actor = $onBehalf ? $expense->creator : null;
+
+        $this->afterCommit('aviso de despesa paga', fn () => Notifier::expensePaid($expense, $first, $total, $actor));
+        $this->afterCommit('aviso ao credor', fn () => Notifier::expensePaidOnBehalf($expense, count($paidQuotas)));
+
+        if ($hasProof && ! $onBehalf) {
+            $this->afterCommit('WhatsApp do comprovante', fn () => $this->dispatchProofNotice($first->id));
+        }
+    }
+
+    /**
+     * Avisa os pagadores por WhatsApp depois da resposta (no-op se a feature está desligada),
+     * como `pay()`. O fechamento fica num método próprio e não dentro de outra função: o
+     * serializador de closures do `dispatch` pegaria a função de fora e levaria o `$this` do
+     * controller junto (estouro de memória).
+     */
+    private function dispatchProofNotice(int $quotaId): void
+    {
+        dispatch(function () use ($quotaId) {
+            $quota = Quota::with('expense.payers', 'expense.payer')->find($quotaId);
+
+            if ($quota) {
+                WhatsAppNotifier::expenseProofPaid($quota);
+            }
+        })->afterResponse();
+    }
+
+    /** A despesa que o usuário autenticado já cadastrou com esta chave, ou null. */
+    private function expenseByRequestKey(string $requestKey): ?Expense
+    {
+        return Expense::where('user_creator_id', auth()->id())
+            ->where('client_request_id', $requestKey)
+            ->first();
+    }
+
+    /**
+     * Resposta de um cadastro cuja chave já foi usada. Despesa apagada ou dados diferentes
+     * são 409 (nunca recria nem sobrescreve); dados iguais são um reenvio e devolvem a
+     * despesa que existe, sem gravar arquivo, criar quotas nem notificar.
+     */
+    private function replayResponse(Expense $existing, string $fingerprint): \Illuminate\Http\JsonResponse
+    {
+        if ($existing->deleted) {
+            return response()->json([
+                'error' => 'Este cadastro já foi processado e a despesa foi apagada. Confira a lista antes de tentar de novo.',
+            ], 409);
+        }
+
+        if (! hash_equals((string) $existing->request_fingerprint, $fingerprint)) {
+            return response()->json([
+                'error' => 'Esta despesa já foi cadastrada com outros dados. Confira a lista antes de tentar de novo.',
+            ], 409);
+        }
+
+        return response()->json([
+            'message' => 'Despesa já cadastrada',
+            'expense_id' => $existing->id,
+            'payment_registered' => $existing->quotas()->where('paid', true)->where('born_paid', false)->exists(),
+            'already_existed' => true,
+        ]);
+    }
+
+    /** Se a exceção é a violação do índice único (criador, chave) de `ex_expenses`. */
+    private function isDuplicateRequestKey(\Throwable $e): bool
+    {
+        return $e instanceof QueryException
+            && ($e->errorInfo[1] ?? null) === 1062
+            && str_contains($e->getMessage(), 'ex_expenses_creator_request_unique');
+    }
+
+    /**
+     * Executa um passo que vem DEPOIS do commit do `store()` (aviso, WhatsApp,
+     * limpeza). Falha vira `Log::warning` e a resposta de sucesso segue: a despesa
+     * já está criada, e o cliente não pode ver erro por causa de um aviso.
+     */
+    private function afterCommit(string $step, callable $fn): void
+    {
+        try {
+            $fn();
+        } catch (\Throwable $e) {
+            Log::warning("store: falha no passo pós-commit ({$step})", ['exception' => $e->getMessage()]);
         }
     }
 
@@ -711,10 +930,45 @@ class ExpenseController extends Controller
                 'settled' => $sealed,
             ],
             'totals' => $summary['totals'],
-            'expenses' => $summary['expenses'],
+            'expenses' => $this->withCanUndoPurchase($group, $summary['expenses']),
             'balances' => $summary['balances'],
             'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements']),
         ]);
+    }
+
+    /**
+     * Acrescenta `canUndoPurchase: true` às entradas de uma compra parcelada paga cujo desfazer
+     * ainda é possível para o usuário autenticado (feature 20261027-pagamento-no-cadastro-despesa,
+     * plan.md §5, P5): ele é o credor, a compra tem quota paga e não `born_paid`, e nenhuma delas
+     * está em ciclo encerrado. A chave só existe quando é verdadeira (ausente = falso), e só na
+     * resposta: nunca entra em `compute()` nem no snapshot, que seguem como estavam (R14).
+     *
+     * @param  array<int, array<string, mixed>>  $expenses
+     * @return array<int, array<string, mixed>>
+     */
+    private function withCanUndoPurchase(Group $group, array $expenses): array
+    {
+        $userId = auth()->id();
+
+        $isCandidate = fn (array $expense) => ($expense['expenseType'] ?? null) === 'IN_INSTALLMENTS'
+            && ! empty($expense['paid'])
+            && empty($expense['bornPaid'])
+            && ($expense['userPayerId'] ?? null) === $userId;
+
+        $candidateIds = collect($expenses)->filter($isCandidate)->pluck('id')->unique()->values()->all();
+
+        if ($candidateIds === []) {
+            return $expenses;
+        }
+
+        $undoable = $this->payments()->undoableExpenseIds($group, $candidateIds);
+
+        return array_map(
+            fn (array $expense) => $isCandidate($expense) && in_array($expense['id'], $undoable, true)
+                ? $expense + ['canUndoPurchase' => true]
+                : $expense,
+            $expenses
+        );
     }
 
     /**
@@ -1113,11 +1367,13 @@ class ExpenseController extends Controller
         // Foto trocada num `pay()` repetido: o arquivo anterior sai do disco só
         // depois de o banco apontar para o novo (nunca perde o comprovante se a
         // gravação falhar). Sem isto o antigo ficava órfão no disco privado
-        // (feature `20261022-editar-comprovante-depois-de-paga`, R9).
+        // (feature `20261022-editar-comprovante-depois-de-paga`, R9). Só sai se
+        // nenhuma outra quota o usa: uma compra paga no cadastro aponta várias
+        // quotas para o mesmo arquivo (feature `20261027-pagamento-no-cadastro-despesa`, R18).
         if (array_key_exists('payment_proof_path', $update)
             && $previousProofPath
             && $previousProofPath !== $update['payment_proof_path']) {
-            ProofStorage::delete($previousProofPath);
+            ProofStorage::deleteIfUnreferenced($previousProofPath);
         }
 
         $this->sealCycleIfSettled($group, $group->id, $cycle['start'], $cycle['end']);
@@ -1185,7 +1441,7 @@ class ExpenseController extends Controller
             return response()->json(['error' => 'Esta despesa não está paga nessa competência.'], 422);
         }
 
-        ProofStorage::delete($quota->payment_proof_path);
+        $previousProofPath = $quota->payment_proof_path;
 
         $quota->update([
             'paid' => false,
@@ -1195,9 +1451,47 @@ class ExpenseController extends Controller
             'payment_note' => null,
         ]);
 
+        // O arquivo só sai do disco depois de o banco deixar de apontar para ele, e
+        // só se nenhuma outra quota da compra o usa (feature
+        // `20261027-pagamento-no-cadastro-despesa`, R18).
+        ProofStorage::deleteIfUnreferenced($previousProofPath);
+
         $this->unsealIfBroken($group, $group->id, $cycle['start'], $cycle['end']);
 
         return response()->json($quota->fresh());
+    }
+
+    /**
+     * Desfaz de uma vez o pagamento de uma compra parcelada paga no cadastro (feature
+     * 20261027-pagamento-no-cadastro-despesa, R19 e D11). Só o credor, e só enquanto nenhuma
+     * parcela paga estiver em ciclo encerrado; depois disso a compra é histórico e nada muda.
+     * O `unpay` por parcela segue como sempre e não alcança parcelas futuras; este alcança.
+     *
+     * O arquivo de comprovante, compartilhado pelas parcelas, só sai do disco depois do commit
+     * e só se nenhuma outra quota o usa (R18).
+     */
+    public function undoPurchase($expenseId)
+    {
+        $expense = $this->findExpenseForMember($expenseId);
+
+        if (auth()->id() !== $expense->user_payer_id) {
+            abort(403, 'Só o credor pode desfazer o pagamento desta compra.');
+        }
+
+        try {
+            $result = $this->payments()->undoPurchase($expense);
+        } catch (PurchaseUndoRefused $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        foreach ($result['paths'] as $path) {
+            ProofStorage::deleteIfUnreferenced($path);
+        }
+
+        return response()->json([
+            'message' => 'Pagamento da compra desfeito.',
+            'quotas_cleared' => $result['cleared'],
+        ]);
     }
 
     /**
@@ -1314,11 +1608,12 @@ class ExpenseController extends Controller
         [$quota, $previousPath, $update] = $outcome;
 
         // Só depois do commit: se a transação desse rollback, o arquivo antigo
-        // continuaria referenciado e não pode ter sido apagado.
+        // continuaria referenciado e não pode ter sido apagado. E só se nenhuma
+        // outra quota o usa (compra paga no cadastro, R18).
         if (array_key_exists('payment_proof_path', $update)
             && $previousPath
             && $previousPath !== $update['payment_proof_path']) {
-            ProofStorage::delete($previousPath);
+            ProofStorage::deleteIfUnreferenced($previousPath);
         }
 
         return response()->json($quota->fresh());
@@ -1460,6 +1755,16 @@ class ExpenseController extends Controller
     private function cycles(): CycleSummaryService
     {
         return app(CycleSummaryService::class);
+    }
+
+    /**
+     * Regras do pagamento registrado no cadastro (feature
+     * 20261027-pagamento-no-cadastro-despesa). Resolvido pelo container, sem
+     * construtor, pelo mesmo motivo de `cycles()`.
+     */
+    private function payments(): ExpensePaymentService
+    {
+        return app(ExpensePaymentService::class);
     }
 
     /**

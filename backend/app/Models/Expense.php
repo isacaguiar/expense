@@ -23,9 +23,24 @@ class Expense extends Model
         'user_payer_id',
         'deleted',
         'fixed_recurrence_ends_at',
+        'client_request_id',
+        'request_fingerprint',
+    ];
+
+    /**
+     * Só servem à idempotência do cadastro (`store()`); o cliente não precisa
+     * delas, e a impressão digital não deve sair da API.
+     */
+    protected $hidden = [
+        'client_request_id',
+        'request_fingerprint',
     ];
 
     protected $casts = [
+        // Num `multipart` o valor chega como string, e o `Notifier` compara ids com `===`.
+        'group_id' => 'integer',
+        'user_creator_id' => 'integer',
+        'user_payer_id' => 'integer',
         'create_date' => 'datetime',
         'date_payment' => 'date',
         'total_value' => 'decimal:2',

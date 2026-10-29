@@ -205,6 +205,35 @@ describe('PendingCyclesList', () => {
       expect(within(cards()[0]).getByText('R$ 120,00 de R$ 300,00 pagos')).toBeInTheDocument();
     });
 
+    // Compra parcelada registrada já paga no cadastro (docs/feature/20261027-pagamento-no-cadastro-despesa,
+    // CA-F13): a parcela do ciclo conta como paga no `totals.paid` que o servidor manda.
+    it('shows the paid installment of a purchase registered as paid, next to a pending expense', async () => {
+      // Geladeira 3 x 100,00 paga no cadastro (parcela do ciclo: 100,00) + Mercado 200,00 pendente.
+      await renderList([pendingCycle({ totals: { total: 300, paid: 100, pending: 200 }, pending_expenses_count: 1 })]);
+
+      const bar = within(cards()[0]).getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '33');
+      expect(bar).toHaveAccessibleName('Pago: 33% do total');
+      expect(within(cards()[0]).getByText('R$ 100,00 de R$ 300,00 pagos')).toBeInTheDocument();
+      expect(within(cards()[0]).getByText('1 despesa pendente')).toBeInTheDocument();
+    });
+
+    it('fills the bar and lists no pending expense when the only expense is a purchase registered as paid', async () => {
+      await renderList([
+        pendingCycle({
+          totals: { total: 100, paid: 100, pending: 0 },
+          pending_expenses_count: 0,
+          settlements_total: 0,
+          settlements_confirmed: 0,
+          awaiting_seal: true,
+        }),
+      ]);
+
+      expect(within(cards()[0]).getByRole('progressbar')).toHaveAttribute('aria-valuenow', '100');
+      expect(within(cards()[0]).getByText('R$ 100,00 de R$ 100,00 pagos')).toBeInTheDocument();
+      expect(within(cards()[0]).getByText('Nenhuma despesa pendente')).toBeInTheDocument();
+    });
+
     it('keeps the bar empty, not NaN, when the cycle has nothing to divide', async () => {
       await renderList([pendingCycle({ totals: { total: 0, paid: 0, pending: 0 } })]);
 
