@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import { trackEvent } from '../analytics/trackEvent';
@@ -20,6 +20,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { buildInstallmentQuotas, InstallmentQuota } from '../utils/installments';
 import UserAvatar from '../components/UserAvatar';
+import PaymentProofFields from '../components/PaymentProofFields';
+import { buildExpenseBody, proofFileProblem, type ExpensePayload } from '../utils/expenseRequest';
+import { describePaymentOccurrence } from '../utils/paymentOccurrence';
+import { newRequestKey } from '../utils/requestKey';
 import type { ExpenseType } from '../types/expense';
 import type { GroupMember } from '../types/group';
 
@@ -41,6 +45,20 @@ const ExpenseForm: React.FC = () => {
   const [participantIds, setParticipantIds] = useState<number[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
+
+  // Pagamento registrado no cadastro (docs/feature/20261027-pagamento-no-cadastro-despesa):
+  // foto e/ou descrição do pagamento, ambas opcionais. `proofInputKey` recria o <input>
+  // nativo quando a foto é descartada, para escolher o mesmo arquivo de novo.
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [proofInputKey, setProofInputKey] = useState<number>(0);
+  const [proofProblem, setProofProblem] = useState<string | null>(null);
+  const [paymentNote, setPaymentNote] = useState<string>('');
+
+  // Chave de idempotência do cadastro: uma por tela aberta, enviada em todo envio.
+  const requestKeyRef = useRef<string | null>(null);
+  if (requestKeyRef.current === null) {
+    requestKeyRef.current = newRequestKey();
+  }
 
   useEffect(() => {
     if (!groupId) return;
@@ -69,6 +87,32 @@ const ExpenseForm: React.FC = () => {
     setParticipantIds(prev =>
       prev.includes(memberId) ? prev.filter(id => id !== memberId) : [...prev, memberId]
     );
+  };
+
+  const handleProofChange = (chosen: File | null) => {
+    if (chosen === null) {
+      setProofFile(null);
+      setProofProblem(null);
+      return;
+    }
+
+    const problem = proofFileProblem(chosen);
+
+    if (problem) {
+      // O arquivo recusado não fica escolhido; uma foto válida anterior continua valendo.
+      setProofProblem(problem);
+      setProofInputKey(key => key + 1);
+      return;
+    }
+
+    setProofProblem(null);
+    setProofFile(chosen);
+  };
+
+  const handleRemoveProof = () => {
+    setProofFile(null);
+    setProofProblem(null);
+    setProofInputKey(key => key + 1);
   };
 
   const handleSave = () => {
@@ -107,7 +151,11 @@ const ExpenseForm: React.FC = () => {
 
     const token = localStorage.getItem('accessToken');
 
-    const payload = {
+    // Descrição só com espaços não é pagamento: o campo nem vai (R2). Com foto, o corpo é
+    // `multipart`; sem foto, o JSON de sempre.
+    const trimmedNote = paymentNote.trim();
+
+    const payload: ExpensePayload = {
       date_payment: date,
       description,
       expense_type: expenseType,
@@ -117,13 +165,15 @@ const ExpenseForm: React.FC = () => {
       user_creator_id: currentUserId,
       user_payer_id: Number(payerId),
       payers: participantIds,
-      quotas
+      quotas,
+      ...(trimmedNote ? { descricao_pagamento: trimmedNote } : {}),
+      client_request_id: requestKeyRef.current as string
     };
 
     setSaving(true);
 
     axios
-      .post(`${API_BASE_URL}/api/expenses`, payload, {
+      .post(`${API_BASE_URL}/api/expenses`, buildExpenseBody(payload, proofFile), {
         headers: { Authorization: token ? `Bearer ${token}` : '' }
       })
       .then(() => {
@@ -139,6 +189,16 @@ const ExpenseForm: React.FC = () => {
       })
       .finally(() => setSaving(false));
   };
+
+  const paymentRequested = proofFile !== null || paymentNote.trim() !== '';
+  const payerMember = members.find(member => String(member.id) === payerId);
+  const occurrence = describePaymentOccurrence({
+    expenseType,
+    installments: parseInt(installmentsCount, 10),
+    date,
+    payerName: payerMember?.name ?? '',
+    isSelf: currentUserId !== null && payerId === String(currentUserId)
+  });
 
   const dateFieldLabel =
     expenseType === 'IN_INSTALLMENTS'
@@ -244,6 +304,53 @@ const ExpenseForm: React.FC = () => {
                   </Box>
                 ))}
               </FormGroup>
+            </Box>
+
+            <Box>
+              <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+                Pagamento (opcional)
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
+                Se esta despesa já foi paga, anexe a foto do comprovante e/ou descreva o pagamento: ela será
+                cadastrada já paga.
+              </Typography>
+
+              <PaymentProofFields
+                file={proofFile}
+                onFileChange={handleProofChange}
+                note={paymentNote}
+                onNoteChange={setPaymentNote}
+                photoLabel="Anexar foto do comprovante"
+                noteLabel="Descrição do pagamento (opcional)"
+                inputKey={proofInputKey}
+                disabled={saving}
+              />
+
+              {proofFile && (
+                <Button size="small" onClick={handleRemoveProof} disabled={saving}>
+                  Remover foto
+                </Button>
+              )}
+
+              {proofProblem && (
+                <Alert severity="warning" role="status" sx={{ mt: 1 }}>
+                  {proofProblem}
+                </Alert>
+              )}
+
+              {paymentRequested && (
+                <Alert severity="info" role="status" sx={{ mt: 1.5 }}>
+                  <Typography variant="body2">{occurrence.summary}</Typography>
+                  {payerMember && occurrence.onBehalf && (
+                    <Typography variant="body2" sx={{ mt: 0.5 }}>
+                      {occurrence.onBehalf}
+                    </Typography>
+                  )}
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    {occurrence.warning}
+                  </Typography>
+                </Alert>
+              )}
             </Box>
 
             <Box display="flex" gap={2} mt={1}>

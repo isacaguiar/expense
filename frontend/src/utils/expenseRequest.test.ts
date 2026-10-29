@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { buildExpenseBody, EXPENSE_SAVE_TIMEOUT_MS, type ExpensePayload } from './expenseRequest';
+import {
+  buildExpenseBody,
+  EXPENSE_SAVE_TIMEOUT_MS,
+  PROOF_MAX_BYTES,
+  proofFileProblem,
+  type ExpensePayload,
+} from './expenseRequest';
 
 const payload = (overrides: Partial<ExpensePayload> = {}): ExpensePayload => ({
   date_payment: '2026-08-10',
@@ -89,6 +95,39 @@ describe('buildExpenseBody', () => {
 
     expect(json.client_request_id).toBeTruthy();
     expect(form.get('client_request_id')).toBe(json.client_request_id);
+  });
+});
+
+describe('proofFileProblem', () => {
+  const file = (type: string, size: number) => {
+    const chosen = new File(['x'], 'comprovante', { type });
+    Object.defineProperty(chosen, 'size', { value: size });
+    return chosen;
+  };
+
+  it('accepts an image of any size up to 5 MB, the limit the server enforces (max:5120 KB)', () => {
+    expect(PROOF_MAX_BYTES).toBe(5 * 1024 * 1024);
+    expect(proofFileProblem(file('image/jpeg', 1))).toBeNull();
+    expect(proofFileProblem(file('image/png', PROOF_MAX_BYTES))).toBeNull();
+  });
+
+  it('warns about a photo over 5 MB', () => {
+    expect(proofFileProblem(file('image/jpeg', PROOF_MAX_BYTES + 1))).toBe(
+      'A foto passa de 5 MB. Escolha uma menor ou reduza a qualidade.'
+    );
+  });
+
+  it('warns about a file that is not an image', () => {
+    expect(proofFileProblem(file('application/pdf', 10))).toBe(
+      'Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.'
+    );
+    expect(proofFileProblem(file('', 10))).toBe('Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.');
+  });
+
+  it('reports the type problem first when a file is both too big and not an image', () => {
+    expect(proofFileProblem(file('video/mp4', PROOF_MAX_BYTES * 3))).toBe(
+      'Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.'
+    );
   });
 });
 
