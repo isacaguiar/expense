@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildExpenseBody,
+  describeSaveError,
   EXPENSE_SAVE_TIMEOUT_MS,
   PROOF_MAX_BYTES,
   proofFileProblem,
@@ -128,6 +129,75 @@ describe('proofFileProblem', () => {
     expect(proofFileProblem(file('video/mp4', PROOF_MAX_BYTES * 3))).toBe(
       'Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.'
     );
+  });
+});
+
+describe('describeSaveError', () => {
+  const failure = (status: number, data: unknown) => ({ response: { status, data } });
+  const CHECK_THE_LIST = 'Confira a lista de despesas antes de tentar de novo';
+  const NO_DUPLICATE = 'sem risco de duplicar';
+
+  it('shows the reason the API gave, as before', () => {
+    expect(describeSaveError(failure(422, { error: 'Não é possível alterar dados de uma competência já fechada.' }))).toBe(
+      'Não é possível alterar dados de uma competência já fechada.'
+    );
+    expect(describeSaveError(failure(500, { error: 'Erro ao criar despesa' }))).toBe('Erro ao criar despesa');
+  });
+
+  it('falls back to the first validation message when the API sends only Laravel "errors"', () => {
+    expect(
+      describeSaveError(failure(422, { message: 'The given data was invalid.', errors: { comprovante: ['O comprovante deve ser uma imagem.'] } }))
+    ).toBe('O comprovante deve ser uma imagem.');
+  });
+
+  it('falls back to the generic text when the API gave no reason', () => {
+    expect(describeSaveError(failure(500, {}))).toBe('Falha ao salvar despesa.');
+    expect(describeSaveError(failure(422, 'não é json'))).toBe('Falha ao salvar despesa.');
+    expect(describeSaveError(undefined)).toContain('Falha ao salvar despesa.');
+  });
+
+  it('has its own text for a photo the server refuses as too large (413), whatever the body', () => {
+    const message = describeSaveError(failure(413, '<html>413 Request Entity Too Large</html>'));
+
+    expect(message).toContain('maior do que o servidor aceita');
+    expect(message).not.toContain('<html>');
+  });
+
+  it('keeps the server reason for a 409, and has a text of its own when there is none', () => {
+    expect(describeSaveError(failure(409, { error: 'Este cadastro já foi processado e a despesa foi apagada.' }))).toBe(
+      'Este cadastro já foi processado e a despesa foi apagada.'
+    );
+    expect(describeSaveError(failure(409, {}))).toContain('outros dados');
+    expect(describeSaveError(failure(409, {}))).toContain(CHECK_THE_LIST);
+  });
+
+  it.each([
+    ['ECONNABORTED', 'timeout of 60000ms exceeded'],
+    ['ETIMEDOUT', 'timeout of 60000ms exceeded'],
+  ])('asks to check the list, and says resending does not duplicate, on a timeout (%s)', (code, message) => {
+    const text = describeSaveError({ code, message });
+
+    expect(text).toContain(CHECK_THE_LIST);
+    expect(text).toContain(NO_DUPLICATE);
+  });
+
+  it('asks the same on a network failure without response, and still starts with the generic text', () => {
+    const text = describeSaveError(new Error('Network Error'));
+
+    expect(text).toContain('Falha ao salvar despesa.');
+    expect(text).toContain(CHECK_THE_LIST);
+    expect(text).toContain(NO_DUPLICATE);
+  });
+
+  it.each([502, 503, 504])('treats a gateway answer %i as "may have arrived": check the list first', status => {
+    const text = describeSaveError(failure(status, '<html>bad gateway</html>'));
+
+    expect(text).toContain(CHECK_THE_LIST);
+    expect(text).toContain(NO_DUPLICATE);
+  });
+
+  it('does not tell the user to check the list for a refusal the server clearly made (422)', () => {
+    expect(describeSaveError(failure(422, { error: 'Motivo qualquer.' }))).not.toContain(CHECK_THE_LIST);
   });
 });
 

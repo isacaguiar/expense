@@ -21,7 +21,13 @@ import DespesasThemeScope from '../theme/DespesasThemeScope';
 import { buildInstallmentQuotas, InstallmentQuota } from '../utils/installments';
 import UserAvatar from '../components/UserAvatar';
 import PaymentProofFields from '../components/PaymentProofFields';
-import { buildExpenseBody, proofFileProblem, type ExpensePayload } from '../utils/expenseRequest';
+import {
+  buildExpenseBody,
+  describeSaveError,
+  EXPENSE_SAVE_TIMEOUT_MS,
+  proofFileProblem,
+  type ExpensePayload
+} from '../utils/expenseRequest';
 import { describePaymentOccurrence } from '../utils/paymentOccurrence';
 import { newRequestKey } from '../utils/requestKey';
 import type { ExpenseType } from '../types/expense';
@@ -54,11 +60,17 @@ const ExpenseForm: React.FC = () => {
   const [proofProblem, setProofProblem] = useState<string | null>(null);
   const [paymentNote, setPaymentNote] = useState<string>('');
 
-  // Chave de idempotência do cadastro: uma por tela aberta, enviada em todo envio.
+  // Chave de idempotência do cadastro: uma por tela aberta, enviada em todo envio e em todo
+  // reenvio, mesmo depois de o usuário editar campos. É o que faz o servidor devolver a
+  // mesma despesa, em vez de criar outra, quando a resposta se perdeu (R23).
   const requestKeyRef = useRef<string | null>(null);
   if (requestKeyRef.current === null) {
     requestKeyRef.current = newRequestKey();
   }
+
+  // Trava síncrona contra envio repetido: `saving` é estado e só vale depois da próxima
+  // renderização, então dois cliques seguidos ainda passariam por ele.
+  const submittingRef = useRef<boolean>(false);
 
   useEffect(() => {
     if (!groupId) return;
@@ -116,7 +128,7 @@ const ExpenseForm: React.FC = () => {
   };
 
   const handleSave = () => {
-    if (!groupId) return;
+    if (!groupId || submittingRef.current) return;
 
     setSaveError(null);
 
@@ -170,11 +182,13 @@ const ExpenseForm: React.FC = () => {
       client_request_id: requestKeyRef.current as string
     };
 
+    submittingRef.current = true;
     setSaving(true);
 
     axios
       .post(`${API_BASE_URL}/api/expenses`, buildExpenseBody(payload, proofFile), {
-        headers: { Authorization: token ? `Bearer ${token}` : '' }
+        headers: { Authorization: token ? `Bearer ${token}` : '' },
+        timeout: EXPENSE_SAVE_TIMEOUT_MS
       })
       .then(() => {
         trackEvent('expense_created');
@@ -183,11 +197,15 @@ const ExpenseForm: React.FC = () => {
       .catch(err => {
         console.error('Erro ao salvar despesa:', err);
         // O backend valida as regras de domínio (competência fechada, soma das
-        // quotas, pagador não-membro) — o cliente só exibe o motivo que a API
-        // devolveu, no mesmo padrão de ExpenseView.tsx.
-        setSaveError(err.response?.data?.error ?? 'Falha ao salvar despesa.');
+        // quotas, pagador não-membro) — o cliente exibe o motivo que a API devolveu,
+        // no mesmo padrão de ExpenseView.tsx, e acrescenta só o que ela não pode
+        // dizer (413, timeout, falta de resposta). Campos, foto e chave ficam como estão.
+        setSaveError(describeSaveError(err));
       })
-      .finally(() => setSaving(false));
+      .finally(() => {
+        submittingRef.current = false;
+        setSaving(false);
+      });
   };
 
   const paymentRequested = proofFile !== null || paymentNote.trim() !== '';

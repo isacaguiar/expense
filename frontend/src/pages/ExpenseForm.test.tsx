@@ -1,10 +1,11 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import ExpenseForm from './ExpenseForm';
 import { trackEvent } from '../analytics/trackEvent';
+import { EXPENSE_SAVE_TIMEOUT_MS } from '../utils/expenseRequest';
 
 vi.mock('axios');
 
@@ -485,6 +486,126 @@ describe('ExpenseForm', () => {
 
       expect(fileInput()).toHaveAttribute('accept', 'image/*');
       expect(fileInput()).not.toHaveAttribute('capture');
+    });
+
+    // --- Envio: chave estável, trava síncrona, timeout e mensagens de erro (R23, CA-F8, CA-F9, CA-F15 a CA-F17) ---
+
+    it('sends the request with an explicit timeout (CA-F16)', async () => {
+      await renderForm();
+      await fillBasics();
+      await save();
+
+      const [, , config] = await savedRequest<Record<string, unknown>>();
+
+      expect(config).toMatchObject({ timeout: EXPENSE_SAVE_TIMEOUT_MS });
+    });
+
+    it('sends one request on a double click, even before the saving state has rendered (CA-F9)', async () => {
+      let finish: (value: { data: { expense_id: number } }) => void = () => {};
+      vi.mocked(axios.post).mockReturnValue(new Promise(resolve => (finish = resolve)));
+      await renderForm();
+      await fillBasics();
+
+      const button = screen.getByRole('button', { name: 'Salvar' });
+      // Os dois cliques chegam antes de o React re-renderizar com `saving`: só a trava síncrona os separa.
+      act(() => {
+        button.click();
+        button.click();
+      });
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+
+      finish({ data: { expense_id: 1 } });
+
+      await waitFor(() => expect(navigateMock).toHaveBeenCalledTimes(1));
+      expect(trackEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['422', { response: { status: 422, data: { error: 'Não é possível registrar o pagamento de uma competência que ainda não começou.' } } }, 'ainda não começou'],
+      ['413', { response: { status: 413, data: '<html>413</html>' } }, 'maior do que o servidor aceita'],
+      ['409', { response: { status: 409, data: { error: 'Este cadastro já foi processado com outros dados.' } } }, 'outros dados'],
+      ['500', { response: { status: 500, data: { error: 'Erro ao criar despesa' } } }, 'Erro ao criar despesa'],
+      ['rede', new Error('Network Error'), 'Falha ao salvar despesa.'],
+      ['timeout', { code: 'ECONNABORTED', message: 'timeout of 60000ms exceeded' }, 'sem risco de duplicar'],
+    ])('keeps fields, photo and key after a %s failure and does not count the expense (CA-F8, CA-F15)', async (_name, rejection, text) => {
+      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(axios.post).mockRejectedValueOnce(rejection);
+      await renderForm();
+      await fillBasics();
+      await userEvent.type(noteField(), 'Cartão');
+      pickFile(photo());
+      await save();
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(text);
+      expect(alertSpy).not.toHaveBeenCalled();
+      expect(trackEvent).not.toHaveBeenCalled();
+      expect(navigateMock).not.toHaveBeenCalled();
+
+      // Nada se perdeu e o botão voltou.
+      expect(screen.getByLabelText('Descrição')).toHaveValue('Mercado');
+      expect(screen.getByLabelText('Valor')).toHaveValue('150,00');
+      expect(noteField()).toHaveValue('Cartão');
+      expect(screen.getByRole('button', { name: /cartao\.jpg/ })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+
+      // Reenviar usa a mesma chave e a mesma foto.
+      await save();
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(2));
+      const [first, second] = vi.mocked(axios.post).mock.calls.map(call => call[1] as FormData);
+      expect(second.get('client_request_id')).toBe(first.get('client_request_id'));
+      expect((second.get('comprovante') as File).name).toBe('cartao.jpg');
+      alertSpy.mockRestore();
+    });
+
+    it('keeps the same request key when the user edits fields and sends again (CA-F15)', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(axios.post).mockRejectedValueOnce(new Error('Network Error'));
+      await renderForm();
+      await fillBasics();
+      await save();
+      await screen.findByRole('alert');
+
+      await userEvent.type(screen.getByLabelText('Descrição'), ' semanal');
+      await userEvent.type(noteField(), 'Pix');
+      await save();
+
+      await waitFor(() => expect(axios.post).toHaveBeenCalledTimes(2));
+      const [first, second] = vi.mocked(axios.post).mock.calls.map(call => call[1] as Record<string, unknown>);
+
+      expect(second.description).toBe('Mercado semanal');
+      expect(second.client_request_id).toBe(first.client_request_id);
+      expect(first.client_request_id).toMatch(UUID_V4);
+    });
+
+    it('uses a different request key in a form opened later', async () => {
+      await renderForm();
+      await fillBasics();
+      await save();
+      const [, first] = await savedRequest<Record<string, unknown>>();
+      cleanup();
+
+      vi.mocked(axios.post).mockClear();
+      await renderForm();
+      await fillBasics();
+      await save();
+      const [, second] = await savedRequest<Record<string, unknown>>();
+
+      expect(second.client_request_id).not.toBe(first.client_request_id);
+    });
+
+    it('asks to check the list before trying again, and says resending does not duplicate, on a timeout (CA-F16)', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(axios.post).mockRejectedValueOnce({ code: 'ECONNABORTED', message: 'timeout of 60000ms exceeded' });
+      await renderForm();
+      await fillBasics();
+      await save();
+
+      const alert = await screen.findByRole('alert');
+
+      expect(alert).toHaveTextContent('Confira a lista de despesas antes de tentar de novo');
+      expect(alert).toHaveTextContent('sem risco de duplicar');
     });
 
     it('goes back to JSON, without comprovante, when the chosen photo is removed', async () => {
