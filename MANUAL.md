@@ -66,6 +66,12 @@ ciclo está totalmente quitado (todas as despesas pagas e todos os acertos
 confirmados), ele vira histórico: o ícone deixa de aparecer e, para corrigir, é
 preciso **desfazer o pagamento** e marcá-lo como pago de novo.
 
+Cadastrou uma compra parcelada já paga e errou? Enquanto nenhuma parcela paga
+estiver em um ciclo já encerrado, o credor vê, ao lado de **Desfazer
+pagamento**, a ação **Desfazer pagamento da compra**: ela pede confirmação,
+volta todas as parcelas para pendente e remove o comprovante e a descrição do
+pagamento. Depois que o ciclo da compra encerra, isso não é mais possível.
+
 **Fechar mês** congela os números do período.
 
 ### Nova despesa
@@ -74,6 +80,21 @@ Preencha **Descrição**, **Valor**, **Tipo** (À Vista, Parcelada ou Fixa), a
 **Data** e o **Pagador** (quem pagou de fato). Em **"Quem participa desta
 despesa?"** marque só as pessoas que entram nessa divisão — o valor é rateado
 igualmente entre elas.
+
+Se a despesa **já foi paga**, use a seção **Pagamento (opcional)**, no fim do
+formulário: anexe a **foto do comprovante** (até 5 MB), escreva a **descrição do
+pagamento** — que não é a descrição da despesa, até 500 caracteres — ou use os
+dois. Com qualquer um dos dois, a despesa já nasce paga, no mesmo **Salvar**;
+sem nenhum, ela é cadastrada pendente, como antes. Antes de salvar, a tela diz o
+que será marcado como pago: em **À Vista**, a própria despesa; em **Parcelada**,
+todas as parcelas de uma vez, como numa compra no cartão em que o pagamento é um
+só (e o valor não poderá ser alterado depois); em **Fixa**, apenas a ocorrência
+inicial, e as próximas continuam pendentes.
+
+O pagamento é do **Pagador**. Se você cadastra no lugar de outra pessoa, o
+pagamento é registrado em nome dela e ela recebe um aviso. Não é possível
+registrar o pagamento de um mês que ainda não começou. Depois do **fechamento do
+ciclo**, o pagamento da compra não poderá mais ser alterado.
 
 ### Pagamentos
 ![Tela de pagamentos](docs/manual/images/07-pagamentos.jpg)
