@@ -25,17 +25,21 @@ type UsePaymentActionsResult = {
   paySuccess: boolean;
   unpaySuccess: boolean;
   editSuccess: boolean;
+  undoPurchaseSuccess: boolean;
   dismissPayError: () => void;
   dismissPaySuccess: () => void;
   dismissUnpaySuccess: () => void;
   dismissEditSuccess: () => void;
+  dismissUndoPurchaseSuccess: () => void;
   isCreditor: (exp: SummaryExpense) => boolean;
   canPay: (exp: SummaryExpense) => boolean;
   canUnpay: (exp: SummaryExpense) => boolean;
   canEditProof: (exp: SummaryExpense) => boolean;
+  canUndoPurchase: (exp: SummaryExpense) => boolean;
   handlePay: (expenseId: number, details: PaymentDetails) => void;
   handleUnpay: (expenseId: number) => void;
   handleEditProof: (expenseId: number, input: EditProofInput) => void;
+  handleUndoPurchase: (expenseId: number) => void;
 };
 
 /**
@@ -57,6 +61,12 @@ type UsePaymentActionsResult = {
  * e **nunca em ciclo selado** (`cycle.settled`), onde o backend responde 422
  * ("Desfaça o pagamento para corrigir o comprovante"). A edição troca, remove ou
  * anexa a foto e ajusta a descrição sem tocar em pago/data/quem pagou.
+ *
+ * Desfazer o pagamento da compra (`canUndoPurchase`, `POST .../undo-purchase`) limpa de
+ * uma vez todas as parcelas de uma compra parcelada paga no cadastro, inclusive as futuras,
+ * que o `unpay` por parcela não alcança. Quem decide se ainda dá é o servidor, que manda
+ * `canUndoPurchase: true` só enquanto nenhuma parcela paga está em ciclo encerrado
+ * (docs/feature/20261027-pagamento-no-cadastro-despesa, R19 e D11); a rota não recebe ciclo.
  */
 export function usePaymentActions(
   currentUserId: number | null,
@@ -69,6 +79,7 @@ export function usePaymentActions(
   const [paySuccess, setPaySuccess] = useState<boolean>(false);
   const [unpaySuccess, setUnpaySuccess] = useState<boolean>(false);
   const [editSuccess, setEditSuccess] = useState<boolean>(false);
+  const [undoPurchaseSuccess, setUndoPurchaseSuccess] = useState<boolean>(false);
 
   const cycleIsFuture = summary?.cycle.status === 'future';
   // Editar o comprovante exige provar que o ciclo não está selado; sem o resumo
@@ -94,6 +105,13 @@ export function usePaymentActions(
   const canEditProof = useCallback(
     (exp: SummaryExpense) => cycleAllowsProofEdit && exp.paid && isCreditor(exp),
     [cycleAllowsProofEdit, isCreditor]
+  );
+
+  // A chave só existe quando o servidor a manda `true`; conferir o credor aqui é só uma
+  // segunda trava, a regra de verdade (janela aberta) continua sendo do servidor.
+  const canUndoPurchase = useCallback(
+    (exp: SummaryExpense) => exp.canUndoPurchase === true && isCreditor(exp),
+    [isCreditor]
   );
 
   const handlePay = useCallback(
@@ -193,22 +211,50 @@ export function usePaymentActions(
     [cyclesAgo, reload]
   );
 
+  const handleUndoPurchase = useCallback(
+    (expenseId: number) => {
+      setPayingExpenseId(expenseId);
+      setPayError(null);
+
+      const token = localStorage.getItem('accessToken');
+
+      axios
+        .post(`${API_BASE_URL}/api/expenses/${expenseId}/undo-purchase`, {}, {
+          headers: { Authorization: token ? `Bearer ${token}` : '' }
+        })
+        .then(() => {
+          setUndoPurchaseSuccess(true);
+          reload();
+        })
+        .catch(err => {
+          console.error('Erro ao desfazer o pagamento da compra:', err);
+          setPayError(err.response?.data?.error ?? 'Falha ao desfazer o pagamento da compra.');
+        })
+        .finally(() => setPayingExpenseId(null));
+    },
+    [reload]
+  );
+
   return {
     payingExpenseId,
     payError,
     paySuccess,
     unpaySuccess,
     editSuccess,
+    undoPurchaseSuccess,
     dismissPayError: () => setPayError(null),
     dismissPaySuccess: () => setPaySuccess(false),
     dismissUnpaySuccess: () => setUnpaySuccess(false),
     dismissEditSuccess: () => setEditSuccess(false),
+    dismissUndoPurchaseSuccess: () => setUndoPurchaseSuccess(false),
     isCreditor,
     canPay,
     canUnpay,
     canEditProof,
+    canUndoPurchase,
     handlePay,
     handleUnpay,
-    handleEditProof
+    handleEditProof,
+    handleUndoPurchase
   };
 }
