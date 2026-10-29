@@ -4,7 +4,7 @@
 
 Versão: 1.3 · Criado em: 20261027
 
-**Status: v1.3, todas as decisões fechadas em 2026-10-27 (Constitution §5.2).** O usuário decidiu D1–D5 (algumas contra a recomendação da v1.0), aprovou D6–D10, D11 nasceu do brainstorm, e mandou **seguir as sugestões** para D12, D13 e D14 (v1.3). A v1.2 detalhou a prevenção de duplicidade (§2.5, R12, R23, D7, F6–F15). Nenhum código foi escrito. O `plan.md` foi iniciado a partir desta versão; `tasks.md` e `implementation.md` só têm título e data.
+**Status: v1.3, todas as decisões fechadas em 2026-10-27 (Constitution §5.2).** O usuário decidiu D1–D5 (algumas contra a recomendação da v1.0), aprovou D6–D10, D11 nasceu do brainstorm, e mandou **seguir as sugestões** para D12, D13 e D14 (v1.3). A v1.2 detalhou a prevenção de duplicidade (§2.5, R12, R23, D7, F6–F15). A feature foi implementada nas tasks de `tasks.md`, com o log real no `implementation.md`. **Um ajuste depois da aprovação:** o R21 (avisos quando o criador não é o credor) foi revisado pela TASK-545, a partir do achado N1 da revisão de segurança (`plan.md` P10); a versão do specify não subiu e o ajuste aguarda a confirmação do usuário.
 
 ### Mudanças em relação à v1.0
 

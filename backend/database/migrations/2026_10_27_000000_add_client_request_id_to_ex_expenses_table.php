@@ -29,9 +29,14 @@ return new class extends Migration
         // `user_creator_id` e descarta o índice simples que a sustentava; sem
         // recriá-lo antes, o `dropUnique` falha com o erro 1553. O nome é o que a
         // FK gera sozinha na criação da tabela, para o schema voltar idêntico.
-        Schema::table('ex_expenses', function (Blueprint $table) {
-            $table->index('user_creator_id', 'ex_expenses_user_creator_id_foreign');
-        });
+        // Só recria se ele não existir: depois de um `down()` e de um novo `up()`
+        // o índice recriado é explícito e o MySQL não o descarta ao criar o único,
+        // então um segundo `down()` falharia com o erro 1061 (nome repetido).
+        if (! Schema::hasIndex('ex_expenses', 'ex_expenses_user_creator_id_foreign')) {
+            Schema::table('ex_expenses', function (Blueprint $table) {
+                $table->index('user_creator_id', 'ex_expenses_user_creator_id_foreign');
+            });
+        }
 
         Schema::table('ex_expenses', function (Blueprint $table) {
             $table->dropUnique('ex_expenses_creator_request_unique');

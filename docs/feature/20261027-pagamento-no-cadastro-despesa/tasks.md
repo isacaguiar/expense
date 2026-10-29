@@ -48,6 +48,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-545 | Atribuir os avisos de um cadastro com pagamento a quem cadastrou, e não ao credor, quando são pessoas diferentes; sem WhatsApp do comprovante nesse caso (achado N1 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 | TASK-546 | Exigir uma única quota na data informada para À Vista e Fixa, e o teto de 120 quotas, quando há pagamento no cadastro (achados N2 e N3 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
 | TASK-547 | Converter para inteiro os ids do `store()` recebidos em multipart e esconder `client_request_id` e `request_fingerprint` da API (achados N5 e N4 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
+| TASK-548 | Tornar o `down()` da migration `client_request_id` idempotente (achado do `pr-readiness-checker`: depois de rollback e novo `migrate`, o segundo rollback falhava com o erro 1061) | backend | plan.md §2 | nenhum | Concluída (2026-10-29) |
 
 ## Dependências e ordem
 
@@ -90,6 +91,7 @@ Ordem de execução: **512 → 513 → 514 → 515 → 516 → 517 → 518 → 5
 | TASK-545 | 527, 532 | Muda os avisos montados na TASK-527, a partir do achado da revisão |
 | TASK-546 | 522, 523, 532 | Estreita o `store()` das TASK-522 e 523, a partir do achado da revisão |
 | TASK-547 | 526, 532 | Corrige tipos no `store()` e o `$hidden` do model, a partir do achado da revisão |
+| TASK-548 | 516 | Corrige o `down()` da migration criada na TASK-516, a partir do relatório do `pr-readiness-checker` |
 | TASK-544 | todas | Roda sobre a branch da feature com tudo integrado |
 
 **Tasks derivadas da revisão de segurança (TASK-532).** As TASK-545, 546 e 547 nasceram do relatório do agent `security-reviewer` (achados de severidade média ou alta viram task antes do PR; `implementation.md` tem o relatório e o tratamento de cada achado). Executam logo depois da TASK-534, antes de o frontend continuar, e **todas precisam estar concluídas antes da TASK-544**. A ordem real de execução ficou: 531 → 532 → 547 → 546 → 545 → 533 → 534 → 535 em diante.
@@ -217,3 +219,7 @@ Cada task, antes de integrar: backend, `cd backend && ./vendor/bin/pint --test` 
   - Teste com o corpo todo em **strings**, como o multipart real, e foto, criador = credor: nenhum `expense_paid_on_behalf` e nenhum `expense_paid` para o próprio credor (hoje o `store()` grava `user_payer_id` como string e as comparações estritas dos avisos falham).
   - `GET /api/expenses/{id}` e a resposta do `PUT` não trazem `client_request_id` nem `request_fingerprint`; o replay segue funcionando (lê os atributos direto).
   - Feito com `$casts` `integer` para `group_id`, `user_creator_id` e `user_payer_id` e `$hidden` com as duas colunas no `Expense` (em vez de `(int)` no `store()`: a conversão vale para todo caminho que grave o model, e o `Notifier` lê pelo atributo). Teste de unidade do model em `tests/Unit/ExpenseModelIdentifiersTest.php`, porque reler a despesa do banco sempre devolve inteiro e não prova o cast.
+- **TASK-548**:
+  - Num banco que tem o índice simples `ex_expenses_user_creator_id_foreign` **e** o único composto (o que sobra depois de rollback e novo `migrate`), `php artisan migrate:rollback --step=1 --env=testing` conclui; antes dava o erro `1061 Duplicate key name`. O ciclo rollback → migrate → rollback → migrate repete sem erro.
+  - Num banco recém-migrado, em que só o composto sustenta a FK, o rollback continua recriando o índice simples e o schema volta ao original (3 índices de FK e a chave primária, sem as duas colunas).
+  - Feito com `Schema::hasIndex('ex_expenses', 'ex_expenses_user_creator_id_foreign')` no `down()`. Sem a guarda, o segundo rollback volta a falhar (mutação). Não há teste PHPUnit: DDL em `DatabaseTransactions` não é revertido, então a prova é o ciclo de comandos no banco isolado, registrado no `implementation.md`.
