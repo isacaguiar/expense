@@ -36,6 +36,29 @@ describe('CycleTotalsCards', () => {
     expect(within(cardOf('A pagar')).getByText('76% do total')).toBeInTheDocument();
   });
 
+  // Compra parcelada registrada já paga no cadastro (docs/feature/20261027-pagamento-no-cadastro-despesa,
+  // CA-F13): a parcela do ciclo entra em "Pago" como qualquer despesa paga, sem nenhuma conta
+  // nova no cliente — o servidor manda `totals.paid` e a tela só o mostra.
+  it('counts the installment of a purchase registered as paid in the Pago card, next to a pending expense', () => {
+    // Geladeira 3 x 100,00 paga no cadastro (a parcela do ciclo: 100,00) + Mercado 200,00 pendente.
+    render(<CycleTotalsCards totals={{ total: 300, paid: 100, pending: 200 }} cycle={cycle} />);
+
+    expect(within(cardOf('Total de despesas')).getByText('R$ 300,00')).toBeInTheDocument();
+    expect(within(cardOf('Pago')).getByText('R$ 100,00')).toBeInTheDocument();
+    expect(within(cardOf('Pago')).getByText('33% do total')).toBeInTheDocument();
+    expect(within(cardOf('A pagar')).getByText('R$ 200,00')).toBeInTheDocument();
+    expect(within(cardOf('A pagar')).getByText('67% do total')).toBeInTheDocument();
+  });
+
+  it('shows everything paid and nothing to pay when the only expense is a purchase registered as paid', () => {
+    render(<CycleTotalsCards totals={{ total: 100, paid: 100, pending: 0 }} cycle={cycle} />);
+
+    expect(within(cardOf('Pago')).getByText('R$ 100,00')).toBeInTheDocument();
+    expect(within(cardOf('Pago')).getByText('100% do total')).toBeInTheDocument();
+    expect(within(cardOf('A pagar')).getByText('R$ 0,00')).toBeInTheDocument();
+    expect(within(cardOf('A pagar')).getByText('0% do total')).toBeInTheDocument();
+  });
+
   it('shows 0% instead of dividing by zero when the cycle has no expenses', () => {
     render(<CycleTotalsCards totals={{ total: 0, paid: 0, pending: 0 }} cycle={cycle} />);
 
