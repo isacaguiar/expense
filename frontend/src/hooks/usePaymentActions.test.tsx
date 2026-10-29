@@ -118,6 +118,115 @@ describe('usePaymentActions', () => {
     expect(body.get('descricao')).toBe('Pix agendado para sexta');
   });
 
+  // Desfazer de uma vez o pagamento de uma compra parcelada registrada no cadastro
+  // (docs/feature/20261027-pagamento-no-cadastro-despesa, plan §7, R19).
+  describe('undo purchase', () => {
+    const purchase = { ...expense, paid: true, expenseType: 'IN_INSTALLMENTS' as const, canUndoPurchase: true };
+
+    it('canUndoPurchase is true only when the server says so and the user is the creditor', () => {
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('open'), 0, () => {}));
+
+      expect(result.current.canUndoPurchase(purchase)).toBe(true);
+      expect(result.current.canUndoPurchase({ ...purchase, canUndoPurchase: false })).toBe(false);
+      expect(result.current.canUndoPurchase({ ...purchase, canUndoPurchase: undefined })).toBe(false);
+      expect(result.current.canUndoPurchase({ ...purchase, userPayerId: 2 })).toBe(false);
+    });
+
+    it('does not depend on the cycle being viewed: the server already looked at every installment', () => {
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('future'), 0, () => {}));
+
+      expect(result.current.canUndoPurchase(purchase)).toBe(true);
+    });
+
+    it('is false for a creditor who is not signed in yet', () => {
+      const { result } = renderHook(() => usePaymentActions(null, summaryWith('open'), 0, () => {}));
+
+      expect(result.current.canUndoPurchase(purchase)).toBe(false);
+    });
+
+    it('handleUndoPurchase calls the route without a cycle and reloads', async () => {
+      const reload = vi.fn();
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('open'), 2, reload));
+
+      act(() => result.current.handleUndoPurchase(42));
+      await waitFor(() => expect(result.current.undoPurchaseSuccess).toBe(true));
+
+      expect(axios.post).toHaveBeenCalledTimes(1);
+      expect(vi.mocked(axios.post).mock.calls[0][0]).toMatch(/\/api\/expenses\/42\/undo-purchase$/);
+      expect(vi.mocked(axios.post).mock.calls[0][1]).toEqual({});
+      expect(reload).toHaveBeenCalledTimes(1);
+      expect(result.current.payError).toBeNull();
+      expect(result.current.payingExpenseId).toBeNull();
+      // Os avisos de sucesso das outras ações não são acionados por ela.
+      expect(result.current.paySuccess).toBe(false);
+      expect(result.current.unpaySuccess).toBe(false);
+    });
+
+    it('marks the expense as being worked on until the request ends', async () => {
+      let finish: (value: { data: object }) => void = () => {};
+      vi.mocked(axios.post).mockReturnValue(new Promise(resolve => (finish = resolve)));
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('open'), 0, () => {}));
+
+      act(() => result.current.handleUndoPurchase(42));
+      expect(result.current.payingExpenseId).toBe(42);
+
+      await act(async () => finish({ data: {} }));
+      expect(result.current.payingExpenseId).toBeNull();
+    });
+
+    it('shows the reason the server gave when the undo is refused, and does not reload', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(axios.post).mockRejectedValueOnce({
+        response: { data: { error: 'O ciclo desta compra já foi encerrado; o pagamento não pode mais ser desfeito.' } },
+      });
+      const reload = vi.fn();
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('open'), 0, reload));
+
+      act(() => result.current.handleUndoPurchase(42));
+      await waitFor(() =>
+        expect(result.current.payError).toBe('O ciclo desta compra já foi encerrado; o pagamento não pode mais ser desfeito.')
+      );
+
+      expect(result.current.undoPurchaseSuccess).toBe(false);
+      expect(reload).not.toHaveBeenCalled();
+      expect(result.current.payingExpenseId).toBeNull();
+    });
+
+    it('falls back to a generic message when the failure has no reason', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(axios.post).mockRejectedValueOnce(new Error('Network Error'));
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('open'), 0, () => {}));
+
+      act(() => result.current.handleUndoPurchase(42));
+      await waitFor(() => expect(result.current.payError).toBe('Falha ao desfazer o pagamento da compra.'));
+    });
+
+    it('dismissUndoPurchaseSuccess clears the success flag', async () => {
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('open'), 0, () => {}));
+
+      act(() => result.current.handleUndoPurchase(42));
+      await waitFor(() => expect(result.current.undoPurchaseSuccess).toBe(true));
+
+      act(() => result.current.dismissUndoPurchaseSuccess());
+
+      expect(result.current.undoPurchaseSuccess).toBe(false);
+    });
+
+    it('clears an earlier error when a new undo starts', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.mocked(axios.post).mockRejectedValueOnce({ response: { data: { error: 'Motivo antigo.' } } });
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('open'), 0, () => {}));
+
+      act(() => result.current.handleUndoPurchase(42));
+      await waitFor(() => expect(result.current.payError).toBe('Motivo antigo.'));
+
+      act(() => result.current.handleUndoPurchase(42));
+
+      await waitFor(() => expect(result.current.undoPurchaseSuccess).toBe(true));
+      expect(result.current.payError).toBeNull();
+    });
+  });
+
   describe('canEditProof', () => {
     const paid = { ...expense, paid: true };
 
