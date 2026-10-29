@@ -52,7 +52,7 @@ const ExpenseForm: React.FC = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
 
-  // Pagamento registrado no cadastro (docs/feature/20261027-pagamento-no-cadastro-despesa):
+  // Pagamento registrado no cadastro (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa):
   // foto e/ou descrição do pagamento, ambas opcionais. `proofInputKey` recria o <input>
   // nativo quando a foto é descartada, para escolher o mesmo arquivo de novo.
   const [proofFile, setProofFile] = useState<File | null>(null);

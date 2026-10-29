@@ -6,7 +6,7 @@ use Carbon\Carbon;
 
 /**
  * Impressão digital do corpo de um cadastro de despesa, para a idempotência de
- * `POST /api/expenses` (docs/feature/20261027-pagamento-no-cadastro-despesa,
+ * `POST /api/expenses` (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa,
  * plan.md §2 e specify.md D7). Dada a mesma chave `client_request_id`, o
  * servidor compara este hash com o que gravou: igual é reenvio e devolve a
  * despesa que já existe; diferente é reuso da chave com outros dados (409).

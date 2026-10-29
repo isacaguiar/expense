@@ -1343,7 +1343,7 @@ describe('ExpenseManager - marcar como paga / desfazer pagamento', () => {
 });
 
 // Compra parcelada registrada já paga no cadastro: a lista só mostra o que o servidor manda
-// (docs/feature/20261027-pagamento-no-cadastro-despesa, CA-F13).
+// (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, CA-F13).
 describe('ExpenseManager - compra paga no cadastro: chip e filtro de Status', () => {
   const paidPurchase: SummaryExpenseFixture = {
     id: 80,
@@ -1418,7 +1418,7 @@ describe('ExpenseManager - compra paga no cadastro: chip e filtro de Status', ()
 });
 
 // Desfazer de uma vez o pagamento de uma compra parcelada registrada no cadastro
-// (docs/feature/20261027-pagamento-no-cadastro-despesa, plan §7, R19, CA-F12).
+// (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, plan §7, R19, CA-F12).
 describe('ExpenseManager - desfazer pagamento da compra', () => {
   const purchase: SummaryExpenseFixture = {
     id: 70,

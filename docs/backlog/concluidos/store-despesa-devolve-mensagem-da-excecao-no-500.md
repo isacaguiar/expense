@@ -4,7 +4,7 @@ ID: 080
 Origem: docs/feature/concluidas/202610/20261008-rateio-parcelas-no-backend/ (observação pré-existente da revisão de segurança da TASK-403); `backend/app/Http/Controllers/ExpenseController.php` (`store()`, no `catch`)
 Criado em: 2026-10-09
 Prioridade: MEDIA
-Status: Aberto
+Status: Resolvido na TASK-525 (feature 20261027-pagamento-no-cadastro-despesa)
 
 ## Descrição
 O `catch (\Throwable)` do `store()` responde `500` com `['error' => 'Erro ao criar despesa', 'details' => $e->getMessage()]`. Numa falha de banco, a mensagem da exceção traz o SQL e os valores ligados, e vai para o cliente. É a única ocorrência de `details` nos controllers, e o frontend não lê esse campo.
@@ -36,3 +36,13 @@ A fechar na Triagem.
 Uma falha de banco expõe a estrutura das tabelas e valores de outros campos a quem acionar a rota. Não há exposição de dado de terceiro por si só, mas é informação útil para quem procura outra brecha.
 
 Tipo sugerido: backend
+
+## Resolução
+Concluído em: 2026-10-29
+Feature: docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa/   (arquivada após o merge do PR #249 em `dev`: `ADR-009`)
+Tasks: TASK-525
+PRs: https://github.com/isacaguiar/expense/pull/249
+
+Resolvido **dentro de outra feature**, e não por `/novo-bug`: a feature de pagamento no cadastro reescreveu o `catch` do `store()` (decisão D10 do specify). Ele agora faz o rollback, remove a foto recém-gravada, registra a exceção com `Log::error('Erro ao criar despesa', ['exception' => $e])` e responde `500` com só `{"error": "Erro ao criar despesa"}`, **sem `details`**. As regras adotadas valem: a resposta de erro continua `500` com a mesma mensagem (R1), o log não grava o request inteiro (R2) e o rollback é o mesmo (R3). Dois testes de `ExpenseControllerStorePaymentTest` provam que o `500` não traz `details`, com e sem pagamento no cadastro.
+
+**D1 = A** (remover e logar), como o item recomendava. **A D2 segue aberta e é do usuário:** conferir `APP_DEBUG=false` no servidor de produção. Na validação local da feature (ambiente `testing`) um `403` voltou com stack trace, porque o ambiente de teste tem `APP_DEBUG` ligado; vale conferir antes de assumir que produção está fechada.

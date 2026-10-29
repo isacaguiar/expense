@@ -50,7 +50,7 @@ describe('notificationText', () => {
   });
 
   // Pagamento registrado por outra pessoa no cadastro da despesa, em nome do credor
-  // (docs/feature/20261027-pagamento-no-cadastro-despesa, D4 e R21).
+  // (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, D4 e R21).
   it('expense_paid_on_behalf says who registered the payment in the creditors name', () => {
     expect(
       notificationText('expense_paid_on_behalf', { actorName: 'João', expenseDescription: 'Geladeira', quotasCount: 3 })

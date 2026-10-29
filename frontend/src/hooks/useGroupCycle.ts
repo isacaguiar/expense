@@ -60,7 +60,7 @@ export type SummaryExpense = {
   totalValue?: number;
   // Só vem `true`, e só ao credor de uma compra parcelada paga no cadastro cujo desfazer
   // ainda é possível (nenhuma parcela paga em ciclo encerrado). A decisão é do servidor
-  // (docs/feature/20261027-pagamento-no-cadastro-despesa, plan §5); ausente = não oferecer.
+  // (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, plan §5); ausente = não oferecer.
   canUndoPurchase?: boolean;
   userPayerId: number;
   userCreatorId: number;
