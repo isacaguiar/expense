@@ -1342,6 +1342,81 @@ describe('ExpenseManager - marcar como paga / desfazer pagamento', () => {
   });
 });
 
+// Compra parcelada registrada já paga no cadastro: a lista só mostra o que o servidor manda
+// (docs/feature/20261027-pagamento-no-cadastro-despesa, CA-F13).
+describe('ExpenseManager - compra paga no cadastro: chip e filtro de Status', () => {
+  const paidPurchase: SummaryExpenseFixture = {
+    id: 80,
+    description: 'Geladeira',
+    value: 100,
+    totalValue: 300,
+    date: '2026-08-10',
+    payerName: 'Isac',
+    paid: true,
+    isFixed: false,
+    expenseType: 'IN_INSTALLMENTS',
+    installmentNumber: 1,
+    installmentsTotal: 3,
+    paymentNote: 'Cartão de crédito',
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+  };
+
+  const pendingExpense: SummaryExpenseFixture = {
+    id: 81,
+    description: 'Mercado',
+    value: 200,
+    date: '2026-08-12',
+    payerName: 'Isac',
+    paid: false,
+    isFixed: false,
+    userPayerId: CURRENT_USER_ID,
+    userCreatorId: CURRENT_USER_ID,
+  };
+
+  const shown = () => ['Geladeira', 'Mercado'].filter(description => screen.queryByText(description) !== null);
+  const statusButton = (name: 'Todas' | 'Pagas' | 'Pendentes') =>
+    within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name });
+
+  beforeEach(() => {
+    vi.mocked(axios.get).mockReset();
+    mockGetResponses([paidPurchase, pendingExpense]);
+  });
+
+  it('shows the chip Paga for the purchase and Pendente for the other expense', async () => {
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+    await screen.findByText('Geladeira');
+
+    expect(screen.getAllByText('Paga')).toHaveLength(1);
+    expect(screen.getAllByText('Pendente')).toHaveLength(1);
+    expect(screen.getByText('Paga').closest('tr')).toHaveTextContent('Geladeira');
+    expect(screen.getByText('Pendente').closest('tr')).toHaveTextContent('Mercado');
+  });
+
+  it('puts the purchase under Pagas and not under Pendentes, and brings it back with Todas', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+    await screen.findByText('Geladeira');
+
+    await user.click(statusButton('Pagas'));
+    expect(shown()).toEqual(['Geladeira']);
+
+    await user.click(statusButton('Pendentes'));
+    expect(shown()).toEqual(['Mercado']);
+
+    await user.click(statusButton('Todas'));
+    expect(shown()).toEqual(['Geladeira', 'Mercado']);
+  });
+});
+
 // Desfazer de uma vez o pagamento de uma compra parcelada registrada no cadastro
 // (docs/feature/20261027-pagamento-no-cadastro-despesa, plan §7, R19, CA-F12).
 describe('ExpenseManager - desfazer pagamento da compra', () => {
