@@ -40,7 +40,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-537 | Dar ao `ExpenseForm` chave estável, trava síncrona, timeout e mensagens de erro (CA-F8, CA-F9, CA-F15 a CA-F17) | frontend | plan.md §6 | nenhum | Concluída (2026-10-29) |
 | TASK-538 | Acrescentar `canUndoPurchase` ao tipo e `handleUndoPurchase` ao `usePaymentActions` | frontend | plan.md §7 | nenhum | Concluída (2026-10-29) |
 | TASK-539 | Acrescentar a ação "Desfazer pagamento da compra" ao `ExpenseManager` (CA-F12) | frontend | plan.md §7 | nenhum | Concluída (2026-10-29) |
-| TASK-540 | Acrescentar o texto de `expense_paid_on_behalf` em `notificationText.ts` | frontend | plan.md §7 | nenhum | Pendente |
+| TASK-540 | Acrescentar o texto de `expense_paid_on_behalf` em `notificationText.ts` | frontend | plan.md §7 | nenhum | Concluída (2026-10-29) |
 | TASK-541 | Testar a apresentação de totais, filtros e chips com fixture de compra paga (CA-F13) | frontend | plan.md §7 | nenhum | Pendente |
 | TASK-542 | Registrar os limites de upload (`post_max_size`, `upload_max_filesize`) do servidor de produção (RK8) | infra | plan.md §8 | depende de informação do usuário sobre o host | Pendente |
 | TASK-543 | Atualizar `MANUAL.md` e `MANUAL.pdf` (CA-D1) | doc | plan.md §8 | nenhum | Pendente |
