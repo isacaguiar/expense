@@ -1,7 +1,7 @@
 # `grossDebts` ignora quota paga e diverge de `settlements`
 
 ID: 111
-Origem: docs/feature/20261027-pagamento-no-cadastro-despesa/specify.md §2.13 e §3.4 (D13); `backend/app/Http/Controllers/ExpenseController.php:983-1023` (`grossDebts`, `:987`), `backend/app/Services/CycleSummaryService.php:238-314` (`compute`)
+Origem: docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa/specify.md §2.13 e §3.4 (D13); `backend/app/Http/Controllers/ExpenseController.php:983-1023` (`grossDebts`, `:987`), `backend/app/Services/CycleSummaryService.php:238-314` (`compute`)
 Criado em: 2026-10-27
 Prioridade: MEDIA
 Status: Aberto

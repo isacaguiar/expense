@@ -1,7 +1,7 @@
 # Aviso de possível duplicidade no cadastro de despesa
 
 ID: 112
-Origem: docs/feature/20261027-pagamento-no-cadastro-despesa/specify.md §3.4 (D14) e §3.5 (F7, F15); `frontend/src/pages/ExpenseForm.tsx`, `backend/app/Http/Controllers/ExpenseController.php` (`store`)
+Origem: docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa/specify.md §3.4 (D14) e §3.5 (F7, F15); `frontend/src/pages/ExpenseForm.tsx`, `backend/app/Http/Controllers/ExpenseController.php` (`store`)
 Criado em: 2026-10-27
 Prioridade: BAIXA
 Status: Aberto

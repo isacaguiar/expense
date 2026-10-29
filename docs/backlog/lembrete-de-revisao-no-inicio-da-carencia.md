@@ -1,7 +1,7 @@
 # Lembrete de revisão no início da carência do ciclo
 
 ID: 110
-Origem: docs/feature/20261027-pagamento-no-cadastro-despesa/specify.md §3.4 (D12); `backend/app/Http/Controllers/ExpenseController.php` (`summary()`, `sealCycleIfSettled`), `backend/app/Support/Notifier.php`, `backend/app/Support/BillingCycle.php`
+Origem: docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa/specify.md §3.4 (D12); `backend/app/Http/Controllers/ExpenseController.php` (`summary()`, `sealCycleIfSettled`), `backend/app/Support/Notifier.php`, `backend/app/Support/BillingCycle.php`
 Criado em: 2026-10-27
 Prioridade: MEDIA
 Status: Aberto
