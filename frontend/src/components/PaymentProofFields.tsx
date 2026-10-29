@@ -25,7 +25,7 @@ interface PaymentProofFieldsProps {
 /**
  * Seletor de foto + descrição do pagamento, usados pelo popup de comprovante
  * (`PaymentProofDialog`) e pela seção "Pagamento (opcional)" do cadastro de despesa
- * (docs/feature/20261027-pagamento-no-cadastro-despesa, plan §6). Só apresentação:
+ * (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, plan §6). Só apresentação:
  * a regra de quando o pagamento vale (foto OU descrição não vazia) fica com quem usa.
  */
 const PaymentProofFields: React.FC<PaymentProofFieldsProps> = ({

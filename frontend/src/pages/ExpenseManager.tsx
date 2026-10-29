@@ -147,7 +147,7 @@ const ExpenseManager: React.FC = () => {
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
 
   // "Desfazer pagamento da compra" limpa todas as parcelas de uma vez: pede confirmação antes
-  // (docs/feature/20261027-pagamento-no-cadastro-despesa, R19).
+  // (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, R19).
   const [undoPurchaseExpenseId, setUndoPurchaseExpenseId] = useState<number | null>(null);
 
   const confirmUndoPurchase = () => {

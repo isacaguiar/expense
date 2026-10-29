@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Idempotência do cadastro de despesa (docs/feature/20261027-pagamento-no-cadastro-despesa,
+ * Idempotência do cadastro de despesa (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa,
  * plan.md §2): `client_request_id` é a chave que o cliente gera por formulário e
  * `request_fingerprint` o sha-256 do corpo normalizado, para o servidor distinguir
  * um reenvio idêntico (devolve a despesa que já existe) de um reuso da chave com
