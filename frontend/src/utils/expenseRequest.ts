@@ -9,6 +9,59 @@ import type { InstallmentQuota } from './installments';
  */
 export const EXPENSE_SAVE_TIMEOUT_MS = 60_000;
 
+const CHECK_THE_LIST =
+  'Confira a lista de despesas antes de tentar de novo; se a despesa não aparecer, pode salvar outra vez, sem risco de duplicar.';
+
+/** O que `axios` devolve numa falha, só nos campos que a mensagem usa (o teste não depende da classe). */
+type SaveErrorLike = {
+  code?: string;
+  response?: {
+    status?: number;
+    data?: unknown;
+  };
+};
+
+/**
+ * Texto do alerta quando o cadastro falha. O motivo que a API deu vale sempre (as regras de
+ * domínio são do servidor); o cliente só acrescenta o que a API não pode dizer: 413 (o corpo
+ * é da página do servidor web), e a falta de resposta (timeout, rede, 502 a 504), em que a
+ * despesa pode ter sido criada e o reenvio, com a mesma chave, não duplica (R23).
+ */
+export function describeSaveError(err: unknown): string {
+  const { code, response } = (err ?? {}) as SaveErrorLike;
+  const status = response?.status;
+  const data = response && typeof response.data === 'object' && response.data !== null ? (response.data as Record<string, unknown>) : null;
+
+  if (code === 'ECONNABORTED' || code === 'ETIMEDOUT') {
+    return `O envio demorou mais do que o esperado. ${CHECK_THE_LIST}`;
+  }
+
+  if (!response) {
+    return `Falha ao salvar despesa. Não foi possível confirmar se o envio chegou. ${CHECK_THE_LIST}`;
+  }
+
+  if (status === 413) {
+    return 'A foto é maior do que o servidor aceita. Escolha uma foto menor ou reduza a qualidade.';
+  }
+
+  if (status === 502 || status === 503 || status === 504) {
+    return `Falha ao salvar despesa. O servidor não respondeu a tempo. ${CHECK_THE_LIST}`;
+  }
+
+  if (typeof data?.error === 'string' && data.error !== '') {
+    return data.error;
+  }
+
+  if (status === 409) {
+    return `Este cadastro já foi processado com outros dados. ${CHECK_THE_LIST}`;
+  }
+
+  const validation = data?.errors as Record<string, unknown> | undefined;
+  const firstMessage = validation ? Object.values(validation).flat().find(item => typeof item === 'string') : undefined;
+
+  return typeof firstMessage === 'string' ? firstMessage : 'Falha ao salvar despesa.';
+}
+
 /** Tamanho máximo da foto do comprovante; o servidor valida o mesmo valor (`max:5120`, em KB). */
 export const PROOF_MAX_BYTES = 5 * 1024 * 1024;
 

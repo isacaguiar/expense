@@ -37,7 +37,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-534 | Criar o utilitário `paymentOccurrence.ts` com testes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
 | TASK-535 | Extrair `PaymentProofFields` de `PaymentProofDialog` sem alterar os testes existentes | frontend | plan.md §6 | nenhum | Concluída (2026-10-28) |
 | TASK-536 | Acrescentar a seção "Pagamento (opcional)" ao `ExpenseForm` com envio em JSON ou multipart (CA-F1 a CA-F7, CA-F10, CA-F11) | frontend | plan.md §6 | nenhum | Concluída (2026-10-29) |
-| TASK-537 | Dar ao `ExpenseForm` chave estável, trava síncrona, timeout e mensagens de erro (CA-F8, CA-F9, CA-F15 a CA-F17) | frontend | plan.md §6 | nenhum | Pendente |
+| TASK-537 | Dar ao `ExpenseForm` chave estável, trava síncrona, timeout e mensagens de erro (CA-F8, CA-F9, CA-F15 a CA-F17) | frontend | plan.md §6 | nenhum | Concluída (2026-10-29) |
 | TASK-538 | Acrescentar `canUndoPurchase` ao tipo e `handleUndoPurchase` ao `usePaymentActions` | frontend | plan.md §7 | nenhum | Pendente |
 | TASK-539 | Acrescentar a ação "Desfazer pagamento da compra" ao `ExpenseManager` (CA-F12) | frontend | plan.md §7 | nenhum | Pendente |
 | TASK-540 | Acrescentar o texto de `expense_paid_on_behalf` em `notificationText.ts` | frontend | plan.md §7 | nenhum | Pendente |
