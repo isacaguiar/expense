@@ -38,6 +38,7 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import UndoIcon from '@mui/icons-material/Undo';
+import RemoveDoneIcon from '@mui/icons-material/RemoveDone';
 import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
@@ -129,17 +130,31 @@ const ExpenseManager: React.FC = () => {
     paySuccess,
     unpaySuccess,
     editSuccess,
+    undoPurchaseSuccess,
     dismissPayError,
     dismissPaySuccess,
     dismissUnpaySuccess,
     dismissEditSuccess,
+    dismissUndoPurchaseSuccess,
     canPay,
     canUnpay,
     canEditProof,
+    canUndoPurchase,
     handlePay,
     handleUnpay,
-    handleEditProof
+    handleEditProof,
+    handleUndoPurchase
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
+
+  // "Desfazer pagamento da compra" limpa todas as parcelas de uma vez: pede confirmação antes
+  // (docs/feature/20261027-pagamento-no-cadastro-despesa, R19).
+  const [undoPurchaseExpenseId, setUndoPurchaseExpenseId] = useState<number | null>(null);
+
+  const confirmUndoPurchase = () => {
+    if (undoPurchaseExpenseId === null) return;
+    handleUndoPurchase(undoPurchaseExpenseId);
+    setUndoPurchaseExpenseId(null);
+  };
 
   // O ✓ "Marcar como paga" não paga direto: abre o popup de comprovante (foto
   // ou descrição) — docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga.
@@ -262,6 +277,7 @@ const ExpenseManager: React.FC = () => {
 
   const removeExpense = expenses.find(exp => exp.id === removeExpenseId) ?? null;
   const deleteExpense = expenses.find(exp => exp.id === deleteExpenseId) ?? null;
+  const undoPurchaseExpense = expenses.find(exp => exp.id === undoPurchaseExpenseId) ?? null;
   const detailExpense = expenses.find(exp => exp.id === detailExpenseId) ?? null;
   // Sempre da lista atual (nunca um objeto guardado): depois de recarregar, o
   // popup abre com a descrição e a foto que estão gravadas agora.
@@ -457,6 +473,18 @@ const ExpenseManager: React.FC = () => {
             onClick={() => handleUnpay(exp.id)}
           >
             <UndoIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {canUndoPurchase(exp) && (
+        <Tooltip title="Desfazer pagamento da compra">
+          <IconButton
+            aria-label="Desfazer pagamento da compra"
+            size="small"
+            disabled={payingExpenseId === exp.id}
+            onClick={() => setUndoPurchaseExpenseId(exp.id)}
+          >
+            <RemoveDoneIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       )}
@@ -799,6 +827,26 @@ const ExpenseManager: React.FC = () => {
         onConfirm={confirmPayment}
       />
 
+      {/* Confirmação do desfazer pagamento da compra (todas as parcelas de uma vez) */}
+      <Dialog
+        open={undoPurchaseExpenseId !== null}
+        onClose={() => setUndoPurchaseExpenseId(null)}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle>Desfazer pagamento da compra</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            {`Todas as parcelas de "${undoPurchaseExpense?.description ?? 'esta compra'}" voltarão a ficar pendentes, e o comprovante e a descrição do pagamento serão removidos. Depois que o ciclo da compra encerrar, isto não poderá mais ser feito.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUndoPurchaseExpenseId(null)}>Cancelar</Button>
+          <Button variant="contained" color="error" onClick={confirmUndoPurchase}>
+            Desfazer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Popup de edição do comprovante de uma despesa já paga */}
       <PaymentProofDialog
         open={editProofOpen && editProofExpense !== null}
@@ -924,6 +972,17 @@ const ExpenseManager: React.FC = () => {
       >
         <Alert onClose={dismissUnpaySuccess} severity="success" variant="filled">
           Pagamento desfeito.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={undoPurchaseSuccess}
+        autoHideDuration={4000}
+        onClose={dismissUndoPurchaseSuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissUndoPurchaseSuccess} severity="success" variant="filled">
+          Pagamento da compra desfeito.
         </Alert>
       </Snackbar>
 
