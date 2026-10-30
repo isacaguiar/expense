@@ -16,7 +16,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 | TASK-550 | Criar `Notifier::groupMemberRemoved` (tipo `group_member_removed`, `group_id` nulo) com teste | backend | plan.md §2 | nenhum | Concluída |
 | TASK-551 | Implementar `GroupMemberController::destroy` (autorização, transação com lock, bloqueio, notificação e exclusão lógica do grupo sem membros) | backend | plan.md §1 | antes do merge | Concluída |
 | TASK-552 | Fazer `ExpenseController::update` aceitar quem já estava na despesa, mesmo que já não seja membro | backend | plan.md §3 | nenhum | Concluída |
-| TASK-553 | Contar no limite de 3 grupos só os grupos de que o criador ainda é membro | backend | plan.md §5 | nenhum | Pendente |
+| TASK-553 | Contar no limite de 3 grupos só os grupos de que o criador ainda é membro | backend | plan.md §5 | nenhum | Concluída |
 | TASK-554 | Mostrar no painel pessoal o nome do ex-devedor, sem contato nem avatar (D6-B) | backend | plan.md §4 | nenhum | Pendente |
 | TASK-555 | Travar com teste de regressão que o relatório de fechamento preserva o nome do ex-membro | backend | plan.md §4 | nenhum | Pendente |
 | TASK-556 | Rodar o `security-reviewer` na rota e no controller novos e tratar os achados | backend | plan.md §1 | nenhum | Pendente |

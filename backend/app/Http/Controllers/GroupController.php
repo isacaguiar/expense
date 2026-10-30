@@ -48,8 +48,11 @@ class GroupController extends Controller
             'closing_day' => 'nullable|integer|between:1,31',
         ]);
 
+        // Só conta o grupo de que o criador ainda é membro: sair de um grupo libera a vaga,
+        // mas `created_by` fica (é ele que autoriza o criador a remover outros membros).
         $createdGroupsCount = Group::where('deleted', 0)
             ->where('created_by', auth()->id())
+            ->whereHas('members', fn ($q) => $q->where('user_id', auth()->id()))
             ->count();
 
         if ($createdGroupsCount >= self::MAX_GROUPS_CREATED_PER_USER) {
