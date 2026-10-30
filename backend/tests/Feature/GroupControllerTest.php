@@ -332,6 +332,61 @@ class GroupControllerTest extends TestCase
         $response->assertStatus(201);
     }
 
+    /**
+     * Item 086, D4-A (CA-8): o limite conta os grupos criados de que a pessoa ainda
+     * é membro. Sair de um grupo libera a vaga, mas o grupo segue com `created_by`.
+     *
+     * @return array{0: User, 1: string, 2: array<int, int>} criador, token, ids dos 3 grupos
+     */
+    private function creatorWithThreeGroups(): array
+    {
+        $creator = User::factory()->create();
+        $token = $this->tokenFor($creator);
+
+        $ids = [];
+        foreach (range(1, 3) as $i) {
+            $ids[] = $this->withToken($token)
+                ->postJson('/api/groups', ['name' => "Grupo {$i}"])
+                ->assertStatus(201)
+                ->json('id');
+        }
+
+        return [$creator, $token, $ids];
+    }
+
+    public function test_store_does_not_count_a_group_the_creator_has_left(): void
+    {
+        [$creator, $token, $ids] = $this->creatorWithThreeGroups();
+        // Outra pessoa no primeiro grupo: ele continua existindo (e com created_by) depois da saída.
+        $other = User::factory()->create();
+        Group::find($ids[0])->members()->attach($other->id);
+
+        $this->withToken($token)
+            ->deleteJson("/api/groups/{$ids[0]}/members/{$creator->id}")
+            ->assertStatus(200);
+        $this->assertDatabaseHas('ex_groups', ['id' => $ids[0], 'created_by' => $creator->id, 'deleted' => 0]);
+
+        $this->withToken($token)->postJson('/api/groups', ['name' => 'Grupo 4'])->assertStatus(201);
+
+        // A vaga liberada foi uma só: os 2 grupos que ele integra mais o novo já são 3.
+        $this->withToken($token)->postJson('/api/groups', ['name' => 'Grupo 5'])->assertStatus(422);
+        $this->assertDatabaseMissing('ex_groups', ['name' => 'Grupo 5']);
+    }
+
+    public function test_store_still_counts_a_group_the_creator_belongs_to_when_someone_else_leaves(): void
+    {
+        [$creator, $token, $ids] = $this->creatorWithThreeGroups();
+        $other = User::factory()->create();
+        Group::find($ids[0])->members()->attach($other->id);
+
+        $this->withToken($this->tokenFor($other))
+            ->deleteJson("/api/groups/{$ids[0]}/members/{$other->id}")
+            ->assertStatus(200);
+
+        $this->withToken($token)->postJson('/api/groups', ['name' => 'Grupo 4'])->assertStatus(422);
+        $this->assertDatabaseMissing('ex_groups', ['name' => 'Grupo 4']);
+    }
+
     public function test_member_can_update_closing_day(): void
     {
         $member = User::factory()->create();
