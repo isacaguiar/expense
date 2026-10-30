@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Conta ativada com sucesso - Novemax</title>
+  <title>Conta ativada com sucesso - Shared Expense</title>
   <style>
     body {
       background-color: #f2f4f8;
@@ -36,19 +36,19 @@
 <body>
   <div class="container">
     <div class="logo">
-      <img src="https://novemax.com.br/assets/images/logo.png" alt="Novemax">
+      <img src="{{ $message->embed(resource_path('images/mail/logo-expense.png')) }}" alt="Shared Expense">
     </div>
 
     <h2>Conta ativada com sucesso!</h2>
 
     <p>Olá {{ $user->name }},</p>
 
-    <p>Sua conta foi ativada com sucesso e agora você pode acessar a plataforma Novemax com seu e-mail e senha recém-definidos.</p>
+    <p>Sua conta foi ativada com sucesso e agora você pode acessar a plataforma Shared Expense com seu e-mail e senha recém-definidos.</p>
 
     <p>Seja bem-vindo(a)!</p>
 
     <div class="footer">
-      <p>© {{ now()->year }} Novemax Soluções em Informática</p>
+      <p>© {{ now()->year }} Shared Expense</p>
     </div>
   </div>
 </body>

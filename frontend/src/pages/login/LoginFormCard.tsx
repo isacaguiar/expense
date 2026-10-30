@@ -148,7 +148,12 @@ export default function LoginFormCard({
             label="Lembrar de mim"
             sx={{ '& .MuiFormControlLabel-label': { fontSize: '0.8rem' } }}
           />
-          <Link href="#" underline="hover" sx={{ color: brandColors.primary, fontSize: '0.8rem' }}>
+          <Link
+            component={RouterLink}
+            to="/recuperar-acesso"
+            underline="hover"
+            sx={{ color: brandColors.primary, fontSize: '0.8rem' }}
+          >
             Esqueci minha senha
           </Link>
         </Box>
