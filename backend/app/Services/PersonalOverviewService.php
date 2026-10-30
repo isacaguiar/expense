@@ -78,6 +78,7 @@ class PersonalOverviewService
         $canConfirm = in_array($cycle['status'], ['closed', 'closed_manually'], true) && ! $cycle['settled'];
 
         $members = $group->members->keyBy('id');
+        $formerDebtors = $this->formerDebtors($summary['settlements'], $members, $user->id);
         $toPay = [];
         $toReceive = [];
 
@@ -95,7 +96,7 @@ class PersonalOverviewService
                 ];
             } elseif ($toId === $user->id) {
                 $toReceive[] = [
-                    'from_user' => $this->person($members, $fromId, withContact: false),
+                    'from_user' => $this->person($members, $fromId, withContact: false, formerMembers: $formerDebtors),
                     'amount' => (float) $settlement['amount'],
                     'confirmed_at' => $settlement['confirmedAt'] ?? null,
                     'confirmed_proof_url' => $settlement['confirmedProofUrl'] ?? null,
@@ -138,17 +139,49 @@ class PersonalOverviewService
     }
 
     /**
+     * Quem deve ao usuário e já não é membro do grupo (item 086, D6-B): o credor
+     * precisa saber quem lhe deve, então esses devedores saem pelo nome. Uma só
+     * consulta por grupo, e só quando há algum, para o caso comum não pagar nada.
+     * Só `id` e `name` são lidos: e-mail, Pix e foto de quem saiu nunca passam daqui.
+     *
+     * @param  array<int, array<string, mixed>>  $settlements
+     * @param  Collection<int, User>  $members
+     * @return Collection<int, User>
+     */
+    private function formerDebtors(array $settlements, Collection $members, int $userId): Collection
+    {
+        $ids = [];
+
+        foreach ($settlements as $settlement) {
+            $fromId = (int) $settlement['from_user_id'];
+
+            if ((int) $settlement['to_user_id'] === $userId && ! $members->has($fromId)) {
+                $ids[] = $fromId;
+            }
+        }
+
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        return User::whereIn('id', array_unique($ids))->get(['id', 'name'])->keyBy('id');
+    }
+
+    /**
      * A pessoa do outro lado de um acerto. Só o credor (a quem o usuário vai
-     * pagar) leva e-mail e Pix, que o Pix precisa; o devedor não.
+     * pagar) leva e-mail e Pix, que o Pix precisa; o devedor não. Quem já não é
+     * membro só tem o nome revelado, e só se vier em `$formerMembers`: o credor
+     * que saiu segue `Desconhecido` e sem contato (TASK-432).
      *
      * @param  Collection<int, User>  $members
+     * @param  Collection<int, User>|null  $formerMembers
      * @return array<string, mixed>
      */
-    private function person(Collection $members, int $userId, bool $withContact): array
+    private function person(Collection $members, int $userId, bool $withContact, ?Collection $formerMembers = null): array
     {
         $member = $members->get($userId);
 
-        $person = ['id' => $userId, 'name' => $member?->name ?? 'Desconhecido'];
+        $person = ['id' => $userId, 'name' => $member?->name ?? $formerMembers?->get($userId)?->name ?? 'Desconhecido'];
 
         if ($withContact) {
             $person += ['email' => $member?->email, 'pix' => $member?->pix];
