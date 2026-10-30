@@ -34,6 +34,13 @@ A correção exige editar `backend/app/Http/Controllers/InvitationController.php
 
 Por decisão do usuário, as duas frentes foram unificadas em uma única feature:
 
-→ **`docs/feature/20260930-recuperacao-acesso/`**
+→ **`docs/feature/concluidas/202609/20260930-recuperacao-acesso/`**
 
 Este arquivo fica só como registro do achado original e do motivo da escalada; a correção, os arquivos tocados e o log de implementação estão na feature acima.
+
+## Resolução
+Concluído em: 2026-10-30
+Branch: backend/20260930-recuperacao-acesso (a branch `fix/20260930-logo-email-marca-novemax` não chegou a existir: a correção foi feita na branch da feature)
+PR: https://github.com/isacaguiar/expense/pull/257
+
+Resolvido **dentro da feature para a qual o bug escalou**, e não pelo BFF: a TASK-380 de `docs/feature/concluidas/202609/20260930-recuperacao-acesso/` trocou a marca "Novemax" e a logo pela do Shared Expense nos 4 templates de e-mail e no assunto do e-mail de recuperação de senha. A feature foi mergeada em `dev` em 2026-10-30 (PR #257) e promovida a `main` pelo PR #258. **Ficou de fora** o nome do remetente (`MAIL_FROM_NAME="SCD Novemax"` em `.github/workflows/deploy-backend.yml:53`), que não está nos templates: está registrado como item 124 do backlog (`docs/backlog/remetente-scd-novemax-e-doc-comparado-por-hash.md`).

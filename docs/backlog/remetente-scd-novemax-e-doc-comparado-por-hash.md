@@ -1,7 +1,7 @@
 # Remetente dos e-mails ainda diz "SCD Novemax" e o `01-specify.md` afirma que o token é "comparado por hash"
 
 ID: 124
-Origem: docs/feature/20260930-recuperacao-acesso/specify.md §2.3 e revisão de segurança de 2026-10-30 (F9 e F4); `.github/workflows/deploy-backend.yml:53`, `docs/sdd/01-specify.md:42`
+Origem: docs/feature/concluidas/202609/20260930-recuperacao-acesso/specify.md §2.3 e revisão de segurança de 2026-10-30 (F9 e F4); `.github/workflows/deploy-backend.yml:53`, `docs/sdd/01-specify.md:42`
 Criado em: 2026-10-30
 Prioridade: BAIXA
 Status: Aberto

@@ -1,7 +1,7 @@
 # Uniformizar as respostas de `/forgot-password` e `/invitations/verify` (enumeração de e-mail, oráculo do 429 e do 500)
 
 ID: 119
-Origem: docs/feature/20260930-recuperacao-acesso/specify.md §3 e revisão de segurança de 2026-10-30 (F2); `backend/app/Http/Controllers/InvitationController.php` (linhas 18, 65, 73-75, 100-102), `frontend/src/pages/ForgotPasswordPage.tsx:33-39`, item 045 do backlog
+Origem: docs/feature/concluidas/202609/20260930-recuperacao-acesso/specify.md §3 e revisão de segurança de 2026-10-30 (F2); `backend/app/Http/Controllers/InvitationController.php` (linhas 18, 65, 73-75, 100-102), `frontend/src/pages/ForgotPasswordPage.tsx:33-39`, item 045 do backlog
 Criado em: 2026-10-30
 Prioridade: BAIXA
 Status: Aberto
