@@ -167,13 +167,18 @@ class ExpenseController extends Controller
             return $response;
         }
 
+        // Credor e participantes: membros do grupo mais quem já está nesta despesa,
+        // mesmo que tenha saído do grupo (item 086, R6). Só o `update()`; o `store()`
+        // segue exigindo membro.
+        $allowedPayers = Rule::in($this->payerIdsAllowedOnUpdate($expense));
+
         $data = $request->validate([
             'description' => 'sometimes|required|string|max:255',
             'date_payment' => 'sometimes|required|date',
             'total_value' => 'sometimes|required|numeric|min:0',
-            'user_payer_id' => ['sometimes', 'required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id)],
+            'user_payer_id' => ['sometimes', 'required', $allowedPayers],
             'payers' => 'sometimes|required|array|min:1',
-            'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
+            'payers.*' => $allowedPayers,
             // expense_type/installments/quotas: edição de tipo (só À Vista <->
             // Parcelada — Fixa fica de fora dos dois lados, ver abaixo).
             // docs/feature/concluidas/202608/20260826-editar-tipo-despesa/plan.md §1.
@@ -299,6 +304,31 @@ class ExpenseController extends Controller
         $this->hydrateQuotaExpense($fresh);
 
         return response()->json($fresh);
+    }
+
+    /**
+     * Ids que `update()` aceita como credor e como participantes: os membros atuais
+     * do grupo e quem já está nesta despesa (participantes e credor).
+     *
+     * Sair do grupo só tira a linha de `ex_groups_members` (item 086): a pessoa
+     * continua em `ex_expenses_payers` e pode continuar como credor, e reenviar
+     * esses ids numa edição não pode virar 422. Quem nunca esteve na despesa e não
+     * é membro continua recusado. Lista (`Rule::in`) em vez de `Rule::exists`
+     * porque a união com o pivô de participantes não cabe numa consulta só.
+     *
+     * @return list<int>
+     */
+    private function payerIdsAllowedOnUpdate(Expense $expense): array
+    {
+        return DB::table('ex_groups_members')
+            ->where('group_id', $expense->group_id)
+            ->pluck('user_id')
+            ->merge($expense->payers()->pluck('ex_users.id'))
+            ->push($expense->user_payer_id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
