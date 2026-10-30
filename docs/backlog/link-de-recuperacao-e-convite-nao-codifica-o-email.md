@@ -1,7 +1,7 @@
 # O link de recuperação de senha e o de convite não codificam o e-mail: endereço com `+` não funciona
 
 ID: 121
-Origem: docs/feature/20260930-recuperacao-acesso/specify.md e revisão de segurança de 2026-10-30 (F7); `backend/app/Http/Controllers/InvitationController.php` (linha 84), `backend/app/Mail/UserInvitedMail.php:29`, `frontend/src/pages/AcceptInvitePage.tsx`
+Origem: docs/feature/concluidas/202609/20260930-recuperacao-acesso/specify.md e revisão de segurança de 2026-10-30 (F7); `backend/app/Http/Controllers/InvitationController.php` (linha 84), `backend/app/Mail/UserInvitedMail.php:29`, `frontend/src/pages/AcceptInvitePage.tsx`
 Criado em: 2026-10-30
 Prioridade: MEDIA
 Status: Aberto

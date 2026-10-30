@@ -108,4 +108,4 @@ Requisito: um documento versionado que traga a definição de cada evento, a con
 - Mudar a política de carregar o gtag só após o aceite (modelagem de conversão de quem recusa), ou refazer o banner de consentimento.
 - Atribuição entre dispositivos, `gclid`/Google Ads e cross-domain (site e app estão no mesmo host).
 - Corrigir o item 046 (`refreshToken` salvo como `"undefined"`, `LoginPage.tsx:73`) e os outros itens abertos do backlog que não sejam o 066.
-- Qualquer coisa das features em andamento `backend/20260930-recuperacao-acesso` e `20260923-google-callback-modsecurity-iss`, exceto a mudança aditiva no `GoogleAuthController` descrita no §2.4.
+- Qualquer coisa das features `20260930-recuperacao-acesso` (já mergeada em `dev` pelo PR #257 e arquivada em `docs/feature/concluidas/202609/20260930-recuperacao-acesso/`) e `20260923-google-callback-modsecurity-iss` (em andamento), exceto a mudança aditiva no `GoogleAuthController` descrita no §2.4.

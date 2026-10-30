@@ -1,7 +1,7 @@
 # Executar o checklist do GA4: a medição aprimorada pode levar e-mail e token da URL de recuperação ao Google
 
 ID: 122
-Origem: docs/feature/20260930-recuperacao-acesso/specify.md e revisão de segurança de 2026-10-30 (F6); `docs/analytics/README.md:105`, `frontend/src/analytics/sanitizePath.ts:33-35`, `frontend/src/analytics/consent.ts:85`, `docs/feature/20261004-metricas-aquisicao-ativacao/plan.md:24`
+Origem: docs/feature/concluidas/202609/20260930-recuperacao-acesso/specify.md e revisão de segurança de 2026-10-30 (F6); `docs/analytics/README.md:105`, `frontend/src/analytics/sanitizePath.ts:33-35`, `frontend/src/analytics/consent.ts:85`, `docs/feature/20261004-metricas-aquisicao-ativacao/plan.md:24`
 Criado em: 2026-10-30
 Prioridade: MEDIA
 Status: Aberto

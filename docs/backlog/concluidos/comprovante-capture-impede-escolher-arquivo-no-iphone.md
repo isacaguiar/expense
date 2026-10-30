@@ -4,7 +4,7 @@ ID: 105
 Origem: relato do mantenedor em 2026-10-27 (uso no iPhone), sem feature de origem; causa provável vista por leitura de código
 Criado em: 2026-10-27
 Prioridade: ALTA
-Status: Aberto
+Status: Resolvido pelo bugfix 20261027-comprovante-iphone-so-camera
 
 ## Descrição
 Relato: no iPhone, ao tocar no botão de anexar o comprovante ("Selecionar foto" e equivalentes), o sistema abre para tirar a foto, mas **não permite selecionar um arquivo**. **Não reproduzido** (a sessão não tinha iPhone).
@@ -26,3 +26,12 @@ Verificação: só em iPhone real (ou no simulador de Safari do iOS). Um teste d
 Em celular, o comprovante costuma ser o print do Pix que já está na galeria. Sem poder escolhê-lo, quem usa iPhone só consegue anexar tirando uma foto nova (por exemplo, da própria tela), e o comprovante do acerto exige foto. Atinge o fluxo principal de cobrança por Pix, por isso a prioridade ALTA (o mantenedor pode rebaixar).
 
 Tipo sugerido: frontend. É defeito em comportamento existente, então, ao promover, o caminho é o fluxo de bugfix (`/novo-bug` e a Triagem de `docs/bugfix/README.md`), não `/promover-backlog` com feature.
+
+## Resolução
+Concluído em: 2026-10-27
+Bugfix: docs/bugfix/concluidos/202610/20261027-comprovante-iphone-so-camera.md (fluxo BFF, sem feature nem tasks)
+PRs: https://github.com/isacaguiar/expense/pull/246
+
+Corrigido no cliente, pela opção 1 do item: o `capture` saiu do `<input type="file">` do comprovante, que ficou com `accept="image/*"` e um comentário explicando por que não há `capture`. Conferido no código de `dev` em 2026-10-30: o campo vive hoje em `frontend/src/components/PaymentProofFields.tsx` (o `PaymentProofDialog.tsx:203-205` citado na descrição foi refatorado depois, na TASK-535 da feature `20261027-pagamento-no-cadastro-despesa`, que extraiu o campo), e nenhum `<input type="file">` do frontend tem `capture` (o outro é o da foto de perfil, `Profile.tsx`). Três testes seguram a regressão: `PaymentProofDialog.test.tsx`, `PaymentProofFields.test.tsx` e `ExpenseForm.test.tsx`.
+
+**Falta a conferência em iPhone real**, que o §3 do bugfix registra como pendente e que o teste não prova (ele só afirma que o atributo saiu). Nenhum doc do projeto registra que ela foi feita. Se o iPhone ainda falhar, o caminho é reabrir o bugfix ou escalar para feature, como ele descreve.
