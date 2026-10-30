@@ -4,7 +4,7 @@ ID: 086
 Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §8 (achados X2 e S1 da revisão de segurança da TASK-414); `backend/app/Http/Controllers/GroupMemberController.php` (`store()`); `backend/routes/api.php:57`; `docs/sdd/03-tasks.md` TASK-017
 Criado em: 2026-10-21
 Prioridade: ALTA
-Status: Aberto
+Status: Promovido para TASK-549
 
 ## Descrição
 Duas pontas do mesmo problema:
