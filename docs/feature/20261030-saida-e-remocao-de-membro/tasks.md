@@ -12,7 +12,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-549 | Criar `MemberExitBlockers`, a regra de bloqueio da saída (D3-B), com testes de unidade | backend | plan.md §1 | nenhum | Pendente |
+| TASK-549 | Criar `MemberExitBlockers`, a regra de bloqueio da saída (D3-B), com testes de unidade | backend | plan.md §1 | nenhum | Concluída |
 | TASK-550 | Criar `Notifier::groupMemberRemoved` (tipo `group_member_removed`, `group_id` nulo) com teste | backend | plan.md §2 | nenhum | Pendente |
 | TASK-551 | Implementar `GroupMemberController::destroy` (autorização, transação com lock, bloqueio, notificação e exclusão lógica do grupo sem membros) | backend | plan.md §1 | antes do merge | Pendente |
 | TASK-552 | Fazer `ExpenseController::update` aceitar quem já estava na despesa, mesmo que já não seja membro | backend | plan.md §3 | nenhum | Pendente |
