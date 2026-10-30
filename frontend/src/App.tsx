@@ -2,6 +2,7 @@ import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import LoginPage from './pages/LoginPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
 import MyPanel from './pages/MyPanel';
@@ -31,9 +32,9 @@ const App = () => {
     <>
       {/*
         Fora do `RequireAuth` e fora de qualquer layout: o consentimento
-        precisa ser pedido também em `/`, `/cadastro`, `/aceitar-convite` e
-        `/recuperar-senha`, que são as telas onde um visitante chega antes
-        de estar autenticado.
+        precisa ser pedido também em `/`, `/cadastro`, `/aceitar-convite`,
+        `/recuperar-senha` e `/recuperar-acesso`, que são as telas onde um
+        visitante chega antes de estar autenticado.
       */}
       <ConsentBanner />
 
@@ -44,6 +45,7 @@ const App = () => {
         <Route path="/" element={<LoginPage />} />
         <Route path="/aceitar-convite" element={<AcceptInvitePage />} />
         <Route path="/recuperar-senha" element={<AcceptInvitePage mode="reset" />} />
+        <Route path="/recuperar-acesso" element={<ForgotPasswordPage />} />
         <Route path="/cadastro" element={<RegisterPage />} />
 
         {/* Rotas privadas */}

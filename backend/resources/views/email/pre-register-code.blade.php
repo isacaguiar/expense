@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Código de confirmação - Novemax</title>
+  <title>Código de confirmação - Shared Expense</title>
   <style>
     body {
       background-color: #f2f4f8;
@@ -47,7 +47,7 @@
 <body>
   <div class="container">
     <div class="logo">
-      <img src="https://novemax.com.br/assets/images/logo.png" alt="Novemax">
+      <img src="{{ $message->embed(resource_path('images/mail/logo-expense.png')) }}" alt="Shared Expense">
     </div>
 
     <h2>Confirme seu e-mail para criar a conta</h2>
@@ -66,7 +66,7 @@
 
     <div class="footer">
       <p>Nunca compartilhe este código com outras pessoas.</p>
-      <p>© {{ now()->year }} Novemax Soluções em Informática</p>
+      <p>© {{ now()->year }} Shared Expense</p>
     </div>
   </div>
 </body>

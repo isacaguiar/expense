@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8">
-  <title>Convite para a Plataforma - Novemax</title>
+  <title>Convite para a Plataforma - Shared Expense</title>
   <style>
     body {
       background-color: #f2f4f8;
@@ -45,14 +45,14 @@
 <body>
   <div class="container">
     <div class="logo">
-      <img src="https://novemax.com.br/assets/images/logo.png" alt="Novemax">
+      <img src="{{ $message->embed(resource_path('images/mail/logo-expense.png')) }}" alt="Shared Expense">
     </div>
 
-    <h2>Você foi convidado para acessar a plataforma Novemax!</h2>
+    <h2>Você foi convidado para acessar a plataforma Shared Expense!</h2>
 
     <p>
       <strong>{{ $inviterName }}</strong>
-      convidou você para participar do grupo <strong>{{ $groupName }}</strong> na plataforma Novemax.
+      convidou você para participar do grupo <strong>{{ $groupName }}</strong> na plataforma Shared Expense.
     </p>
 
     @if($inviteMessage)
@@ -70,7 +70,7 @@
 
     <div class="footer">
       <p>Este convite é exclusivo e válido para um único uso.</p>
-      <p>© {{ now()->year }} Novemax Soluções em Informática</p>
+      <p>© {{ now()->year }} Shared Expense</p>
     </div>
   </div>
 </body>

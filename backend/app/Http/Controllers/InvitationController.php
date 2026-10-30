@@ -89,7 +89,7 @@ class InvitationController extends Controller
                 'resetLink' => $resetLink,
             ], function ($mail) use ($user) {
                 $mail->to($user->email)
-                    ->subject('Recuperação de senha - Novemax');
+                    ->subject('Recuperação de senha - Shared Expense');
             });
         } catch (\Throwable $e) {
             Log::error('Falha ao enviar e-mail de recuperação de senha', [
