@@ -26,10 +26,12 @@ export default function ForgotPasswordPage() {
     } catch (err) {
       const response = (err as { response?: { status?: number; data?: { message?: string } } })?.response;
 
-      // 422 = e-mail não encontrado (exists:ex_users,email no backend). Não
-      // diferenciamos esse caso na UI do sucesso real, para não piorar a
-      // enumeração de e-mail que já existe na resposta crua do backend —
-      // ver docs/feature/20260930-recuperacao-acesso/specify.md §3.
+      // 422 = e-mail não encontrado (exists:ex_users,email no backend). Tratamos
+      // como sucesso genérico para não ampliar a enumeração que a resposta crua
+      // do backend já tem. LIMITE CONHECIDO (revisão de segurança, 2026-10-30):
+      // o 429 e o 500 só existem para conta existente, então a tela ainda
+      // confirma a conta a quem pede duas vezes seguidas; risco aceito, conserto
+      // no item 119 do backlog. Ver docs/feature/20260930-recuperacao-acesso/specify.md §3.
       if (response?.status === 422) {
         setSuccess(true);
       } else if (response?.status === 429) {
