@@ -124,6 +124,7 @@ O `ID` é só numérico e sequencial (não reaproveita número de item removido/
 | 122 | [ga4-checklist-da-medicao-aprimorada-nunca-executado.md](ga4-checklist-da-medicao-aprimorada-nunca-executado.md) | O checklist do GA4 de `docs/analytics/README.md` nunca foi executado: eventos automáticos usam a URL real, com `?email=…&token=…` em `/recuperar-senha` | recuperacao-acesso (revisão de segurança, F6) | 2026-10-30 | MEDIA | Aberto |
 | 123 | [tela-recuperar-acesso-ux-sucesso-falso-e-alertas-juntos.md](tela-recuperar-acesso-ux-sucesso-falso-e-alertas-juntos.md) | Dois defeitos de UX da tela nova: formato inválido vira falso sucesso (422 tratado como sucesso) e reenviar logo depois cai no 429 com o sucesso ainda na tela | recuperacao-acesso (revisão de segurança, F9) | 2026-10-30 | BAIXA | Aberto |
 | 124 | [remetente-scd-novemax-e-doc-comparado-por-hash.md](remetente-scd-novemax-e-doc-comparado-por-hash.md) | `MAIL_FROM_NAME="SCD Novemax"` no deploy deixa a marca antiga no remetente; `docs/sdd/01-specify.md:42` descreve uma comparação por hash que o código não faz | recuperacao-acesso (revisão de segurança, F4 e F9) | 2026-10-30 | BAIXA | Aberto |
+| 125 | [store-despesa-devolve-500-com-participante-em-array.md](store-despesa-devolve-500-com-participante-em-array.md) | `POST /api/expenses` devolve 500 (erro de SQL) quando `payers` traz um elemento em array; no `update()` já deixou de acontecer (TASK-552) | saida-e-remocao-de-membro (TASK-552, teste de entrada malformada) | 2026-10-30 | BAIXA | Aberto |
 
 ## Itens concluídos
 
