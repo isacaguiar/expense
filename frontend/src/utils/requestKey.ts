@@ -1,7 +1,7 @@
 /**
  * Chave de idempotência de um cadastro de despesa: um UUID v4 gerado uma vez por
  * formulário e reenviado em todo reenvio, para o servidor reconhecer a mesma
- * tentativa (docs/feature/20261027-pagamento-no-cadastro-despesa, R23 e D7).
+ * tentativa (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, R23 e D7).
  *
  * `crypto.randomUUID` só existe em contexto seguro (HTTPS ou localhost). Quem abre o
  * app por IP em HTTP não o tem; nesse caso o v4 é montado a partir de

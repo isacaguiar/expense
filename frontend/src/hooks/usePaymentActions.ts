@@ -66,7 +66,7 @@ type UsePaymentActionsResult = {
  * uma vez todas as parcelas de uma compra parcelada paga no cadastro, inclusive as futuras,
  * que o `unpay` por parcela não alcança. Quem decide se ainda dá é o servidor, que manda
  * `canUndoPurchase: true` só enquanto nenhuma parcela paga está em ciclo encerrado
- * (docs/feature/20261027-pagamento-no-cadastro-despesa, R19 e D11); a rota não recebe ciclo.
+ * (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, R19 e D11); a rota não recebe ciclo.
  */
 export function usePaymentActions(
   currentUserId: number | null,

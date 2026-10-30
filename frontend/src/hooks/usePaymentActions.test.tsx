@@ -119,7 +119,7 @@ describe('usePaymentActions', () => {
   });
 
   // Desfazer de uma vez o pagamento de uma compra parcelada registrada no cadastro
-  // (docs/feature/20261027-pagamento-no-cadastro-despesa, plan §7, R19).
+  // (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, plan §7, R19).
   describe('undo purchase', () => {
     const purchase = { ...expense, paid: true, expenseType: 'IN_INSTALLMENTS' as const, canUndoPurchase: true };
 

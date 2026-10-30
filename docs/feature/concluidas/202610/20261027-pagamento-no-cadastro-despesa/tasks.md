@@ -4,7 +4,7 @@
 
 Versão: 1.0 · Criado em: 20261027
 
-**Status: aprovado pelo usuário em 2026-10-27 ("Sim, siga as sugestões"); executado.** Todas as tasks concluídas, exceto a TASK-542 (depende de informação do usuário sobre o host de produção e vai declarada no PR). Log no `implementation.md`.
+**Status: aprovado pelo usuário em 2026-10-27 ("Sim, siga as sugestões"); executado.** Todas as tasks concluídas; a TASK-542 foi fechada depois do merge, com os limites de upload de produção informados pelo usuário. Log no `implementation.md`.
 
 IDs a partir de TASK-512: o maior em qualquer branch do repositório e em `docs/` é TASK-511 (feature `20261026-organizacao-despesas-pagamentos`), conferido em 2026-10-27 com `grep` nos documentos e nas mensagens de commit de todas as branches. Reconfirmar a numeração se outra feature reservar IDs antes do merge.
 
@@ -42,7 +42,7 @@ Escopo: `backend/`, `frontend/` e documentação. A ordem põe os **testes de ca
 | TASK-539 | Acrescentar a ação "Desfazer pagamento da compra" ao `ExpenseManager` (CA-F12) | frontend | plan.md §7 | nenhum | Concluída (2026-10-29) |
 | TASK-540 | Acrescentar o texto de `expense_paid_on_behalf` em `notificationText.ts` | frontend | plan.md §7 | nenhum | Concluída (2026-10-29) |
 | TASK-541 | Testar a apresentação de totais, filtros e chips com fixture de compra paga (CA-F13) | frontend | plan.md §7 | nenhum | Concluída (2026-10-29) |
-| TASK-542 | Registrar os limites de upload (`post_max_size`, `upload_max_filesize`) do servidor de produção (RK8) | infra | plan.md §8 | depende de informação do usuário sobre o host | Pendente |
+| TASK-542 | Registrar os limites de upload (`post_max_size`, `upload_max_filesize`) do servidor de produção (RK8) | infra | plan.md §8 | depende de informação do usuário sobre o host | Concluída (2026-10-29; limite ajustado pelo usuário no cPanel, de 2M para 6M; conferido em produção com uma foto de 4,9 MiB, que passou) |
 | TASK-543 | Atualizar `MANUAL.md` e `MANUAL.pdf` (CA-D1) | doc | plan.md §8 | nenhum | Concluída (2026-10-29) |
 | TASK-544 | Validar a feature localmente na stack isolada, rodar o `pr-readiness-checker` e registrar o resultado | backend | plan.md §8, §10 | antes do merge (o usuário valida localmente antes do push e do PR) | Concluída (2026-10-29; usuário validou e autorizou o PR por escrito) |
 | TASK-545 | Atribuir os avisos de um cadastro com pagamento a quem cadastrou, e não ao credor, quando são pessoas diferentes; sem WhatsApp do comprovante nesse caso (achado N1 da TASK-532) | backend | plan.md §4 | nenhum | Concluída (2026-10-28) |
@@ -199,6 +199,7 @@ Cada task, antes de integrar: backend, `cd backend && ./vendor/bin/pint --test` 
   - Testes de `CycleTotalsCards`, `PendingCyclesList`, filtro de status e chips com fixture de compra paga: o "% pago" e "R$ pagos de R$ total" refletem `totals.paid`; o filtro "Pagas" inclui a compra e "Pendentes" não; o chip diz "Paga" (CA-F13).
 - **TASK-542**:
   - O limite efetivo de `post_max_size` e `upload_max_filesize` do host de produção fica registrado no `implementation.md` com a fonte (informada pelo usuário ou lida do painel do host). Se for menor que 5 MB mais o corpo do formulário, vira ajuste do host ou texto da mensagem 413; sem essa informação o PR segue, mas a pendência fica declarada na descrição.
+  - Feito: o usuário informou `upload_max_filesize` = 2M e `post_max_size` = 8M; como 2M ficava abaixo dos 5 MB do app, o ajuste foi no host (`upload_max_filesize` para 6M no cPanel). Detalhes, fonte e o que não foi medido no `implementation.md`.
 - **TASK-543**:
   - `MANUAL.md` descreve o pagamento no cadastro por tipo (À Vista, Parcelada paga inteira, Fixa só a inicial), o aviso ao credor, o desfazer da compra e a janela de correção, e o aviso de que depois do fechamento do ciclo o pagamento não pode ser alterado; `MANUAL.pdf` é regenerado como nas features anteriores. `git diff --stat -- docs/ MANUAL.md MANUAL.pdf` lista só esses arquivos e a pasta da feature.
 - **TASK-544**:

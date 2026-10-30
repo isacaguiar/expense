@@ -205,7 +205,7 @@ describe('PendingCyclesList', () => {
       expect(within(cards()[0]).getByText('R$ 120,00 de R$ 300,00 pagos')).toBeInTheDocument();
     });
 
-    // Compra parcelada registrada já paga no cadastro (docs/feature/20261027-pagamento-no-cadastro-despesa,
+    // Compra parcelada registrada já paga no cadastro (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa,
     // CA-F13): a parcela do ciclo conta como paga no `totals.paid` que o servidor manda.
     it('shows the paid installment of a purchase registered as paid, next to a pending expense', async () => {
       // Geladeira 3 x 100,00 paga no cadastro (parcela do ciclo: 100,00) + Mercado 200,00 pendente.

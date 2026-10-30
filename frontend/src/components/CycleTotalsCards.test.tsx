@@ -36,7 +36,7 @@ describe('CycleTotalsCards', () => {
     expect(within(cardOf('A pagar')).getByText('76% do total')).toBeInTheDocument();
   });
 
-  // Compra parcelada registrada já paga no cadastro (docs/feature/20261027-pagamento-no-cadastro-despesa,
+  // Compra parcelada registrada já paga no cadastro (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa,
   // CA-F13): a parcela do ciclo entra em "Pago" como qualquer despesa paga, sem nenhuma conta
   // nova no cliente — o servidor manda `totals.paid` e a tela só o mostra.
   it('counts the installment of a purchase registered as paid in the Pago card, next to a pending expense', () => {

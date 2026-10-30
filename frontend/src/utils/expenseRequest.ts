@@ -5,7 +5,7 @@ import type { InstallmentQuota } from './installments';
  * Tempo máximo do `POST /api/expenses`. Uma foto de até 5 MB numa rede móvel precisa de
  * folga, e estourar o prazo é seguro porque o reenvio é idempotente (chave estável do
  * formulário). Sem prazo, a tela ficava em "Salvando…" até o usuário recarregar e
- * tentar de novo (docs/feature/20261027-pagamento-no-cadastro-despesa, R23).
+ * tentar de novo (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, R23).
  */
 export const EXPENSE_SAVE_TIMEOUT_MS = 60_000;
 

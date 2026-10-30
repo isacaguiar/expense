@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 
 /**
  * Regras do pagamento registrado junto do cadastro da despesa
- * (docs/feature/20261027-pagamento-no-cadastro-despesa, plan.md §4 e §5).
+ * (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, plan.md §4 e §5).
  *
  * Esta classe guarda a regra de negócio; o `ExpenseController` orquestra
  * (Constitution §1 item 3). Nada aqui grava arquivo nem notifica.

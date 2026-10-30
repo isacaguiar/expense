@@ -1,7 +1,7 @@
 import type { ExpenseType } from '../types/expense';
 
 // Textos da seção "Pagamento (opcional)" do cadastro de despesa
-// (docs/feature/20261027-pagamento-no-cadastro-despesa, R9 e §3.6). São apresentação:
+// (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, R9 e §3.6). São apresentação:
 // quais ocorrências ficam pagas e a regra de competência vêm do servidor.
 
 export type PaymentOccurrenceInput = {

@@ -254,7 +254,7 @@ describe('ExpenseForm', () => {
     expect(navigateMock).toHaveBeenCalledWith('/groups/1/expenses');
   });
 
-  // Pagamento registrado no cadastro (docs/feature/20261027-pagamento-no-cadastro-despesa,
+  // Pagamento registrado no cadastro (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa,
   // plan §6): seção opcional com foto e descrição do pagamento. Sem preencher nada, o
   // cadastro é o de sempre (CA-F1) e os testes acima passam sem edição.
   describe('seção "Pagamento (opcional)"', () => {
