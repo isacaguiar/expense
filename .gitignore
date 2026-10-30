@@ -10,6 +10,7 @@ frontend/node_modules
 .env
 .env.backup
 .env.production
+.env.testing
 .env.example
 .phpunit.result.cache
 Homestead.json
@@ -33,3 +34,11 @@ id_rsa.pub
 
 # Gerado por site/tools/gerar-datas-legais.sh no deploy.
 site/src/legal-dates.php
+
+# Dumps de crash do Git Bash/MSYS gravados no diretório corrente (já foram commitados por engano uma vez).
+*.stackdump
+
+# Plugin Impeccable: só .impeccable/config.json é compartilhado; cache, pendências e config local são da máquina.
+.impeccable/hook.cache.json
+.impeccable/hook.pending.json
+.impeccable/config.local.json

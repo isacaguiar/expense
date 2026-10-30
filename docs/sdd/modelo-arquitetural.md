@@ -111,10 +111,10 @@ vs. o que trava até uma pessoa aprovar.
 | Abrir PR (branch da feature → `dev`) ou PR de promoção (`dev` → `main`) | ✅ | — |
 | Merge de PR em `dev` (feature inteira) | — | ✅ (revisão do PR) |
 | Merge em `main` (produção) | — | ✅ (revisão do PR de promoção) |
-| Deploy (`deploy-backend.yml`, EAS build do Expo) | — | ✅ — na prática, o merge em `main` já dispara |
+| Deploy (`deploy-backend.yml`) | — | ✅ — na prática, o merge em `main` já dispara |
 | Rotacionar, expor ou remover segredo / credencial | — | ✅ (rotação é 100% humana) |
 | Apagar dado definitivamente (hard delete) | — | ✅ |
-| Corte de produção do frontend novo (`expense/app`) substituindo `expense/frontend` | — | ✅ |
+| Publicar o app na Google Play (primeira versão e releases em produção; o `frontend/` web não é substituído) | — | ✅ |
 
 ## 6. Skills e agents
 

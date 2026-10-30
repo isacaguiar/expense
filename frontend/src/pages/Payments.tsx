@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -7,11 +7,6 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
   Grid,
   IconButton,
   Snackbar,
@@ -23,20 +18,21 @@ import { useParams } from 'react-router-dom';
 import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import ArrowForwardIosIcon from '@mui/icons-material/ArrowForwardIos';
 import PhotoCameraOutlinedIcon from '@mui/icons-material/PhotoCameraOutlined';
-import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import UndoIcon from '@mui/icons-material/Undo';
+import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
-import PayableSettlementList from '../components/PayableSettlementList';
+import { useCurrentUserId } from '../hooks/useCurrentUserId';
+import PaymentSettlementsPanel, { SettlementsTab } from '../components/PaymentSettlementsPanel';
+import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
 import UserAvatar from '../components/UserAvatar';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
-
-const formatDate = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-};
+import { formatShortDate } from '../utils/dates';
+import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
+import ExpenseFilterBar from '../components/ExpenseFilterBar';
+import { useExpenseFilters } from '../hooks/useExpenseFilters';
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -47,15 +43,13 @@ const Payments: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
 
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const currentUserId = useCurrentUserId();
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    axios
-      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers: { Authorization: token ? `Bearer ${token}` : '' } })
-      .then(res => setCurrentUserId(res.data.id))
-      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
-  }, []);
+  // Aba de acertos escolhida. Mora aqui, e não no painel, porque `useGroupCycle` marca
+  // `loading` a cada busca (navegar de ciclo, recarregar) e a página troca o conteúdo
+  // por um spinner: um estado do painel se perderia
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §8).
+  const [settlementsTab, setSettlementsTab] = useState<SettlementsTab>('toPay');
 
   // Membros do grupo com email/chave Pix — usado só pra resolver, ao clicar
   // num valor a pagar, se o credor tem Pix cadastrado e qual o e-mail pra
@@ -79,35 +73,46 @@ const Payments: React.FC = () => {
     payError,
     paySuccess,
     unpaySuccess,
+    editSuccess,
     dismissPayError,
     dismissPaySuccess,
     dismissUnpaySuccess,
+    dismissEditSuccess,
     canPay,
     canUnpay,
+    canEditProof,
     handlePay,
-    handleUnpay
+    handleUnpay,
+    handleEditProof
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
 
-  // Diálogo "Confirmar pagamento": a foto é obrigatória aqui (do lado do
-  // cliente) mesmo com o campo sendo opcional na API — ver plan.md §2/§6.
+  // Popup "Confirmar pagamento" do credor: foto OU descrição, o mesmo
+  // componente do ✓ de Despesas (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga,
+  // decisão D2 — antes a foto era obrigatória aqui, plan.md §6 da tela de Pagamentos).
   const [confirmExpenseId, setConfirmExpenseId] = useState<number | null>(null);
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const openConfirmDialog = (expenseId: number) => {
-    setConfirmExpenseId(expenseId);
-    setSelectedFile(null);
-  };
-
-  const closeConfirmDialog = () => {
+  const confirmPayment = ({ file, note }: PaymentProofValue) => {
+    if (confirmExpenseId === null) return;
+    handlePay(confirmExpenseId, file ? { proof: file, note } : { note });
     setConfirmExpenseId(null);
-    setSelectedFile(null);
   };
 
-  const confirmPayment = () => {
-    if (confirmExpenseId === null || !selectedFile) return;
-    handlePay(confirmExpenseId, selectedFile);
-    closeConfirmDialog();
+  // "Editar comprovante" (despesa já paga): popup próprio, com estado separado do
+  // `confirmExpenseId` acima — docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga.
+  // O id do alvo não é zerado ao fechar: o popup continua mostrando a mesma
+  // despesa durante a animação de saída. Quem manda abrir é `editProofOpen`.
+  const [editProofExpenseId, setEditProofExpenseId] = useState<number | null>(null);
+  const [editProofOpen, setEditProofOpen] = useState<boolean>(false);
+
+  const openEditProof = (expenseId: number) => {
+    setEditProofExpenseId(expenseId);
+    setEditProofOpen(true);
+  };
+
+  const confirmEditProof = ({ file, note, removeProof }: PaymentProofValue) => {
+    if (editProofExpenseId === null) return;
+    handleEditProof(editProofExpenseId, { proof: file ?? undefined, removeProof, note });
+    setEditProofOpen(false);
   };
 
   // Valor a pagar por pessoa: ao clicar num settlement, abre o Pix do credor
@@ -135,24 +140,23 @@ const Payments: React.FC = () => {
   // distinto de confirmar uma despesa (isso continua com o credor, acima).
   // Ver docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/plan.md §6.
   const [confirmSettlementTarget, setConfirmSettlementTarget] = useState<SummarySettlement | null>(null);
-  const [selectedSettlementFile, setSelectedSettlementFile] = useState<File | null>(null);
   const [confirmingSettlement, setConfirmingSettlement] = useState<boolean>(false);
   const [settlementConfirmError, setSettlementConfirmError] = useState<string | null>(null);
   const [settlementConfirmSuccess, setSettlementConfirmSuccess] = useState<boolean>(false);
 
   const openConfirmSettlementDialog = (settlement: SummarySettlement) => {
     setConfirmSettlementTarget(settlement);
-    setSelectedSettlementFile(null);
     setSettlementConfirmError(null);
   };
 
   const closeConfirmSettlementDialog = () => {
     setConfirmSettlementTarget(null);
-    setSelectedSettlementFile(null);
   };
 
-  const confirmSettlementPayment = () => {
-    if (!confirmSettlementTarget || !selectedSettlementFile || !groupId) return;
+  // Aqui a foto continua obrigatória (o backend exige `comprovante`); a
+  // descrição é só um complemento opcional (specify R2).
+  const confirmSettlementPayment = ({ file, note }: PaymentProofValue) => {
+    if (!confirmSettlementTarget || !file || !groupId) return;
 
     setConfirmingSettlement(true);
     setSettlementConfirmError(null);
@@ -160,7 +164,12 @@ const Payments: React.FC = () => {
     const token = localStorage.getItem('accessToken');
     const form = new FormData();
     form.append('to_user_id', String(confirmSettlementTarget.to_user_id));
-    form.append('comprovante', selectedSettlementFile);
+    form.append('comprovante', file);
+    if (note) form.append('descricao', note);
+    // Sem isto o backend assume o ciclo corrente (aberto) e recusa o acerto de um
+    // ciclo anterior já fechado: "só pode ser confirmado depois que a competência
+    // é fechada". Mesmo parâmetro que `handlePay`/`handleUnpay` já mandam.
+    form.append('cycles_ago', String(cyclesAgo));
 
     axios
       .post(`${API_BASE_URL}/api/groups/${groupId}/settlements/confirm`, form, {
@@ -179,6 +188,20 @@ const Payments: React.FC = () => {
   };
 
   const expenses = summary?.expenses ?? [];
+
+  // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Substitui o
+  // "pendentes primeiro" que a API devolve; `expenses` (a lista da API, sem ordenar) segue
+  // alimentando o estado vazio e a busca por id do popup de comprovante
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §5).
+  const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);
+
+  // Busca, tipo, credor, devedores e status: os mesmos de Despesas (mesmo hook e mesma barra),
+  // sobre a lista já ordenada e só para ela — estado local desta tela, sem persistência (plan.md §4).
+  const filters = useExpenseFilters(sortedExpenses);
+  const { filteredExpenses } = filters;
+  // Sempre da lista atual (nunca um objeto guardado): depois de recarregar, o
+  // popup abre com a descrição e a foto que estão gravadas agora.
+  const editProofExpense = expenses.find(exp => exp.id === editProofExpenseId) ?? null;
 
   return (
     <DespesasThemeScope>
@@ -199,7 +222,7 @@ const Payments: React.FC = () => {
               textTransform="capitalize"
               sx={{ flexGrow: 1, minWidth: 0, textAlign: 'center', fontSize: { xs: '1rem', md: '1.25rem' } }}
             >
-              {formatDate(summary.cycle.start)} – {formatDate(summary.cycle.end)}
+              {formatShortDate(summary.cycle.start)} – {formatShortDate(summary.cycle.end)}
             </Typography>
             <IconButton onClick={goToNextCycle} aria-label="Próximo ciclo">
               <ArrowForwardIosIcon />
@@ -221,12 +244,17 @@ const Payments: React.FC = () => {
                 Despesas do ciclo
               </Typography>
 
+              {/* Os filtros só afetam esta lista: os acertos e os saldos ao lado seguem representando a competência inteira. */}
+              <ExpenseFilterBar filters={filters} />
+
               {expenses.length === 0 ? (
                 <Typography color="text.secondary">Nenhuma despesa nesta competência.</Typography>
+              ) : filteredExpenses.length === 0 ? (
+                <Typography color="text.secondary">Nenhuma despesa encontrada para esse filtro.</Typography>
               ) : (
                 <Stack spacing={2}>
-                  {expenses.map((exp: SummaryExpense) => (
-                    <Card key={exp.id} variant="outlined">
+                  {filteredExpenses.map((exp: SummaryExpense) => (
+                    <Card key={expenseRowKey(exp)} variant="outlined">
                       <CardContent>
                         <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1}>
                           <Typography variant="subtitle1" fontWeight="bold">
@@ -238,6 +266,10 @@ const Payments: React.FC = () => {
                             size="small"
                           />
                         </Box>
+
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          Data: {formatShortDate(exp.date)}
+                        </Typography>
 
                         <Box display="flex" alignItems="center" gap={1} sx={{ my: 0.5 }}>
                           <Typography variant="body2" color="text.secondary">
@@ -270,16 +302,33 @@ const Payments: React.FC = () => {
                           </Typography>
                         )}
 
-                        <Box display="flex" justifyContent="flex-end" mt={2} gap={1}>
+                        {exp.paid && exp.paymentNote && (
+                          <Typography variant="body2" color="text.secondary" mt={1} sx={{ overflowWrap: 'anywhere' }}>
+                            Descrição do pagamento: {exp.paymentNote}
+                          </Typography>
+                        )}
+
+                        <Box display="flex" justifyContent="flex-end" flexWrap="wrap" mt={2} gap={1}>
                           {canPay(exp) && (
                             <Button
                               size="small"
                               variant="contained"
                               startIcon={<PhotoCameraOutlinedIcon />}
                               disabled={payingExpenseId === exp.id}
-                              onClick={() => openConfirmDialog(exp.id)}
+                              onClick={() => setConfirmExpenseId(exp.id)}
                             >
                               Confirmar pagamento
+                            </Button>
+                          )}
+                          {canEditProof(exp) && (
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<AttachFileOutlinedIcon />}
+                              disabled={payingExpenseId === exp.id}
+                              onClick={() => openEditProof(exp.id)}
+                            >
+                              Editar comprovante
                             </Button>
                           )}
                           {canUnpay(exp) && (
@@ -302,11 +351,7 @@ const Payments: React.FC = () => {
             </Grid>
 
             <Grid size={{ xs: 12, md: 5 }}>
-              <Typography variant="subtitle1" fontWeight={700} gutterBottom>
-                Valores a pagar
-              </Typography>
-
-              <PayableSettlementList
+              <PaymentSettlementsPanel
                 settlements={summary.settlements}
                 balances={summary.balances}
                 currentUserId={currentUserId}
@@ -315,6 +360,8 @@ const Payments: React.FC = () => {
                   !summary.cycle.settled
                 }
                 cycleSettled={summary.cycle.settled}
+                tab={settlementsTab}
+                onTabChange={setSettlementsTab}
                 onPayWithPix={handleSelectSettlement}
                 onSendProof={openConfirmSettlementDialog}
               />
@@ -323,31 +370,29 @@ const Payments: React.FC = () => {
         </>
       ) : null}
 
-      <Dialog open={confirmExpenseId !== null} onClose={closeConfirmDialog} fullWidth maxWidth="xs">
-        <DialogTitle>Confirmar pagamento</DialogTitle>
-        <DialogContent>
-          <DialogContentText mb={2}>
-            Anexe uma foto do comprovante para confirmar o pagamento.
-          </DialogContentText>
-          <Button variant="outlined" component="label" fullWidth startIcon={<PhotoCameraOutlinedIcon />}>
-            {selectedFile ? selectedFile.name : 'Selecionar foto'}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              hidden
-              onChange={e => setSelectedFile(e.target.files?.[0] ?? null)}
-            />
-          </Button>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeConfirmDialog}>Cancelar</Button>
-          <Button variant="contained" disabled={!selectedFile} onClick={confirmPayment}>
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PaymentProofDialog
+        open={confirmExpenseId !== null}
+        title="Confirmar pagamento"
+        description="Anexe uma foto do comprovante ou descreva o pagamento."
+        photoLabel="Selecionar foto"
+        requirePhoto={false}
+        onClose={() => setConfirmExpenseId(null)}
+        onConfirm={confirmPayment}
+      />
+
+      {/* Popup de edição do comprovante de uma despesa já paga */}
+      <PaymentProofDialog
+        open={editProofOpen && editProofExpense !== null}
+        title="Editar comprovante"
+        description="Troque a foto, remova-a ou ajuste a descrição. O pagamento continua marcado como pago."
+        photoLabel={editProofExpense?.paymentProofUrl ? 'Trocar a foto' : 'Selecionar foto'}
+        requirePhoto={false}
+        confirmLabel="Salvar"
+        initialNote={editProofExpense?.paymentNote ?? ''}
+        currentProofUrl={editProofExpense?.paymentProofUrl ?? null}
+        onClose={() => setEditProofOpen(false)}
+        onConfirm={confirmEditProof}
+      />
 
       {pixTarget && (
         <PixPaymentDialog
@@ -360,41 +405,17 @@ const Payments: React.FC = () => {
         />
       )}
 
-      <Dialog open={confirmSettlementTarget !== null} onClose={closeConfirmSettlementDialog} fullWidth maxWidth="xs">
-        <DialogTitle>Enviar comprovante do Pix</DialogTitle>
-        <DialogContent>
-          <DialogContentText mb={2}>
-            Anexe o comprovante do seu pagamento via Pix para confirmar.
-          </DialogContentText>
-          <Button variant="outlined" component="label" fullWidth startIcon={<UploadFileOutlinedIcon />}>
-            {selectedSettlementFile ? selectedSettlementFile.name : 'Selecionar comprovante'}
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              hidden
-              onChange={e => setSelectedSettlementFile(e.target.files?.[0] ?? null)}
-            />
-          </Button>
-          {settlementConfirmError && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              {settlementConfirmError}
-            </Alert>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={closeConfirmSettlementDialog} disabled={confirmingSettlement}>
-            Cancelar
-          </Button>
-          <Button
-            variant="contained"
-            disabled={!selectedSettlementFile || confirmingSettlement}
-            onClick={confirmSettlementPayment}
-          >
-            Confirmar
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <PaymentProofDialog
+        open={confirmSettlementTarget !== null}
+        title="Enviar comprovante do Pix"
+        description="Anexe o comprovante do seu pagamento via Pix para confirmar."
+        photoLabel="Selecionar comprovante"
+        requirePhoto
+        busy={confirmingSettlement}
+        error={settlementConfirmError}
+        onClose={closeConfirmSettlementDialog}
+        onConfirm={confirmSettlementPayment}
+      />
 
       <Snackbar
         open={paySuccess}
@@ -415,6 +436,17 @@ const Payments: React.FC = () => {
       >
         <Alert onClose={dismissUnpaySuccess} severity="success" variant="filled">
           Pagamento desfeito.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={editSuccess}
+        autoHideDuration={4000}
+        onClose={dismissEditSuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissEditSuccess} severity="success" variant="filled">
+          Comprovante atualizado.
         </Alert>
       </Snackbar>
 

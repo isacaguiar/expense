@@ -13,6 +13,17 @@ export type LoginResponse = {
   expires_in: number;
 };
 
+/**
+ * Resposta de `GET /api/auth/google/exchange`: o mesmo token de `LoginResponse`
+ * mais `new_user`, que diz se a conta foi criada neste login. A conta nasce
+ * dentro do login por Google, então é o único jeito de distinguir um cadastro
+ * novo de um login comum. Um backend anterior à TASK-386 não manda o campo —
+ * por isso a leitura exige `=== true`.
+ */
+export type GoogleExchangeResponse = LoginResponse & {
+  new_user: boolean;
+};
+
 /** Corpo de `POST /api/pre-register` — o formulário de `/cadastro` inteiro. */
 export type PreRegisterPayload = {
   name: string;

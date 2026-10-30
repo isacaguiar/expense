@@ -5,6 +5,7 @@ import AcceptInvitePage from './pages/AcceptInvitePage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import RegisterPage from './pages/RegisterPage';
 import Dashboard from './pages/Dashboard';
+import MyPanel from './pages/MyPanel';
 import GroupForm from './pages/GroupForm';
 import GroupMembersForm from './pages/GroupMembersForm';
 import ExpenseManager from './pages/ExpenseManager';
@@ -63,6 +64,7 @@ const App = () => {
 
           {/* Sem grupo selecionado: cabeçalho simples (SimpleShellLayout) */}
           <Route element={<SimpleShellLayout />}>
+            <Route path="/painel" element={<MyPanel />} />
             <Route path="/meus-grupos" element={<Dashboard />} />
             <Route path="/dashboard" element={<Navigate to="/meus-grupos" replace />} />
             <Route path="/groups/new" element={<GroupForm />} />

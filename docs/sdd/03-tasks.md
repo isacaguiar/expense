@@ -21,9 +21,11 @@ Regra de atomicidade: uma task deve ser completável, revisável e testável **i
 
 ---
 
-## Épico A — Migração do frontend para React Native (Expo)
+## Épico A — Migração do frontend para React Native (Expo) — **substituído**
 
-**Migrado para `docs/feature/20260817-migracao-frontend-expo/` em 2026-08-17.** TASK-001 a TASK-010 (+ TASK-022 a TASK-026, criadas ao migrar) têm specify/plan/tasks/implementation próprios lá — ver `docs/feature/20260817-migracao-frontend-expo/tasks.md` para status atualizado. Este épico não recebe mais tasks novas aqui.
+**Substituído pelo `decisions/ADR-010` (2026-10-08): o app móvel será em Flutter, não Expo.** TASK-001 a TASK-010 e TASK-022 a TASK-026 ficam **obsoletas** e nunca foram executadas. O trabalho do app móvel está no item 074 do backlog (`docs/backlog/app-flutter-google-play.md`).
+
+Histórico: o épico foi migrado para `docs/feature/20260817-migracao-frontend-expo/` em 2026-08-17 (specify/plan/tasks/implementation próprios lá, mantidos como retrato histórico, com aviso de supersessão). Este épico não recebe mais tasks novas aqui.
 
 ## Épico B — Segurança
 

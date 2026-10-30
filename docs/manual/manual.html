@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Manual de Despesas Compartilhadas</title>
+<style>
+  @page { size: Letter; margin: 0.42in 0.85in 0.5in; }
+
+  :root {
+    --ink: #16241f;
+    --muted: #5c6b64;
+    --accent: #0e7c66;
+    --accent-dark: #0b5f4e;
+    --rule: #e5e4db;
+    --frame: #d8d7ce;
+    --chip: #e3f0ec;
+  }
+
+  * { box-sizing: border-box; }
+
+  html {
+    font-family: "Segoe UI", sans-serif;
+    font-size: 10pt;
+    line-height: 1.62;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  body { margin: 0; }
+
+  strong { font-weight: 600; }
+
+  /* Cabeçalho */
+  header { border-bottom: 1.5px solid var(--ink); padding: 14px 0 22px; margin-bottom: 34px; }
+  .eyebrow {
+    font: 7.5pt Consolas, monospace; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent-dark); margin: 0 0 12px;
+  }
+  h1 { font: 400 33pt/1.1 Georgia, serif; letter-spacing: -0.012em; margin: 0 0 14px; }
+  .lede { font-size: 11.5pt; line-height: 1.5; color: var(--muted); margin: 0; max-width: 5.4in; }
+
+  /* Seções */
+  h2 { font: 700 16.5pt/1.2 Georgia, serif; margin: 0 0 14px; }
+  .block { margin: 0 0 30px; }
+  .block > h2 { break-after: avoid; }
+  /* O filete fica dentro do título para nunca ficar sozinho no pé de uma página. */
+  .block + .block > h2::before {
+    content: ""; display: block; border-top: 1px solid var(--rule); margin: 0 0 28px;
+  }
+  .keep { break-inside: avoid; }
+  p { margin: 0 0 12px; }
+
+  ul.dots { list-style: none; padding: 0; margin: 0 0 18px; }
+  ul.dots li { position: relative; padding-left: 16px; margin-bottom: 9px; }
+  ul.dots li::before {
+    content: ""; position: absolute; left: 1px; top: 0.62em; width: 5px; height: 5px;
+    border-radius: 50%; background: var(--accent);
+  }
+
+  /* Cartão de exemplo */
+  .example {
+    border: 1px solid var(--frame); border-radius: 10px; padding: 14px 18px 12px;
+    box-shadow: 0 1px 4px rgba(22, 36, 31, 0.12); background: #fff; margin: 0 0 14px;
+    break-inside: avoid;
+  }
+  .example .label {
+    font: 7pt Consolas, monospace; letter-spacing: 0.12em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 8px;
+  }
+  .example .row {
+    display: flex; justify-content: space-between; font: 9.5pt/1.7 Consolas, monospace;
+  }
+  .example .row b { font-weight: 700; }
+  .example .note {
+    font: 8pt Consolas, monospace; color: var(--muted); border-top: 1px dotted #b9bfbb;
+    margin: 8px 0 0; padding-top: 8px;
+  }
+
+  /* Capturas */
+  figure { margin: 0 0 20px; break-inside: avoid; }
+  figure img {
+    display: block; width: 100%; border-radius: 7px; border: 1px solid var(--frame);
+    box-shadow: 0 1px 4px rgba(22, 36, 31, 0.14);
+  }
+  figcaption {
+    font: 8pt/1.5 Consolas, monospace; color: var(--muted);
+    border-left: 3px solid var(--accent); padding-left: 10px; margin-top: 9px;
+  }
+
+  /* Telas */
+  .screen { margin: 0 0 30px; break-inside: avoid; }
+  h3 {
+    display: flex; align-items: center; gap: 10px; margin: 0 0 12px;
+    font: 700 12pt Arial, sans-serif;
+  }
+  h3::before { content: ""; width: 22px; height: 2px; background: var(--accent); }
+  .screens-title { break-after: avoid; margin-bottom: 26px; }
+
+  /* Passos */
+  ol.steps { list-style: none; counter-reset: step; padding: 0; margin: 0; }
+  ol.steps > li {
+    counter-increment: step; position: relative; padding: 2px 0 0 44px; margin-bottom: 14px; min-height: 28px;
+  }
+  ol.steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: -1px; width: 28px; height: 28px;
+    border-radius: 50%; background: var(--chip); color: var(--accent);
+    font: 11pt/28px Georgia, serif; text-align: center;
+  }
+  ol.steps ul { list-style: none; padding: 0; margin: 6px 0 0; }
+  ol.steps ul li { position: relative; padding-left: 20px; margin-bottom: 3px; }
+  ol.steps ul li::before {
+    content: ""; position: absolute; left: 3px; top: 0.6em; width: 6px; height: 6px;
+    border: 1.5px solid var(--accent); border-radius: 50%;
+  }
+
+  footer {
+    border-top: 1.5px solid var(--ink); margin-top: 28px; padding-top: 10px;
+    font: 8pt Consolas, monospace; color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">Manual do usuário</p>
+  <h1>Despesas compartilhadas,<br>contas em dia</h1>
+  <p class="lede">Como registrar os gastos do grupo, dividir os valores e acertar tudo com o menor número de Pix possível.</p>
+</header>
+
+<section class="block">
+  <h2>O que é</h2>
+  <p>Aplicativo web para um grupo de pessoas — família, república, amigos — registrar despesas em comum e dividir os valores. Em vez de cada um pagar cada um, <strong>o app calcula automaticamente o menor número de transferências que acerta todas as contas do ciclo</strong>: ninguém faz um Pix que poderia ser evitado. Você acompanha, mês a mês, quem deve quanto a quem, e paga ou cobra por Pix dentro do próprio app.</p>
+</section>
+
+<section class="block">
+  <h2>Como a conta é calculada</h2>
+  <ul class="dots">
+    <li>Cada despesa é dividida <strong>igualmente</strong> entre os participantes que você marcar — não precisam ser todos do grupo. Ex.: R$ 120 entre 3 pessoas = R$ 40 cada.</li>
+    <li>Ao longo do ciclo, o app soma tudo e calcula o <strong>saldo líquido</strong> de cada pessoa: quanto ela tem <em>a receber</em> ou <em>a pagar</em>.</li>
+    <li>A partir dos saldos, ele monta a <strong>liquidação mínima</strong>: o menor conjunto de transferências que zera todos os saldos de uma vez.</li>
+  </ul>
+
+  <div class="example">
+    <p class="label">Exemplo · Isac pagou R$ 90 (conta dividida entre 3)</p>
+    <div class="row"><span>ngaguiar → Isac</span><b>R$ 30,00</b></div>
+    <div class="row"><span>mateus.davi.10 → Isac</span><b>R$ 30,00</b></div>
+    <p class="note">Dois Pix, não seis. O app resolve os acertos par a par.</p>
+  </div>
+
+  <figure style="break-before: page">
+    <img src="images/07-pagamentos.jpg" alt="Tela de pagamentos com a lista Valores a pagar">
+    <figcaption>Cada linha de “Valores a pagar” é uma transferência única já calculada pelo app: “Fulano deve pagar R$ X a Beltrano”.</figcaption>
+  </figure>
+</section>
+
+<section class="block">
+  <h2 class="screens-title">Telas principais</h2>
+
+  <div class="screen">
+    <h3>Login</h3>
+    <figure>
+      <img src="images/01-login.jpg" alt="Tela de login">
+      <figcaption>expense.novemax.com.br/app</figcaption>
+    </figure>
+    <p>Informe e-mail e senha e clique em <strong>Entrar</strong>. Novos usuários entram por convite: ao ser adicionado a um grupo, você recebe um e-mail com um link para criar a senha e ativar a conta.</p>
+  </div>
+
+  <div class="screen">
+    <h3>Meus Grupos</h3>
+    <figure>
+      <img src="images/02-meus-grupos.jpg" alt="Lista de grupos do usuário">
+      <figcaption>Ponto de partida depois do login.</figcaption>
+    </figure>
+    <p>Lista os grupos de que você participa, com o responsável e os integrantes. <strong>Novo Grupo</strong> cria um grupo — informe nome, descrição e, se quiser, um “dia de fechamento”. Clique no nome do grupo para abrir a Home dele.</p>
+  </div>
+
+  <div class="screen">
+    <h3>Home (resumo do grupo)</h3>
+    <figure>
+      <img src="images/03-resumo.jpg" alt="Home do grupo com totais e saldo por pessoa">
+      <figcaption>Use as setas para trocar de período.</figcaption>
+    </figure>
+    <p>Visão do ciclo selecionado: <strong>Total de despesas</strong>, <strong>Pago</strong> e <strong>A pagar</strong>, a lista de despesas e, à direita, o painel com duas abas — <strong>Saldo</strong> (líquido de cada pessoa) e <strong>À pagar</strong> (a liquidação mínima). O selo <em>Prévia</em> indica que os números ainda mudam até o ciclo fechar.</p>
+  </div>
+
+  <div class="screen">
+    <h3>Despesas</h3>
+    <figure>
+      <img src="images/05-despesas.jpg" alt="Lista de despesas do ciclo">
+      <figcaption>Buscar, filtrar, editar, marcar como paga.</figcaption>
+    </figure>
+    <p>Todas as despesas do ciclo, com <strong>Tipo</strong>, <strong>Valor</strong>, <strong>Credor</strong> (quem pagou) e <strong>Status</strong> (Paga / Pendente). Dá para buscar, filtrar por <strong>Fixas / Variáveis</strong>, editar, excluir e <strong>marcar como paga</strong>. <strong>Fechar mês</strong> congela os números do período.</p>
+    <p>Ao clicar em <strong>marcar como paga</strong> (o ✓ da linha), abre um popup: anexe uma <strong>foto do comprovante</strong>, escreva uma <strong>descrição</strong> do pagamento — por exemplo “pago em dinheiro” ou “Pix agendado”, até 500 caracteres — ou os dois. É preciso informar pelo menos um deles para confirmar. A descrição aparece nos <strong>detalhes</strong> da despesa.</p>
+    <p>Depois de paga, o credor ainda pode corrigir o comprovante sem desfazer o pagamento: o ícone do <strong>clipe</strong> (<strong>Editar comprovante</strong>, ao lado de <strong>Desfazer pagamento</strong>) abre o mesmo popup, já com a foto e a descrição atuais. Dá para <strong>trocar a foto</strong>, <strong>remover a foto</strong> ou <strong>ajustar a descrição</strong>, e também anexar a primeira foto a uma despesa que foi paga sem comprovante. A despesa continua paga, com a mesma data; só é preciso que sobre a foto ou a descrição. Quando o ciclo está totalmente quitado (todas as despesas pagas e todos os acertos confirmados), ele vira histórico: o ícone deixa de aparecer e, para corrigir, é preciso <strong>desfazer o pagamento</strong> e marcá-lo como pago de novo.</p>
+    <p>Cadastrou uma compra parcelada já paga e errou? Enquanto nenhuma parcela paga estiver em um ciclo já encerrado, o credor vê, ao lado de <strong>Desfazer pagamento</strong>, a ação <strong>Desfazer pagamento da compra</strong>: ela pede confirmação, volta todas as parcelas para pendente e remove o comprovante e a descrição do pagamento. Depois que o ciclo da compra encerra, isso não é mais possível.</p>
+  </div>
+
+  <div class="screen">
+    <h3>Nova despesa</h3>
+    <figure>
+      <img src="images/06-nova-despesa.jpg" alt="Formulário de cadastro de despesa">
+      <figcaption>“Quem participa desta despesa?” define o rateio.</figcaption>
+    </figure>
+    <p>Preencha <strong>Descrição</strong>, <strong>Valor</strong>, <strong>Tipo</strong> (À Vista, Parcelada ou Fixa), a <strong>Data</strong> e o <strong>Pagador</strong> (quem pagou de fato). Em <strong>“Quem participa desta despesa?”</strong> marque só as pessoas que entram nessa divisão — o valor é rateado igualmente entre elas.</p>
+    <p>Se a despesa <strong>já foi paga</strong>, use a seção <strong>Pagamento (opcional)</strong>, no fim do formulário: anexe a <strong>foto do comprovante</strong> (até 5 MB), escreva a <strong>descrição do pagamento</strong> — que não é a descrição da despesa, até 500 caracteres — ou use os dois. Com qualquer um dos dois, a despesa já nasce paga, no mesmo <strong>Salvar</strong>; sem nenhum, ela é cadastrada pendente, como antes. Antes de salvar, a tela diz o que será marcado como pago: em <strong>À Vista</strong>, a própria despesa; em <strong>Parcelada</strong>, todas as parcelas de uma vez, como numa compra no cartão em que o pagamento é um só (e o valor não poderá ser alterado depois); em <strong>Fixa</strong>, apenas a ocorrência inicial, e as próximas continuam pendentes.</p>
+    <p>O pagamento é do <strong>Pagador</strong>. Se você cadastra no lugar de outra pessoa, o pagamento é registrado em nome dela e ela recebe um aviso. Não é possível registrar o pagamento de um mês que ainda não começou. Depois do <strong>fechamento do ciclo</strong>, o pagamento da compra não poderá mais ser alterado.</p>
+  </div>
+
+  <div class="screen">
+    <h3>Pagamentos</h3>
+    <figure>
+      <img src="images/07-pagamentos.jpg" alt="Tela de pagamentos">
+      <figcaption>Onde as contas do ciclo são acertadas.</figcaption>
+    </figure>
+    <p>Em <strong>Despesas do ciclo</strong>, o credor confirma o pagamento no mesmo popup da tela Despesas: foto do comprovante, descrição ou os dois. Depois de paga, o cartão da despesa ganha o botão <strong>Editar comprovante</strong>, que faz o mesmo que o ícone da tela Despesas (trocar, remover ou anexar a foto e ajustar a descrição sem desfazer o pagamento) e também deixa de aparecer quando o ciclo está totalmente quitado. Em <strong>Valores a pagar</strong>, quem deve usa <strong>Pagar com Pix</strong> (abre o QR Code / copia-e-cola do credor) e <strong>Enviar comprovante</strong> para registrar o pagamento; aqui a <strong>foto é obrigatória</strong> e a <strong>descrição é opcional</strong>. Reenviar o comprovante substitui a foto e a descrição anteriores.</p>
+  </div>
+
+  <div class="screen">
+    <h3>Relatórios</h3>
+    <figure>
+      <img src="images/08-relatorios.jpg" alt="Histórico de ciclos fechados">
+      <figcaption>Valores definitivos de cada ciclo encerrado.</figcaption>
+    </figure>
+    <p>Histórico dos ciclos já fechados. Clique em um deles para rever os totais, as despesas e os saldos daquele período — agora com valores <strong>definitivos</strong>.</p>
+  </div>
+</section>
+
+<section class="block keep">
+  <h2>Ciclo e tipos de despesa</h2>
+  <p>Um <strong>ciclo</strong> é o período das despesas — o mês calendário ou, se o grupo tiver um <strong>dia de fechamento</strong>, o intervalo entre um fechamento e o próximo, como a fatura de um cartão.</p>
+  <ul class="dots">
+    <li><strong>Fixa</strong> — repete automaticamente em todo ciclo até você removê-la (aluguel, internet…).</li>
+    <li><strong>À Vista</strong> — um lançamento único.</li>
+    <li><strong>Parcelada</strong> — divide o valor em N meses.</li>
+  </ul>
+  <p>Ao usar <strong>Fechar mês</strong>, os números daquele ciclo ficam congelados e passam a aparecer em Relatórios.</p>
+</section>
+
+<section class="block keep">
+  <h2>Passo a passo</h2>
+  <ol class="steps">
+    <li><strong>Ative sua conta</strong> pelo link do convite e faça login.</li>
+    <li>Em <strong>Configurações → Minha Conta</strong>, cadastre sua <strong>chave Pix</strong> (para receber).</li>
+    <li><strong>Crie o grupo</strong> e, em <strong>Participantes</strong>, adicione as pessoas por e-mail.</li>
+    <li>Em <strong>Despesas</strong>, lance os gastos do mês:
+      <ul>
+        <li>contas recorrentes → tipo <strong>Fixa</strong> (uma vez só);</li>
+        <li>compras do dia a dia → <strong>À Vista</strong> ou <strong>Parcelada</strong>.</li>
+      </ul>
+    </li>
+    <li>Acompanhe na <strong>Home</strong> o saldo de cada um e quem paga a quem.</li>
+    <li>Em <strong>Pagamentos</strong>, o devedor paga por <strong>Pix</strong> e envia o comprovante; o credor <strong>confirma</strong> o recebimento.</li>
+    <li>No fim do período, use <strong>Fechar mês</strong> e consulte depois em <strong>Relatórios</strong>.</li>
+  </ol>
+</section>
+
+<footer>Controle de Despesas Compartilhadas · capturas do grupo Piatã House</footer>
+
+</body>
+</html>

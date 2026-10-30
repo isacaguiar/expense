@@ -1,5 +1,7 @@
 # Plan — Migração do Frontend para React Native (Expo)
 
+> **Substituída pelo `ADR-010` (2026-10-08)** (`docs/sdd/decisions/ADR-010-app-movel-em-flutter.md`): o app móvel será em Flutter, não Expo. Esta feature **nunca foi iniciada** (nenhuma task executada) e ficou obsoleta; o conteúdo abaixo é o plano original, mantido como retrato histórico. O trabalho do app está no item 074 do backlog (`docs/backlog/app-flutter-google-play.md`).
+
 > Traduz `specify.md` em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
 
 Versão: 1.0 · Criado em: 20260817

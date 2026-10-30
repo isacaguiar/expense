@@ -2,7 +2,7 @@
 
 > Este documento define as regras que **todo** trabalho no projeto (humano ou IA) deve seguir. Ele é o topo da hierarquia do SDD: Specify, Plan, Tasks e Implementation não podem contradizê-lo. Mudar a Constitution é sempre um **gate humano** (ver bloco Governança).
 
-Versão: 1.5 · Última atualização: 2026-09-01
+Versão: 1.7 · Última atualização: 2026-10-24
 
 ---
 
@@ -32,17 +32,17 @@ Trava as versões/peças abaixo. Trocar qualquer uma é decisão de **Governanç
 | Backend | PHP 8.1+, Laravel 10, `tymon/jwt-auth` (auth), Laravel Sanctum, `endroid/qr-code` (Pix) |
 | Banco | MySQL 8.0 |
 | Frontend web | React 18 + TypeScript + Vite + MUI (`@mui/material`) + `react-router-dom` + `axios` |
-| Frontend mobile/web unificado *(em migração)* | Expo + `react-native-web` + Expo Router + `react-native-paper` — ver `02-plan.md` |
+| App mobile | Flutter (Dart) + Material 3, projeto `app/` — ver `decisions/ADR-010` |
 | Infra local | Docker Compose (MySQL + Adminer) |
 | Deploy backend | GitHub Actions → SSH/rsync porta 2222 (`easingthemes/ssh-deploy`) → `expense-api.novemax.com.br` — ver `decisions/ADR-008` |
 
-> Decisão já tomada e registrada em `02-plan.md`/`03-tasks.md`: migração do frontend para **Expo + React Native Paper**, em projeto novo (`expense/app`), com `expense/frontend` (React web atual) continuando em paralelo até o corte.
+> Decisão registrada em `decisions/ADR-010`: app móvel em **Flutter**, em projeto novo (`app/`), com `frontend/` (React web) permanecendo como cliente web em produção. Substitui a migração para Expo do `decisions/ADR-001`.
 
 ## 4. Compatibilidade
 
 1. A API hoje é **sem versionamento** (`/api/*`). Mudança breaking em contrato de resposta/rota exige uma de duas coisas: (a) campo/rota nova aditiva, ou (b) introdução de `/api/v2` — nunca alterar o contrato de um endpoint existente em produção sem depreciação assistida.
 2. Migrations são **aditivas por padrão** (nova coluna nullable ou com default, nova tabela). Migration destrutiva (`drop`, `rename`, alterar tipo de coluna existente) é ação com **gate humano** (Governança) antes de rodar em qualquer banco compartilhado.
-3. Quando o app Expo (`expense/app`) e o frontend web (`expense/frontend`) coexistirem, ambos consomem a **mesma API** — nenhuma mudança de contrato pode quebrar um dos dois sem o outro ser atualizado junto.
+3. Quando o app Flutter (`app/`) e o frontend web (`frontend/`) coexistirem, ambos consomem a **mesma API** — nenhuma mudança de contrato pode quebrar um dos dois sem o outro ser atualizado junto.
 4. Navegadores: baseline "evergreen" (últimas 2 versões de Chrome/Edge/Firefox/Safari) — sem suporte a IE ou navegadores EOL.
 
 ## 5. Governança
@@ -57,6 +57,8 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 - **A partir de 2026-08-18** (`ADR-003-fluxo-branch-por-feature.md`): fluxo por feature, em duas camadas. Uma **branch da feature** (`<tipo>/<AAAAMMDD>-<slug-da-feature>`, nome igual à pasta em `docs/feature/`) nasce de `dev` atualizada quando a primeira task começa — a primeira task é implementada direto nela, sem sub-branch própria. Cada task seguinte nasce numa branch própria (`<tipo>/<AAAAMMDD>-<slug-da-feature>-TASK-0xx`) a partir da branch da feature, e faz merge local (`--no-ff`, sem PR, sem gate humano) de volta nela. Só quando a feature estiver pronta abre-se **um único PR** da branch da feature contra `dev` — ver `04-implementation.md` §1 para o passo a passo completo, incluindo quando abrir o PR de promoção `dev` → `main`.
 
 1.1.1. **Arquivamento de feature concluída** (`ADR-009-arquivar-concluidos-por-anomes.md`): quando o PR único da feature é mergeado em `dev`, a pasta `docs/feature/<AAAAMMDD>-<slug>/` é movida para `docs/feature/concluidas/<AAAAMM>/<AAAAMMDD>-<slug>/`, onde `<AAAAMM>` são os 6 primeiros dígitos do nome da pasta (mês de criação). `docs/feature/` na raiz passa a conter só features em andamento; o estado "concluída" é posicional, sem índice. A branch não muda de nome (derivada do nome na criação; o move é pós-merge).
+
+1.1.2. **Release e tag de versão** (`ADR-011-convencao-de-release.md`): cada promoção `dev` → `main` recebe uma tag anotada SemVer `vMAJOR.MINOR.PATCH` (uma só para API, web e site; `app-vX.Y.Z` fica reservado ao app Flutter). MINOR = promoção com feature nova; PATCH = só bugfix; MAJOR = quebra de contrato da API (§4.1) ou migration destrutiva aprovada. O PR de promoção declara a versão proposta; a tag é criada no merge commit de `main` **depois** do merge e do deploy verde, e as notas vão no GitHub Release (`gh release create --generate-notes`). Criar e publicar a tag é gate humano (§5.2). `v1.0.0` é a baseline retroativa (`01dcb406e7`, estado de produção antes da primeira promoção sob esta regra). Passo a passo: `04-implementation.md` §1.9.
 
 1.2. **Fluxo de correção de bug (BFF)**: correção de defeito em comportamento já existente pode seguir o **Bug-Fix Flow** — artefato único em `docs/bugfix/<AAAAMMDD>-<slug>.md`, branch única `fix/<AAAAMMDD>-<slug>`, um PR contra `dev` — em vez das 5 fases e da pasta `docs/feature/`, **desde que** a Triagem de `docs/bugfix/README.md` não marque nenhum gatilho de escalação. Marcou qualquer um → segue o fluxo SDD completo (`docs/feature/`). Gatilhos e critério: `docs/bugfix/README.md`; o porquê do fluxo: `docs/sdd/decisions/ADR-004-fluxo-bugfix.md`. Ao concluir, o arquivo vai para `docs/bugfix/concluidos/<AAAAMM>/<AAAAMMDD>-<slug>.md` (`<AAAAMM>` = mês de criação — `ADR-009`, `docs/bugfix/README.md` §Fechamento).
 
@@ -79,10 +81,11 @@ Histórico do fluxo (não misturar os três modelos numa mesma feature em andame
 | Merge de PR de bugfix em `dev` | ❌ | ✅ (revisão humana do PR) |
 | Abrir PR de promoção (`dev` → `main`), após validação/teste em `dev` | ✅ | — |
 | Merge em `main` (produção) | ❌ | ✅ (revisão humana do PR de promoção) |
-| Deploy (workflow `deploy-backend.yml`, EAS build do Expo) | ❌ | ✅ — na prática, o próprio merge em `main` já dispara `deploy-backend.yml`; não fazer merge em `main` sem essa consequência estar clara |
+| Criar e publicar tag de release (`vX.Y.Z`) em `main`, depois do merge de promoção | ❌ | ✅ |
+| Deploy (workflow `deploy-backend.yml`) | ❌ | ✅ — na prática, o próprio merge em `main` já dispara `deploy-backend.yml`; não fazer merge em `main` sem essa consequência estar clara |
 | Rotacionar, expor ou remover segredo/credencial | ❌ | ✅ |
 | Apagar dado definitivamente (hard delete) | ❌ | ✅ |
-| Corte de produção do frontend novo (`expense/app`) substituindo `expense/frontend` | ❌ | ✅ |
+| Publicar o app na Google Play (primeira versão e releases em produção; o `frontend/` web não é substituído) | ❌ | ✅ |
 
 3. Achados que **já exigem decisão humana** (não corrigir silenciosamente; estado de remediação em `docs/feature/concluidas/202608/20260817-seguranca-api/tasks.md`):
    - Segredos versionados em texto puro (`README.md` raiz: senha do jasypt; client-id/secret do Google OAuth; arquivo `client_secret_*.json` na raiz do repositório) → precisa rotacionar credenciais e remover do histórico/arquivo.

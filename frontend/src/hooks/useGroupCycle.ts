@@ -36,6 +36,9 @@ export type SummaryExpense = {
   valuePerPerson: number;
   paid: boolean;
   paymentProofUrl: string | null;
+  // Descrição do pagamento (docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga):
+  // opcional porque falta num ciclo selado antes da feature (snapshot congelado).
+  paymentNote?: string | null;
   payerName: string | null;
   // Opcionais: aditivos (docs/feature/20260904-avatar-usuario-listagens/plan.md
   // §1) — ausentes num ciclo selado antes dessa mudança (snapshot congelado).
@@ -55,6 +58,10 @@ export type SummaryExpense = {
   installmentNumber?: number | null;
   installmentsTotal?: number;
   totalValue?: number;
+  // Só vem `true`, e só ao credor de uma compra parcelada paga no cadastro cujo desfazer
+  // ainda é possível (nenhuma parcela paga em ciclo encerrado). A decisão é do servidor
+  // (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, plan §5); ausente = não oferecer.
+  canUndoPurchase?: boolean;
   userPayerId: number;
   userCreatorId: number;
 };
@@ -71,6 +78,9 @@ export type SummarySettlement = {
   to_user_id: number;
   amount: number;
   confirmedProofUrl: string | null;
+  // Descrição enviada pelo devedor junto do comprovante (opcional: decorada ao
+  // vivo pelo backend, mas fixtures e respostas antigas podem não trazê-la).
+  confirmedNote?: string | null;
   confirmedAt: string | null;
 };
 

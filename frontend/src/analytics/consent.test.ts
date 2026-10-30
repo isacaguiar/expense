@@ -99,4 +99,55 @@ describe('consentimento e carga do Google Analytics', () => {
 
     expect(googleScripts()).toHaveLength(1);
   });
+
+  describe('revogação e novo aceite na mesma sessão', () => {
+    const comandos = () => window.dataLayer.map((entry) => Array.from(entry as IArguments));
+
+    const paginasMedidas = () =>
+      comandos().filter((comando) => comando[0] === 'event' && comando[1] === 'page_view');
+
+    // Pega o gate que só olha "o script foi carregado": revogar não mudaria nada
+    // e a próxima tela continuaria sendo enviada ao Google.
+    it('revogar depois de aceitar interrompe a medição sem recarregar a página', async () => {
+      const { initAnalytics, setConsent, isAnalyticsActive } = await import('./consent');
+      const { trackPageView } = await import('./pageView');
+
+      initAnalytics();
+      setConsent('granted');
+      trackPageView('/meus-grupos');
+      expect(paginasMedidas()).toHaveLength(1);
+
+      setConsent('denied');
+      trackPageView('/groups/42/expenses');
+
+      expect(isAnalyticsActive()).toBe(false);
+      expect(paginasMedidas()).toHaveLength(1);
+    });
+
+    // Pega o aceite que sai cedo porque o script já foi carregado: o GA ficaria
+    // negado até recarregar, mesmo com o cookie dizendo `granted`.
+    it('aceitar de novo depois de revogar volta a conceder o armazenamento de analytics', async () => {
+      const { initAnalytics, setConsent, isAnalyticsActive } = await import('./consent');
+      const { trackPageView } = await import('./pageView');
+
+      initAnalytics();
+      setConsent('granted');
+      setConsent('denied');
+      setConsent('granted');
+
+      const concessoes = comandos().filter(
+        (comando) =>
+          comando[0] === 'consent' &&
+          comando[1] === 'update' &&
+          (comando[2] as { analytics_storage: string }).analytics_storage === 'granted'
+      );
+
+      expect(concessoes).toHaveLength(2);
+      expect(googleScripts()).toHaveLength(1);
+      expect(isAnalyticsActive()).toBe(true);
+
+      trackPageView('/meus-grupos');
+      expect(paginasMedidas()).toHaveLength(1);
+    });
+  });
 });

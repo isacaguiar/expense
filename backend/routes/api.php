@@ -8,6 +8,7 @@ use App\Http\Controllers\GroupExpenseReportController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PixController;
 use App\Http\Controllers\PreRegisterController;
 use App\Http\Controllers\ProofDownloadController;
@@ -33,6 +34,7 @@ Route::post('/pre-register/resend', [PreRegisterController::class, 'resend'])->m
 
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/me/overview', [OverviewController::class, 'show'])->middleware('throttle:overview');
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [AuthController::class, 'dashboard']);
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
@@ -59,6 +61,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/expenses/{expenseId}/stop-recurrence', [ExpenseController::class, 'stopRecurrence']);
     Route::post('/expenses/{expenseId}/pay', [ExpenseController::class, 'pay']);
     Route::post('/expenses/{expenseId}/unpay', [ExpenseController::class, 'unpay']);
+    Route::post('/expenses/{expenseId}/undo-purchase', [ExpenseController::class, 'undoPurchase']);
+    Route::post('/expenses/{expenseId}/payment-proof', [ExpenseController::class, 'updatePaymentProof']);
     Route::post('/groups/{groupId}/settlements/confirm', [ExpenseController::class, 'confirmSettlement']);
 
     Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
@@ -68,6 +72,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/groups/{groupId}/expenses/close', [ExpenseController::class, 'close']);
     Route::post('/groups/{groupId}/expenses/reopen', [ExpenseController::class, 'reopen']);
     Route::get('/groups/{groupId}/expenses/cycles', [ExpenseController::class, 'cycleHistory']);
+    Route::get('/groups/{groupId}/expenses/pending-cycles', [ExpenseController::class, 'pendingCycles']);
+    Route::get('/groups/{groupId}/expenses/closing-report', [ExpenseController::class, 'closingReport']);
     Route::get('/groups/{groupId}/expenses/gross-debts', [ExpenseController::class, 'grossDebts']);
 
     Route::get('/groups/{groupId}/expenses/report/{year}', [GroupExpenseReportController::class, 'reportByGroupAndYear']);

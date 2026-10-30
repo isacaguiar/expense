@@ -1,3 +1,4 @@
+import DashboardOutlinedIcon from '@mui/icons-material/DashboardOutlined';
 import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
 import ReceiptLongOutlinedIcon from '@mui/icons-material/ReceiptLongOutlined';
 import AssessmentOutlinedIcon from '@mui/icons-material/AssessmentOutlined';
@@ -12,6 +13,7 @@ import { logout } from '../auth/logout';
 
 export function simpleNavItems(navigate: NavigateFunction): GroupNavItem[] {
   return [
+    { label: 'Painel', icon: DashboardOutlinedIcon, to: '/painel' },
     { label: 'Home', icon: HomeOutlinedIcon, to: '/summary' },
     { label: 'Despesas', icon: ReceiptLongOutlinedIcon, to: '/expenses' },
     { label: 'Pagamentos', icon: PaymentsOutlinedIcon, to: '/payments' },

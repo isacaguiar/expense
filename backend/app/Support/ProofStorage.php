@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use App\Models\Quota;
+use App\Models\SettlementConfirmation;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -27,6 +29,13 @@ class ProofStorage
     /**
      * Grava o arquivo em `comprovantes/<groupId>/<uuid>.<ext>` no disco
      * privado e devolve o path relativo (para persistir na coluna).
+     *
+     * O disco `local` tem `'throw' => false` (`config/filesystems.php`): numa
+     * falha de gravação (disco cheio, permissão) `storeAs` devolve `false` em
+     * vez de lançar. Sem a guarda abaixo, quem chama seguiria em frente com um
+     * `false` no lugar do path (`pay()` o gravava na coluna e a edição de
+     * comprovante respondia 200 sem a foto). Aborta com 500 antes de qualquer
+     * escrita no banco.
      */
     public static function store(UploadedFile $file, int $groupId): string
     {
@@ -35,7 +44,13 @@ class ProofStorage
 
         $name = Str::uuid()->toString().'.'.$extension;
 
-        return $file->storeAs("comprovantes/{$groupId}", $name, self::DISK);
+        $path = $file->storeAs("comprovantes/{$groupId}", $name, self::DISK);
+
+        if ($path === false) {
+            abort(500, 'Não foi possível gravar o comprovante.');
+        }
+
+        return $path;
     }
 
     /**
@@ -60,5 +75,29 @@ class ProofStorage
         }
 
         Storage::disk(self::resolveDisk($path))->delete($path);
+    }
+
+    /**
+     * Remove o arquivo SÓ se nenhuma linha o referencia mais. Uma compra paga no
+     * cadastro aponta várias quotas para o mesmo arquivo (feature
+     * 20261027-pagamento-no-cadastro-despesa, R18): apagar pelo caminho, como
+     * `delete` faz, deixaria as outras quotas sem o comprovante. Olha também o
+     * comprovante de acerto do devedor, para nunca apagar arquivo de outro fluxo.
+     *
+     * Chamar DEPOIS de o banco deixar de apontar para o arquivo, senão a própria
+     * linha que está sendo atualizada ainda o referencia.
+     */
+    public static function deleteIfUnreferenced(?string $path): void
+    {
+        if (! $path) {
+            return;
+        }
+
+        if (Quota::where('payment_proof_path', $path)->exists()
+            || SettlementConfirmation::where('proof_path', $path)->exists()) {
+            return;
+        }
+
+        self::delete($path);
     }
 }

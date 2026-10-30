@@ -49,6 +49,24 @@ describe('notificationText', () => {
     ).toBe('Ana registrou "Financiamento" com 3 parcelas já pagas em seu nome');
   });
 
+  // Pagamento registrado por outra pessoa no cadastro da despesa, em nome do credor
+  // (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, D4 e R21).
+  it('expense_paid_on_behalf says who registered the payment in the creditors name', () => {
+    expect(
+      notificationText('expense_paid_on_behalf', { actorName: 'João', expenseDescription: 'Geladeira', quotasCount: 3 })
+    ).toBe('João registrou o pagamento de "Geladeira" em seu nome');
+  });
+
+  it('expense_paid_on_behalf reads the same for a single installment or an in-cash expense', () => {
+    expect(
+      notificationText('expense_paid_on_behalf', { actorName: 'João', expenseDescription: 'Conta de luz', quotasCount: 1 })
+    ).toBe('João registrou o pagamento de "Conta de luz" em seu nome');
+  });
+
+  it('expense_paid_on_behalf does not print "undefined" when the payload is incomplete', () => {
+    expect(notificationText('expense_paid_on_behalf', {})).not.toContain('undefined');
+  });
+
   it('falls back to a generic text for an unknown type', () => {
     expect(notificationText('whatever', {})).toBe('Nova notificação');
   });

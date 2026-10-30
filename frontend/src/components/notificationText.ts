@@ -35,6 +35,8 @@ export function notificationText(type: string, data: NotificationData): string {
       const paga = count === 1 ? 'já paga' : 'já pagas';
       return `${str(data.actorName)} registrou "${str(data.expenseDescription)}" com ${count} ${parcela} ${paga} em seu nome`;
     }
+    case 'expense_paid_on_behalf':
+      return `${str(data.actorName)} registrou o pagamento de "${str(data.expenseDescription)}" em seu nome`;
     default:
       return 'Nova notificação';
   }

@@ -1,6 +1,6 @@
 # ADR-001: Migração do frontend para Expo + React Native Paper
 
-Status: Aceita
+Status: Superada por ADR-010
 Data: 2026-08-17
 
 ## Contexto

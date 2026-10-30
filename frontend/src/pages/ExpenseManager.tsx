@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from '../config';
 import {
@@ -26,9 +26,6 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   useMediaQuery,
   useTheme
@@ -41,19 +38,26 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import UndoIcon from '@mui/icons-material/Undo';
+import RemoveDoneIcon from '@mui/icons-material/RemoveDone';
+import AttachFileOutlinedIcon from '@mui/icons-material/AttachFileOutlined';
 import AutorenewOutlinedIcon from '@mui/icons-material/AutorenewOutlined';
 import ReceiptOutlinedIcon from '@mui/icons-material/ReceiptOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
-import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SavingsOutlinedIcon from '@mui/icons-material/SavingsOutlined';
 import ImageOutlinedIcon from '@mui/icons-material/ImageOutlined';
 import { useGroupCycle, SummaryExpense } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import SummarySidePanel from '../components/SummarySidePanel';
 import CycleClosingAlert from '../components/CycleClosingAlert';
+import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import { brandColors } from '../theme/brandColors';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
 import UserAvatar from '../components/UserAvatar';
+import ExpenseFilterBar from '../components/ExpenseFilterBar';
+import { useExpenseFilters } from '../hooks/useExpenseFilters';
+import { formatShortDate } from '../utils/dates';
+import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
+import { useCurrentUserId } from '../hooks/useCurrentUserId';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -61,13 +65,6 @@ import UserAvatar from '../components/UserAvatar';
 const formatDate = (dateStr: string): string => {
   const [year, month, day] = dateStr.split('-').map(Number);
   return new Date(year, month - 1, day).toLocaleDateString('pt-BR');
-};
-
-// Rótulo curto (dia + mês abreviado) pro cabeçalho de competência — mesmo
-// formato usado em GroupSummary, pra não ter duas convenções de data na UI.
-const formatCycleBoundary = (dateStr: string): string => {
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
 };
 
 /**
@@ -100,19 +97,18 @@ const ExpenseManager: React.FC = () => {
   const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
   const expenses = summary?.expenses ?? [];
 
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const currentUserId = useCurrentUserId();
 
-  useEffect(() => {
-    const token = localStorage.getItem('accessToken');
-    axios
-      .get<{ id: number }>(`${API_BASE_URL}/api/me`, { headers: { Authorization: token ? `Bearer ${token}` : '' } })
-      .then(res => setCurrentUserId(res.data.id))
-      .catch(err => console.error('Erro ao carregar usuário autenticado:', err));
-  }, []);
+  // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Vale
+  // para cards e tabela e substitui o "pendentes primeiro" que a API devolve; a
+  // lista da API (`expenses`) segue intacta para as buscas por id abaixo
+  // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §5).
+  const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);
 
-  // Busca e filtro por tipo — client-side, sobre os dados da competência já carregada
-  const [search, setSearch] = useState<string>('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'fixed' | 'variable'>('all');
+  // Busca e filtros — client-side, sobre os dados da competência já carregada e
+  // já ordenada; o mesmo hook e a mesma barra servem a Pagamentos (plan.md §4).
+  const filters = useExpenseFilters(sortedExpenses);
+  const { filteredExpenses } = filters;
 
   // Modal de detalhamento da despesa
   const [detailExpenseId, setDetailExpenseId] = useState<number | null>(null);
@@ -133,14 +129,60 @@ const ExpenseManager: React.FC = () => {
     payError,
     paySuccess,
     unpaySuccess,
+    editSuccess,
+    undoPurchaseSuccess,
     dismissPayError,
     dismissPaySuccess,
     dismissUnpaySuccess,
+    dismissEditSuccess,
+    dismissUndoPurchaseSuccess,
     canPay,
     canUnpay,
+    canEditProof,
+    canUndoPurchase,
     handlePay,
-    handleUnpay
+    handleUnpay,
+    handleEditProof,
+    handleUndoPurchase
   } = usePaymentActions(currentUserId, summary, cyclesAgo, reload);
+
+  // "Desfazer pagamento da compra" limpa todas as parcelas de uma vez: pede confirmação antes
+  // (docs/feature/concluidas/202610/20261027-pagamento-no-cadastro-despesa, R19).
+  const [undoPurchaseExpenseId, setUndoPurchaseExpenseId] = useState<number | null>(null);
+
+  const confirmUndoPurchase = () => {
+    if (undoPurchaseExpenseId === null) return;
+    handleUndoPurchase(undoPurchaseExpenseId);
+    setUndoPurchaseExpenseId(null);
+  };
+
+  // O ✓ "Marcar como paga" não paga direto: abre o popup de comprovante (foto
+  // ou descrição) — docs/feature/concluidas/202610/20261021-comprovante-ao-marcar-paga.
+  const [payTargetId, setPayTargetId] = useState<number | null>(null);
+
+  const confirmPayment = ({ file, note }: PaymentProofValue) => {
+    if (payTargetId === null) return;
+    handlePay(payTargetId, file ? { proof: file, note } : { note });
+    setPayTargetId(null);
+  };
+
+  // "Editar comprovante" (despesa já paga): outro popup, com estado próprio —
+  // docs/feature/concluidas/202610/20261022-editar-comprovante-depois-de-paga. O id do alvo não é
+  // zerado ao fechar: o popup continua mostrando a mesma despesa durante a
+  // animação de saída. Quem manda abrir é `editProofOpen`.
+  const [editProofExpenseId, setEditProofExpenseId] = useState<number | null>(null);
+  const [editProofOpen, setEditProofOpen] = useState<boolean>(false);
+
+  const openEditProof = (expenseId: number) => {
+    setEditProofExpenseId(expenseId);
+    setEditProofOpen(true);
+  };
+
+  const confirmEditProof = ({ file, note, removeProof }: PaymentProofValue) => {
+    if (editProofExpenseId === null) return;
+    handleEditProof(editProofExpenseId, { proof: file ?? undefined, removeProof, note });
+    setEditProofOpen(false);
+  };
 
   // Fechar/reabrir a competência vigente
   const [closingMonth, setClosingMonth] = useState<boolean>(false);
@@ -235,7 +277,11 @@ const ExpenseManager: React.FC = () => {
 
   const removeExpense = expenses.find(exp => exp.id === removeExpenseId) ?? null;
   const deleteExpense = expenses.find(exp => exp.id === deleteExpenseId) ?? null;
+  const undoPurchaseExpense = expenses.find(exp => exp.id === undoPurchaseExpenseId) ?? null;
   const detailExpense = expenses.find(exp => exp.id === detailExpenseId) ?? null;
+  // Sempre da lista atual (nunca um objeto guardado): depois de recarregar, o
+  // popup abre com a descrição e a foto que estão gravadas agora.
+  const editProofExpense = expenses.find(exp => exp.id === editProofExpenseId) ?? null;
 
   const closeDeleteDialog = () => {
     setDeleteExpenseId(null);
@@ -267,14 +313,6 @@ const ExpenseManager: React.FC = () => {
       })
       .finally(() => setDeleting(false));
   };
-
-  const filteredExpenses = expenses
-    .filter(exp => exp.description.toLowerCase().includes(search.toLowerCase()))
-    .filter(exp => {
-      if (typeFilter === 'fixed') return Boolean(exp.isFixed);
-      if (typeFilter === 'variable') return !exp.isFixed;
-      return true;
-    });
 
   // Ações de EDIÇÃO/exclusão de despesa só existem enquanto a competência
   // selecionada está aberta — inclui a janela de carência, em que o ciclo
@@ -408,9 +446,21 @@ const ExpenseManager: React.FC = () => {
             aria-label="Marcar como paga"
             size="small"
             disabled={payingExpenseId === exp.id}
-            onClick={() => handlePay(exp.id)}
+            onClick={() => setPayTargetId(exp.id)}
           >
             <CheckCircleOutlineIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+      {canEditProof(exp) && (
+        <Tooltip title="Editar comprovante">
+          <IconButton
+            aria-label="Editar comprovante"
+            size="small"
+            disabled={payingExpenseId === exp.id}
+            onClick={() => openEditProof(exp.id)}
+          >
+            <AttachFileOutlinedIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       )}
@@ -426,13 +476,25 @@ const ExpenseManager: React.FC = () => {
           </IconButton>
         </Tooltip>
       )}
+      {canUndoPurchase(exp) && (
+        <Tooltip title="Desfazer pagamento da compra">
+          <IconButton
+            aria-label="Desfazer pagamento da compra"
+            size="small"
+            disabled={payingExpenseId === exp.id}
+            onClick={() => setUndoPurchaseExpenseId(exp.id)}
+          >
+            <RemoveDoneIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
     </Box>
   );
 
   const renderExpenseCards = (list: SummaryExpense[]) => (
     <Stack spacing={1.5}>
       {list.map(exp => (
-        <Card key={exp.id} variant="outlined">
+        <Card key={expenseRowKey(exp)} variant="outlined">
           <CardContent sx={{ '&:last-child': { pb: 2 } }}>
             <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1}>
               <Box display="flex" alignItems="center" gap={1} sx={{ minWidth: 0 }}>
@@ -453,6 +515,9 @@ const ExpenseManager: React.FC = () => {
               />
             </Box>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Data: {formatShortDate(exp.date)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
               Valor: R$ {formatValue(exp.value)}
             </Typography>
             <Box display="flex" alignItems="center" gap={1} sx={{ mt: 0.5 }}>
@@ -527,7 +592,7 @@ const ExpenseManager: React.FC = () => {
           textTransform="capitalize"
           sx={{ flexGrow: 1, minWidth: 0, textAlign: 'center', fontSize: { xs: '1rem', md: '1.25rem' } }}
         >
-          {summary ? `${formatCycleBoundary(summary.cycle.start)} – ${formatCycleBoundary(summary.cycle.end)}` : ''}
+          {summary ? `${formatShortDate(summary.cycle.start)} – ${formatShortDate(summary.cycle.end)}` : ''}
         </Typography>
         <IconButton onClick={goToNextCycle} aria-label="Próxima competência">
           <ArrowForwardIosIcon />
@@ -556,29 +621,8 @@ const ExpenseManager: React.FC = () => {
       ) : (
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, sm: 12, lg: 8 }}>
-            {/* Busca e filtro por tipo */}
-            <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
-              <TextField
-                label="Buscar despesa"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                size="small"
-                sx={{ minWidth: 240 }}
-                InputProps={{
-                  startAdornment: <SearchOutlinedIcon fontSize="small" sx={{ color: 'text.secondary', mr: 1 }} />
-                }}
-              />
-              <ToggleButtonGroup
-                value={typeFilter}
-                exclusive
-                size="small"
-                onChange={(_, value) => value && setTypeFilter(value)}
-              >
-                <ToggleButton value="all">Todas</ToggleButton>
-                <ToggleButton value="fixed">Fixas</ToggleButton>
-                <ToggleButton value="variable">Variáveis</ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
+            {/* Busca e filtros (credor, devedores, tipo, status) */}
+            <ExpenseFilterBar filters={filters} />
 
             {expenses.length === 0 ? (
               <Box display="flex" flexDirection="column" alignItems="center" textAlign="center" py={6} gap={2}>
@@ -623,6 +667,7 @@ const ExpenseManager: React.FC = () => {
                 <Table>
                   <TableHead>
                     <TableRow sx={{ bgcolor: 'grey.50' }}>
+                      <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Data</TableCell>
                       <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Tipo</TableCell>
                       <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Despesa</TableCell>
                       <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>Valor</TableCell>
@@ -635,7 +680,8 @@ const ExpenseManager: React.FC = () => {
                   </TableHead>
                   <TableBody>
                     {filteredExpenses.map(exp => (
-                      <TableRow key={exp.id} hover>
+                      <TableRow key={expenseRowKey(exp)} hover>
+                        <TableCell>{formatShortDate(exp.date)}</TableCell>
                         <TableCell>
                           {renderTypeIcon(exp)}
                         </TableCell>
@@ -681,6 +727,7 @@ const ExpenseManager: React.FC = () => {
                 balances={summary.balances}
                 settlements={summary.settlements}
                 cycleStatus={summary.cycle.status}
+                currentUserId={currentUserId}
               />
             )}
           </Grid>
@@ -755,6 +802,12 @@ const ExpenseManager: React.FC = () => {
                   Ver comprovante
                 </MuiLink>
               )}
+
+              {detailExpense.paid && detailExpense.paymentNote && (
+                <Typography variant="body2" sx={{ overflowWrap: 'anywhere' }}>
+                  Descrição do pagamento: {detailExpense.paymentNote}
+                </Typography>
+              )}
             </Box>
           )}
         </DialogContent>
@@ -762,6 +815,51 @@ const ExpenseManager: React.FC = () => {
           <Button onClick={() => setDetailExpenseId(null)}>Fechar</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Popup de comprovante ao marcar como paga: foto OU descrição */}
+      <PaymentProofDialog
+        open={payTargetId !== null}
+        title="Confirmar pagamento"
+        description="Anexe uma foto do comprovante ou descreva o pagamento."
+        photoLabel="Selecionar foto"
+        requirePhoto={false}
+        onClose={() => setPayTargetId(null)}
+        onConfirm={confirmPayment}
+      />
+
+      {/* Confirmação do desfazer pagamento da compra (todas as parcelas de uma vez) */}
+      <Dialog
+        open={undoPurchaseExpenseId !== null}
+        onClose={() => setUndoPurchaseExpenseId(null)}
+        PaperProps={{ sx: { borderRadius: 2 } }}
+      >
+        <DialogTitle>Desfazer pagamento da compra</DialogTitle>
+        <DialogContent dividers>
+          <Typography>
+            {`Todas as parcelas de "${undoPurchaseExpense?.description ?? 'esta compra'}" voltarão a ficar pendentes, e o comprovante e a descrição do pagamento serão removidos. Depois que o ciclo da compra encerrar, isto não poderá mais ser feito.`}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUndoPurchaseExpenseId(null)}>Cancelar</Button>
+          <Button variant="contained" color="error" onClick={confirmUndoPurchase}>
+            Desfazer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Popup de edição do comprovante de uma despesa já paga */}
+      <PaymentProofDialog
+        open={editProofOpen && editProofExpense !== null}
+        title="Editar comprovante"
+        description="Troque a foto, remova-a ou ajuste a descrição. O pagamento continua marcado como pago."
+        photoLabel={editProofExpense?.paymentProofUrl ? 'Trocar a foto' : 'Selecionar foto'}
+        requirePhoto={false}
+        confirmLabel="Salvar"
+        initialNote={editProofExpense?.paymentNote ?? ''}
+        currentProofUrl={editProofExpense?.paymentProofUrl ?? null}
+        onClose={() => setEditProofOpen(false)}
+        onConfirm={confirmEditProof}
+      />
 
       {/* Diálogo de remoção de despesa Fixa */}
       <Dialog
@@ -874,6 +972,28 @@ const ExpenseManager: React.FC = () => {
       >
         <Alert onClose={dismissUnpaySuccess} severity="success" variant="filled">
           Pagamento desfeito.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={undoPurchaseSuccess}
+        autoHideDuration={4000}
+        onClose={dismissUndoPurchaseSuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissUndoPurchaseSuccess} severity="success" variant="filled">
+          Pagamento da compra desfeito.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={editSuccess}
+        autoHideDuration={4000}
+        onClose={dismissEditSuccess}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={dismissEditSuccess} severity="success" variant="filled">
+          Comprovante atualizado.
         </Alert>
       </Snackbar>
 

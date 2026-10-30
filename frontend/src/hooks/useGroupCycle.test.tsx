@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -75,5 +75,36 @@ describe('useGroupCycle', () => {
 
     const summaryCall = vi.mocked(axios.get).mock.calls.find(c => String(c[0]).includes('/expenses/summary'));
     expect((summaryCall?.[1] as { params: { cycles_ago: number } }).params.cycles_ago).toBe(0);
+  });
+
+  it('keeps the selected cycle when reload() refetches the summary', async () => {
+    vi.mocked(axios.get).mockImplementation((url: string) => {
+      if (url.includes('/expenses/focus-cycle')) {
+        return Promise.resolve({ data: { cycles_ago: 2 } });
+      }
+      if (url.includes('/expenses/summary')) {
+        return Promise.resolve({ data: summaryPayload });
+      }
+      return Promise.reject(new Error(`unexpected GET ${url}`));
+    });
+    const summaryCalls = () =>
+      vi.mocked(axios.get).mock.calls.filter(c => String(c[0]).includes('/expenses/summary'));
+    const cyclesAgoOf = (call: unknown[]) => (call[1] as { params: { cycles_ago: number } }).params.cycles_ago;
+
+    const { result } = renderHook(() => useGroupCycle('7'), { wrapper });
+    await waitFor(() => expect(result.current.summary).not.toBeNull());
+
+    act(() => result.current.goToPreviousCycle());
+    await waitFor(() => expect(summaryCalls()).toHaveLength(2));
+    expect(cyclesAgoOf(summaryCalls()[1])).toBe(3);
+
+    act(() => result.current.reload());
+    await waitFor(() => expect(summaryCalls()).toHaveLength(3));
+
+    // O reload repete a mesma competência e não volta a perguntar o foco ao backend.
+    expect(cyclesAgoOf(summaryCalls()[2])).toBe(3);
+    expect(result.current.cyclesAgo).toBe(3);
+    const focusCalls = vi.mocked(axios.get).mock.calls.filter(c => String(c[0]).includes('/expenses/focus-cycle'));
+    expect(focusCalls).toHaveLength(1);
   });
 });
