@@ -31,7 +31,7 @@ Registrado em `docs/bugfix/20260930-logo-email-marca-novemax.md`: a correção d
 ## 3. Fora de escopo desta feature
 
 - Corrigir a enumeração de e-mail em `/api/forgot-password` (resposta 422 em inglês para e-mail inexistente vs. 200 em português para existente) — vira item de `docs/backlog/` (**item 119**). **Risco aceito nesta feature (revisão de segurança, 2026-10-30):** a tela trata o 422 como sucesso genérico, mas o **429** ("já solicitou recentemente") e o **500** só existem para conta existente; quem pede duas vezes seguidas ainda descobre, pela tela, que a conta existe. A API já vazava isso por status e corpo.
-- Adicionar rate limit por IP (hoje o limite é só por e-mail-alvo, contornável trocando o e-mail a cada request) — vira item de `docs/backlog/` (**item 118**).
+- Adicionar rate limit dedicado por IP (hoje há só o limite global `api` de 60/min por IP e o limite por e-mail-alvo, contornável trocando o e-mail a cada request; a rota irmã `/pre-register` tem `throttle:10,1`) — vira item de `docs/backlog/` (**item 118**).
 - Trocar a comparação de token `===` por `hash_equals` (timing attack de baixo risco prático) — vira item de `docs/backlog/` (**item 120**).
 - Login social (Google/Microsoft) — já coberto por outras features, não é tocado aqui.
 - Refatorar os 2 envios de e-mail diretos (`Mail::send()` cru em `InvitationController`) para classes `Mailable` dedicadas — não é necessário para a correção da logo (ver `plan.md` §1); fica como possível tech-debt isolado, não entra nesta feature.

@@ -47,4 +47,22 @@ A branch ficou parada de 30/09 a 30/10 sem virar PR. Antes do PR, foi integrada 
 
 ### F8: senha de teste no log, e a publicação da branch
 
-O log da TASK-382 (linha 21 deste arquivo) registrava, em texto puro, a senha de um usuário de teste local e o e-mail do mantenedor, desde o commit da TASK-381. A branch foi publicada como backup em 2026-10-30, num repositório público, antes de o conteúdo ser varrido. Tratamento: a branch remota foi apagada; os quatro commits que não estão em `dev` foram reescritos (`git filter-branch --tree-filter`), trocando os dois valores por `<omitido>`; a versão limpa foi republicada. Conferido no GitHub: a senha não existe em nenhum dos commits publicados nem em `dev`. **O valor não é repetido aqui.** Pendente, com o usuário: conferir que aquela senha não é usada em nenhuma conta real.
+O log da TASK-382 (linha 21 deste arquivo) registrava, em texto puro, a senha de um usuário de teste local e o e-mail do mantenedor, desde o commit da TASK-381. A branch foi publicada como backup em 2026-10-30, num repositório público, antes de o conteúdo ser varrido. Tratamento: a branch remota foi apagada; os quatro commits que não estão em `dev` foram reescritos (`git filter-branch --tree-filter`), trocando os dois valores por `<omitido>`; a versão limpa foi republicada. Conferido na branch remota publicada (após `git fetch`, `git grep -F` em cada um dos 6 commits fora de `dev` e em `dev`): a senha não existe em nenhum deles. O e-mail do mantenedor segue só nos dois arquivos que já estão em `dev` (`docs/feature/20260923-google-callback-modsecurity-iss/specify.md` e `docs/feature/20260930-frontend-links-prefixo-app/specify.md`), fora do diff deste PR. **O valor não é repetido aqui.** Pendente, com o usuário: conferir que aquela senha não é usada em nenhuma conta real.
+
+
+## 4. Checklist pré-PR (2026-10-30)
+
+Agent `pr-readiness-checker`, somente leitura, sobre `dev...HEAD` (27 arquivos, +850/-21; `dev` local = `origin/dev` = merge-base). Backend e Vitest completo não foram rodados de novo pelo agente: valem os números da §3.
+
+| Ponto | Resultado | Evidência |
+|---|---|---|
+| Testes existentes | PASSOU | Só `LoginPage.test.tsx` mudou entre os existentes (+5/-1, uma asserção): o `href` esperado do link passou de `'#'` para `'/recuperar-acesso'`, consequência de trocar o link morto pelo `RouterLink`. Nenhum teste removido, pulado ou relaxado; nenhum teste do backend foi modificado. |
+| Segredos (repositório público) | PASSOU | Linhas adicionadas, `git log dev..HEAD -p` e `git grep -F` por commit e por ref: a senha tem 0 ocorrências em `HEAD`, nos 6 commits, em `dev`, `main` e nos refs remotos; sem token, chave ou URL com credencial. |
+| `tasks.md` e log | PASSOU | TASK-380, 381 e 382 "Concluída", uma linha de log por task com comando e resultado. Sem colisão de IDs: `dev` reserva TASK-383 em diante para outra feature. |
+| Backlog 118 a 124 | PASSOU | 7 arquivos no formato do README, 7 linhas no índice, IDs únicos e contíguos com o 117; nenhum existe em outra branch. |
+| Docs SDD | PASSOU | `docs/bugfix/README.md` aponta o bugfix escalado para a feature; `specify.md` §3 cita os itens 118, 119 e 120. A redação do item 118 foi corrigida nesta rodada (o limite global por IP existe; falta um dedicado). |
+| Escopo | PASSOU | Nenhuma migration, rota, config, workflow, `composer.*` ou `package*.json` alterado. `logo-expense.png` com 148 KB, rastreado, mesmo blob do logo do frontend. |
+| Qualidade | PASSOU | `./vendor/bin/pint --test` → PASS (198 arquivos); `npx tsc --noEmit` → sem erros; nenhum `any`, `@ts-ignore`, `eslint-disable`, `console.log`, `.only` ou `.skip` nas linhas adicionadas. |
+| Mensagens de commit | PASSOU | 6 commits fora de `dev`, padrão do repositório, sem dado sensível. |
+
+Pendente, não verificável pelo agente: a validação manual do mantenedor no navegador pelo Mailpit (a TASK-382 consta "Concluída" pela execução de 2026-09-30, anterior ao merge de `dev`; a confirmação dele será registrada aqui), o aspecto do e-mail em clientes reais e o console do GA4 (item 122).
