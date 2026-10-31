@@ -161,8 +161,13 @@ class CycleSummaryService
     {
         $entries = $this->entries($group->id, $start, $end);
 
+        // A foto de quem saiu do grupo não sai (item 086, R13): `id` e nome ficam, o avatar não.
+        // `$group->members` também alimenta `$balances` abaixo, então não custa consulta a mais.
+        $memberIds = $group->members->pluck('id');
+        $avatarOf = fn (?User $user) => $user !== null && $memberIds->contains($user->id) ? $user->avatar_url : null;
+
         $expenses = $entries
-            ->map(function (array $entry) {
+            ->map(function (array $entry) use ($avatarOf) {
                 $participantsCount = max($entry['expense']->payers->count(), 1);
 
                 return [
@@ -181,13 +186,13 @@ class CycleSummaryService
                     // Aditivo (Constitution §4.1): sibling de payerName/participants,
                     // não substitui — avatar do credor/participantes pra exibição
                     // (docs/feature/20260904-avatar-usuario-listagens/plan.md §1).
-                    'payerAvatarUrl' => $entry['expense']->payer->avatar_url ?? null,
+                    'payerAvatarUrl' => $avatarOf($entry['expense']->payer),
                     'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
                     'participantDetails' => $entry['expense']->payers
                         ->map(fn ($payer) => [
                             'id' => $payer->id,
                             'name' => $payer->name,
-                            'avatarUrl' => $payer->avatar_url,
+                            'avatarUrl' => $avatarOf($payer),
                         ])
                         ->values()
                         ->all(),
