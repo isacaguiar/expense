@@ -71,6 +71,10 @@ export type SummaryBalance = {
   name: string;
   avatarUrl?: string | null;
   balance: number;
+  // Só vem `true`, e só em quem já saiu do grupo mas ainda é ponta de um acerto do ciclo
+  // (docs/feature/20261030-saida-e-remocao-de-membro, R11/D7-B): a decisão é do servidor.
+  // Ausente = membro, e o cartão não muda.
+  formerMember?: boolean;
 };
 
 export type SummarySettlement = {

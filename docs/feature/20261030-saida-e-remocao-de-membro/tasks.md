@@ -24,7 +24,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 | TASK-558 | Adicionar **Sair do grupo**, **Remover** e o diálogo de confirmação em `GroupMembersForm` | frontend | plan.md §6 | nenhum | Concluída |
 | TASK-559 | Atualizar `01-specify.md` §3.3 e deixar o ponteiro da `TASK-017` em `03-tasks.md` | doc | plan.md §8 | nenhum | Pendente |
 | TASK-560 | Incluir em `balances` quem é ponta de um acerto e já saiu do grupo, só com nome e sem foto (R11) | backend | plan.md §4.1 | nenhum | Concluída |
-| TASK-561 | Mostrar o rótulo "saiu do grupo" no cartão de saldo do ex-membro (D7-B) | frontend | plan.md §4.1 | nenhum | Pendente |
+| TASK-561 | Mostrar o rótulo "saiu do grupo" no cartão de saldo do ex-membro (D7-B) | frontend | plan.md §4.1 | nenhum | Concluída |
 | TASK-562 | Esconder o contato de quem saiu nas respostas de despesa (`show`, `update` e `gross-debts`) | backend | plan.md §4.2 | nenhum | Concluída |
 | TASK-563 | Fazer o `update` aceitar como novo credor só membro ou o credor atual (R14) | backend | plan.md §3.1 | nenhum | Concluída |
 | TASK-564 | Devolver `creator` nulo em `GET /groups` e `GET /groups/{id}` quando o criador saiu | backend | plan.md §4.3 | nenhum | Concluída |
