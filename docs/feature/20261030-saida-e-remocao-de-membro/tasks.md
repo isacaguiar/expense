@@ -4,7 +4,7 @@
 
 Versão: 1.2 · Criado em: 20261030
 
-**Status: v1.2, aguardando aprovação.** A v1.2 acrescenta as **TASK-562 a TASK-565** (revisão de segurança da TASK-556, opção 1 e TASK-565 escolhidas pelo usuário em 2026-10-31) e põe a TASK-556 em andamento. A v1.0 foi aprovada em 2026-10-30. A v1.1 acrescenta a **TASK-560** (achado §2.9 da TASK-554, opção A escolhida pelo usuário) e a **TASK-561** (D7 = B) e amplia o escopo da TASK-556; **aprovadas em 2026-10-31**. O specify (v1.1) e o plan foram aprovados em 2026-10-30, com D1 a D5 como recomendado, **D6 = B** e o ajuste da D3-B (ii) (fixa ativa bloqueia também o credor).
+**Status: v1.2, aprovada em 2026-10-31.** A v1.2 acrescenta as **TASK-562 a TASK-565** (revisão de segurança da TASK-556, opção 1 e TASK-565 escolhidas pelo usuário em 2026-10-31) e põe a TASK-556 em andamento. A v1.0 foi aprovada em 2026-10-30. A v1.1 acrescenta a **TASK-560** (achado §2.9 da TASK-554, opção A escolhida pelo usuário) e a **TASK-561** (D7 = B) e amplia o escopo da TASK-556; **aprovadas em 2026-10-31**. O specify (v1.1) e o plan foram aprovados em 2026-10-30, com D1 a D5 como recomendado, **D6 = B** e o ajuste da D3-B (ii) (fixa ativa bloqueia também o credor).
 
 IDs a partir de **TASK-549**: o maior em `docs/`, em todas as branches remotas e nas mensagens de commit de todas as refs é TASK-548 (feature `20261027-pagamento-no-cadastro-despesa`), conferido em 2026-10-30 com `git grep` e `git log --all`. Reconfirmar a numeração antes de criar a primeira branch de task, caso outra feature em andamento reserve IDs.
 
@@ -25,7 +25,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 | TASK-559 | Atualizar `01-specify.md` §3.3 e deixar o ponteiro da `TASK-017` em `03-tasks.md` | doc | plan.md §8 | nenhum | Pendente |
 | TASK-560 | Incluir em `balances` quem é ponta de um acerto e já saiu do grupo, só com nome e sem foto (R11) | backend | plan.md §4.1 | nenhum | Concluída |
 | TASK-561 | Mostrar o rótulo "saiu do grupo" no cartão de saldo do ex-membro (D7-B) | frontend | plan.md §4.1 | nenhum | Pendente |
-| TASK-562 | Esconder o contato de quem saiu nas respostas de despesa (`show`, `update` e `gross-debts`) | backend | plan.md §4.2 | nenhum | Pendente |
+| TASK-562 | Esconder o contato de quem saiu nas respostas de despesa (`show`, `update` e `gross-debts`) | backend | plan.md §4.2 | nenhum | Concluída |
 | TASK-563 | Fazer o `update` aceitar como novo credor só membro ou o credor atual (R14) | backend | plan.md §3.1 | nenhum | Pendente |
 | TASK-564 | Devolver `creator` nulo em `GET /groups` e `GET /groups/{id}` quando o criador saiu | backend | plan.md §4.3 | nenhum | Pendente |
 | TASK-565 | Tirar a foto de quem saiu de `payerAvatarUrl` e `participantDetails` do resumo e do fechamento (R13) | backend | plan.md §4.4 | nenhum | Pendente |

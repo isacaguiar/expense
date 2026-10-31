@@ -4,7 +4,7 @@
 
 Versão: 1.3 · Criado em: 20261030
 
-**Status: v1.3, aguardando aprovação.** A v1.3 nasceu da revisão de segurança da TASK-556 (opção 1 e TASK-565 escolhidas pelo usuário em 2026-10-31) e acrescenta §2.10, R12 a R14, CA-18 a CA-21, RK8 e as TASK-562 a TASK-565. A v1.0 foi aprovada em 2026-10-30 com **D1 a D5 como recomendado** (inclusive a D3-B), e a v1.1 no mesmo dia, com a **D6 = B**. A v1.2 nasceu da TASK-554 (achado §2.9, opção A escolhida pelo usuário) e acrescenta R11, D7, CA-16 e CA-17 e as TASK-560 e TASK-561; **aprovada em 2026-10-31, com a D7 = B**. Escopo decidido pelo usuário: **só o item 086**, com **backend e botão na web**; os itens 095 (apagar grupo em cascata) e 072 (excluir conta) ficam de fora.
+**Status: v1.3, aprovada em 2026-10-31.** A v1.3 nasceu da revisão de segurança da TASK-556 (opção 1 e TASK-565 escolhidas pelo usuário em 2026-10-31) e acrescenta §2.10, R12 a R14, CA-18 a CA-21, RK8 e as TASK-562 a TASK-565. A v1.0 foi aprovada em 2026-10-30 com **D1 a D5 como recomendado** (inclusive a D3-B), e a v1.1 no mesmo dia, com a **D6 = B**. A v1.2 nasceu da TASK-554 (achado §2.9, opção A escolhida pelo usuário) e acrescenta R11, D7, CA-16 e CA-17 e as TASK-560 e TASK-561; **aprovada em 2026-10-31, com a D7 = B**. Escopo decidido pelo usuário: **só o item 086**, com **backend e botão na web**; os itens 095 (apagar grupo em cascata) e 072 (excluir conta) ficam de fora.
 
 ### Mudanças da v1.1 em relação à v1.0
 
