@@ -4,7 +4,7 @@
 
 Versão: 1.0 · Criado em: 20261004
 
-IDs a partir de TASK-383: o maior em `dev` é TASK-379 e a branch `backend/20260930-recuperacao-acesso` já usa até TASK-382. Reconfirmar a numeração se outra feature em andamento reservar IDs antes do merge.
+IDs a partir de TASK-383: a feature `docs/feature/concluidas/202609/20260930-recuperacao-acesso/` (mergeada em `dev` pelo PR #257) usou até TASK-382. Reconfirmar a numeração se outra feature em andamento reservar IDs antes do merge.
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|

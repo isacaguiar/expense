@@ -1,7 +1,7 @@
 # Tela `/recuperar-acesso`: e-mail malformado mostra sucesso, e "Reenviar link" mostra os alertas verde e vermelho juntos
 
 ID: 123
-Origem: docs/feature/20260930-recuperacao-acesso/specify.md e revisão de segurança de 2026-10-30 (F9); `frontend/src/pages/ForgotPasswordPage.tsx:33`, `frontend/src/pages/forgot-password/ForgotPasswordFormCard.tsx:110`
+Origem: docs/feature/concluidas/202609/20260930-recuperacao-acesso/specify.md e revisão de segurança de 2026-10-30 (F9); `frontend/src/pages/ForgotPasswordPage.tsx:33`, `frontend/src/pages/forgot-password/ForgotPasswordFormCard.tsx:110`
 Criado em: 2026-10-30
 Prioridade: BAIXA
 Status: Aberto

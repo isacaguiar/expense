@@ -4,7 +4,7 @@ Versão: 1.0 · Criado em: 20261027 · Branch: `fix/20261027-comprovante-iphone-
 
 > Fluxo BFF — ver `docs/bugfix/README.md`. Se qualquer caixa da Triagem for marcada, este trabalho **não** é BFF: crie `docs/feature/<AAAAMMDD>-<slug>/` com `/nova-feature` e deixe aqui só um ponteiro.
 >
-> Origem: relato do mantenedor em 2026-10-27 ("usando o iPhone, ao tentar adicionar um comprovante ele abre para foto, porém não permite selecionar o arquivo"). Item de backlog correspondente: `docs/backlog/comprovante-capture-impede-escolher-arquivo-no-iphone.md` (ID 105, PR #244). Por ser defeito em comportamento existente, o caminho é este fluxo, e não `/promover-backlog`.
+> Origem: relato do mantenedor em 2026-10-27 ("usando o iPhone, ao tentar adicionar um comprovante ele abre para foto, porém não permite selecionar o arquivo"). Item de backlog correspondente: `docs/backlog/concluidos/comprovante-capture-impede-escolher-arquivo-no-iphone.md` (ID 105, PR #244). Por ser defeito em comportamento existente, o caminho é este fluxo, e não `/promover-backlog`.
 
 ## Triagem
 

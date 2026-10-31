@@ -1,6 +1,6 @@
 # Specify — Recuperação de Acesso (tela "esqueci minha senha" + marca correta nos e-mails)
 
-> Feature: completa o fluxo de autoatendimento de recuperação de senha / confirmação de e-mail, criando a tela que falta no frontend e corrigindo a marca errada ("Novemax") exibida nos e-mails do sistema. Origem: pedido direto do usuário nesta sessão, depois de precisar atualizar `email_verified_at` manualmente no banco para liberar acesso — e, ao investigar o envio de e-mail, a correção da marca escalou do BFF (`docs/bugfix/20260930-logo-email-marca-novemax.md`) por tocar `InvitationController.php` (controller de autenticação).
+> Feature: completa o fluxo de autoatendimento de recuperação de senha / confirmação de e-mail, criando a tela que falta no frontend e corrigindo a marca errada ("Novemax") exibida nos e-mails do sistema. Origem: pedido direto do usuário nesta sessão, depois de precisar atualizar `email_verified_at` manualmente no banco para liberar acesso — e, ao investigar o envio de e-mail, a correção da marca escalou do BFF (`docs/bugfix/concluidos/202609/20260930-logo-email-marca-novemax.md`) por tocar `InvitationController.php` (controller de autenticação).
 
 Versão: 1.0 · Criado em: 20260930
 
@@ -26,7 +26,7 @@ Os 4 templates Blade de e-mail (`backend/resources/views/email/pre-register-code
 
 ### 2.4 Correção da marca escala para feature (não é BFF)
 
-Registrado em `docs/bugfix/20260930-logo-email-marca-novemax.md`: a correção do assunto do e-mail de recuperação de senha exige editar `InvitationController.php`, controller de autenticação — a Triagem do BFF marca a caixa "Auth/autorização/dado sensível" (`docs/bugfix/README.md`), escalando a correção para o fluxo de feature completo. Como a tela da etapa 1 (§2.1) também não tem task aplicável e precisaria de feature própria, as duas frentes foram unificadas aqui por decisão do usuário.
+Registrado em `docs/bugfix/concluidos/202609/20260930-logo-email-marca-novemax.md`: a correção do assunto do e-mail de recuperação de senha exige editar `InvitationController.php`, controller de autenticação — a Triagem do BFF marca a caixa "Auth/autorização/dado sensível" (`docs/bugfix/README.md`), escalando a correção para o fluxo de feature completo. Como a tela da etapa 1 (§2.1) também não tem task aplicável e precisaria de feature própria, as duas frentes foram unificadas aqui por decisão do usuário.
 
 ## 3. Fora de escopo desta feature
 

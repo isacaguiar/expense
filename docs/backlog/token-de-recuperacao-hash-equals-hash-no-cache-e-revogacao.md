@@ -1,7 +1,7 @@
 # Token de recuperação: `hash_equals`, guardar só o hash e revogar o que sobra depois do uso
 
 ID: 120
-Origem: docs/feature/20260930-recuperacao-acesso/specify.md §3 e revisão de segurança de 2026-10-30 (F3, F4 e F5); `backend/app/Http/Controllers/InvitationController.php` (linhas 30, 33, 45-57 e 80-82), `backend/app/Http/Controllers/GroupMemberController.php:63-65`, `docs/sdd/01-specify.md:42`
+Origem: docs/feature/concluidas/202609/20260930-recuperacao-acesso/specify.md §3 e revisão de segurança de 2026-10-30 (F3, F4 e F5); `backend/app/Http/Controllers/InvitationController.php` (linhas 30, 33, 45-57 e 80-82), `backend/app/Http/Controllers/GroupMemberController.php:63-65`, `docs/sdd/01-specify.md:42`
 Criado em: 2026-10-30
 Prioridade: BAIXA
 Status: Aberto

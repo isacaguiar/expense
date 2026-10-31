@@ -1,7 +1,7 @@
 # `/forgot-password` e `/invitations/verify` só têm o limite global por IP, e o limite por e-mail tem corrida
 
 ID: 118
-Origem: docs/feature/20260930-recuperacao-acesso/specify.md §3 e revisão de segurança de 2026-10-30 (F1); `backend/routes/api.php:21-22`, `backend/app/Providers/RouteServiceProvider.php:27-29`, `backend/app/Http/Controllers/InvitationController.php` (`forgotPassword`, linhas 71-76, 87 e 106)
+Origem: docs/feature/concluidas/202609/20260930-recuperacao-acesso/specify.md §3 e revisão de segurança de 2026-10-30 (F1); `backend/routes/api.php:21-22`, `backend/app/Providers/RouteServiceProvider.php:27-29`, `backend/app/Http/Controllers/InvitationController.php` (`forgotPassword`, linhas 71-76, 87 e 106)
 Criado em: 2026-10-30
 Prioridade: MEDIA
 Status: Aberto
