@@ -24,6 +24,11 @@ const BalanceCards: React.FC<BalanceCardsProps> = ({ balances }) => (
           <UserAvatar name={balance.name} avatarUrl={balance.avatarUrl} />
           <Box flexGrow={1}>
             <Typography variant="body1">{balance.name}</Typography>
+            {balance.formerMember && (
+              <Typography variant="caption" color="text.secondary" display="block">
+                saiu do grupo
+              </Typography>
+            )}
             <Typography
               variant="body2"
               color={balance.balance > 0 ? 'success.main' : balance.balance < 0 ? 'error.main' : 'text.secondary'}
