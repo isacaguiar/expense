@@ -571,4 +571,144 @@ class ExpenseControllerClosingReportTest extends TestCase
         $this->assertNull($response->json('settlements.0.confirmedNote'));
         $this->assertStringNotContainsString('grupo B', json_encode($response->json()));
     }
+
+    /*
+     * Quem saiu do grupo (item 086) deixa de estar em `ex_groups_members`, mas a despesa,
+     * as parcelas e os participantes continuam. `ClosingBreakdown` lê o nome do payload
+     * da despesa e não da lista de membros, então o relatório não pode trocá-lo por
+     * "Desconhecido" como faz o painel pessoal (feature 20261030-saida-e-remocao-de-membro, CA-6).
+     */
+
+    public function test_a_debtor_who_left_the_group_keeps_the_real_name_in_the_live_report(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $ana, $bruno] = $this->groupWithPair();
+        $this->expenseBetween($group, $ana, [$bruno], 200, false, '2026-09-10');
+        $group->members()->detach($bruno->id);
+
+        $response = $this->report($ana, $group, '2026-09-01')->assertOk();
+
+        $this->assertSame('Ana', $response->json('creditors.0.creditor.name'));
+        $this->assertCount(1, $response->json('creditors.0.debtors'));
+        $this->assertSame('Bruno', $response->json('creditors.0.debtors.0.name'));
+        $this->assertEquals(100.0, $response->json('creditors.0.debtors.0.amount'));
+        $this->assertStringNotContainsString('Desconhecido', json_encode($response->json()));
+    }
+
+    public function test_a_creditor_who_left_the_group_keeps_the_real_name_in_the_live_report(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $ana, $bruno] = $this->groupWithPair();
+        $this->expenseBetween($group, $ana, [$bruno], 200, false, '2026-09-10');
+        $group->members()->detach($ana->id);
+
+        $response = $this->report($bruno, $group, '2026-09-01')->assertOk();
+
+        $this->assertSame('Ana', $response->json('creditors.0.creditor.name'));
+        $this->assertEquals(200.0, $response->json('creditors.0.advanced_total'));
+        $this->assertSame('Bruno', $response->json('creditors.0.debtors.0.name'));
+        $this->assertStringNotContainsString('Desconhecido', json_encode($response->json()));
+    }
+
+    public function test_a_sealed_cycle_keeps_the_name_of_a_debtor_who_left_after_it_was_sealed(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $ana, $bruno] = $this->groupWithPair();
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-09-01',
+            'cycle_end' => '2026-09-30',
+            'totals' => ['total' => 200.0, 'paid' => 200.0, 'pending' => 0.0],
+            'expenses' => [[
+                'id' => 5, 'description' => 'Selada', 'date' => '2026-09-10', 'value' => 200.0,
+                'paid' => true, 'bornPaid' => false, 'payerName' => 'Ana', 'userPayerId' => $ana->id,
+                'participants' => ['Ana', 'Bruno'],
+                'participantDetails' => [
+                    ['id' => $ana->id, 'name' => 'Ana', 'avatarUrl' => null],
+                    ['id' => $bruno->id, 'name' => 'Bruno', 'avatarUrl' => null],
+                ],
+            ]],
+            'balances' => [],
+            'settlements' => [['from_user_id' => $bruno->id, 'to_user_id' => $ana->id, 'amount' => 100.0]],
+            'settled_at' => now(),
+        ]);
+        $group->members()->detach($bruno->id);
+
+        $response = $this->report($ana, $group, '2026-09-01')->assertOk();
+
+        $this->assertSame('Bruno', $response->json('creditors.0.debtors.0.name'));
+        $this->assertSame($bruno->id, $response->json('creditors.0.debtors.0.id'));
+        $this->assertEquals(100.0, $response->json('creditors.0.debtors.0.amount'));
+        $this->assertStringNotContainsString('Desconhecido', json_encode($response->json()));
+    }
+
+    public function test_an_old_snapshot_without_participant_details_keeps_the_name_of_a_debtor_who_left_but_not_the_id(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $ana, $bruno] = $this->groupWithPair();
+        GroupCycleSnapshot::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-09-01',
+            'cycle_end' => '2026-09-30',
+            'totals' => ['total' => 90.0, 'paid' => 90.0, 'pending' => 0.0],
+            // Formato anterior aos campos aditivos: o ex-membro só existe como nome.
+            'expenses' => [[
+                'id' => 7, 'description' => 'Antiga', 'date' => '2026-09-03', 'value' => 90.0,
+                'valuePerPerson' => 45.0, 'paid' => true, 'payerName' => 'Ana',
+                'participants' => ['Ana', 'Bruno'],
+            ]],
+            'balances' => [],
+            'settlements' => [['from_user_id' => $bruno->id, 'to_user_id' => $ana->id, 'amount' => 45.0]],
+            'settled_at' => now(),
+        ]);
+        $group->members()->detach($bruno->id);
+
+        $response = $this->report($ana, $group, '2026-09-01')->assertOk();
+
+        // Sem membro de mesmo nome para resolver, o devedor entra só com o nome (ClosingBreakdown::participantsOf).
+        $this->assertSame('Bruno', $response->json('creditors.0.debtors.0.name'));
+        $this->assertNull($response->json('creditors.0.debtors.0.id'));
+        $this->assertNull($response->json('creditors.0.debtors.0.avatarUrl'));
+        $this->assertEquals(45.0, $response->json('creditors.0.debtors.0.amount'));
+    }
+
+    /**
+     * Registra o que o código faz hoje com `id` e foto de quem saiu: no relatório ao vivo,
+     * `participantDetails` e `payerAvatarUrl` da despesa os trazem e `ClosingBreakdown` os
+     * repassa. O painel pessoal (D6-B) e o `balances` (R11) retêm a foto; o relatório não.
+     * Já e-mail e Pix nunca saem (R7): as chaves de cada pessoa são só as quatro abaixo.
+     * Fica aqui como caracterização (TASK-555 não muda comportamento); se a foto passar a
+     * ser retida de propósito, é este caso que se atualiza.
+     */
+    public function test_today_the_live_report_still_carries_the_id_and_avatar_of_creditor_and_debtor_who_left(): void
+    {
+        Carbon::setTestNow('2026-10-15');
+
+        [$group, $ana, $bruno] = $this->groupWithPair();
+        $carla = User::factory()->create(['name' => 'Carla']);
+        $group->members()->attach($carla->id);
+        $ana->forceFill(['avatar_url' => 'https://example.test/ana.png'])->save();
+        $bruno->forceFill(['photo_path' => 'photos/bruno.jpg'])->save();
+        $this->expenseBetween($group, $ana, [$bruno], 200, false, '2026-09-10');
+        $group->members()->detach([$ana->id, $bruno->id]);
+
+        $response = $this->report($carla, $group, '2026-09-01')->assertOk();
+
+        $this->assertSame($ana->id, $response->json('creditors.0.creditor.id'));
+        $this->assertSame('https://example.test/ana.png', $response->json('creditors.0.creditor.avatarUrl'));
+        $this->assertSame($bruno->id, $response->json('creditors.0.debtors.0.id'));
+        $this->assertNotNull($response->json('creditors.0.debtors.0.avatarUrl'));
+        $this->assertSame(User::find($bruno->id)->avatar_url, $response->json('creditors.0.debtors.0.avatarUrl'));
+
+        $creditorKeys = array_keys($response->json('creditors.0.creditor'));
+        $debtorKeys = array_keys($response->json('creditors.0.debtors.0'));
+        sort($creditorKeys);
+        sort($debtorKeys);
+        $this->assertSame(['avatarUrl', 'id', 'name'], $creditorKeys);
+        $this->assertSame(['amount', 'avatarUrl', 'id', 'name'], $debtorKeys);
+    }
 }
