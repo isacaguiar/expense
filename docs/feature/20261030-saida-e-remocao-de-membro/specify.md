@@ -2,17 +2,25 @@
 
 > Feature: o usuário passa a conseguir **sair de um grupo** (e o criador do grupo a **remover** outro membro), pela API e por um botão na tela de membros da web. Hoje a rota `DELETE /groups/{groupId}/members/{userId}` existe, mas o método não, e quem é adicionado a um grupo nunca consegue sair. Promove o item 086 do backlog e absorve a `TASK-017` do Épico C de `docs/sdd/03-tasks.md`.
 
-Versão: 1.1 · Criado em: 20261030
+Versão: 1.2 · Criado em: 20261030
 
-**Status: v1.1.** A v1.0 foi aprovada em 2026-10-30 com **D1 a D5 como recomendado** (inclusive a D3-B). A v1.1 nasceu da leitura do código para o `plan.md` e traz três correções e uma decisão nova (D6), que aguardam OK junto com o plano. Escopo decidido pelo usuário: **só o item 086**, com **backend e botão na web**; os itens 095 (apagar grupo em cascata) e 072 (excluir conta) ficam de fora.
+**Status: v1.2.** A v1.0 foi aprovada em 2026-10-30 com **D1 a D5 como recomendado** (inclusive a D3-B), e a v1.1 no mesmo dia, com a **D6 = B**. A v1.2 nasceu da TASK-554 (achado §2.9, opção A escolhida pelo usuário) e acrescenta R11, D7, CA-16 e CA-17 e a TASK-560; **aguarda OK**, em especial a D7. Escopo decidido pelo usuário: **só o item 086**, com **backend e botão na web**; os itens 095 (apagar grupo em cascata) e 072 (excluir conta) ficam de fora.
 
-### Mudanças em relação à v1.0
+### Mudanças da v1.1 em relação à v1.0
 
 | Onde | Mudança | Por quê |
 |---|---|---|
 | §2.6, R7, RK3, CA-6 | Reescritos. O painel pessoal **anonimiza o ex-membro de propósito** (TASK-432), e o fechamento **já preserva o nome**. A "nome real, nunca Desconhecido" da v1.0 contrariava um teste existente. | `PersonalOverviewServiceTest.php:561-576` trava a política; eu só tinha lido o código, não o teste. |
 | D6 (nova) | Decide o que o painel pessoal mostra do ex-membro. | Consequência direta da D3-B: o devedor sai com parcela em aberto e o credor passaria a ver "Desconhecido". |
 | D3-B (ii), §2.4, CA-4 | Fixa ativa bloqueia o **participante** e também o **credor** (com outros participantes). | A v1.0 só citava o participante, mas as parcelas futuras de um credor que saiu ficariam sem ninguém para confirmar (§2.3). |
+
+### Mudanças da v1.2 em relação à v1.1
+
+| Onde | Mudança | Por quê |
+|---|---|---|
+| §2.9 (novo), R11 (nova), CA-16 (novo) | As telas de acerto do **grupo** também mostravam o ex-devedor como "Desconhecido": `balances` só tem membros atuais. `balances` passa a trazer quem é ponta de um acerto, só com nome. | Achado da TASK-554, confirmado com uma sonda descartável. A v1.1 só tinha analisado o painel pessoal e o relatório de fechamento. |
+| D7 (nova), CA-17 (novo) | Decide como o ex-membro aparece nos cartões de saldo. | Incluí-lo em `balances` o faz aparecer em `BalanceCards`. |
+| §3.1 item 3, RK3, RK7 (novo), §6 | Referências ao §2.9; risco novo dos cartões; dois itens fora de escopo. | Coerência com o acima. |
 
 ---
 
@@ -60,13 +68,17 @@ A despesa `FIXED` nasce sem quota e materializa uma por ciclo enquanto `fixed_re
 
 `GroupMembersForm.tsx` lista os membros (linhas 116-125) e adiciona por e-mail (`handleAddMember`, linha 61), sem nenhuma chamada de remoção. `GET /api/groups/{id}` já devolve `creator {id, email}` (`GroupController.php:77`, `types/group.ts`), e `GET /api/me` devolve o usuário logado (`AuthController.php:53`). A notificação `group_member_added` tem texto em `frontend/src/components/notificationText.ts:28`; um tipo novo precisa de entrada ali.
 
+### 2.9 As telas de acerto do grupo também mostram o ex-devedor como "Desconhecido"
+
+Achado da TASK-554 (2026-10-30), confirmado com uma sonda descartável. `CycleSummaryService::compute` semeia `balances` **só** com `$group->members` (`CycleSummaryService.php:222-230`), mas `settlements` nasce de `$owed`, que inclui qualquer participante da despesa (`:238-314`); as guardas `isset($balances[...])` (`:261` e `:265`) existem porque o ex-membro pode não estar lá. Com o devedor fora do grupo, `balances` traz só o credor e `settlements` traz devedor→credor. O frontend resolve o nome de cada ponta do acerto por `balances` (`SettlementList.tsx:35-36`, `PayableSettlementList.tsx:52-53`, `PaymentSettlementsPanel.tsx:55-56`, `CycleClosingAlert.tsx:30-35`; o relatório de fechamento passa `report.balances` em `ClosingReportPanel.tsx:205`) e cai em "Desconhecido", sem foto. `balances` também alimenta os cartões de saldo (`BalanceCards.tsx`), então incluir o ex-membro ali o faz aparecer nesses cartões. `payer` e `payers` já são carregados por `entries()` (`CycleSummaryService.php:55`, `:83` e `:109`): o nome do ex-membro já está em memória, sem consulta nova. Snapshots já selados guardam o `balances` do momento do fechamento e não são reescritos.
+
 ## 3. Requisitos
 
 ### 3.1 O que a feature entrega
 
 1. `GroupMemberController::destroy($groupId, $userId)`, com autorização, regra de bloqueio (D3) e testes.
 2. Botão **Sair do grupo** (e, para o criador, **Remover** em cada outro membro) na tela de membros da web, com confirmação.
-3. Ajustes para o histórico seguir funcionando com ex-membros: edição de despesa antiga (§2.5) e nome real nas telas (§2.6).
+3. Ajustes para o histórico seguir funcionando com ex-membros: edição de despesa antiga (§2.5) e nome real nas telas (§2.6 e §2.9).
 4. Notificação ao membro removido por outra pessoa.
 
 ### 3.2 Regras adotadas
@@ -85,6 +97,7 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 | R8 | O membro **removido por outra pessoa** recebe a notificação `group_member_removed` (best effort, no padrão `Notifier::guard`: falha ao notificar não desfaz a remoção). Sair por conta própria não notifica ninguém. |
 | R9 | Quem sai e depois é adicionado de novo volta como membro normal, com o histórico que já tinha (`store()` não muda). |
 | R10 | Rodar o agent `security-reviewer` na rota nova e o `pr-readiness-checker` antes do PR. |
+| R11 | Toda pessoa que é ponta de um acerto (`settlements`) de um ciclo tem entrada em `balances` com o nome. Quem já saiu do grupo entra com `user_id`, `name`, `avatarUrl` **nulo**, `balance` e a chave nova `formerMember: true` (só nessas entradas); e-mail e Pix nunca. Os saldos dos membros não mudam (mesmas chaves, números e ordem; os ex-membros vêm depois). Contrato aditivo (Constitution §4, item 1). Snapshots já selados não são reescritos. |
 
 ### 3.3 Contrato da API (proposta, aditiva)
 
@@ -102,6 +115,7 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 | D4 | Saída do criador do grupo | A) permitir, como qualquer membro, e o limite de 3 grupos passa a contar só grupos de que ele **ainda é membro**<br>B) bloquear até haver outro criador | **A** | `GroupController` autoriza tudo por **membro**, não por criador, então sair não deixa o grupo órfão. A mudança no limite (§2.7) evita a vaga presa; sem ela o criador que sai perde a vaga para sempre. |
 | D5 | Grupo que fica sem nenhum membro | A) marcar `deleted = true` (exclusão lógica) na mesma transação<br>B) deixar como está | **A** | Sem membros ninguém alcança o grupo; marcar como excluído é o mesmo caminho lógico do `GroupController::destroy` e **não apaga nada** (sem hard delete). |
 | D6 | O que o painel pessoal mostra de um ex-membro (§2.6) | A) manter **"Desconhecido"** para qualquer ex-membro, devedor ou credor (política da TASK-432 inteira, nenhum teste muda)<br>B) mostrar o **nome** (nunca e-mail, Pix nem avatar) do ex-membro que **deve** ao usuário, e manter anônimo o ex-**credor** | **B** | A TASK-432 escondeu o credor que saiu porque ninguém mais tem a quem pagar, e esse caso continua anônimo (o teste dela não muda). O devedor que saiu é outro caso: o credor já vê o nome dele nas telas de despesa e precisa saber quem deve. Com a D3-B, "Desconhecido deve R$ 50" seria rotina. |
+| D7 | Como o ex-membro aparece nos cartões de saldo (`BalanceCards`), já que `balances` passa a trazê-lo (§2.9, R11) | A) igual aos demais, **sem rótulo** (nada muda no frontend)<br>B) com o rótulo **"saiu do grupo"** (acrescenta a TASK-561, só frontend)<br>C) **fora** dos cartões: `balances` serve só para o nome nos acertos (também exige mudança no frontend) | **B** | O cartão mostra uma posição que existe de verdade (o ex-devedor ainda deve), então esconder (C) apaga informação, e deixar sem rótulo (A) faz aparecer um nome que o usuário não reconhece como membro. O rótulo é pequeno e só usa a chave `formerMember` da R11. Com a **A**, a TASK-560 sozinha basta. |
 
 ### 3.5 Falhas e consistência
 
@@ -128,10 +142,11 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 |---|---|---|---|
 | RK1 | Vítima presa por bloqueio da D3 (credor ou fixa) | A armadilha original volta pela porta dos fundos | D3-B reduz ao mínimo; a correção completa é a D1-B (candidato a backlog). Documentado como limite conhecido. |
 | RK2 | `update()` recusa despesa com ex-membro | Edição de despesa antiga dá 422 | R6 e teste dedicado. |
-| RK3 | Painel pessoal mostra "Desconhecido" para o devedor que saiu | Credor não sabe quem deve | D6 (recomendada B) e testes no painel pessoal; teste de regressão no fechamento. |
+| RK3 | Painel pessoal mostra "Desconhecido" para o devedor que saiu | Credor não sabe quem deve | D6 (recomendada B) e testes no painel pessoal; teste de regressão no fechamento. As telas de acerto do grupo têm o mesmo efeito (§2.9): R11 e TASK-560. |
 | RK4 | Notificação nova sem texto no frontend | Cai em "Nova notificação" | Entrada em `notificationText.ts` na mesma task. |
 | RK5 | Limite de grupos criados | Criador que sai perde a vaga | D4-A altera a contagem, com teste. |
 | RK6 | Item 095 (qualquer membro apaga o grupo em cascata) | Um membro pode apagar o grupo de quem ficou | Fora de escopo; segue no backlog. |
+| RK7 | `balances` com ex-membro muda a lista de cartões de saldo | Aparece um cartão de quem não é mais do grupo | R11 (`formerMember` só nas entradas novas) e D7 (recomendada B: rótulo "saiu do grupo"). |
 
 ## 5. Critérios de aceite
 
@@ -148,12 +163,14 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 - **CA-9**: o último membro que sai deixa `deleted = true`, sem apagar nenhuma linha.
 - **CA-10**: suíte inteira do backend verde e `pint --test` limpo; testes novos em `GroupMemberControllerTest` e nos testes de despesa, painel e fechamento; nenhum teste existente alterado sem motivo.
 - **CA-11**: o agent `security-reviewer` rodou na rota e nenhum achado ficou sem tratamento ou item de backlog.
+- **CA-16** (R11, TASK-560): com o devedor fora do grupo, `summary.balances` traz o ex-devedor com nome, `avatarUrl` nulo e `formerMember: true`, e o mesmo vale para o ex-credor com outros participantes; toda ponta de `settlements` tem entrada em `balances`; os saldos dos membros, as chaves e a ordem deles não mudam; sem ex-membro o `balances` é idêntico ao de hoje (sem a chave `formerMember`); ex-membro sem dívida no ciclo não aparece; nenhuma consulta a mais.
 
 ### 5.2 Frontend
 
 - **CA-12**: o usuário logado vê **Sair do grupo**; só o criador vê **Remover** nas linhas dos outros; confirmação antes de qualquer remoção.
 - **CA-13**: 422 mostra a mensagem da API sem sair da tela; sucesso ao sair leva a `/meus-grupos`; sucesso ao remover atualiza a lista.
 - **CA-14**: a notificação nova tem texto próprio; `npx tsc --noEmit` limpo e testes Vitest dos arquivos tocados verdes.
+- **CA-17** (D7-B, TASK-561, só se a D7 for B): o cartão de saldo do ex-membro mostra o rótulo "saiu do grupo"; os cartões dos membros não mudam; `npx tsc --noEmit` limpo e testes Vitest dos arquivos tocados verdes.
 
 ### 5.3 Documentação
 
@@ -167,3 +184,5 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 - Notificar o criador quando alguém sai por conta própria, e uma tela de "grupos de que saí".
 - Teto de grupos **em que alguém participa** (o item 086 menciona a ausência; esta feature não cria o teto).
 - Aplicar a mesma saída no app Flutter (`app/` ainda não existe).
+- Reescrever o `balances` de snapshots já selados (guardam o saldo do momento do fechamento).
+- Trocar a consulta `formerDebtors()` do painel pessoal (TASK-554, concluída) por leitura de `balances`: simplificação possível depois da TASK-560, não requisito.

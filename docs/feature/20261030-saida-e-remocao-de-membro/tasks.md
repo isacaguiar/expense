@@ -2,13 +2,13 @@
 
 > Formato igual ao usado no SDD geral — ver `docs/sdd/03-tasks.md` para a definição completa do formato e a regra de atomicidade ("se a descrição tem 'e' ligando duas entregas independentes, é duas tasks").
 
-Versão: 1.0 · Criado em: 20261030
+Versão: 1.1 · Criado em: 20261030
 
-**Status: v1.0, aguardando aprovação (Constitution §5.2).** O specify (v1.1) e o plan foram aprovados em 2026-10-30, com D1 a D5 como recomendado, **D6 = B** e o ajuste da D3-B (ii) (fixa ativa bloqueia também o credor).
+**Status: v1.1.** A v1.0 foi aprovada em 2026-10-30. A v1.1 acrescenta a **TASK-560** (achado §2.9 da TASK-554, opção A escolhida pelo usuário) e amplia o escopo da TASK-556; **aguardam OK**, junto com a D7 do specify v1.2. O specify (v1.1) e o plan foram aprovados em 2026-10-30, com D1 a D5 como recomendado, **D6 = B** e o ajuste da D3-B (ii) (fixa ativa bloqueia também o credor).
 
 IDs a partir de **TASK-549**: o maior em `docs/`, em todas as branches remotas e nas mensagens de commit de todas as refs é TASK-548 (feature `20261027-pagamento-no-cadastro-despesa`), conferido em 2026-10-30 com `git grep` e `git log --all`. Reconfirmar a numeração antes de criar a primeira branch de task, caso outra feature em andamento reserve IDs.
 
-Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK-017`** do Épico C (`docs/sdd/03-tasks.md`), cujo ponteiro é a TASK-559. Ordem (plan §9): primeiro a regra de bloqueio isolada, depois o endpoint, depois os ajustes de histórico, a revisão de segurança da API pronta, e por último a tela e a documentação, para o PR único nunca ter a tela apontando para um endpoint incompleto. As tasks 552 a 555 não dependem umas das outras e podem sair em qualquer ordem depois da 551. A TASK-558 reúne **Sair do grupo** e **Remover** de propósito: os dois botões compartilham o mesmo diálogo e o mesmo tratamento de erro, e separá-los obrigaria a construir o diálogo duas vezes. **Nenhum teste existente é editado**; todo teste novo entra em caso novo ou arquivo novo.
+Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK-017`** do Épico C (`docs/sdd/03-tasks.md`), cujo ponteiro é a TASK-559. Ordem (plan §9): primeiro a regra de bloqueio isolada, depois o endpoint, depois os ajustes de histórico, a revisão de segurança da API pronta, e por último a tela e a documentação, para o PR único nunca ter a tela apontando para um endpoint incompleto. As tasks 552 a 555 não dependem umas das outras e podem sair em qualquer ordem depois da 551. A **TASK-560** (acrescentada depois, plan §4.1) não depende de nenhuma e deve sair **antes** da TASK-556, para a revisão de segurança já ver o que ela expõe. A TASK-558 reúne **Sair do grupo** e **Remover** de propósito: os dois botões compartilham o mesmo diálogo e o mesmo tratamento de erro, e separá-los obrigaria a construir o diálogo duas vezes. **Nenhum teste existente é editado**; todo teste novo entra em caso novo ou arquivo novo.
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
@@ -23,6 +23,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 | TASK-557 | Adicionar o texto da notificação `group_member_removed` no frontend | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-558 | Adicionar **Sair do grupo**, **Remover** e o diálogo de confirmação em `GroupMembersForm` | frontend | plan.md §6 | nenhum | Pendente |
 | TASK-559 | Atualizar `01-specify.md` §3.3 e deixar o ponteiro da `TASK-017` em `03-tasks.md` | doc | plan.md §8 | nenhum | Pendente |
+| TASK-560 | Incluir em `balances` quem é ponta de um acerto e já saiu do grupo, só com nome e sem foto (R11) | backend | plan.md §4.1 | nenhum | Pendente |
 
 ## Critérios de aceite
 
@@ -54,7 +55,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
   - Caso novo em `ExpenseControllerClosingReportTest` (**CA-6**, metade do fechamento): relatório com devedor que saiu do grupo traz o nome real dele em `creditors[].debtors[]`, nunca "Desconhecido". O teste registra também o que o código faz hoje com `id` e `avatarUrl` do ex-membro, sem mudar o comportamento.
   - `git diff --stat -- backend/app` vazio (task só de teste); `php artisan test --filter ExpenseControllerClosingReportTest` verde; testes existentes sem edição.
 - **TASK-556**:
-  - O agent `security-reviewer` roda sobre `routes/api.php:57`, `GroupMemberController::destroy`, `MemberExitBlockers`, a validação nova do `update()` e a contagem do `store()` de grupo; o relatório fica registrado em `implementation.md`.
+  - O agent `security-reviewer` roda sobre `routes/api.php:57`, `GroupMemberController::destroy`, `MemberExitBlockers`, a validação nova do `update()`, a contagem do `store()` de grupo e a inclusão de ex-membros em `balances` (TASK-560, que expõe o nome deles no `summary`); o relatório fica registrado em `implementation.md`.
   - Nenhum achado de severidade alta ou média sem correção (com teste) ou item de `docs/backlog/`; achado baixo vira item de backlog (**CA-11**). Suíte do backend verde depois de qualquer correção.
 - **TASK-557**:
   - `case 'group_member_removed'` em `frontend/src/components/notificationText.ts`, com o texto `${actorName} removeu você do grupo "${groupName}"`.
@@ -67,6 +68,10 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 - **TASK-559**:
   - `docs/sdd/01-specify.md` §3.3 passa a descrever o `destroy` (quem pode, bloqueio da D3-B, efeito só no pivô) no lugar de "método não implementado"; a linha da `TASK-017` em `docs/sdd/03-tasks.md` vira `~~…~~ — migrada para docs/feature/20261030-saida-e-remocao-de-membro/ (TASK-551)`, no formato das demais (**CA-15**).
   - `git diff -- docs/sdd/00-constitution.md` vazio: a Constitution §2.4, que cita a rota como quebrada, **não é editada** (gate humano) e é apenas sinalizada ao usuário no relatório final.
+- **TASK-560**:
+  - `CycleSummaryService::compute` garante entrada em `$balances` para cada participante e para o credor (`$expense->payer`, se não for nulo) de toda despesa que gera acerto (depois do `continue` de `born_paid`): quem não é membro entra como `['user_id', 'name', 'avatarUrl' => null, 'balance', 'formerMember' => true]`, depois dos membros. As guardas `isset` e o resto do método ficam como estão (plan §4.1).
+  - Arquivo novo `CycleSummaryServiceFormerMemberTest` (**CA-16**): ex-devedor e ex-credor (com outros participantes) entram com nome, `avatarUrl` nulo e `formerMember`, mesmo com foto própria cadastrada; toda ponta de `settlements` tem entrada em `balances`; os membros mantêm chaves, saldos e ordem; sem ex-membro o `balances` é idêntico ao de antes e sem a chave `formerMember`; ex-membro cuja única parcela no ciclo é retroativa quitada, ou que só aparece em outro ciclo, não entra; o número de consultas de `compute` não muda; um caso por HTTP em `GET /groups/{id}/expenses/summary` traz o ex-devedor em `balances`.
+  - `php artisan test --filter 'CycleSummaryService|ExpenseControllerSummary|PersonalOverviewServiceTest|ExpenseControllerClosingReportTest'` verde com os testes existentes **sem edição**; suíte inteira e `./vendor/bin/pint --test` limpos; `git diff --stat -- backend/routes backend/app/Http` vazio.
 
 ## Depois da aprovação deste arquivo
 

@@ -1,8 +1,8 @@
 # Plan — Saída e Remoção de Membro do Grupo
 
-> Traduz `specify.md` (v1.1) em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
+> Traduz `specify.md` (v1.2) em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
 
-Versão: 1.0 · Criado em: 20261030
+Versão: 1.1 · Criado em: 20261030
 
 ---
 
@@ -12,6 +12,8 @@ O `specify.md` v1.1 foi aprovado nas decisões D1 a D5 (como recomendado). Dois 
 
 - **D6** (§4): o que o painel pessoal mostra do ex-membro. Recomendação **B** (nome do ex-devedor, sem contato; ex-credor continua "Desconhecido"). Com a **A**, a §4 inteira cai: nenhum arquivo do painel pessoal muda.
 - **Correção da D3-B (ii)**: fixa ativa também bloqueia o **credor** (com outros participantes), não só o participante.
+
+**Emenda da v1.1 deste plano (2026-10-30):** o specify v1.2 acrescenta a **R11** e a **D7** (achado §2.9 da TASK-554, opção A escolhida pelo usuário). A §4.1 abaixo traduz a R11 na **TASK-560**. Aguarda OK a **D7**: como o ex-membro aparece nos cartões de saldo. Recomendação **B** (rótulo "saiu do grupo", que acrescenta a TASK-561, só frontend); com a **A**, a TASK-560 sozinha basta.
 
 ## 1. `GroupMemberController::destroy` e a regra de bloqueio (specify R1 a R5, R9, D2, D3, D5, F1 a F7)
 
@@ -56,6 +58,21 @@ Só se a D6 for **B**. `backend/app/Services/PersonalOverviewService.php`:
 - O lado `to_pay` (`to_user`, o credor) **não muda**: ex-credor segue `Desconhecido`, sem e-mail, Pix nem avatar, e o teste `test_a_creditor_who_left_the_group_shows_as_unknown_and_without_contact` (`PersonalOverviewServiceTest.php:561-576`) fica **inalterado**.
 - `ClosingBreakdown` **não muda**: já preserva o nome do ex-membro (specify §2.6). Entra só um teste de regressão.
 
+## 4.1 Nome do ex-membro nas telas de acerto do grupo (R11, D7, specify §2.9, CA-16)
+
+Independente da D6 e da §4. `backend/app/Services/CycleSummaryService.php`, método `compute` (`:222-271`):
+
+- Dentro do loop dos participantes (`:256`), **depois** do `continue` do credor e antes das guardas `isset`, garantir uma entrada em `$balances` para o participante e para `$expense->payer` (quando não é nulo). Se `$balances[$user->id]` não existe, criar `['user_id' => …, 'name' => $user->name, 'avatarUrl' => null, 'balance' => 0.0, 'formerMember' => true]`. As guardas `isset` ficam como estão (passam a ser sempre verdadeiras, o que as deixa inofensivas) para o diff ser mínimo.
+- Por que dentro do loop e depois do `continue` de `born_paid` (`:246`): é exatamente a condição em que nasce um item de `$owed` e, portanto, um `settlement`. A regra "toda ponta de acerto tem nome" vale por construção, e quem só tem parcela retroativa quitada ou nenhuma dívida no ciclo não aparece.
+- Os membros ficam como estão: mesmas chaves, mesmos números, mesma ordem. A chave `formerMember` só existe nas entradas novas, e elas vêm depois de todos os membros.
+- `avatarUrl` nulo de propósito (R7): a foto de quem saiu não sai. E-mail e Pix `balances` nunca teve.
+- Sem consulta nova: `entries()` já carrega `payer` e `payers` (`:55`, `:83`, `:109`). Os tetos de consulta de `PersonalOverviewServiceTest` (TASK-427/428), que passam por `compute`, continuam valendo sem edição.
+- Contrato aditivo (Constitution §4, item 1): `balances` ganha entradas e uma chave opcional, sem mudar tipo nem sentido de campo nenhum. `ExpenseController` só repassa `balances` e **não muda**. O que o `compute` devolve também é o que se sela: fechamentos futuros guardam essas entradas, e os já selados não são reescritos.
+
+Frontend: nada muda com a D7-A. Com a D7-B (recomendada), a TASK-561 acrescenta `formerMember?: boolean` a `SummaryBalance` (`useGroupCycle.ts:69-74`) e o rótulo "saiu do grupo" em `BalanceCards.tsx`, sem mexer nas quatro telas que resolvem nome por `balances`, que passam a achá-lo.
+
+A TASK-554 (painel pessoal) não muda: o `formerDebtors()` dela é independente e seus testes seguem valendo. Com a 560 pronta o painel poderia ler o nome de `balances` e dispensar a consulta, mas isso reabriria task concluída; fica como simplificação posterior.
+
 ## 5. Limite de 3 grupos criados (D4-A, RK5)
 
 `GroupController::store` (`:51-53`): a contagem passa a `Group::where('deleted', 0)->where('created_by', auth()->id())->whereHas('members', fn ($q) => $q->where('user_id', auth()->id()))->count()`. Por que não zerar `created_by` na saída: perderia o registro de quem criou e o `created_by` é o que autoriza a D2. Os testes de limite de `GroupControllerTest` continuam valendo (o criador segue membro nos cenários deles).
@@ -80,7 +97,9 @@ Só se a D6 for **B**. `backend/app/Services/PersonalOverviewService.php`:
 | Feature | `GroupControllerTest` (caso novo) | CA-8 |
 | Feature | `PersonalOverviewServiceTest` (casos novos) e `ExpenseControllerClosingReportTest` (caso novo) | CA-6 |
 | Feature | `NotifierTriggersTest` (caso novo) | R8 e `group_id` nulo |
+| Feature | `CycleSummaryServiceFormerMemberTest` (novo) | CA-16 |
 | Frontend | `GroupMembersForm.test.tsx` (casos novos), `notificationText.test.ts` (caso novo) | CA-12 a CA-14 |
+| Frontend | `BalanceCards.test.tsx` (caso novo ou arquivo novo) | CA-17, só com a D7-B (TASK-561) |
 
 Nenhum teste existente é editado. Antes do PR: `security-reviewer` na rota (CA-11) e `pr-readiness-checker`.
 
@@ -90,4 +109,4 @@ Nenhum teste existente é editado. Antes do PR: `security-reviewer` na rota (CA-
 
 ## 9. Ordem de execução
 
-Há dependência técnica: o `destroy` (§1) chama o `Notifier` (§2), e a tela (§6) depende da API pronta e do texto da notificação. §3, §4 e §5 não dependem de nada e podem sair em qualquer ordem depois do `destroy`. Critério de ordenação em `tasks.md`: primeiro a regra de bloqueio isolada (testável sozinha), depois o endpoint, depois os ajustes de histórico, por último a tela e a documentação, para o PR único nunca ter a tela apontando para um endpoint ainda incompleto.
+Há dependência técnica: o `destroy` (§1) chama o `Notifier` (§2), e a tela (§6) depende da API pronta e do texto da notificação. §3, §4 e §5 não dependem de nada e podem sair em qualquer ordem depois do `destroy`. Critério de ordenação em `tasks.md`: primeiro a regra de bloqueio isolada (testável sozinha), depois o endpoint, depois os ajustes de histórico, por último a tela e a documentação, para o PR único nunca ter a tela apontando para um endpoint ainda incompleto. A §4.1 (TASK-560) também não depende de nada e deve sair **antes** da revisão de segurança (TASK-556), porque passa a expor o nome do ex-membro no `summary`; ela entra no escopo dessa revisão.
