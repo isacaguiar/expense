@@ -19,6 +19,10 @@ use Tests\TestCase;
  * reenviando esses ids não pode virar 422: `update()` aceita membros do grupo
  * mais quem JÁ está naquela despesa. Quem nunca esteve nela e não é membro
  * continua recusado, e o `store()` não muda.
+ *
+ * O credor é a exceção (R14, TASK-563): `user_payer_id` só aceita um membro ou o
+ * credor atual. Participante que saiu segue aceito em `payers`, mas o dono não
+ * pode torná-lo credor de parcela em aberto, o que a D3-B proíbe.
  */
 class ExpenseControllerUpdateFormerMemberTest extends TestCase
 {
@@ -167,6 +171,109 @@ class ExpenseControllerUpdateFormerMemberTest extends TestCase
             ->assertStatus(200);
 
         $this->assertContains($newcomer->id, $this->payerIds($expense));
+    }
+
+    /** @return list<int> */
+    private function quotaIds(Expense $expense): array
+    {
+        return $expense->quotas()->pluck('id')->sort()->values()->all();
+    }
+
+    public function test_a_participant_who_left_cannot_be_made_the_creditor(): void
+    {
+        ['editor' => $editor, 'former' => $former, 'expense' => $expense] = $this->expenseWithAFormerMember();
+        $payersBefore = $this->payerIds($expense);
+        $quotasBefore = $this->quotaIds($expense);
+
+        // Manda junto `description` e os participantes: nada pode ser gravado pela metade.
+        $this->update($editor, $expense, ['description' => 'Editada', 'user_payer_id' => $former->id, 'payers' => [$editor->id, $former->id]])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['user_payer_id'])
+            ->assertJsonMissingValidationErrors(['payers.0', 'payers.1']);
+
+        // E sozinho, sem mais nada no corpo.
+        $this->update($editor, $expense, ['user_payer_id' => $former->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['user_payer_id']);
+
+        $fresh = $expense->fresh();
+        $this->assertSame($editor->id, $fresh->user_payer_id);
+        $this->assertSame('Compra de teste', $fresh->description);
+        $this->assertSame($payersBefore, $this->payerIds($expense));
+        $this->assertSame($quotasBefore, $this->quotaIds($expense));
+    }
+
+    public function test_the_creditor_who_left_can_be_resent_without_touching_the_participants(): void
+    {
+        ['group' => $group, 'users' => [$editor, $former, $stays]] = $this->makeGroup(3);
+        $expense = $this->makePurchase($group, $former, [$former, $editor, $stays], 'IN_CASH', 90.00, '2026-10-05');
+        $expense->update(['user_creator_id' => $editor->id]);
+        $group->members()->detach($former->id);
+
+        $this->update($editor, $expense, ['user_payer_id' => $former->id])
+            ->assertStatus(200)
+            ->assertJsonPath('user_payer_id', $former->id);
+
+        $this->assertSame($former->id, $expense->fresh()->user_payer_id);
+    }
+
+    public function test_the_creditor_can_be_changed_to_a_member_while_a_participant_who_left_stays(): void
+    {
+        ['editor' => $editor, 'former' => $former, 'stays' => $stays, 'expense' => $expense] = $this->expenseWithAFormerMember();
+
+        $this->update($editor, $expense, ['user_payer_id' => $stays->id, 'payers' => [$editor->id, $former->id, $stays->id]])
+            ->assertStatus(200)
+            ->assertJsonPath('user_payer_id', $stays->id);
+
+        $this->assertSame($stays->id, $expense->fresh()->user_payer_id);
+        $this->assertContains($former->id, $this->payerIds($expense));
+    }
+
+    public function test_a_creditor_who_left_and_was_replaced_cannot_become_the_creditor_again(): void
+    {
+        ['group' => $group, 'users' => [$editor, $former, $stays]] = $this->makeGroup(3);
+        $expense = $this->makePurchase($group, $former, [$former, $editor, $stays], 'IN_CASH', 90.00, '2026-10-05');
+        $expense->update(['user_creator_id' => $editor->id]);
+        $group->members()->detach($former->id);
+
+        // Trocar para um membro é permitido...
+        $this->update($editor, $expense, ['user_payer_id' => $stays->id])->assertStatus(200);
+        $this->assertSame($stays->id, $expense->fresh()->user_payer_id);
+
+        // ...mas depois disso ele não é "o credor atual": volta a valer a regra de membro.
+        $this->update($editor, $expense, ['user_payer_id' => $former->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['user_payer_id']);
+
+        $this->assertSame($stays->id, $expense->fresh()->user_payer_id);
+    }
+
+    public function test_a_participant_who_left_is_refused_as_the_creditor_even_if_still_a_member_of_another_group(): void
+    {
+        ['editor' => $editor, 'former' => $former, 'expense' => $expense] = $this->expenseWithAFormerMember();
+        // Sair deste grupo não tira a pessoa do resto: o que vale é a lista de membros DESTE grupo.
+        Group::create(['name' => 'Outro grupo'])->members()->attach($former->id);
+
+        $this->update($editor, $expense, ['user_payer_id' => $former->id])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['user_payer_id']);
+
+        $this->assertSame($editor->id, $expense->fresh()->user_payer_id);
+    }
+
+    public function test_the_creditor_who_left_can_also_be_added_as_a_participant(): void
+    {
+        ['group' => $group, 'users' => [$editor, $former, $stays]] = $this->makeGroup(3);
+        // O credor não está entre os participantes, só em `user_payer_id`.
+        $expense = $this->makePurchase($group, $former, [$editor, $stays], 'IN_CASH', 60.00, '2026-10-05');
+        $expense->update(['user_creator_id' => $editor->id]);
+        $group->members()->detach($former->id);
+
+        $this->update($editor, $expense, ['payers' => [$editor->id, $stays->id, $former->id]])
+            ->assertStatus(200);
+
+        $this->assertContains($former->id, $this->payerIds($expense));
+        $this->assertSame($former->id, $expense->fresh()->user_payer_id);
     }
 
     public function test_a_malformed_participant_is_a_422_not_a_server_error(): void
