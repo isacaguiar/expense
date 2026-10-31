@@ -8,6 +8,7 @@ use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
+use App\Models\User;
 use App\Services\CycleSummaryService;
 use App\Services\ExpensePaymentService;
 use App\Support\BillingCycle;
@@ -120,6 +121,7 @@ class ExpenseController extends Controller
         $expense->load(['payers', 'quotas']);
         $this->hydrateQuotaExpense($expense);
         $this->appendValuePerPerson($expense);
+        $this->hideFormerMemberFields($expense);
 
         return response()->json($expense);
     }
@@ -156,6 +158,41 @@ class ExpenseController extends Controller
             'value_per_person',
             round((float) $quota->value_quota / $divisor, 2)
         ));
+    }
+
+    /**
+     * Ids dos membros atuais do grupo (linhas de `ex_groups_members`).
+     *
+     * @return \Illuminate\Support\Collection<int, int|string>
+     */
+    private function memberIdsOf($groupId)
+    {
+        return DB::table('ex_groups_members')->where('group_id', $groupId)->pluck('user_id');
+    }
+
+    /**
+     * Quem saiu do grupo continua em `payers` (item 086), mas o contato dele não pode
+     * seguir saindo para os membros atuais (R12): `payers` serializa o `User` inteiro,
+     * com e-mail, Pix, WhatsApp, papel e foto. Cada participante que já não é membro
+     * passa a sair só com `id` e `name`, que é tudo que as telas leem
+     * (`ExpenseView`). Lista de permitidos (`setVisible`) e não de proibidos, para
+     * uma coluna nova de `ex_users` não vazar por esquecimento; aqui e não em
+     * `User::$hidden`, porque os membros precisam ver o contato uns dos outros.
+     * Usa as relações já carregadas e uma consulta de membros.
+     */
+    private function hideFormerMemberFields(Expense $expense): void
+    {
+        if (! $expense->relationLoaded('payers')) {
+            return;
+        }
+
+        $memberIds = $this->memberIdsOf($expense->group_id);
+
+        $expense->payers->each(function (User $payer) use ($memberIds) {
+            if (! $memberIds->contains($payer->id)) {
+                $payer->setVisible(['id', 'name']);
+            }
+        });
     }
 
     public function update(Request $request, $id)
@@ -302,6 +339,7 @@ class ExpenseController extends Controller
 
         $fresh = $expense->fresh(['payers', 'quotas']);
         $this->hydrateQuotaExpense($fresh);
+        $this->hideFormerMemberFields($fresh);
 
         return response()->json($fresh);
     }
@@ -1265,6 +1303,7 @@ class ExpenseController extends Controller
             ->exists();
 
         $entries = $this->cycles()->entries($groupId, $start, $end);
+        $memberIds = $this->memberIdsOf($groupId);
 
         $creditors = [];
         foreach ($entries as $entry) {
@@ -1288,8 +1327,16 @@ class ExpenseController extends Controller
             $share = round($entry['value'] / $participantsCount, 2);
 
             if (! isset($creditors[$creditor->id])) {
+                // Credor que saiu do grupo (R12): o nome fica, o contato não.
+                $isMember = $memberIds->contains($creditor->id);
+
                 $creditors[$creditor->id] = [
-                    'creditor' => ['id' => $creditor->id, 'name' => $creditor->name, 'email' => $creditor->email, 'pix' => $creditor->pix],
+                    'creditor' => [
+                        'id' => $creditor->id,
+                        'name' => $creditor->name,
+                        'email' => $isMember ? $creditor->email : null,
+                        'pix' => $isMember ? $creditor->pix : null,
+                    ],
                     'debtors' => [],
                 ];
             }

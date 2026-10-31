@@ -15,7 +15,7 @@ O `specify.md` v1.1 foi aprovado nas decisões D1 a D5 (como recomendado). Dois 
 
 **Emenda da v1.1 deste plano (2026-10-30):** o specify v1.2 acrescenta a **R11** e a **D7** (achado §2.9 da TASK-554, opção A escolhida pelo usuário). A §4.1 abaixo traduz a R11 na **TASK-560**. **D7 = B** aprovada em 2026-10-31: o ex-membro aparece nos cartões de saldo com o rótulo "saiu do grupo", o que acrescenta a TASK-561 (só frontend) depois da TASK-560.
 
-**Emenda da v1.2 deste plano (2026-10-31):** a revisão de segurança da TASK-556 (opção 1 e TASK-565 escolhidas pelo usuário) acrescenta as seções **3.1** (R14, TASK-563), **4.2** (R12, TASK-562), **4.3** (R12, TASK-564) e **4.4** (R13, TASK-565). A 3.1 corrige uma falha deste plano: a lista única da §3 serve a `payers.*`, mas não a `user_payer_id`.
+**Emenda da v1.2 deste plano (2026-10-31):** a revisão de segurança da TASK-556 (opção 1 e TASK-565 escolhidas pelo usuário) acrescenta as seções **3.1** (R14, TASK-563), **4.2** (R12, TASK-562), **4.3** (R12, TASK-564) e **4.4** (R13, TASK-565). A 3.1 corrige uma falha deste plano: a lista única da §3 serve a `payers.*`, mas não a `user_payer_id`. Aprovada em 2026-10-31.
 
 ## 1. `GroupMemberController::destroy` e a regra de bloqueio (specify R1 a R5, R9, D2, D3, D5, F1 a F7)
 
