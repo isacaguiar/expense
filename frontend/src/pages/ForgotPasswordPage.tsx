@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
       // do backend já tem. LIMITE CONHECIDO (revisão de segurança, 2026-10-30):
       // o 429 e o 500 só existem para conta existente, então a tela ainda
       // confirma a conta a quem pede duas vezes seguidas; risco aceito, conserto
-      // no item 119 do backlog. Ver docs/feature/20260930-recuperacao-acesso/specify.md §3.
+      // no item 119 do backlog. Ver docs/feature/concluidas/202609/20260930-recuperacao-acesso/specify.md §3.
       if (response?.status === 422) {
         setSuccess(true);
       } else if (response?.status === 429) {
