@@ -204,18 +204,21 @@ class ExpenseController extends Controller
             return $response;
         }
 
-        // Credor e participantes: membros do grupo mais quem já está nesta despesa,
-        // mesmo que tenha saído do grupo (item 086, R6). Só o `update()`; o `store()`
-        // segue exigindo membro.
-        $allowedPayers = Rule::in($this->payerIdsAllowedOnUpdate($expense));
+        // Participantes: membros do grupo mais quem já está nesta despesa, mesmo que
+        // tenha saído do grupo (item 086, R6). Credor: só membro ou o credor atual
+        // (R14), para o dono não tornar credor de parcela em aberto quem já saiu.
+        // Só o `update()`; o `store()` segue exigindo membro.
+        $creditorIds = $this->creditorIdsAllowedOnUpdate($expense);
+        $allowedCreditor = Rule::in($creditorIds);
+        $allowedParticipants = Rule::in($this->participantIdsAllowedOnUpdate($expense, $creditorIds));
 
         $data = $request->validate([
             'description' => 'sometimes|required|string|max:255',
             'date_payment' => 'sometimes|required|date',
             'total_value' => 'sometimes|required|numeric|min:0',
-            'user_payer_id' => ['sometimes', 'required', $allowedPayers],
+            'user_payer_id' => ['sometimes', 'required', $allowedCreditor],
             'payers' => 'sometimes|required|array|min:1',
-            'payers.*' => $allowedPayers,
+            'payers.*' => $allowedParticipants,
             // expense_type/installments/quotas: edição de tipo (só À Vista <->
             // Parcelada — Fixa fica de fora dos dois lados, ver abaixo).
             // docs/feature/concluidas/202608/20260826-editar-tipo-despesa/plan.md §1.
@@ -345,25 +348,41 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Ids que `update()` aceita como credor e como participantes: os membros atuais
-     * do grupo e quem já está nesta despesa (participantes e credor).
+     * Ids que `update()` aceita em `user_payer_id`: os membros atuais do grupo e o
+     * credor atual da despesa (R14).
      *
      * Sair do grupo só tira a linha de `ex_groups_members` (item 086): a pessoa
-     * continua em `ex_expenses_payers` e pode continuar como credor, e reenviar
-     * esses ids numa edição não pode virar 422. Quem nunca esteve na despesa e não
-     * é membro continua recusado. Lista (`Rule::in`) em vez de `Rule::exists`
-     * porque a união com o pivô de participantes não cabe numa consulta só.
+     * continua em `ex_expenses_payers` e como credora, e reenviar o credor que já
+     * saiu numa edição não pode virar 422. Já o participante que saiu fica de fora:
+     * o dono não pode torná-lo credor de parcela em aberto, o que a D3-B proíbe.
+     * Lista (`Rule::in`) em vez de `Rule::exists` porque a união com o credor atual
+     * não cabe numa consulta só.
      *
      * @return list<int>
      */
-    private function payerIdsAllowedOnUpdate(Expense $expense): array
+    private function creditorIdsAllowedOnUpdate(Expense $expense): array
     {
-        return DB::table('ex_groups_members')
-            ->where('group_id', $expense->group_id)
-            ->pluck('user_id')
-            ->merge($expense->payers()->pluck('ex_users.id'))
+        return $this->memberIdsOf($expense->group_id)
             ->push($expense->user_payer_id)
             ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Ids que `update()` aceita em `payers.*`: os do credor mais quem já é
+     * participante desta despesa, mesmo que tenha saído do grupo (R6). Quem nunca
+     * esteve na despesa e não é membro continua recusado. Recebe a lista do credor
+     * já calculada para não ler os membros do grupo uma segunda vez.
+     *
+     * @param  list<int>  $creditorIds  o resultado de `creditorIdsAllowedOnUpdate`
+     * @return list<int>
+     */
+    private function participantIdsAllowedOnUpdate(Expense $expense, array $creditorIds): array
+    {
+        return collect($creditorIds)
+            ->merge($expense->payers()->pluck('ex_users.id'))
             ->unique()
             ->values()
             ->all();
