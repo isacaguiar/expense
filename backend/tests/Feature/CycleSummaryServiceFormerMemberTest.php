@@ -284,4 +284,168 @@ class CycleSummaryServiceFormerMemberTest extends TestCase
         $this->assertTrue($entry['formerMember']);
         $this->assertNull($entry['avatarUrl']);
     }
+
+    // ---- Item 086, R13 (CA-21, TASK-565): a foto de quem saiu não sai ----
+
+    /** Foto própria (URL assinada) e do Google: nenhuma das duas pode sair depois da saída. */
+    private function withPhoto(User $user): User
+    {
+        $user->forceFill([
+            'photo_path' => "photos/{$user->id}.jpg",
+            'avatar_url' => "https://example.test/{$user->id}.png",
+        ])->save();
+
+        return $user;
+    }
+
+    /** A entrada de `$user` em `participantDetails` da despesa, ou null. */
+    private function participantOf(array $expense, User $user): ?array
+    {
+        foreach ($expense['participantDetails'] as $detail) {
+            if ($detail['id'] === $user->id) {
+                return $detail;
+            }
+        }
+
+        return null;
+    }
+
+    public function test_a_participant_who_left_keeps_the_id_and_name_but_loses_the_avatar_in_the_expenses(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->groupWhereTheDebtorLeft();
+        $this->withPhoto($debtor);
+
+        $expense = $this->summaryOf($group)['expenses'][0];
+
+        $this->assertSame(
+            ['id' => $debtor->id, 'name' => $debtor->name, 'avatarUrl' => null],
+            $this->participantOf($expense, $debtor)
+        );
+        $this->assertSame($creditor->id, $expense['userPayerId']);
+    }
+
+    public function test_a_creditor_who_left_keeps_the_id_and_name_but_loses_the_avatar_in_the_expenses(): void
+    {
+        ['group' => $group, 'users' => [$creditor, $first, $second]] = $this->makeGroup(3);
+        $this->withPhoto($creditor);
+        $this->makePurchase($group, $creditor, [$creditor, $first, $second], 'IN_CASH', 90.00, '2026-10-05');
+        $group->members()->detach($creditor->id);
+
+        $expense = $this->summaryOf($group)['expenses'][0];
+
+        $this->assertNull($expense['payerAvatarUrl']);
+        $this->assertSame($creditor->id, $expense['userPayerId']);
+        $this->assertSame($creditor->name, $expense['payerName']);
+        $this->assertSame(
+            ['id' => $creditor->id, 'name' => $creditor->name, 'avatarUrl' => null],
+            $this->participantOf($expense, $creditor)
+        );
+    }
+
+    public function test_a_participant_who_left_this_group_loses_the_avatar_even_if_still_in_another_group(): void
+    {
+        ['group' => $group, 'debtor' => $debtor] = $this->groupWhereTheDebtorLeft();
+        $this->withPhoto($debtor);
+        $other = Group::create(['name' => 'Outro grupo']);
+        $other->members()->attach($debtor->id);
+
+        $expense = $this->summaryOf($group)['expenses'][0];
+
+        $this->assertNull($this->participantOf($expense, $debtor)['avatarUrl']);
+    }
+
+    public function test_members_keep_their_avatars_in_the_expenses(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'stays' => $stays] = $this->groupWhereTheDebtorLeft();
+        $this->withPhoto($creditor);
+        $stays->forceFill(['avatar_url' => 'https://example.test/stays.png'])->save();
+
+        $expense = $this->summaryOf($group)['expenses'][0];
+        $creditorAvatar = User::find($creditor->id)->avatar_url;
+
+        $this->assertNotNull($creditorAvatar);
+        $this->assertSame($creditorAvatar, $expense['payerAvatarUrl']);
+        $this->assertSame($creditorAvatar, $this->participantOf($expense, $creditor)['avatarUrl']);
+        $this->assertSame('https://example.test/stays.png', $this->participantOf($expense, $stays)['avatarUrl']);
+    }
+
+    public function test_hiding_the_avatars_costs_no_extra_query(): void
+    {
+        // Uma despesa com um ex-membro, contra três despesas com quatro ex-membros entre seis participantes.
+        ['group' => $small, 'users' => $smallUsers] = $this->makeGroup(3);
+        $this->makePurchase($small, $smallUsers[0], $smallUsers, 'IN_CASH', 90.00, '2026-10-05');
+        $small->members()->detach($smallUsers[1]->id);
+
+        ['group' => $large, 'users' => $largeUsers] = $this->makeGroup(6);
+        foreach (['2026-10-03', '2026-10-05', '2026-10-07'] as $i => $date) {
+            $this->makePurchase($large, $largeUsers[$i], $largeUsers, 'IN_CASH', 120.00, $date);
+        }
+        $large->members()->detach(array_map(fn (User $u) => $u->id, array_slice($largeUsers, 2, 4)));
+
+        $this->summaryOf($small); // aquece o que é cacheado na primeira chamada
+        $this->assertSame(
+            $this->queriesOf(fn () => $this->summaryOf($small)),
+            $this->queriesOf(fn () => $this->summaryOf($large))
+        );
+    }
+
+    public function test_a_sealed_cycle_carries_no_avatar_of_who_had_left_but_keeps_the_members(): void
+    {
+        ['group' => $group, 'users' => [$creditor, $debtor]] = $this->makeGroup(2);
+        $creditor->forceFill(['avatar_url' => 'https://example.test/creditor.png'])->save();
+        $this->withPhoto($debtor);
+        $expense = $this->makePurchase($group, $creditor, [$creditor, $debtor], 'IN_CASH', 100.00, '2026-09-10');
+        $this->markPaid($expense);
+        SettlementConfirmation::create([
+            'group_id' => $group->id,
+            'cycle_start' => '2026-09-01',
+            'cycle_end' => '2026-09-30',
+            'from_user_id' => $debtor->id,
+            'to_user_id' => $creditor->id,
+            'amount' => 50,
+            'proof_path' => 'comprovantes/'.$group->id.'/x.jpg',
+            'confirmed_at' => now(),
+        ]);
+        $group->members()->detach($debtor->id);
+
+        $this->withToken(auth('api')->login($creditor))
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")
+            ->assertOk()
+            ->assertJsonPath('cycle.settled', true);
+
+        $stored = GroupCycleSnapshot::where('group_id', $group->id)->latest('id')->firstOrFail()->expenses[0];
+        $this->assertSame('https://example.test/creditor.png', $stored['payerAvatarUrl']);
+        $this->assertSame('https://example.test/creditor.png', $this->participantOf($stored, $creditor)['avatarUrl']);
+        $this->assertSame(
+            ['id' => $debtor->id, 'name' => $debtor->name, 'avatarUrl' => null],
+            $this->participantOf($stored, $debtor)
+        );
+    }
+
+    public function test_the_summary_and_closing_report_endpoints_hide_the_avatar_of_who_left_and_keep_the_members(): void
+    {
+        ['group' => $group, 'users' => [$creditor, $debtor, $stays]] = $this->makeGroup(3);
+        $creditor->forceFill(['avatar_url' => 'https://example.test/creditor.png'])->save();
+        $this->withPhoto($debtor);
+        $this->makePurchase($group, $creditor, [$creditor, $debtor, $stays], 'IN_CASH', 90.00, '2026-09-10');
+        $group->members()->detach($debtor->id);
+        $token = auth('api')->login($stays);
+
+        $summary = $this->withToken($token)
+            ->getJson("/api/groups/{$group->id}/expenses/summary?cycles_ago=1")
+            ->assertOk();
+        $expense = $summary->json('expenses.0');
+        $this->assertSame('https://example.test/creditor.png', $expense['payerAvatarUrl']);
+        $this->assertNull($this->participantOf($expense, $debtor)['avatarUrl']);
+        $this->assertSame($debtor->id, $this->participantOf($expense, $debtor)['id']);
+
+        $report = $this->withToken($token)
+            ->getJson("/api/groups/{$group->id}/expenses/closing-report?cycle_start=2026-09-01")
+            ->assertOk();
+        $this->assertSame('https://example.test/creditor.png', $report->json('creditors.0.creditor.avatarUrl'));
+        $debtorRow = collect($report->json('creditors.0.debtors'))->firstWhere('id', $debtor->id);
+        $this->assertNotNull($debtorRow, 'o ex-devedor perdeu o id no relatório');
+        $this->assertNull($debtorRow['avatarUrl']);
+        $this->assertSame($debtor->name, $debtorRow['name']);
+    }
 }

@@ -677,14 +677,14 @@ class ExpenseControllerClosingReportTest extends TestCase
     }
 
     /**
-     * Registra o que o código faz hoje com `id` e foto de quem saiu: no relatório ao vivo,
-     * `participantDetails` e `payerAvatarUrl` da despesa os trazem e `ClosingBreakdown` os
-     * repassa. O painel pessoal (D6-B) e o `balances` (R11) retêm a foto; o relatório não.
-     * Já e-mail e Pix nunca saem (R7): as chaves de cada pessoa são só as quatro abaixo.
-     * Fica aqui como caracterização (TASK-555 não muda comportamento); se a foto passar a
-     * ser retida de propósito, é este caso que se atualiza.
+     * Item 086, R13 (TASK-565): no relatório ao vivo, quem saiu do grupo segue com `id` e
+     * nome (o frontend resolve o credor por `userPayerId`), mas sem a foto. `CycleSummaryService`
+     * anula `participantDetails[].avatarUrl` e `payerAvatarUrl` de quem não é membro e
+     * `ClosingBreakdown` repassa o que recebe. E-mail e Pix nunca saem (R7): as chaves de
+     * cada pessoa são só as abaixo. Este caso nasceu na TASK-555 como caracterização do
+     * comportamento anterior (a foto saía) e foi atualizado quando a TASK-565 o mudou.
      */
-    public function test_today_the_live_report_still_carries_the_id_and_avatar_of_creditor_and_debtor_who_left(): void
+    public function test_the_live_report_keeps_the_id_but_not_the_avatar_of_creditor_and_debtor_who_left(): void
     {
         Carbon::setTestNow('2026-10-15');
 
@@ -698,11 +698,13 @@ class ExpenseControllerClosingReportTest extends TestCase
 
         $response = $this->report($carla, $group, '2026-09-01')->assertOk();
 
+        // As duas fotos existem (Google e enviada); nenhuma sai.
+        $this->assertNotNull(User::find($ana->id)->avatar_url);
+        $this->assertNotNull(User::find($bruno->id)->avatar_url);
         $this->assertSame($ana->id, $response->json('creditors.0.creditor.id'));
-        $this->assertSame('https://example.test/ana.png', $response->json('creditors.0.creditor.avatarUrl'));
+        $this->assertNull($response->json('creditors.0.creditor.avatarUrl'));
         $this->assertSame($bruno->id, $response->json('creditors.0.debtors.0.id'));
-        $this->assertNotNull($response->json('creditors.0.debtors.0.avatarUrl'));
-        $this->assertSame(User::find($bruno->id)->avatar_url, $response->json('creditors.0.debtors.0.avatarUrl'));
+        $this->assertNull($response->json('creditors.0.debtors.0.avatarUrl'));
 
         $creditorKeys = array_keys($response->json('creditors.0.creditor'));
         $debtorKeys = array_keys($response->json('creditors.0.debtors.0'));
