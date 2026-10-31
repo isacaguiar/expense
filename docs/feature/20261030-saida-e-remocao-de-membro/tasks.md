@@ -27,7 +27,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 | TASK-561 | Mostrar o rótulo "saiu do grupo" no cartão de saldo do ex-membro (D7-B) | frontend | plan.md §4.1 | nenhum | Pendente |
 | TASK-562 | Esconder o contato de quem saiu nas respostas de despesa (`show`, `update` e `gross-debts`) | backend | plan.md §4.2 | nenhum | Concluída |
 | TASK-563 | Fazer o `update` aceitar como novo credor só membro ou o credor atual (R14) | backend | plan.md §3.1 | nenhum | Concluída |
-| TASK-564 | Devolver `creator` nulo em `GET /groups` e `GET /groups/{id}` quando o criador saiu | backend | plan.md §4.3 | nenhum | Pendente |
+| TASK-564 | Devolver `creator` nulo em `GET /groups` e `GET /groups/{id}` quando o criador saiu | backend | plan.md §4.3 | nenhum | Concluída |
 | TASK-565 | Tirar a foto de quem saiu de `payerAvatarUrl` e `participantDetails` do resumo e do fechamento (R13) | backend | plan.md §4.4 | nenhum | Pendente |
 
 ## Critérios de aceite
