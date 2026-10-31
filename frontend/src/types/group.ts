@@ -65,3 +65,15 @@ export type GroupListItem = GroupDetail & {
 
 /** Só id + nome: o seletor de grupo do shell não precisa do resto do payload. */
 export type GroupOption = Pick<Group, 'id' | 'name'>;
+
+/**
+ * Uma despesa que impede a saída ou a remoção de um membro: item de `blocking` na
+ * resposta 422 de `DELETE /api/groups/{id}/members/{userId}` (`MemberExitBlockers`).
+ * `reason` é `creditor_open_quotas` (credor de parcela em aberto de outra pessoa) ou
+ * `active_fixed` (despesa fixa ainda ativa).
+ */
+export type MemberExitBlocker = {
+  expense_id: number;
+  description: string;
+  reason: string;
+};
