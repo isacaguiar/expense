@@ -31,6 +31,17 @@ describe('notificationText', () => {
     );
   });
 
+  // Item 086 (R8): quem foi removido do grupo por outra pessoa.
+  it('group_member_removed says who removed the recipient from which group', () => {
+    expect(notificationText('group_member_removed', { actorName: 'Ana', groupName: 'Casa' })).toBe(
+      'Ana removeu você do grupo "Casa"'
+    );
+  });
+
+  it('group_member_removed does not print "undefined" when the payload is incomplete', () => {
+    expect(notificationText('group_member_removed', {})).not.toContain('undefined');
+  });
+
   it('expense_created names the actor and the expense', () => {
     expect(notificationText('expense_created', { actorName: 'Ana', expenseDescription: 'Internet' })).toBe(
       'Ana adicionou a despesa "Internet"'
