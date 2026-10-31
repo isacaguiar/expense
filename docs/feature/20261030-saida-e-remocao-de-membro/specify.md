@@ -2,9 +2,9 @@
 
 > Feature: o usuário passa a conseguir **sair de um grupo** (e o criador do grupo a **remover** outro membro), pela API e por um botão na tela de membros da web. Hoje a rota `DELETE /groups/{groupId}/members/{userId}` existe, mas o método não, e quem é adicionado a um grupo nunca consegue sair. Promove o item 086 do backlog e absorve a `TASK-017` do Épico C de `docs/sdd/03-tasks.md`.
 
-Versão: 1.2 · Criado em: 20261030
+Versão: 1.3 · Criado em: 20261030
 
-**Status: v1.2.** A v1.0 foi aprovada em 2026-10-30 com **D1 a D5 como recomendado** (inclusive a D3-B), e a v1.1 no mesmo dia, com a **D6 = B**. A v1.2 nasceu da TASK-554 (achado §2.9, opção A escolhida pelo usuário) e acrescenta R11, D7, CA-16 e CA-17 e as TASK-560 e TASK-561; **aprovada em 2026-10-31, com a D7 = B**. Escopo decidido pelo usuário: **só o item 086**, com **backend e botão na web**; os itens 095 (apagar grupo em cascata) e 072 (excluir conta) ficam de fora.
+**Status: v1.3, aguardando aprovação.** A v1.3 nasceu da revisão de segurança da TASK-556 (opção 1 e TASK-565 escolhidas pelo usuário em 2026-10-31) e acrescenta §2.10, R12 a R14, CA-18 a CA-21, RK8 e as TASK-562 a TASK-565. A v1.0 foi aprovada em 2026-10-30 com **D1 a D5 como recomendado** (inclusive a D3-B), e a v1.1 no mesmo dia, com a **D6 = B**. A v1.2 nasceu da TASK-554 (achado §2.9, opção A escolhida pelo usuário) e acrescenta R11, D7, CA-16 e CA-17 e as TASK-560 e TASK-561; **aprovada em 2026-10-31, com a D7 = B**. Escopo decidido pelo usuário: **só o item 086**, com **backend e botão na web**; os itens 095 (apagar grupo em cascata) e 072 (excluir conta) ficam de fora.
 
 ### Mudanças da v1.1 em relação à v1.0
 
@@ -21,6 +21,15 @@ Versão: 1.2 · Criado em: 20261030
 | §2.9 (novo), R11 (nova), CA-16 (novo) | As telas de acerto do **grupo** também mostravam o ex-devedor como "Desconhecido": `balances` só tem membros atuais. `balances` passa a trazer quem é ponta de um acerto, só com nome. | Achado da TASK-554, confirmado com uma sonda descartável. A v1.1 só tinha analisado o painel pessoal e o relatório de fechamento. |
 | D7 (nova), CA-17 (novo) | Decide como o ex-membro aparece nos cartões de saldo. | Incluí-lo em `balances` o faz aparecer em `BalanceCards`. |
 | §3.1 item 3, RK3, RK7 (novo), §6 | Referências ao §2.9; risco novo dos cartões; dois itens fora de escopo. | Coerência com o acima. |
+
+### Mudanças da v1.3 em relação à v1.2
+
+| Onde | Mudança | Por quê |
+|---|---|---|
+| §2.10 (novo), R12 e R13 (novas), RK8 (novo), CA-18, CA-20 e CA-21 (novos) | E-mail, Pix e WhatsApp de quem saiu continuam saindo nas respostas de despesa e de grupo, e a foto e o `id` saem no resumo e no fechamento. A R7 passa a valer para todas as respostas, e a foto também fica retida. | `security-reviewer` na TASK-556 (achados A1, A2 e B1), conferidos no código. |
+| R6, R14 (nova), CA-19 (novo) | `update()` aceita como novo credor só membro (ou o credor atual); ex-membro continua aceito como participante. | A lista única do plan §3 deixava o dono promover a credor quem já saiu (achado A3), o que a D3-B proíbe. A falha era do plano. |
+| §2.6 | Corrigida a frase sobre `id` e avatar no relatório de fechamento. | A TASK-555 mostrou que só vale para snapshot antigo. |
+| §6 | Itens de backlog 126 a 129 e dois itens que seguem abertos. | Achados B2 a B4 e `stopRecurrence`, mais 091 e 095. |
 
 ---
 
@@ -58,7 +67,7 @@ A despesa `FIXED` nasce sem quota e materializa uma por ciclo enquanto `fixed_re
 
 ### 2.6 O painel pessoal anonimiza o ex-membro de propósito, e o fechamento não
 
-`PersonalOverviewService::person()` devolve `'Desconhecido'`, sem e-mail nem Pix, a quem não está em `$group->members` (`PersonalOverviewService.php:147-151`). Foi decisão da **TASK-432** ("o contato dele não é mais de um membro"), travada em `PersonalOverviewServiceTest.php:561-576` para o **credor** que saiu. A função é a mesma para o **devedor** que saiu: com a D3-B ele sai com parcela em aberto, e o credor passaria a ver "Desconhecido" no que tem a receber. Já `ClosingBreakdown::build` **preserva o nome** do ex-membro: usa `participantDetails` e `payerName` do payload da despesa e, sem membro correspondente, o ex-membro entra sem `id` e sem avatar (`ClosingBreakdown.php:33-36` e `106`).
+`PersonalOverviewService::person()` devolve `'Desconhecido'`, sem e-mail nem Pix, a quem não está em `$group->members` (`PersonalOverviewService.php:147-151`). Foi decisão da **TASK-432** ("o contato dele não é mais de um membro"), travada em `PersonalOverviewServiceTest.php:561-576` para o **credor** que saiu. A função é a mesma para o **devedor** que saiu: com a D3-B ele sai com parcela em aberto, e o credor passaria a ver "Desconhecido" no que tem a receber. Já `ClosingBreakdown::build` **preserva o nome** do ex-membro: usa `participantDetails` e `payerName` do payload da despesa (`ClosingBreakdown.php:33-36` e `106`). **Correção da v1.3 (TASK-555):** o `id` e o avatar só ficam de fora em snapshot antigo, sem `participantDetails`; no relatório ao vivo e nos snapshots novos o payload traz o `id` e a foto reais de quem saiu (§2.10).
 
 ### 2.7 O limite de 3 grupos criados conta grupos que o criador já não enxerga
 
@@ -71,6 +80,17 @@ A despesa `FIXED` nasce sem quota e materializa uma por ciclo enquanto `fixed_re
 ### 2.9 As telas de acerto do grupo também mostram o ex-devedor como "Desconhecido"
 
 Achado da TASK-554 (2026-10-30), confirmado com uma sonda descartável. `CycleSummaryService::compute` semeia `balances` **só** com `$group->members` (`CycleSummaryService.php:222-230`), mas `settlements` nasce de `$owed`, que inclui qualquer participante da despesa (`:238-314`); as guardas `isset($balances[...])` (`:261` e `:265`) existem porque o ex-membro pode não estar lá. Com o devedor fora do grupo, `balances` traz só o credor e `settlements` traz devedor→credor. O frontend resolve o nome de cada ponta do acerto por `balances` (`SettlementList.tsx:35-36`, `PayableSettlementList.tsx:52-53`, `PaymentSettlementsPanel.tsx:55-56`, `CycleClosingAlert.tsx:30-35`; o relatório de fechamento passa `report.balances` em `ClosingReportPanel.tsx:205`) e cai em "Desconhecido", sem foto. `balances` também alimenta os cartões de saldo (`BalanceCards.tsx`), então incluir o ex-membro ali o faz aparecer nesses cartões. `payer` e `payers` já são carregados por `entries()` (`CycleSummaryService.php:55`, `:83` e `:109`): o nome do ex-membro já está em memória, sem consulta nova. Snapshots já selados guardam o `balances` do momento do fechamento e não são reescritos.
+
+### 2.10 A revisão de segurança achou dado pessoal de ex-membro nas respostas de despesa e de grupo
+
+Achados da TASK-556 (2026-10-31), conferidos no código e em requisições reais de uma sonda descartável do revisor. A saída **revoga o acesso**: todo endpoint do grupo e da despesa exige ser membro, e o ex-membro leva 404 em tudo. O que sobra é dado dele que continua saindo para os membros atuais, porque quem sai segue em `ex_expenses_payers`, em `user_payer_id` e em `created_by`:
+
+- **E-mail, Pix e WhatsApp.** `show` (`ExpenseController.php:119-120`) e a resposta do `update` (`:303`) serializam `payers` com o `User` inteiro (`User::$hidden` só esconde senha, token, `google_id` e `photo_path`), e `grossDebts` devolve `email` e `pix` do credor (`:1292`). Antes desta feature não havia ex-membro, então o dado era de membro; agora é de quem saiu, e a R7 diz que nunca é exibido. Severidade **alta**.
+- **E-mail do criador que saiu.** `GroupController::index` (`:23`) e `show` (`:80`) carregam `creator:id,email`, e `created_by` fica depois da saída (é o que autoriza a D2). **Média.**
+- **Credor por promoção.** `update` usa uma lista única (`payerIdsAllowedOnUpdate`, `:321-332`) para `user_payer_id` e `payers.*`. O dono da despesa envia `user_payer_id` = participante que saiu (HTTP 200 na sonda) e faz de quem saiu o credor de parcela em aberto, o que a D3-B proíbe e que dispara o primeiro item no `gross-debts`. **Média.**
+- **Foto e `id` no resumo e no fechamento** (achado da TASK-555). `participantDetails[].avatarUrl` e `payerAvatarUrl` (`CycleSummaryService.php:184-191`) trazem a URL assinada da foto de quem saiu a **todos** os membros, e o `ClosingBreakdown` as repassa. A rota `user.photo` fica fora de `jwt.auth` e vale 30 minutos para quem tiver a URL, mas só é emitida a um membro autenticado. **Baixa**, e contraria a política da D6-B e da R11.
+
+Os pré-existentes e os de baixa severidade viram backlog 126 a 129 (§6). Relatório completo: `implementation.md`, linha da TASK-556.
 
 ## 3. Requisitos
 
@@ -92,12 +112,15 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 | R3 | O efeito é **só** remover a linha de `ex_groups_members`, em transação. Não toca despesas, quotas, participantes (`ex_expenses_payers`), pagamentos, comprovantes nem fechamentos: o histórico é preservado. Nenhum `DELETE` físico de dado de negócio (gate da Constitution §5.2). |
 | R4 | Contrato aditivo (Constitution §4, item 1): a rota já existe e passa de quebrada a funcional; sem migration. Sucesso: **200** com `{ "message": "…" }`. |
 | R5 | Depois de sair, o grupo some de `GET /api/groups` e do `GET /api/me/overview`, e qualquer rota do grupo responde 404 ao ex-membro. |
-| R6 | `update()` de despesa passa a aceitar como `user_payer_id` e `payers.*` quem **já estava** na despesa, mesmo sem ser mais membro. Quem não estava continua tendo de ser membro, e o `store()` não muda. |
+| R6 | `update()` de despesa passa a aceitar em `payers.*` quem **já estava** na despesa, mesmo sem ser mais membro. Em `user_payer_id` aceita só **membro** ou o credor atual, sem 422 ao reenviá-lo (v1.3, ver R14). Quem não estava continua tendo de ser membro, e o `store()` não muda. |
 | R7 | **E-mail e Pix de ex-membro nunca são exibidos.** O painel pessoal segue a D6; o relatório de fechamento já preserva o nome do ex-membro e ganha só um teste de regressão. O teste da TASK-432 não muda. |
 | R8 | O membro **removido por outra pessoa** recebe a notificação `group_member_removed` (best effort, no padrão `Notifier::guard`: falha ao notificar não desfaz a remoção). Sair por conta própria não notifica ninguém. |
 | R9 | Quem sai e depois é adicionado de novo volta como membro normal, com o histórico que já tinha (`store()` não muda). |
 | R10 | Rodar o agent `security-reviewer` na rota nova e o `pr-readiness-checker` antes do PR. |
 | R11 | Toda pessoa que é ponta de um acerto (`settlements`) de um ciclo tem entrada em `balances` com o nome. Quem já saiu do grupo entra com `user_id`, `name`, `avatarUrl` **nulo**, `balance` e a chave nova `formerMember: true` (só nessas entradas); e-mail e Pix nunca. Os saldos dos membros não mudam (mesmas chaves, números e ordem; os ex-membros vêm depois). Contrato aditivo (Constitution §4, item 1). Snapshots já selados não são reescritos. |
+| R12 | **Dado pessoal de ex-membro não sai em nenhuma resposta** (amplia a R7). Em `GET /expenses/{id}` e na resposta do `PUT /expenses/{id}`, quem não é mais membro aparece só com `id` e `name`; no `gross-debts`, o credor que saiu vem com `email` e `pix` nulos; em `GET /groups` e `GET /groups/{id}`, `creator` vem nulo quando o criador saiu (`created_by` continua, é ele que autoriza a D2). Quem é membro não muda. Não quebra cliente existente: antes desta feature não havia ex-membro, a web só lê `id`, `name` e `avatar_url` dos participantes (`ExpenseView.tsx:539-541`) e já trata `creator` nulo (`Dashboard.tsx:194`, `GroupMembersForm.tsx:101`). |
+| R13 | **A foto de ex-membro também não sai** (amplia a D6-B e a R11 ao resto do payload). `participantDetails[].avatarUrl` e `payerAvatarUrl` do `summary`, do `closing-report` e dos snapshots novos vêm nulos para quem não é membro; o `id` fica, porque o frontend precisa dele. Snapshots já selados não são reescritos (a URL assinada neles já expirou). |
+| R14 | **O credor da despesa só muda para membro.** `update()` aceita como novo `user_payer_id` só um membro ou o credor atual; ex-membro continua aceito como participante. Evita que o dono transforme em credor de parcela aberta quem já saiu, o que a D3-B proíbe. Emenda a R6. |
 
 ### 3.3 Contrato da API (proposta, aditiva)
 
@@ -147,6 +170,7 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 | RK5 | Limite de grupos criados | Criador que sai perde a vaga | D4-A altera a contagem, com teste. |
 | RK6 | Item 095 (qualquer membro apaga o grupo em cascata) | Um membro pode apagar o grupo de quem ficou | Fora de escopo; segue no backlog. |
 | RK7 | `balances` com ex-membro muda a lista de cartões de saldo | Aparece um cartão de quem não é mais do grupo | R11 (`formerMember` só nas entradas novas) e D7 (recomendada B: rótulo "saiu do grupo"). |
+| RK8 | Dado pessoal de ex-membro nas respostas de despesa e de grupo (§2.10) | Os membros atuais seguem vendo e-mail, Pix e WhatsApp de quem saiu, e o dono reatribui o credor a ele | R12 a R14, TASK-562 a 565 e reverificação na TASK-556. |
 
 ## 5. Critérios de aceite
 
@@ -164,6 +188,10 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 - **CA-10**: suíte inteira do backend verde e `pint --test` limpo; testes novos em `GroupMemberControllerTest` e nos testes de despesa, painel e fechamento; nenhum teste existente alterado sem motivo.
 - **CA-11**: o agent `security-reviewer` rodou na rota e nenhum achado ficou sem tratamento ou item de backlog.
 - **CA-16** (R11, TASK-560): com o devedor fora do grupo, `summary.balances` traz o ex-devedor com nome, `avatarUrl` nulo e `formerMember: true`, e o mesmo vale para o ex-credor com outros participantes; toda ponta de `settlements` tem entrada em `balances`; os saldos dos membros, as chaves e a ordem deles não mudam; sem ex-membro o `balances` é idêntico ao de hoje (sem a chave `formerMember`); ex-membro sem dívida no ciclo não aparece; nenhuma consulta a mais.
+- **CA-18** (R12, TASK-562): o participante que saiu aparece em `GET /expenses/{id}` e na resposta do `PUT /expenses/{id}` só com `id` e `name` (nunca e-mail, Pix, WhatsApp, foto nem outro campo), mesmo com todos cadastrados; o participante membro mantém os campos de hoje; `gross-debts` traz `email` e `pix` nulos para o credor que saiu; no máximo uma consulta a mais por resposta.
+- **CA-19** (R14, TASK-563): `update()` com participante que saiu como novo `user_payer_id` dá 422 e nada muda; reenviar o credor atual que saiu, ou trocar para um membro, passa; participantes que saíram seguem aceitos em `payers` (emenda ao CA-5).
+- **CA-20** (R12, TASK-564): `GET /groups` e `GET /groups/{id}` trazem `creator` nulo quando o criador saiu, com `created_by` mantido; com o criador membro, `creator {id, email}` como hoje; nenhuma consulta a mais no `index`.
+- **CA-21** (R13, TASK-565): em `summary` e `closing-report`, `participantDetails[].avatarUrl`, `payerAvatarUrl` e as `avatarUrl` de `creditors` vêm nulos para quem não é membro, com o `id` mantido; membros com foto seguem com a foto; nenhuma consulta a mais.
 
 ### 5.2 Frontend
 
@@ -186,3 +214,6 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 - Aplicar a mesma saída no app Flutter (`app/` ainda não existe).
 - Reescrever o `balances` de snapshots já selados (guardam o saldo do momento do fechamento).
 - Trocar a consulta `formerDebtors()` do painel pessoal (TASK-554, concluída) por leitura de `balances`: simplificação possível depois da TASK-560, não requisito.
+- **Backlog 126 a 129** (achados da TASK-556): `stopRecurrence` sem checagem de dono, aviso de despesa paga a quem saiu, `throttle` em `POST /groups` e `POST /groups/{id}/members`, e a corrida entre `destroy` e escritas que não pegam o lock do grupo.
+- **091** (oráculo de e-mail do `GET /pix/generate`) e **095** (qualquer membro altera ou apaga o grupo): seguem abertos, já estavam no backlog.
+- Invalidar as URLs assinadas de foto e comprovante já emitidas (valem 30 minutos, ADR-005).

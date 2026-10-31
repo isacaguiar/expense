@@ -1,8 +1,8 @@
 # Plan — Saída e Remoção de Membro do Grupo
 
-> Traduz `specify.md` (v1.2) em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
+> Traduz `specify.md` (v1.3) em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
 
-Versão: 1.1 · Criado em: 20261030
+Versão: 1.2 · Criado em: 20261030
 
 ---
 
@@ -14,6 +14,8 @@ O `specify.md` v1.1 foi aprovado nas decisões D1 a D5 (como recomendado). Dois 
 - **Correção da D3-B (ii)**: fixa ativa também bloqueia o **credor** (com outros participantes), não só o participante.
 
 **Emenda da v1.1 deste plano (2026-10-30):** o specify v1.2 acrescenta a **R11** e a **D7** (achado §2.9 da TASK-554, opção A escolhida pelo usuário). A §4.1 abaixo traduz a R11 na **TASK-560**. **D7 = B** aprovada em 2026-10-31: o ex-membro aparece nos cartões de saldo com o rótulo "saiu do grupo", o que acrescenta a TASK-561 (só frontend) depois da TASK-560.
+
+**Emenda da v1.2 deste plano (2026-10-31):** a revisão de segurança da TASK-556 (opção 1 e TASK-565 escolhidas pelo usuário) acrescenta as seções **3.1** (R14, TASK-563), **4.2** (R12, TASK-562), **4.3** (R12, TASK-564) e **4.4** (R13, TASK-565). A 3.1 corrige uma falha deste plano: a lista única da §3 serve a `payers.*`, mas não a `user_payer_id`.
 
 ## 1. `GroupMemberController::destroy` e a regra de bloqueio (specify R1 a R5, R9, D2, D3, D5, F1 a F7)
 
@@ -49,6 +51,10 @@ O **devedor** de parcela avulsa ou parcelada não entra em nenhuma consulta: sai
 
 `ExpenseController::update` (`:174` e `:176`) troca `Rule::exists('ex_groups_members', …)` por `Rule::in($permitidos)` nos campos `user_payer_id` e `payers.*`, onde `$permitidos` = membros do grupo ∪ `payers` atuais da despesa ∪ `user_payer_id` atual (método privado novo). Quem nunca esteve na despesa e não é membro continua recebendo 422 (CA-5), e a mensagem de erro é a mesma do `exists`: o projeto usa o locale `en` sem arquivos de idioma próprios, e as duas regras têm o texto padrão do framework `The selected … is invalid`. O `store()` (`:462-464`) **não muda**. Por que `Rule::in` e não estender o `exists`: o `exists` só consulta uma tabela; a união com o pivô de pagadores exige lista.
 
+## 3.1 O credor da despesa só muda para membro (R14, achado A3 da TASK-556)
+
+`ExpenseController::update`, `payerIdsAllowedOnUpdate` (`:321-332`) devolve membros ∪ participantes atuais ∪ credor atual e alimenta tanto `user_payer_id` (`:179`) quanto `payers.*` (`:181`). Com uma lista só, o dono da despesa envia `user_payer_id` = participante que saiu e o torna credor de parcela em aberto (HTTP 200 na sonda do revisor), o que a D3-B proíbe. A correção separa em dois métodos privados: `creditorIdsAllowedOnUpdate` (membros ∪ credor atual, para `user_payer_id`) e `participantIdsAllowedOnUpdate` (membros ∪ participantes atuais ∪ credor atual, para `payers.*`). Por que o credor atual entra nas duas: reenviar a despesa de um credor que já saiu (só podia sair sem parcela aberta de outros) não pode virar 422, que é a R6 original. Por que `payers.*` não muda: o ex-membro segue sendo participante legítimo. `store()` não muda, e os testes de `ExpenseControllerUpdateFormerMemberTest` seguem valendo.
+
 ## 4. Nome e contato do ex-membro no painel pessoal (R7, D6, §2.6 do specify)
 
 Só se a D6 for **B**. `backend/app/Services/PersonalOverviewService.php`:
@@ -72,6 +78,20 @@ Independente da D6 e da §4. `backend/app/Services/CycleSummaryService.php`, mé
 Frontend (D7-B, aprovada): a TASK-561 acrescenta `formerMember?: boolean` a `SummaryBalance` (`useGroupCycle.ts:69-74`) e o rótulo "saiu do grupo" em `BalanceCards.tsx`, sem mexer nas quatro telas que resolvem nome por `balances`, que passam a achá-lo. `BalanceCards` não tem teste hoje, então o teste é arquivo novo. Por que a chave e não comparar com a lista de membros: o cartão não conhece o grupo, e a decisão de quem é ex-membro é do servidor (R11).
 
 A TASK-554 (painel pessoal) não muda: o `formerDebtors()` dela é independente e seus testes seguem valendo. Com a 560 pronta o painel poderia ler o nome de `balances` e dispensar a consulta, mas isso reabriria task concluída; fica como simplificação posterior.
+
+## 4.2 Contato do ex-membro nas respostas de despesa (R12, TASK-562)
+
+`ExpenseController::show` (`:117-125`) e a resposta do `update` (`:303-306`) devolvem `payers` com o `User` inteiro (`User::$hidden` só esconde senha, tokens, `google_id` e `photo_path`): e-mail, Pix, WhatsApp, papel, `invited_by` e a foto assinada de quem saiu aparecem. Correção: método privado novo `hideFormerMemberFields(Expense $expense)`, que busca uma vez os ids de `ex_groups_members` do grupo e aplica `setVisible(['id', 'name'])` a cada participante que não está neles; é chamado em `show` (depois do `load`) e no `update` (depois do `fresh`). Por que lista de permitidos e não de proibidos (`makeHidden`): coluna nova em `ex_users` não vaza por esquecimento. Por que no controller e não em `User::$hidden`: valeria para os membros também, e eles precisam ver o contato uns dos outros. O frontend só lê `id`, `name` e `avatar_url` de cada participante (`ExpenseView.tsx:231` e `:539-541`, nenhum uso de `pivot`), e `UserAvatar` aceita `avatarUrl` ausente e cai nas iniciais.
+
+`grossDebts` (`:1292`): `email` e `pix` do credor viram `null` quando ele não é membro; usa `$group->members`, no máximo uma consulta a mais. Depois da TASK-563, o credor ex-membro com parcela aberta só nasce por despesa antiga ou por corrida (backlog 129); o tratamento fica como defesa em profundidade.
+
+## 4.3 `creator` do grupo quando o criador saiu (R12, TASK-564)
+
+`GroupController::index` (`:23`) e `show` (`:80`) carregam `creator:id,email`. `created_by` fica depois da saída (é o que autoriza a D2, §5), então o e-mail de quem saiu seguiria saindo. Correção: depois de carregar, `creator` vira `null` quando `created_by` não está entre os membros. No `index` os membros já vêm em `members:id,name,email`, então `$grupo->members->contains('id', $grupo->created_by)` não custa consulta; no `show`, uma consulta de existência no pivô. Por que `setRelation('creator', null)` e não tirar a chave: `types/group.ts:52` já define `creator: GroupCreator | null`, e `Dashboard.tsx:194` e `:287` e `GroupMembersForm.tsx:101` usam `creator?.email ?? '—'`. A TASK-558 usa `created_by`, não `creator`, para saber se o usuário é o criador, e `created_by` não muda. O frontend não é tocado.
+
+## 4.4 Foto do ex-membro no resumo do ciclo (R13, TASK-565)
+
+`CycleSummaryService::compute` (`:184` e `:186-191`) põe em cada despesa `payerAvatarUrl` e `participantDetails[].avatarUrl` com o `avatar_url` do usuário, e `ClosingBreakdown` (`:107` e `:125`) os repassa. A URL é assinada e vale 30 minutos, e a rota `user.photo` fica fora de `jwt.auth`; é emitida a qualquer membro que consulte o ciclo, mesmo para quem saiu. Correção: calcular uma vez, no começo do `compute`, o conjunto de ids de `$group->members` e usar `null` no lugar de `avatar_url` para quem não está nele; o `id` e o nome ficam, porque o frontend resolve o credor por `userPayerId`. Sem consulta nova: `$group->members` já é lido para semear `balances` e fica em cache na relação. Por que no `compute` e não no `ClosingBreakdown`: o `summary` (`expenses[]`), o fechamento e os snapshots novos passam todos pelo `compute`, então um ponto só cobre os três. Snapshots já selados não são reescritos. O caso de caracterização da TASK-555 (`ExpenseControllerClosingReportTest`) foi escrito para ser atualizado quando isto mudasse e é o único teste editado.
 
 ## 5. Limite de 3 grupos criados (D4-A, RK5)
 
@@ -100,8 +120,12 @@ A TASK-554 (painel pessoal) não muda: o `formerDebtors()` dela é independente 
 | Feature | `CycleSummaryServiceFormerMemberTest` (novo) | CA-16 |
 | Frontend | `GroupMembersForm.test.tsx` (casos novos), `notificationText.test.ts` (caso novo) | CA-12 a CA-14 |
 | Frontend | `BalanceCards.test.tsx` (caso novo ou arquivo novo) | CA-17 (TASK-561) |
+| Feature | `ExpenseControllerFormerMemberPayloadTest` (novo) | CA-18 (TASK-562) |
+| Feature | `ExpenseControllerUpdateFormerMemberTest` (casos novos) | CA-19 (TASK-563) |
+| Feature | `GroupControllerTest` (casos novos) | CA-20 (TASK-564) |
+| Feature | `CycleSummaryServiceFormerMemberTest` (casos novos) e `ExpenseControllerClosingReportTest` (o caso de caracterização da TASK-555, reescrito) | CA-21 (TASK-565) |
 
-Nenhum teste existente é editado. Antes do PR: `security-reviewer` na rota (CA-11) e `pr-readiness-checker`.
+Nenhum teste que já existia antes da feature é editado (a única edição é o caso de caracterização da TASK-555, que é desta feature e muda de propósito na TASK-565). Antes do PR: `security-reviewer` na rota (CA-11) e `pr-readiness-checker`.
 
 ## 8. Documentação (CA-15)
 
@@ -110,3 +134,5 @@ Nenhum teste existente é editado. Antes do PR: `security-reviewer` na rota (CA-
 ## 9. Ordem de execução
 
 Há dependência técnica: o `destroy` (§1) chama o `Notifier` (§2), e a tela (§6) depende da API pronta e do texto da notificação. §3, §4 e §5 não dependem de nada e podem sair em qualquer ordem depois do `destroy`. Critério de ordenação em `tasks.md`: primeiro a regra de bloqueio isolada (testável sozinha), depois o endpoint, depois os ajustes de histórico, por último a tela e a documentação, para o PR único nunca ter a tela apontando para um endpoint ainda incompleto. A §4.1 (TASK-560) também não depende de nada e deve sair **antes** da revisão de segurança (TASK-556), porque passa a expor o nome do ex-membro no `summary`; ela entra no escopo dessa revisão.
+
+As §3.1, §4.2, §4.3 e §4.4 (TASK-563, 562, 564 e 565) não dependem umas das outras e saem **antes** de fechar a TASK-556, que passa a ser a última do backend: ela reverifica por teste cada cenário do revisor. A 565 mexe em `CycleSummaryService`, fora dos controllers das outras três.
