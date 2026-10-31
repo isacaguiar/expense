@@ -21,7 +21,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 | TASK-555 | Travar com teste de regressão que o relatório de fechamento preserva o nome do ex-membro | backend | plan.md §4 | nenhum | Concluída |
 | TASK-556 | Rodar o `security-reviewer` na rota e no controller novos e tratar os achados | backend | plan.md §1 | nenhum | Concluída |
 | TASK-557 | Adicionar o texto da notificação `group_member_removed` no frontend | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-558 | Adicionar **Sair do grupo**, **Remover** e o diálogo de confirmação em `GroupMembersForm` | frontend | plan.md §6 | nenhum | Pendente |
+| TASK-558 | Adicionar **Sair do grupo**, **Remover** e o diálogo de confirmação em `GroupMembersForm` | frontend | plan.md §6 | nenhum | Concluída |
 | TASK-559 | Atualizar `01-specify.md` §3.3 e deixar o ponteiro da `TASK-017` em `03-tasks.md` | doc | plan.md §8 | nenhum | Pendente |
 | TASK-560 | Incluir em `balances` quem é ponta de um acerto e já saiu do grupo, só com nome e sem foto (R11) | backend | plan.md §4.1 | nenhum | Concluída |
 | TASK-561 | Mostrar o rótulo "saiu do grupo" no cartão de saldo do ex-membro (D7-B) | frontend | plan.md §4.1 | nenhum | Pendente |
