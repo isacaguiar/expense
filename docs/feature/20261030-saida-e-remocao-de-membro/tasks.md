@@ -4,11 +4,11 @@
 
 Versão: 1.1 · Criado em: 20261030
 
-**Status: v1.1.** A v1.0 foi aprovada em 2026-10-30. A v1.1 acrescenta a **TASK-560** (achado §2.9 da TASK-554, opção A escolhida pelo usuário) e amplia o escopo da TASK-556; **aguardam OK**, junto com a D7 do specify v1.2. O specify (v1.1) e o plan foram aprovados em 2026-10-30, com D1 a D5 como recomendado, **D6 = B** e o ajuste da D3-B (ii) (fixa ativa bloqueia também o credor).
+**Status: v1.1.** A v1.0 foi aprovada em 2026-10-30. A v1.1 acrescenta a **TASK-560** (achado §2.9 da TASK-554, opção A escolhida pelo usuário) e a **TASK-561** (D7 = B) e amplia o escopo da TASK-556; **aprovadas em 2026-10-31**. O specify (v1.1) e o plan foram aprovados em 2026-10-30, com D1 a D5 como recomendado, **D6 = B** e o ajuste da D3-B (ii) (fixa ativa bloqueia também o credor).
 
 IDs a partir de **TASK-549**: o maior em `docs/`, em todas as branches remotas e nas mensagens de commit de todas as refs é TASK-548 (feature `20261027-pagamento-no-cadastro-despesa`), conferido em 2026-10-30 com `git grep` e `git log --all`. Reconfirmar a numeração antes de criar a primeira branch de task, caso outra feature em andamento reserve IDs.
 
-Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK-017`** do Épico C (`docs/sdd/03-tasks.md`), cujo ponteiro é a TASK-559. Ordem (plan §9): primeiro a regra de bloqueio isolada, depois o endpoint, depois os ajustes de histórico, a revisão de segurança da API pronta, e por último a tela e a documentação, para o PR único nunca ter a tela apontando para um endpoint incompleto. As tasks 552 a 555 não dependem umas das outras e podem sair em qualquer ordem depois da 551. A **TASK-560** (acrescentada depois, plan §4.1) não depende de nenhuma e deve sair **antes** da TASK-556, para a revisão de segurança já ver o que ela expõe. A TASK-558 reúne **Sair do grupo** e **Remover** de propósito: os dois botões compartilham o mesmo diálogo e o mesmo tratamento de erro, e separá-los obrigaria a construir o diálogo duas vezes. **Nenhum teste existente é editado**; todo teste novo entra em caso novo ou arquivo novo.
+Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK-017`** do Épico C (`docs/sdd/03-tasks.md`), cujo ponteiro é a TASK-559. Ordem (plan §9): primeiro a regra de bloqueio isolada, depois o endpoint, depois os ajustes de histórico, a revisão de segurança da API pronta, e por último a tela e a documentação, para o PR único nunca ter a tela apontando para um endpoint incompleto. As tasks 552 a 555 não dependem umas das outras e podem sair em qualquer ordem depois da 551. A **TASK-560** (acrescentada depois, plan §4.1) não depende de nenhuma e deve sair **antes** da TASK-556, para a revisão de segurança já ver o que ela expõe. A **TASK-561** depende da 560 (lê a chave `formerMember`) e sai com as demais tasks de frontend. A TASK-558 reúne **Sair do grupo** e **Remover** de propósito: os dois botões compartilham o mesmo diálogo e o mesmo tratamento de erro, e separá-los obrigaria a construir o diálogo duas vezes. **Nenhum teste existente é editado**; todo teste novo entra em caso novo ou arquivo novo.
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
@@ -24,6 +24,7 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
 | TASK-558 | Adicionar **Sair do grupo**, **Remover** e o diálogo de confirmação em `GroupMembersForm` | frontend | plan.md §6 | nenhum | Pendente |
 | TASK-559 | Atualizar `01-specify.md` §3.3 e deixar o ponteiro da `TASK-017` em `03-tasks.md` | doc | plan.md §8 | nenhum | Pendente |
 | TASK-560 | Incluir em `balances` quem é ponta de um acerto e já saiu do grupo, só com nome e sem foto (R11) | backend | plan.md §4.1 | nenhum | Pendente |
+| TASK-561 | Mostrar o rótulo "saiu do grupo" no cartão de saldo do ex-membro (D7-B) | frontend | plan.md §4.1 | nenhum | Pendente |
 
 ## Critérios de aceite
 
@@ -72,6 +73,10 @@ Escopo: `backend/`, `frontend/` e documentação. Esta feature **absorve a `TASK
   - `CycleSummaryService::compute` garante entrada em `$balances` para cada participante e para o credor (`$expense->payer`, se não for nulo) de toda despesa que gera acerto (depois do `continue` de `born_paid`): quem não é membro entra como `['user_id', 'name', 'avatarUrl' => null, 'balance', 'formerMember' => true]`, depois dos membros. As guardas `isset` e o resto do método ficam como estão (plan §4.1).
   - Arquivo novo `CycleSummaryServiceFormerMemberTest` (**CA-16**): ex-devedor e ex-credor (com outros participantes) entram com nome, `avatarUrl` nulo e `formerMember`, mesmo com foto própria cadastrada; toda ponta de `settlements` tem entrada em `balances`; os membros mantêm chaves, saldos e ordem; sem ex-membro o `balances` é idêntico ao de antes e sem a chave `formerMember`; ex-membro cuja única parcela no ciclo é retroativa quitada, ou que só aparece em outro ciclo, não entra; o número de consultas de `compute` não muda; um caso por HTTP em `GET /groups/{id}/expenses/summary` traz o ex-devedor em `balances`.
   - `php artisan test --filter 'CycleSummaryService|ExpenseControllerSummary|PersonalOverviewServiceTest|ExpenseControllerClosingReportTest'` verde com os testes existentes **sem edição**; suíte inteira e `./vendor/bin/pint --test` limpos; `git diff --stat -- backend/routes backend/app/Http` vazio.
+- **TASK-561**:
+  - `SummaryBalance` (`frontend/src/hooks/useGroupCycle.ts:69-74`) ganha `formerMember?: boolean`; `BalanceCards.tsx` mostra o texto "saiu do grupo" (`Typography` `caption`, `text.secondary`) abaixo do nome quando `balance.formerMember` é verdadeiro. Os cartões de quem não tem a chave ficam idênticos. Sem `any` novo; nenhuma outra tela muda.
+  - Arquivo novo `frontend/src/components/BalanceCards.test.tsx` (**CA-17**): cartão com `formerMember: true` mostra o rótulo, nome e valor; cartão de membro (sem a chave) não mostra o rótulo; `formerMember: false` também não; lista mista mostra o rótulo uma só vez.
+  - `cd frontend && npx vitest run src/components/BalanceCards.test.tsx src/components/SummarySidePanel.test.tsx` verde com os testes existentes **sem edição**; `npx tsc --noEmit` sem erro.
 
 ## Depois da aprovação deste arquivo
 

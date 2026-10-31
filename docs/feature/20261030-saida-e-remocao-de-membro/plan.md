@@ -13,7 +13,7 @@ O `specify.md` v1.1 foi aprovado nas decisões D1 a D5 (como recomendado). Dois 
 - **D6** (§4): o que o painel pessoal mostra do ex-membro. Recomendação **B** (nome do ex-devedor, sem contato; ex-credor continua "Desconhecido"). Com a **A**, a §4 inteira cai: nenhum arquivo do painel pessoal muda.
 - **Correção da D3-B (ii)**: fixa ativa também bloqueia o **credor** (com outros participantes), não só o participante.
 
-**Emenda da v1.1 deste plano (2026-10-30):** o specify v1.2 acrescenta a **R11** e a **D7** (achado §2.9 da TASK-554, opção A escolhida pelo usuário). A §4.1 abaixo traduz a R11 na **TASK-560**. Aguarda OK a **D7**: como o ex-membro aparece nos cartões de saldo. Recomendação **B** (rótulo "saiu do grupo", que acrescenta a TASK-561, só frontend); com a **A**, a TASK-560 sozinha basta.
+**Emenda da v1.1 deste plano (2026-10-30):** o specify v1.2 acrescenta a **R11** e a **D7** (achado §2.9 da TASK-554, opção A escolhida pelo usuário). A §4.1 abaixo traduz a R11 na **TASK-560**. **D7 = B** aprovada em 2026-10-31: o ex-membro aparece nos cartões de saldo com o rótulo "saiu do grupo", o que acrescenta a TASK-561 (só frontend) depois da TASK-560.
 
 ## 1. `GroupMemberController::destroy` e a regra de bloqueio (specify R1 a R5, R9, D2, D3, D5, F1 a F7)
 
@@ -69,7 +69,7 @@ Independente da D6 e da §4. `backend/app/Services/CycleSummaryService.php`, mé
 - Sem consulta nova: `entries()` já carrega `payer` e `payers` (`:55`, `:83`, `:109`). Os tetos de consulta de `PersonalOverviewServiceTest` (TASK-427/428), que passam por `compute`, continuam valendo sem edição.
 - Contrato aditivo (Constitution §4, item 1): `balances` ganha entradas e uma chave opcional, sem mudar tipo nem sentido de campo nenhum. `ExpenseController` só repassa `balances` e **não muda**. O que o `compute` devolve também é o que se sela: fechamentos futuros guardam essas entradas, e os já selados não são reescritos.
 
-Frontend: nada muda com a D7-A. Com a D7-B (recomendada), a TASK-561 acrescenta `formerMember?: boolean` a `SummaryBalance` (`useGroupCycle.ts:69-74`) e o rótulo "saiu do grupo" em `BalanceCards.tsx`, sem mexer nas quatro telas que resolvem nome por `balances`, que passam a achá-lo.
+Frontend (D7-B, aprovada): a TASK-561 acrescenta `formerMember?: boolean` a `SummaryBalance` (`useGroupCycle.ts:69-74`) e o rótulo "saiu do grupo" em `BalanceCards.tsx`, sem mexer nas quatro telas que resolvem nome por `balances`, que passam a achá-lo. `BalanceCards` não tem teste hoje, então o teste é arquivo novo. Por que a chave e não comparar com a lista de membros: o cartão não conhece o grupo, e a decisão de quem é ex-membro é do servidor (R11).
 
 A TASK-554 (painel pessoal) não muda: o `formerDebtors()` dela é independente e seus testes seguem valendo. Com a 560 pronta o painel poderia ler o nome de `balances` e dispensar a consulta, mas isso reabriria task concluída; fica como simplificação posterior.
 
@@ -99,7 +99,7 @@ A TASK-554 (painel pessoal) não muda: o `formerDebtors()` dela é independente 
 | Feature | `NotifierTriggersTest` (caso novo) | R8 e `group_id` nulo |
 | Feature | `CycleSummaryServiceFormerMemberTest` (novo) | CA-16 |
 | Frontend | `GroupMembersForm.test.tsx` (casos novos), `notificationText.test.ts` (caso novo) | CA-12 a CA-14 |
-| Frontend | `BalanceCards.test.tsx` (caso novo ou arquivo novo) | CA-17, só com a D7-B (TASK-561) |
+| Frontend | `BalanceCards.test.tsx` (caso novo ou arquivo novo) | CA-17 (TASK-561) |
 
 Nenhum teste existente é editado. Antes do PR: `security-reviewer` na rota (CA-11) e `pr-readiness-checker`.
 

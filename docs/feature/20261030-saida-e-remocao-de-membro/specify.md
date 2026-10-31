@@ -4,7 +4,7 @@
 
 Versão: 1.2 · Criado em: 20261030
 
-**Status: v1.2.** A v1.0 foi aprovada em 2026-10-30 com **D1 a D5 como recomendado** (inclusive a D3-B), e a v1.1 no mesmo dia, com a **D6 = B**. A v1.2 nasceu da TASK-554 (achado §2.9, opção A escolhida pelo usuário) e acrescenta R11, D7, CA-16 e CA-17 e a TASK-560; **aguarda OK**, em especial a D7. Escopo decidido pelo usuário: **só o item 086**, com **backend e botão na web**; os itens 095 (apagar grupo em cascata) e 072 (excluir conta) ficam de fora.
+**Status: v1.2.** A v1.0 foi aprovada em 2026-10-30 com **D1 a D5 como recomendado** (inclusive a D3-B), e a v1.1 no mesmo dia, com a **D6 = B**. A v1.2 nasceu da TASK-554 (achado §2.9, opção A escolhida pelo usuário) e acrescenta R11, D7, CA-16 e CA-17 e as TASK-560 e TASK-561; **aprovada em 2026-10-31, com a D7 = B**. Escopo decidido pelo usuário: **só o item 086**, com **backend e botão na web**; os itens 095 (apagar grupo em cascata) e 072 (excluir conta) ficam de fora.
 
 ### Mudanças da v1.1 em relação à v1.0
 
@@ -170,7 +170,7 @@ Não dependem de decisão; o usuário pode vetar qualquer uma na aprovação.
 - **CA-12**: o usuário logado vê **Sair do grupo**; só o criador vê **Remover** nas linhas dos outros; confirmação antes de qualquer remoção.
 - **CA-13**: 422 mostra a mensagem da API sem sair da tela; sucesso ao sair leva a `/meus-grupos`; sucesso ao remover atualiza a lista.
 - **CA-14**: a notificação nova tem texto próprio; `npx tsc --noEmit` limpo e testes Vitest dos arquivos tocados verdes.
-- **CA-17** (D7-B, TASK-561, só se a D7 for B): o cartão de saldo do ex-membro mostra o rótulo "saiu do grupo"; os cartões dos membros não mudam; `npx tsc --noEmit` limpo e testes Vitest dos arquivos tocados verdes.
+- **CA-17** (D7-B, TASK-561): o cartão de saldo do ex-membro mostra o rótulo "saiu do grupo"; os cartões dos membros não mudam; `npx tsc --noEmit` limpo e testes Vitest dos arquivos tocados verdes.
 
 ### 5.3 Documentação
 
