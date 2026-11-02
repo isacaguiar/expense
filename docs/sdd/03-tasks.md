@@ -36,7 +36,7 @@ Histórico: o épico foi migrado para `docs/feature/20260817-migracao-frontend-e
 | ID | Título | Tipo | Gate humano |
 |---|---|---|---|
 | TASK-016 | Implementar `ExpenseController@index/show/update/destroy` (hoje registrados via `apiResource` mas inexistentes) ou remover do `apiResource` os verbos não suportados | backend | antes do merge |
-| TASK-017 | Implementar `GroupMemberController@destroy` (rota `DELETE /groups/{groupId}/members/{userId}` já existe e está quebrada) | backend | antes do merge |
+| TASK-017 | ~~Implementar `GroupMemberController@destroy` (rota `DELETE /groups/{groupId}/members/{userId}` já existe e está quebrada)~~ — migrada para `docs/feature/20261030-saida-e-remocao-de-membro/` em 2026-10-30, ver `tasks.md` lá (TASK-549 a TASK-565) para status atualizado | backend | antes do merge |
 
 ## Épico D — Backlog de produto (ver `01-specify.md` §5 e §6)
 
