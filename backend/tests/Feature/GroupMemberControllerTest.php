@@ -202,7 +202,7 @@ class GroupMemberControllerTest extends TestCase
 
     // --- DELETE /api/groups/{groupId}/members/{userId} (item 086: sair do grupo e remover membro) ---
     //
-    // Regras em docs/feature/20261030-saida-e-remocao-de-membro/specify.md (R1 a R9, D2, D3-B, D5).
+    // Regras em docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/specify.md (R1 a R9, D2, D3-B, D5).
     // "Agora" fixo em outubro/2026 e closing_day nulo (competência = mês calendário).
 
     private function deleteMember(User $actor, Group $group, int|string|null $targetId = null)

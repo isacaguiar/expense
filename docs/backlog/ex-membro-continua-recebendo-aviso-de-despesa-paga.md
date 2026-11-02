@@ -1,7 +1,7 @@
 # Quem saiu do grupo continua recebendo o aviso de despesa paga (in-app e, em tese, WhatsApp) das despesas em que ainda participa
 
 ID: 127
-Origem: TASK-556 (revisão de segurança) da feature `docs/feature/20261030-saida-e-remocao-de-membro/`; `backend/app/Support/Notifier.php` (`expensePaid`, `:133-155`) e `backend/app/Support/WhatsApp/WhatsAppNotifier.php` (`:49`)
+Origem: TASK-556 (revisão de segurança) da feature `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/`; `backend/app/Support/Notifier.php` (`expensePaid`, `:133-155`) e `backend/app/Support/WhatsApp/WhatsAppNotifier.php` (`:49`)
 Criado em: 2026-10-31
 Prioridade: BAIXA
 Status: Aberto

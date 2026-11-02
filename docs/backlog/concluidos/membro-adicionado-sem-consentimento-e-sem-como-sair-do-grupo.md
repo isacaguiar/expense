@@ -4,7 +4,7 @@ ID: 086
 Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §8 (achados X2 e S1 da revisão de segurança da TASK-414); `backend/app/Http/Controllers/GroupMemberController.php` (`store()`); `backend/routes/api.php:57`; `docs/sdd/03-tasks.md` TASK-017
 Criado em: 2026-10-21
 Prioridade: ALTA
-Status: Concluído (PR #262, aguardando o merge em `dev`)
+Status: Concluído (PR #262, mergeado em 2026-11-02)
 
 ## Descrição
 Duas pontas do mesmo problema:
@@ -45,7 +45,7 @@ Tipo sugerido: backend
 
 ## Resolução
 Concluído em: 2026-11-02
-Feature: docs/feature/20261030-saida-e-remocao-de-membro/   (vai para `docs/feature/concluidas/202610/` quando o PR mergear em `dev`: `ADR-009`)
+Feature: docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/   (arquivada após o merge do PR #262 em `dev`: `ADR-009`)
 Tasks: TASK-549 a TASK-565
 PRs: https://github.com/isacaguiar/expense/pull/262
 

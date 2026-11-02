@@ -14,7 +14,7 @@ use Tests\TestCase;
 
 /**
  * Item 086, TASK-556 (CA-11): reverificação, por teste, dos cenários da revisão do
- * `security-reviewer` sobre a saída de membro (docs/feature/20261030-saida-e-remocao-de-membro).
+ * `security-reviewer` sobre a saída de membro (docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro).
  *
  * O revisor montou um grupo, fez dois membros saírem e olhou o que sobrava para quem ficou.
  * Os achados A1 (contato do ex-membro em `show`, `update` e `gross-debts`), A2 (e-mail do

@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 /**
  * MemberExitBlockers: o que impede alguém de sair (ou ser removido) de um grupo,
- * decisão D3-B de docs/feature/20261030-saida-e-remocao-de-membro/specify.md.
+ * decisão D3-B de docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/specify.md.
  *
  * Só bloqueia o que corrompe o fluxo depois da saída: o **credor** com parcela
  * não paga de outra pessoa (só ele confirma o pagamento, e confirmar exige ser

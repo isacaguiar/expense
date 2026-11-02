@@ -1,7 +1,7 @@
 # `POST /api/expenses/{id}/stop-recurrence` deixa qualquer membro encerrar a despesa fixa de outra pessoa
 
 ID: 126
-Origem: TASK-556 (revisão de segurança) da feature `docs/feature/20261030-saida-e-remocao-de-membro/`; `backend/app/Http/Controllers/ExpenseController.php`, `stopRecurrence()` (`:851-884`)
+Origem: TASK-556 (revisão de segurança) da feature `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/`; `backend/app/Http/Controllers/ExpenseController.php`, `stopRecurrence()` (`:851-884`)
 Criado em: 2026-10-31
 Prioridade: MEDIA
 Status: Aberto
