@@ -4,7 +4,7 @@ ID: 086
 Origem: docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/implementation.md §8 (achados X2 e S1 da revisão de segurança da TASK-414); `backend/app/Http/Controllers/GroupMemberController.php` (`store()`); `backend/routes/api.php:57`; `docs/sdd/03-tasks.md` TASK-017
 Criado em: 2026-10-21
 Prioridade: ALTA
-Status: Promovido para TASK-549
+Status: Concluído (PR #262, aguardando o merge em `dev`)
 
 ## Descrição
 Duas pontas do mesmo problema:
@@ -42,3 +42,13 @@ A fechar no Specify da feature.
 Relacionado: 085 (leitura de membros sem checagem), 060 (log do `User` inteiro em `GroupController::store`) e 072 (exclusão de conta).
 
 Tipo sugerido: backend
+
+## Resolução
+Concluído em: 2026-11-02
+Feature: docs/feature/20261030-saida-e-remocao-de-membro/   (vai para `docs/feature/concluidas/202610/` quando o PR mergear em `dev`: `ADR-009`)
+Tasks: TASK-549 a TASK-565
+PRs: https://github.com/isacaguiar/expense/pull/262
+
+A saída do grupo e a remoção de membro pelo criador existem: `DELETE /groups/{groupId}/members/{userId}` funciona (o próprio usuário sai; o criador remove outro; bloqueio só para credor de parcela em aberto e para fixa ativa, D3-B), preserva todo o histórico financeiro e libera a vaga do limite de 3 grupos criados. O removido por outra pessoa é avisado, o painel pessoal e o saldo do grupo mostram o nome de quem saiu (sem contato nem foto) e a web ganhou **Sair do grupo**, **Remover** e o rótulo "saiu do grupo". A revisão de segurança (TASK-556) achou vazamento de dado de ex-membro nas respostas aos membros que ficaram e a promoção de ex-membro a credor; tudo corrigido com teste (TASK-562 a 565).
+
+**Ficou de fora, de propósito:** o convite pendente com aceite ou recusa (D1-B: hoje quem é adicionado entra direto, mas agora pode sair), o `095` (qualquer membro apaga o grupo em cascata) e o `091` (oráculo de e-mail do `GET /pix/generate`), que seguem abertos, e os achados baixos da revisão, que viraram os itens 126 a 129. Novos itens nascidos aqui: 125 a 132.
