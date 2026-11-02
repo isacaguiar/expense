@@ -1,7 +1,7 @@
 # Hipótese: a saída de membro (`destroy`) pode correr com `ExpenseController::store` e `GroupMemberController::store`, que não pegam o lock do grupo
 
 ID: 129
-Origem: TASK-556 (revisão de segurança) da feature `docs/feature/20261030-saida-e-remocao-de-membro/`; `backend/app/Http/Controllers/GroupMemberController.php` (`destroy`, `:127-145`)
+Origem: TASK-556 (revisão de segurança) da feature `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/`; `backend/app/Http/Controllers/GroupMemberController.php` (`destroy`, `:127-145`)
 Criado em: 2026-10-31
 Prioridade: BAIXA
 Status: Aberto

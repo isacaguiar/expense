@@ -94,7 +94,7 @@ class GroupMemberController extends Controller
 
     /**
      * O próprio usuário sai do grupo, ou o criador do grupo remove outro membro
-     * (item 086, docs/feature/20261030-saida-e-remocao-de-membro/).
+     * (item 086, docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/).
      *
      * O efeito é só tirar a linha de `ex_groups_members` (R3): despesas, quotas,
      * participantes e fechamentos ficam. Quem ainda é credor de parcela aberta de

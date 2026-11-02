@@ -1,7 +1,7 @@
 # Documentos do SDD descrevem como quebradas rotas que já funcionam e como aberto um IDOR já corrigido
 
 ID: 131
-Origem: TASK-559 da feature `docs/feature/20261030-saida-e-remocao-de-membro/` (leitura de `docs/sdd/01-specify.md`, `docs/sdd/00-constitution.md` e das rotas ao atualizar o §3.3)
+Origem: TASK-559 da feature `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/` (leitura de `docs/sdd/01-specify.md`, `docs/sdd/00-constitution.md` e das rotas ao atualizar o §3.3)
 Criado em: 2026-11-02
 Prioridade: BAIXA
 Status: Aberto

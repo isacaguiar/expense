@@ -1,7 +1,7 @@
 # `POST /api/expenses` devolve 500 (erro de SQL) quando `payers` traz um elemento em array
 
 ID: 125
-Origem: TASK-552 da feature `docs/feature/20261030-saida-e-remocao-de-membro/` (achado ao escrever o teste de entrada malformada do `update()`); `backend/app/Http/Controllers/ExpenseController.php`, `store()` (regra `payers.*` e `syncWithoutDetaching($request->payers)`)
+Origem: TASK-552 da feature `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/` (achado ao escrever o teste de entrada malformada do `update()`); `backend/app/Http/Controllers/ExpenseController.php`, `store()` (regra `payers.*` e `syncWithoutDetaching($request->payers)`)
 Criado em: 2026-10-30
 Prioridade: BAIXA
 Status: Aberto

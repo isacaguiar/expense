@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
  * participantes ficam. Isso é inofensivo para quem apenas **deve** uma parcela
  * (o credor continua vendo a dívida e confirmando o pagamento), mas quebra dois
  * casos, e são só eles que bloqueiam (D3-B de
- * docs/feature/20261030-saida-e-remocao-de-membro/specify.md):
+ * docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/specify.md):
  *
  * - `creditor_open_quotas`: o usuário é o **credor** de despesa com parcela não
  *   paga de outra pessoa. Só o credor confirma o pagamento (`pay()`), e

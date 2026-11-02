@@ -1,7 +1,7 @@
 # Teste de isolamento do relatório de fechamento procura "999" e "777" no JSON inteiro e falha quando um id contém esses dígitos
 
 ID: 130
-Origem: TASK-563 (suíte inteira do backend, 1 falha intermitente) da feature `docs/feature/20261030-saida-e-remocao-de-membro/`; `backend/tests/Feature/ExpenseControllerClosingReportTest.php` (`:489-534`, escrito na TASK-496, commit `5711368187`)
+Origem: TASK-563 (suíte inteira do backend, 1 falha intermitente) da feature `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/`; `backend/tests/Feature/ExpenseControllerClosingReportTest.php` (`:489-534`, escrito na TASK-496, commit `5711368187`)
 Criado em: 2026-10-31
 Prioridade: BAIXA
 Status: Aberto

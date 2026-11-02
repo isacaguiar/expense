@@ -12,7 +12,7 @@ use Tests\TestCase;
 
 /**
  * ExpenseController::update com quem já saiu do grupo (item 086, R6 e CA-5 de
- * docs/feature/20261030-saida-e-remocao-de-membro/specify.md).
+ * docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/specify.md).
  *
  * Sair do grupo só tira a linha de `ex_groups_members`; a pessoa continua em
  * `ex_expenses_payers` e pode continuar como credor. Editar a despesa

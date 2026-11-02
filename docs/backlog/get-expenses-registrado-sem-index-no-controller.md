@@ -1,7 +1,7 @@
 # `GET /api/expenses` está registrado, mas `ExpenseController@index` não existe
 
 ID: 132
-Origem: TASK-559 da feature `docs/feature/20261030-saida-e-remocao-de-membro/` (conferência de `php artisan route:list` ao atualizar a Constitution §2.4 e o `01-specify.md`)
+Origem: TASK-559 da feature `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/` (conferência de `php artisan route:list` ao atualizar a Constitution §2.4 e o `01-specify.md`)
 Criado em: 2026-11-02
 Prioridade: BAIXA
 Status: Aberto

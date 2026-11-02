@@ -13,7 +13,7 @@ use Tests\TestCase;
 
 /**
  * Contato de quem saiu do grupo nas respostas de despesa (item 086, R12 e CA-18
- * de docs/feature/20261030-saida-e-remocao-de-membro/specify.md).
+ * de docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/specify.md).
  *
  * Sair do grupo só tira a linha de `ex_groups_members`; a pessoa continua em
  * `ex_expenses_payers` e como credora (`user_payer_id`). `GET /expenses/{id}` e a

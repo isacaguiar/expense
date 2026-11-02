@@ -15,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * `balances` e quem já saiu do grupo (item 086, R11 e CA-16 de
- * docs/feature/20261030-saida-e-remocao-de-membro/specify.md).
+ * docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/specify.md).
  *
  * Sair do grupo só tira a linha de `ex_groups_members`: a pessoa continua em
  * `ex_expenses_payers` e como credor, então segue sendo ponta de um acerto em

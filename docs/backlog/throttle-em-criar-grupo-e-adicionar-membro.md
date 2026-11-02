@@ -1,7 +1,7 @@
 # Sem `throttle` em `POST /api/groups` e `POST /api/groups/{id}/members`: depois da saída do criador, o teto de 3 grupos deixou de limitar o abuso
 
 ID: 128
-Origem: TASK-556 (revisão de segurança) da feature `docs/feature/20261030-saida-e-remocao-de-membro/`; `backend/routes/api.php`, `backend/app/Http/Controllers/GroupController.php` (`store`, `:41-76`) e `GroupMemberController.php` (`store`)
+Origem: TASK-556 (revisão de segurança) da feature `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/`; `backend/routes/api.php`, `backend/app/Http/Controllers/GroupController.php` (`store`, `:41-76`) e `GroupMemberController.php` (`store`)
 Criado em: 2026-10-31
 Prioridade: BAIXA
 Status: Aberto
