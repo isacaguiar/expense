@@ -25,6 +25,14 @@ class GroupController extends Controller
             ->withExists('cycleSnapshots')
             ->get();
 
+        // Quem saiu do grupo não tem mais o e-mail exposto aos membros; `created_by` fica.
+        // Os membros já vieram no `with` acima: nenhuma consulta a mais.
+        $grupos->each(function (Group $grupo) {
+            if (! $grupo->members->contains('id', $grupo->created_by)) {
+                $grupo->setRelation('creator', null);
+            }
+        });
+
         /*$user = auth()->user();
 
         // retorna apenas os grupos ativos do user
@@ -48,8 +56,11 @@ class GroupController extends Controller
             'closing_day' => 'nullable|integer|between:1,31',
         ]);
 
+        // Só conta o grupo de que o criador ainda é membro: sair de um grupo libera a vaga,
+        // mas `created_by` fica (é ele que autoriza o criador a remover outros membros).
         $createdGroupsCount = Group::where('deleted', 0)
             ->where('created_by', auth()->id())
+            ->whereHas('members', fn ($q) => $q->where('user_id', auth()->id()))
             ->count();
 
         if ($createdGroupsCount >= self::MAX_GROUPS_CREATED_PER_USER) {
@@ -76,6 +87,11 @@ class GroupController extends Controller
     {
         $group = Group::with('creator:id,email')->findOrFail($id);
         $this->authorizeMembership($group);
+
+        // Idem `index`: `created_by` fica, o e-mail de quem saiu do grupo não.
+        if ($group->creator && ! $group->members()->where('user_id', $group->created_by)->exists()) {
+            $group->setRelation('creator', null);
+        }
 
         return $group;
     }

@@ -215,6 +215,23 @@ class Notifier
     }
 
     /**
+     * Um usuário foi removido de um grupo por outro (`GroupMemberController@destroy`,
+     * só quando não é a própria saída) → avisa o próprio removido.
+     *
+     * Sem `group_id` na linha e sem `groupId` no `data`: o sino navega para o
+     * resumo do grupo quando há grupo, e quem foi removido já não pode abri-lo.
+     */
+    public static function groupMemberRemoved(Group $group, int $removedUserId, ?string $actorName): void
+    {
+        self::guard('group_member_removed', function () use ($group, $removedUserId, $actorName) {
+            self::fanOut([$removedUserId], 'group_member_removed', null, [
+                'actorName' => $actorName,
+                'groupName' => $group->name,
+            ]);
+        });
+    }
+
+    /**
      * O devedor confirmou o acerto do ciclo via Pix, com comprovante
      * (`ExpenseController@confirmSettlement`) → avisa o credor.
      */

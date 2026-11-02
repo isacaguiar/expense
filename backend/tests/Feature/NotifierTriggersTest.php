@@ -383,6 +383,38 @@ class NotifierTriggersTest extends TestCase
         $this->assertSame(0, Notification::where('type', 'group_member_added')->count());
     }
 
+    // --- group_member_removed (GroupMemberController@destroy) ------------
+
+    public function test_group_member_removed_notifies_the_removed_user_without_a_group_id(): void
+    {
+        $group = Group::create(['name' => 'Casa']);
+        $removed = User::factory()->create();
+
+        Notifier::groupMemberRemoved($group, $removed->id, 'Ana');
+
+        $rows = Notification::where('type', 'group_member_removed')->get();
+        $this->assertCount(1, $rows);
+        $this->assertSame($removed->id, $rows->first()->user_id);
+        // Sem group_id (e sem groupId no data): o sino navega para o resumo do grupo
+        // quando há groupId, e quem foi removido já não pode abri-lo.
+        $this->assertNull($rows->first()->group_id);
+        $this->assertSame(['actorName' => 'Ana', 'groupName' => 'Casa'], $rows->first()->data);
+    }
+
+    public function test_group_member_removed_swallows_a_write_failure(): void
+    {
+        Log::spy();
+
+        $group = Group::create(['name' => 'Casa']);
+        $removed = User::factory()->create();
+
+        // actorName com byte inválido em UTF-8 → json_encode do cast 'data' lança.
+        Notifier::groupMemberRemoved($group, $removed->id, "Jo\xE3o");
+
+        $this->assertSame(0, Notification::where('type', 'group_member_removed')->count());
+        Log::shouldHaveReceived('warning')->atLeast()->once();
+    }
+
     // --- expense_created (ExpenseController@store) -----------------------
 
     private function storePayload(Group $group, User $creator, array $payerIds): array

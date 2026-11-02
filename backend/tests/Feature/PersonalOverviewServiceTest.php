@@ -575,6 +575,108 @@ class PersonalOverviewServiceTest extends TestCase
         $this->assertEquals(50.0, $row['amount']);
     }
 
+    // --- quem saiu do grupo deve a você (item 086, D6-B, CA-6) --------------------
+    // O credor precisa saber QUEM lhe deve, então o ex-devedor aparece pelo nome.
+    // Só o nome: e-mail, Pix e foto de quem já não é do grupo nunca saem.
+
+    public function test_a_debtor_who_left_the_group_shows_with_the_real_name_and_no_contact_or_avatar(): void
+    {
+        $group = $this->pairGroup();
+        $this->expense($group, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        // Foto própria e do Google: nenhuma das duas pode vazar depois da saída.
+        $this->debtor->forceFill(['photo_path' => 'photos/beto.jpg', 'avatar_url' => 'https://example.test/beto.png'])->save();
+        $group->members()->detach($this->debtor->id);
+
+        $item = $this->onlyGroup($this->creditor);
+
+        $this->assertCount(1, $item['to_receive']);
+        $row = $item['to_receive'][0];
+        $this->assertSame(
+            ['id' => $this->debtor->id, 'name' => 'Beto Devedor', 'avatar_url' => null],
+            $row['from_user']
+        );
+        // A dívida segue inteira: sair do grupo não a apaga.
+        $this->assertEquals(50.0, $row['amount']);
+        $this->assertEquals(['total' => 50.0, 'confirmed' => 0.0, 'open' => 50.0], $item['receive']);
+        $this->assertTrue($item['has_open']);
+    }
+
+    public function test_a_settled_debtor_who_left_still_shows_with_the_name_and_the_confirmation(): void
+    {
+        $group = $this->pairGroup();
+        $this->expense($group, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        $this->confirm($group, $this->debtor, $this->creditor, 50);
+        $group->members()->detach($this->debtor->id);
+
+        $row = $this->onlyGroup($this->creditor)['to_receive'][0];
+
+        $this->assertSame('Beto Devedor', $row['from_user']['name']);
+        $this->assertNotNull($row['confirmed_at']);
+    }
+
+    public function test_a_debtor_who_is_still_a_member_keeps_the_avatar(): void
+    {
+        $group = $this->pairGroup();
+        $this->expense($group, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        $this->debtor->forceFill(['avatar_url' => 'https://example.test/beto.png'])->save();
+
+        $row = $this->onlyGroup($this->creditor)['to_receive'][0];
+
+        $this->assertSame('https://example.test/beto.png', $row['from_user']['avatar_url']);
+    }
+
+    public function test_several_former_debtors_cost_the_same_number_of_queries_as_one(): void
+    {
+        $oneGroup = $this->pairGroup('Um ex-devedor');
+        $this->expense($oneGroup, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        $oneGroup->members()->detach($this->debtor->id);
+
+        $otherCreditor = User::factory()->create();
+        $debtors = User::factory()->count(3)->create();
+        $threeGroup = $this->group('Tres ex-devedores', $otherCreditor, ...$debtors);
+        $this->expense($threeGroup, $otherCreditor, $debtors->all(), 100, '2026-09-10');
+        $threeGroup->members()->detach($debtors->pluck('id')->all());
+
+        $this->assertCount(3, $this->onlyGroup($otherCreditor)['to_receive']);
+
+        $one = $this->queriesOf(fn () => $this->service()->forUser($this->creditor));
+        $three = $this->queriesOf(fn () => $this->service()->forUser($otherCreditor));
+
+        $this->assertSame($one, $three, "1 ex-devedor: {$one} consultas; 3 ex-devedores: {$three}");
+    }
+
+    public function test_a_former_debtor_is_looked_up_only_when_there_is_one(): void
+    {
+        $withMember = $this->pairGroup('Todos no grupo');
+        $this->expense($withMember, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        $inGroup = $this->queriesOf(fn () => $this->service()->forUser($this->creditor));
+
+        $withMember->members()->detach($this->debtor->id);
+        $left = $this->queriesOf(fn () => $this->service()->forUser($this->creditor));
+
+        // A busca do ex-devedor é a única consulta a mais, e só existe quando há ex-devedor.
+        $this->assertSame($inGroup + 1, $left, "no grupo: {$inGroup} consultas; depois de sair: {$left}");
+    }
+
+    public function test_a_former_member_who_does_not_owe_the_user_is_never_looked_up(): void
+    {
+        $eva = User::factory()->create(['name' => 'Eva Outra Credora']);
+        $dora = User::factory()->create(['name' => 'Dora Ex-Devedora']);
+        $group = $this->group('Grupo com dois acertos', $this->creditor, $this->debtor, $eva, $dora);
+        $this->expense($group, $this->creditor, [$this->debtor], 100, '2026-09-10');
+        // Dora deve a Eva, não a quem está olhando o painel.
+        $this->expense($group, $eva, [$dora], 80, '2026-09-11');
+
+        $whileMember = $this->queriesOf(fn () => $this->service()->forUser($this->creditor));
+        $group->members()->detach($dora->id);
+        $afterLeaving = $this->queriesOf(fn () => $this->service()->forUser($this->creditor));
+
+        $item = $this->onlyGroup($this->creditor);
+        $this->assertSame(['Beto Devedor'], array_column(array_column($item['to_receive'], 'from_user'), 'name'));
+        // O nome de quem não deve ao usuário não é buscado: nenhuma consulta a mais.
+        $this->assertSame($whileMember, $afterLeaving, "com Dora no grupo: {$whileMember} consultas; depois de sair: {$afterLeaving}");
+    }
+
     // --- orçamento de consultas (TASK-427, achado S1 da revisão de segurança) ----
     // Antes da otimização: 1 grupo vazio = 56 consultas; 20 grupos vazios = 1.082;
     // 1 grupo com pendência recente = 18. Os tetos abaixo são o valor medido
