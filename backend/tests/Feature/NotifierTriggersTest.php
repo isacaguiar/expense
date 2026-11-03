@@ -347,29 +347,34 @@ class NotifierTriggersTest extends TestCase
         $this->assertSame(0, Notification::where('type', 'cycle_closed')->count());
     }
 
-    // --- group_member_added (GroupMemberController@store) ----------------
+    // --- group_invitation (GroupMemberController@store) ------------------
+    // Antes da feature 20261103-convite-pendente-no-grupo o `store()` adicionava o membro e
+    // gravava `group_member_added`; agora cria um convite pendente e avisa com `group_invitation`.
 
-    public function test_group_member_added_notifies_the_new_member_only(): void
+    public function test_group_invitation_notifies_the_invitee_only(): void
     {
         $adder = User::factory()->create();
         $group = Group::create(['name' => 'Casa']);
         $group->members()->attach($adder->id);
 
-        $newMember = User::factory()->create();
+        $invitee = User::factory()->create();
 
         $this->withToken($this->tokenFor($adder))
-            ->postJson("/api/groups/{$group->id}/members", ['email' => $newMember->email])
+            ->postJson("/api/groups/{$group->id}/members", ['email' => $invitee->email])
             ->assertStatus(201);
 
-        $rows = Notification::where('type', 'group_member_added')->get();
+        $rows = Notification::where('type', 'group_invitation')->get();
         $this->assertCount(1, $rows);
-        $this->assertSame($newMember->id, $rows->first()->user_id);
+        $this->assertSame($invitee->id, $rows->first()->user_id);
         $this->assertSame($adder->name, $rows->first()->data['actorName']);
         $this->assertSame('Casa', $rows->first()->data['groupName']);
-        $this->assertSame($group->id, $rows->first()->data['groupId']);
+        // Sem grupo: o convidado ainda não é membro e abrir o grupo daria 404.
+        $this->assertNull($rows->first()->group_id);
+        $this->assertArrayNotHasKey('groupId', $rows->first()->data);
+        $this->assertSame(0, Notification::where('type', 'group_member_added')->count());
     }
 
-    public function test_group_member_added_does_not_notify_when_already_a_member(): void
+    public function test_group_invitation_does_not_notify_when_already_a_member(): void
     {
         $adder = User::factory()->create();
         $existing = User::factory()->create();
@@ -380,7 +385,7 @@ class NotifierTriggersTest extends TestCase
             ->postJson("/api/groups/{$group->id}/members", ['email' => $existing->email])
             ->assertStatus(409);
 
-        $this->assertSame(0, Notification::where('type', 'group_member_added')->count());
+        $this->assertSame(0, Notification::where('type', 'group_invitation')->count());
     }
 
     // --- group_member_removed (GroupMemberController@destroy) ------------
