@@ -27,6 +27,8 @@ export function notificationText(type: string, data: NotificationData): string {
       return `${str(data.actorName)} fechou o ciclo de ${str(data.cycleLabel)} de "${str(data.groupName)}"`;
     case 'group_member_added':
       return `${str(data.actorName)} adicionou você ao grupo "${str(data.groupName)}"`;
+    case 'group_member_removed':
+      return `${str(data.actorName)} removeu você do grupo "${str(data.groupName)}"`;
     case 'expense_created':
       return `${str(data.actorName)} adicionou a despesa "${str(data.expenseDescription)}"`;
     case 'expense_born_paid': {

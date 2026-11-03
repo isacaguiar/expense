@@ -112,6 +112,28 @@ describe('NotificationsMenu', () => {
     expect(onRead).toHaveBeenCalled();
   });
 
+  // Item 086 (R8): o aviso de remoção não traz `group_id` nem `groupId`, porque quem foi
+  // removido já não pode abrir o grupo; o clique só marca como lido.
+  it('lists a removal notice and, on click, marks it as read without navigating', async () => {
+    vi.mocked(axios.get).mockResolvedValue({
+      data: {
+        data: [paidItem({ id: 5, type: 'group_member_removed', group_id: null, data: { actorName: 'Ana', groupName: 'Casa' } })]
+      }
+    });
+    const { onClose, onRead } = renderMenu();
+
+    await userEvent.click(await screen.findByText('Ana removeu você do grupo "Casa"'));
+
+    expect(axios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/api/notifications/read'),
+      { id: 5 },
+      expect.anything()
+    );
+    expect(navigateMock).not.toHaveBeenCalled();
+    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => expect(onRead).toHaveBeenCalled());
+  });
+
   it('shows the empty state when there is nothing', async () => {
     vi.mocked(axios.get).mockResolvedValue({ data: { data: [] } });
     renderMenu();

@@ -7,6 +7,7 @@ use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
+use App\Models\User;
 use App\Support\BillingCycle;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -160,8 +161,13 @@ class CycleSummaryService
     {
         $entries = $this->entries($group->id, $start, $end);
 
+        // A foto de quem saiu do grupo não sai (item 086, R13): `id` e nome ficam, o avatar não.
+        // `$group->members` também alimenta `$balances` abaixo, então não custa consulta a mais.
+        $memberIds = $group->members->pluck('id');
+        $avatarOf = fn (?User $user) => $user !== null && $memberIds->contains($user->id) ? $user->avatar_url : null;
+
         $expenses = $entries
-            ->map(function (array $entry) {
+            ->map(function (array $entry) use ($avatarOf) {
                 $participantsCount = max($entry['expense']->payers->count(), 1);
 
                 return [
@@ -180,13 +186,13 @@ class CycleSummaryService
                     // Aditivo (Constitution §4.1): sibling de payerName/participants,
                     // não substitui — avatar do credor/participantes pra exibição
                     // (docs/feature/20260904-avatar-usuario-listagens/plan.md §1).
-                    'payerAvatarUrl' => $entry['expense']->payer->avatar_url ?? null,
+                    'payerAvatarUrl' => $avatarOf($entry['expense']->payer),
                     'participants' => $entry['expense']->payers->pluck('name')->values()->all(),
                     'participantDetails' => $entry['expense']->payers
                         ->map(fn ($payer) => [
                             'id' => $payer->id,
                             'name' => $payer->name,
-                            'avatarUrl' => $payer->avatar_url,
+                            'avatarUrl' => $avatarOf($payer),
                         ])
                         ->values()
                         ->all(),
@@ -258,6 +264,11 @@ class CycleSummaryService
                     continue;
                 }
 
+                // Aqui nasce um item de $owed, ou seja, um settlement: quem já saiu do grupo
+                // continua sendo ponta dele e precisa de nome em $balances (item 086, R11).
+                $this->ensureBalanceEntry($balances, $participant);
+                $this->ensureBalanceEntry($balances, $expense->payer);
+
                 if (isset($balances[$participant->id])) {
                     $balances[$participant->id]['balance'] -= $valuePerPerson;
                 }
@@ -314,6 +325,29 @@ class CycleSummaryService
         }
 
         return ['totals' => $totals, 'expenses' => $expenses, 'balances' => $balances, 'settlements' => $settlements];
+    }
+
+    /**
+     * Garante a entrada de `$user` em `$balances`. Quem não é membro do grupo (saiu
+     * depois de participar da despesa) entra só com o nome: `avatarUrl` nulo, para a
+     * foto de quem saiu não sair, e `formerMember` para a tela rotular o cartão.
+     * O nome vem das relações `payer` e `payers`, que `entries()` já carrega.
+     *
+     * @param  array<int, array<string, mixed>>  $balances
+     */
+    private function ensureBalanceEntry(array &$balances, ?User $user): void
+    {
+        if ($user === null || isset($balances[$user->id])) {
+            return;
+        }
+
+        $balances[$user->id] = [
+            'user_id' => $user->id,
+            'name' => $user->name,
+            'avatarUrl' => null,
+            'balance' => 0.0,
+            'formerMember' => true,
+        ];
     }
 
     /**

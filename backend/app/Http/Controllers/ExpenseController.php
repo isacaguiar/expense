@@ -8,6 +8,7 @@ use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
+use App\Models\User;
 use App\Services\CycleSummaryService;
 use App\Services\ExpensePaymentService;
 use App\Support\BillingCycle;
@@ -120,6 +121,7 @@ class ExpenseController extends Controller
         $expense->load(['payers', 'quotas']);
         $this->hydrateQuotaExpense($expense);
         $this->appendValuePerPerson($expense);
+        $this->hideFormerMemberFields($expense);
 
         return response()->json($expense);
     }
@@ -158,6 +160,41 @@ class ExpenseController extends Controller
         ));
     }
 
+    /**
+     * Ids dos membros atuais do grupo (linhas de `ex_groups_members`).
+     *
+     * @return \Illuminate\Support\Collection<int, int|string>
+     */
+    private function memberIdsOf($groupId)
+    {
+        return DB::table('ex_groups_members')->where('group_id', $groupId)->pluck('user_id');
+    }
+
+    /**
+     * Quem saiu do grupo continua em `payers` (item 086), mas o contato dele não pode
+     * seguir saindo para os membros atuais (R12): `payers` serializa o `User` inteiro,
+     * com e-mail, Pix, WhatsApp, papel e foto. Cada participante que já não é membro
+     * passa a sair só com `id` e `name`, que é tudo que as telas leem
+     * (`ExpenseView`). Lista de permitidos (`setVisible`) e não de proibidos, para
+     * uma coluna nova de `ex_users` não vazar por esquecimento; aqui e não em
+     * `User::$hidden`, porque os membros precisam ver o contato uns dos outros.
+     * Usa as relações já carregadas e uma consulta de membros.
+     */
+    private function hideFormerMemberFields(Expense $expense): void
+    {
+        if (! $expense->relationLoaded('payers')) {
+            return;
+        }
+
+        $memberIds = $this->memberIdsOf($expense->group_id);
+
+        $expense->payers->each(function (User $payer) use ($memberIds) {
+            if (! $memberIds->contains($payer->id)) {
+                $payer->setVisible(['id', 'name']);
+            }
+        });
+    }
+
     public function update(Request $request, $id)
     {
         $expense = $this->findExpenseForMember($id);
@@ -167,13 +204,21 @@ class ExpenseController extends Controller
             return $response;
         }
 
+        // Participantes: membros do grupo mais quem já está nesta despesa, mesmo que
+        // tenha saído do grupo (item 086, R6). Credor: só membro ou o credor atual
+        // (R14), para o dono não tornar credor de parcela em aberto quem já saiu.
+        // Só o `update()`; o `store()` segue exigindo membro.
+        $creditorIds = $this->creditorIdsAllowedOnUpdate($expense);
+        $allowedCreditor = Rule::in($creditorIds);
+        $allowedParticipants = Rule::in($this->participantIdsAllowedOnUpdate($expense, $creditorIds));
+
         $data = $request->validate([
             'description' => 'sometimes|required|string|max:255',
             'date_payment' => 'sometimes|required|date',
             'total_value' => 'sometimes|required|numeric|min:0',
-            'user_payer_id' => ['sometimes', 'required', Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id)],
+            'user_payer_id' => ['sometimes', 'required', $allowedCreditor],
             'payers' => 'sometimes|required|array|min:1',
-            'payers.*' => Rule::exists('ex_groups_members', 'user_id')->where('group_id', $expense->group_id),
+            'payers.*' => $allowedParticipants,
             // expense_type/installments/quotas: edição de tipo (só À Vista <->
             // Parcelada — Fixa fica de fora dos dois lados, ver abaixo).
             // docs/feature/concluidas/202608/20260826-editar-tipo-despesa/plan.md §1.
@@ -297,8 +342,50 @@ class ExpenseController extends Controller
 
         $fresh = $expense->fresh(['payers', 'quotas']);
         $this->hydrateQuotaExpense($fresh);
+        $this->hideFormerMemberFields($fresh);
 
         return response()->json($fresh);
+    }
+
+    /**
+     * Ids que `update()` aceita em `user_payer_id`: os membros atuais do grupo e o
+     * credor atual da despesa (R14).
+     *
+     * Sair do grupo só tira a linha de `ex_groups_members` (item 086): a pessoa
+     * continua em `ex_expenses_payers` e como credora, e reenviar o credor que já
+     * saiu numa edição não pode virar 422. Já o participante que saiu fica de fora:
+     * o dono não pode torná-lo credor de parcela em aberto, o que a D3-B proíbe.
+     * Lista (`Rule::in`) em vez de `Rule::exists` porque a união com o credor atual
+     * não cabe numa consulta só.
+     *
+     * @return list<int>
+     */
+    private function creditorIdsAllowedOnUpdate(Expense $expense): array
+    {
+        return $this->memberIdsOf($expense->group_id)
+            ->push($expense->user_payer_id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Ids que `update()` aceita em `payers.*`: os do credor mais quem já é
+     * participante desta despesa, mesmo que tenha saído do grupo (R6). Quem nunca
+     * esteve na despesa e não é membro continua recusado. Recebe a lista do credor
+     * já calculada para não ler os membros do grupo uma segunda vez.
+     *
+     * @param  list<int>  $creditorIds  o resultado de `creditorIdsAllowedOnUpdate`
+     * @return list<int>
+     */
+    private function participantIdsAllowedOnUpdate(Expense $expense, array $creditorIds): array
+    {
+        return collect($creditorIds)
+            ->merge($expense->payers()->pluck('ex_users.id'))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
@@ -1235,6 +1322,7 @@ class ExpenseController extends Controller
             ->exists();
 
         $entries = $this->cycles()->entries($groupId, $start, $end);
+        $memberIds = $this->memberIdsOf($groupId);
 
         $creditors = [];
         foreach ($entries as $entry) {
@@ -1258,8 +1346,16 @@ class ExpenseController extends Controller
             $share = round($entry['value'] / $participantsCount, 2);
 
             if (! isset($creditors[$creditor->id])) {
+                // Credor que saiu do grupo (R12): o nome fica, o contato não.
+                $isMember = $memberIds->contains($creditor->id);
+
                 $creditors[$creditor->id] = [
-                    'creditor' => ['id' => $creditor->id, 'name' => $creditor->name, 'email' => $creditor->email, 'pix' => $creditor->pix],
+                    'creditor' => [
+                        'id' => $creditor->id,
+                        'name' => $creditor->name,
+                        'email' => $isMember ? $creditor->email : null,
+                        'pix' => $isMember ? $creditor->pix : null,
+                    ],
                     'debtors' => [],
                 ];
             }
