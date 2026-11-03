@@ -64,6 +64,7 @@ Route::middleware('jwt.auth')->group(function () {
 
     Route::prefix('groups/{groupId}/invitations')->group(function () {
         Route::get('/', [GroupInvitationController::class, 'index']);
+        Route::delete('/{invitationId}', [GroupInvitationController::class, 'destroy']);
     });
 
     // Sem `index`: o controller não o implementa (a listagem é por grupo, `indexByGroup`), e rota
