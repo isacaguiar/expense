@@ -67,6 +67,63 @@ class GroupInvitationService
     }
 
     /**
+     * O convidado aceita o convite: vira membro (`attach`) e o convite fica `accepted`
+     * (R7). É o único caminho, além de `GroupController::store`, que insere em
+     * `ex_groups_members` (R1).
+     *
+     * Tudo o que não dá para aceitar é o **mesmo** `abort(404)`: convite de outra pessoa,
+     * inexistente, vencido, já respondido, de grupo excluído, ou de quem já é membro (F1,
+     * F3). Quem pergunta não descobre qual foi o motivo.
+     *
+     * A busca inicial já é escopada ao usuário, e é ela que impede um pedido alheio de
+     * travar o grupo de outra pessoa. Depois trava-se o **grupo** e então o **convite**
+     * (a mesma ordem de `invite()`, sem deadlock) e relê-se sob o lock só o que pode ter
+     * mudado: grupo excluído, convite respondido, cancelado ou vencido, e já ser membro.
+     * Quem convidou só é avisado se ainda for membro (checado sob o lock, onde ninguém
+     * sai do grupo no meio): o aviso leva o `groupId`, e para um ex-membro seria um 404.
+     */
+    public function accept(int $invitationId, User $user): Group
+    {
+        [$group, $inviterToNotify] = DB::transaction(function () use ($invitationId, $user) {
+            $groupId = GroupInvitation::where('id', $invitationId)
+                ->where('user_id', $user->id)
+                ->value('group_id');
+            abort_if($groupId === null, 404);
+
+            $group = Group::lockForUpdate()->find($groupId);
+            abort_if($group === null || $group->deleted, 404);
+
+            $invitation = GroupInvitation::lockForUpdate()->find($invitationId);
+            abort_if(
+                $invitation === null
+                    || $invitation->status !== GroupInvitation::STATUS_PENDING
+                    || ! $invitation->expires_at->isFuture(),
+                404
+            );
+            abort_if($group->members()->where('user_id', $user->id)->exists(), 404);
+
+            $group->members()->attach($user->id);
+            $invitation->update([
+                'status' => GroupInvitation::STATUS_ACCEPTED,
+                'responded_at' => now(),
+            ]);
+
+            $inviterId = $invitation->invited_by === null ? null : (int) $invitation->invited_by;
+            $notify = $inviterId !== null
+                && $inviterId !== $user->id
+                && $group->members()->where('user_id', $inviterId)->exists();
+
+            return [$group, $notify ? $inviterId : null];
+        });
+
+        if ($inviterToNotify !== null) {
+            Notifier::groupInvitationAccepted($group, $inviterToNotify, $user->name);
+        }
+
+        return $group;
+    }
+
+    /**
      * Uma linha por (grupo, pessoa) — R3. Convite `pending` e dentro da validade só é
      * renovado (e mantém quem convidou primeiro, F6); respondido, cancelado ou vencido é
      * reaberto como novo (R13, D9-A).

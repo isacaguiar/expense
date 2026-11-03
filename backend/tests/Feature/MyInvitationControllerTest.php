@@ -4,9 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Group;
 use App\Models\GroupInvitation;
+use App\Models\Notification;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\BuildsGroupInvitations;
 use Tests\TestCase;
@@ -24,6 +27,7 @@ class MyInvitationControllerTest extends TestCase
     protected function tearDown(): void
     {
         Carbon::setTestNow();
+        Notification::flushEventListeners();
 
         parent::tearDown();
     }
@@ -207,5 +211,253 @@ class MyInvitationControllerTest extends TestCase
         $response = $this->as($ana, 'GET', '/api/me/invitations')->assertOk();
 
         $this->assertSame([$second->id, $first->id], collect($response->json())->pluck('id')->all());
+    }
+
+    // --- POST /api/me/invitations/{id}/accept ----------------------------
+
+    private function accept(User $user, int|string $invitationId): TestResponse
+    {
+        return $this->as($user, 'POST', "/api/me/invitations/{$invitationId}/accept");
+    }
+
+    /** O que um aceite indevido não pode mexer: vínculos, convites (com `updated_at`) e avisos. */
+    private function membershipsInvitationsAndNotices(): array
+    {
+        return [
+            DB::table('ex_groups_members')->orderBy('group_id')->orderBy('user_id')->get()->all(),
+            DB::table('ex_group_invitations')->orderBy('id')->get()->all(),
+            Notification::count(),
+        ];
+    }
+
+    public function test_accepting_requires_authentication(): void
+    {
+        $this->postJson('/api/me/invitations/1/accept')->assertStatus(401);
+    }
+
+    public function test_accepting_makes_the_invitee_a_member_and_closes_the_invitation(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+
+        // Antes de aceitar o grupo não existe para ela (R10).
+        $this->as($ana, 'GET', "/api/groups/{$group->id}/members")->assertStatus(404);
+
+        $response = $this->accept($ana, $invitation->id);
+
+        $response->assertOk()->assertExactJson([
+            'message' => 'Você entrou no grupo.',
+            'group' => ['id' => $group->id, 'name' => 'Casa'],
+        ]);
+        $this->assertTrue($group->members()->where('user_id', $ana->id)->exists());
+        $fresh = $invitation->fresh();
+        $this->assertSame(GroupInvitation::STATUS_ACCEPTED, $fresh->status);
+        $this->assertNotNull($fresh->responded_at);
+
+        $groups = $this->as($ana, 'GET', '/api/groups')->assertOk()->json();
+        $this->assertSame([$group->id], collect($groups)->pluck('id')->all());
+        $this->as($ana, 'GET', '/api/me/invitations')->assertOk()->assertExactJson([]);
+        $members = $this->as($ana, 'GET', "/api/groups/{$group->id}/members")->assertOk()->json();
+        $this->assertEqualsCanonicalizing([$inviter->id, $ana->id], collect($members)->pluck('id')->all());
+    }
+
+    public function test_accepting_notifies_the_inviter_with_the_group_and_nobody_else(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+
+        $this->accept($ana, $invitation->id)->assertOk();
+
+        $rows = Notification::all();
+        $this->assertCount(1, $rows);
+        $this->assertSame('group_invitation_accepted', $rows->first()->type);
+        $this->assertSame($inviter->id, $rows->first()->user_id);
+        $this->assertSame($group->id, $rows->first()->group_id);
+        $this->assertSame($ana->name, $rows->first()->data['actorName']);
+        $this->assertSame($group->id, $rows->first()->data['groupId']);
+        $this->assertSame('Casa', $rows->first()->data['groupName']);
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function unavailableInvitations(): array
+    {
+        return [
+            'convite de outra pessoa' => ['other'],
+            'convite vencido' => ['expired'],
+            'convite já aceito' => [GroupInvitation::STATUS_ACCEPTED],
+            'convite recusado' => [GroupInvitation::STATUS_DECLINED],
+            'convite cancelado' => [GroupInvitation::STATUS_CANCELLED],
+            'grupo excluído' => ['deleted_group'],
+            'id inexistente' => ['missing'],
+            'id do convite seguido de texto' => ['suffix'],
+        ];
+    }
+
+    /**
+     * R7: tudo o que não dá para aceitar responde o **mesmo** 404, com o mesmo corpo, e não
+     * mexe em nada. O id "5abc" existe de propósito: sem a checagem de dígitos o MySQL
+     * compararia como 5 e aceitaria o convite.
+     *
+     * @dataProvider unavailableInvitations
+     */
+    public function test_an_unavailable_invitation_gives_the_same_404_and_changes_nothing(string $kind): void
+    {
+        // Em modo debug o corpo do erro traz `file`, `line` e `trace`, que diferem por
+        // construção; produção roda com APP_DEBUG=false, então o teste fixa o mesmo aqui.
+        config(['app.debug' => false]);
+
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $bruno = User::factory()->create();
+
+        $target = match ($kind) {
+            'other' => $this->makeInvitation($group, $bruno, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id])->id,
+            'expired' => $this->makeExpiredInvitation($group, $ana, $inviter)->id,
+            GroupInvitation::STATUS_ACCEPTED,
+            GroupInvitation::STATUS_DECLINED,
+            GroupInvitation::STATUS_CANCELLED => $this->makeInvitation($group, $ana, $kind, ['invited_by' => $inviter->id])->id,
+            'deleted_group' => (function () use ($group, $ana, $inviter) {
+                $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+                $group->update(['deleted' => true]);
+
+                return $invitation->id;
+            })(),
+            'missing' => 999999999,
+            'suffix' => $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id])->id.'abc',
+        };
+        $baseline = $this->accept($ana, 999999999)->assertStatus(404);
+        $before = $this->membershipsInvitationsAndNotices();
+
+        $response = $this->accept($ana, $target);
+
+        $response->assertStatus(404);
+        $this->assertSame($baseline->getContent(), $response->getContent());
+        $this->assertEquals($before, $this->membershipsInvitationsAndNotices());
+    }
+
+    public function test_someone_who_is_already_a_member_gets_404_and_no_second_membership(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $group->members()->attach($ana->id);
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+        $before = $this->membershipsInvitationsAndNotices();
+
+        $this->accept($ana, $invitation->id)->assertStatus(404);
+
+        $this->assertEquals($before, $this->membershipsInvitationsAndNotices());
+        $this->assertSame(1, $group->members()->where('user_id', $ana->id)->count());
+        $this->assertSame(GroupInvitation::STATUS_PENDING, $invitation->fresh()->status);
+    }
+
+    public function test_accepting_twice_in_a_row_adds_one_membership_and_the_second_is_404(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+
+        $this->accept($ana, $invitation->id)->assertOk();
+        $this->accept($ana, $invitation->id)->assertStatus(404);
+
+        $this->assertSame(1, DB::table('ex_groups_members')->where('group_id', $group->id)->where('user_id', $ana->id)->count());
+        $this->assertSame(1, Notification::where('type', 'group_invitation_accepted')->count());
+    }
+
+    /** @return array<string, array{0: string}> */
+    public static function invitersWhoCannotBeNotified(): array
+    {
+        return [
+            'quem convidou já saiu do grupo' => ['left'],
+            'quem convidou não existe mais' => ['none'],
+            'quem convidou é o próprio convidado' => ['self'],
+        ];
+    }
+
+    /**
+     * @dataProvider invitersWhoCannotBeNotified
+     */
+    public function test_the_invitee_still_joins_when_there_is_nobody_to_notify(string $case): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $stay = User::factory()->create();
+        $group->members()->attach($stay->id);
+        if ($case === 'left') {
+            // Quem saiu não pode abrir o grupo: o aviso (com groupId) levaria a um 404.
+            $group->members()->detach($inviter->id);
+        }
+        $invitedBy = match ($case) {
+            'left' => $inviter->id,
+            'none' => null,
+            'self' => $ana->id,
+        };
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $invitedBy]);
+
+        $this->accept($ana, $invitation->id)->assertOk();
+
+        $this->assertTrue($group->members()->where('user_id', $ana->id)->exists());
+        $this->assertSame(0, Notification::count());
+    }
+
+    public function test_a_notifier_failure_does_not_break_the_acceptance(): void
+    {
+        Log::spy();
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+        Notification::creating(function () {
+            throw new \RuntimeException('falha simulada ao gravar a notificação');
+        });
+
+        $this->accept($ana, $invitation->id)->assertOk();
+
+        $this->assertTrue($group->members()->where('user_id', $ana->id)->exists());
+        $this->assertSame(GroupInvitation::STATUS_ACCEPTED, $invitation->fresh()->status);
+        $this->assertSame(0, Notification::count());
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn ($message, $context = []) => ($context['type'] ?? null) === 'group_invitation_accepted')
+            ->once();
+    }
+
+    /**
+     * F2/CA-11: duas requisições simultâneas não cabem no PHPUnit (uma conexão só), então o
+     * lock é provado pelo que ele deixa no SQL: trava o grupo e depois o convite, nessa
+     * ordem, a mesma de `GroupInvitationService::invite` (ordem diferente dá deadlock).
+     */
+    public function test_accepting_locks_the_group_first_and_then_the_invitation(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+        $token = auth('api')->login($ana);
+
+        DB::enableQueryLog();
+        $this->withToken($token)->postJson("/api/me/invitations/{$invitation->id}/accept")->assertOk();
+        $locks = collect(DB::getQueryLog())
+            ->pluck('query')
+            ->filter(fn (string $sql) => str_contains($sql, ' for update'))
+            ->values();
+        DB::disableQueryLog();
+
+        $this->assertCount(2, $locks);
+        $this->assertStringContainsString('`ex_groups`', $locks[0]);
+        $this->assertStringContainsString('`ex_group_invitations`', $locks[1]);
+    }
+
+    public function test_accepting_is_not_blocked_by_the_limit_of_created_groups(): void
+    {
+        $ana = User::factory()->create();
+        foreach (['A', 'B', 'C'] as $name) {
+            $own = Group::create(['name' => $name, 'created_by' => $ana->id]);
+            $own->members()->attach($ana->id);
+        }
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+
+        $this->accept($ana, $invitation->id)->assertOk();
+
+        $this->assertTrue($group->members()->where('user_id', $ana->id)->exists());
     }
 }
