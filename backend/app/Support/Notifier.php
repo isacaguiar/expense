@@ -232,6 +232,41 @@ class Notifier
     }
 
     /**
+     * Um usuário foi convidado para um grupo (`GroupInvitationService::invite`) → avisa o
+     * próprio convidado. Devolve `true` se a linha foi gravada: o convite só marca
+     * `notified_at` quando o aviso de fato saiu, para uma falha não suprimir o próximo.
+     *
+     * Sem `group_id` na linha e sem `groupId` no `data`, como `groupMemberRemoved`: o sino
+     * navega para o resumo do grupo quando há grupo, e o convidado ainda não é membro
+     * (abrir o grupo daria 404). O clique leva a Meus Grupos, onde ele responde ao convite.
+     */
+    public static function groupInvitation(Group $group, int $inviteeId, ?string $actorName): bool
+    {
+        return self::guard('group_invitation', function () use ($group, $inviteeId, $actorName) {
+            self::fanOut([$inviteeId], 'group_invitation', null, [
+                'actorName' => $actorName,
+                'groupName' => $group->name,
+            ]);
+        });
+    }
+
+    /**
+     * O convidado aceitou o convite (`GroupInvitationService::accept`) → avisa quem
+     * convidou. Quem convidou é membro e pode abrir o grupo, então a linha leva `group_id` e
+     * `groupId`; quem chama só avisa se ele ainda for membro. A recusa não notifica ninguém.
+     */
+    public static function groupInvitationAccepted(Group $group, int $inviterId, ?string $accepterName): void
+    {
+        self::guard('group_invitation_accepted', function () use ($group, $inviterId, $accepterName) {
+            self::fanOut([$inviterId], 'group_invitation_accepted', $group->id, [
+                'actorName' => $accepterName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+            ]);
+        });
+    }
+
+    /**
      * O devedor confirmou o acerto do ciclo via Pix, com comprovante
      * (`ExpenseController@confirmSettlement`) → avisa o credor.
      */
@@ -273,17 +308,23 @@ class Notifier
 
     /**
      * Roda `$fn`; qualquer exceção só vira log e não sobe — a notificação é
-     * best-effort e não pode quebrar a ação que a disparou.
+     * best-effort e não pode quebrar a ação que a disparou. Devolve `false` quando
+     * capturou uma exceção, para quem precisa saber se o aviso saiu; os demais métodos
+     * ignoram o retorno.
      */
-    private static function guard(string $type, callable $fn): void
+    private static function guard(string $type, callable $fn): bool
     {
         try {
             $fn();
+
+            return true;
         } catch (\Throwable $e) {
             Log::warning('Notifier: falha ao gravar notificação', [
                 'type' => $type,
                 'error' => $e->getMessage(),
             ]);
+
+            return false;
         }
     }
 
