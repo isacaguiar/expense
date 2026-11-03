@@ -4,7 +4,7 @@ ID: 133
 Origem: feature `20261030-saida-e-remocao-de-membro` (PR #262, item 086 do backlog): decisão D1 e risco RK1 do `specify.md` e a lista de fora de escopo (§6), em `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/` (a pasta é arquivada pelo PR #264); `backend/app/Http/Controllers/GroupMemberController.php` (`store`, `:32-92`)
 Criado em: 2026-11-02
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-566
 
 ## Descrição
 - **Como a entrada funciona hoje** (lido em `GroupMemberController::store`): qualquer membro informa um e-mail. Se já existe `User` com ele, o `store()` faz `attach` direto em `ex_groups_members` e chama `Notifier::groupMemberAdded`. Se o e-mail é novo, cria o `User` com senha aleatória, grava um token de convite (cache, 2 dias), envia o `UserInvitedMail` e **também** faz o `attach` direto. Em nenhum dos dois casos a pessoa aceita ou recusa: ela já é membro quando fica sabendo.
