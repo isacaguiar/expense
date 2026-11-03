@@ -30,7 +30,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: item 133 do backlog (`
 | TASK-575 | Travar com teste a matriz de autorização do convidado pendente (`PendingInviteeSecurityTest`) | backend | plan.md §3, §5, §12 | nenhum | Concluída |
 | TASK-576 | Rodar o `security-reviewer` nas rotas e controllers novos e tratar os achados | backend | plan.md §8, §12 | nenhum | Pendente |
 | TASK-577 | Mostrar no sino os convites recebido e aceito (textos e clique em `group_invitation`) | frontend | plan.md §9 | nenhum | Concluída |
-| TASK-578 | Criar `ReceivedInvitations` (Aceitar e Recusar) e montá-lo em Meus Grupos | frontend | plan.md §9, §10 | nenhum | Pendente |
+| TASK-578 | Criar `ReceivedInvitations` (Aceitar e Recusar) e montá-lo em Meus Grupos | frontend | plan.md §9, §10 | nenhum | Concluída |
 | TASK-579 | Mostrar em Participantes a lista de convites pendentes com **Cancelar** | frontend | plan.md §9, §11 | nenhum | Pendente |
 | TASK-580 | Trocar "Adicionar" por "Convidar" em Participantes, com a mensagem de convite enviado | frontend | plan.md §11 | nenhum | Pendente |
 | TASK-581 | Atualizar `01-specify.md` §3.2 e §3.3 para o convite pendente | doc | plan.md §13 | nenhum | Pendente |

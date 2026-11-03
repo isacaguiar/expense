@@ -59,9 +59,12 @@ function mockGroupsAndMe(
   groupsData: Group[],
   meId = 10,
   grossDebtsByGroup: GrossDebtsByGroup = {},
-  maxGroupsPerUser = 3
+  maxGroupsPerUser = 3,
+  invitations: unknown[] = []
 ) {
   vi.mocked(axios.get).mockImplementation((url: string) => {
+    // Antes de '/api/me', que também casa esta URL.
+    if (url.includes('/api/me/invitations')) return Promise.resolve({ data: invitations });
     if (url.includes('/api/me')) return Promise.resolve({ data: { id: meId, max_groups_per_user: maxGroupsPerUser } });
     const grossDebtsMatch = url.match(/\/groups\/(\d+)\/expenses\/gross-debts/);
     if (grossDebtsMatch) {
@@ -99,6 +102,41 @@ describe('Dashboard', () => {
     await waitFor(() => {
       expect(navigateMock).toHaveBeenCalledWith('/', { replace: true });
     });
+  });
+
+  // Convite pendente (feature 20261103-convite-pendente-no-grupo, CA-14): quem recebeu convites
+  // os vê em Meus Grupos, acima da busca, mesmo sem participar de nenhum grupo ainda.
+  it('shows the received invitations above the search, even for someone with no group yet', async () => {
+    mockGroupsAndMe([], 10, {}, 3, [
+      { id: 5, group: { id: 7, name: 'Casa nova' }, invited_by: { id: 2, name: 'Ana' }, expires_at: '2026-11-10T12:00:00.000000Z' }
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Convites recebidos')).toBeInTheDocument();
+    expect(screen.getByText(/Ana convidou você para o grupo/)).toHaveTextContent('Ana convidou você para o grupo "Casa nova"');
+    expect(screen.getByRole('button', { name: 'Aceitar convite do grupo Casa nova' })).toBeInTheDocument();
+    expect(screen.getByText('Você ainda não participa de nenhum grupo.')).toBeInTheDocument();
+    const section = screen.getByText('Convites recebidos');
+    const search = screen.getByLabelText('Buscar grupo');
+    expect(section.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('does not show the invitations section when there are none', async () => {
+    mockGroupsAndMe(groups);
+
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    expect(await screen.findByText('Viagem SP')).toBeInTheDocument();
+    expect(screen.queryByText('Convites recebidos')).not.toBeInTheDocument();
   });
 
   it('renders a table row per group and filters by search', async () => {
