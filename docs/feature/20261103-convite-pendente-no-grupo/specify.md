@@ -2,7 +2,9 @@
 
 > Feature: a entrada num grupo passa a depender do **aceite** de quem é convidado. Hoje qualquer membro coloca no grupo qualquer pessoa cadastrada, só pelo e-mail, e a pessoa vira membro na hora. Promove o item 133 do backlog (a D1-B que a feature `20261030-saida-e-remocao-de-membro`, PR #262, deixou como candidata a backlog).
 
-Versão: 1.0 · Criado em: 20261103
+Versão: 1.1 · Criado em: 20261103
+
+**v1.1 (2026-11-03):** acrescenta a **D10** e o **RK9**, decididos pelo usuário depois da revisão de segurança da TASK-576. Nenhuma das D1 a D9 mudou.
 
 ---
 
@@ -122,6 +124,7 @@ Rotas novas, aditivas, sob `jwt.auth`. O `store()` mantém a rota, o 201 e o `me
 | D7 | Cancelar convite pendente | A) quem convidou ou o criador<br>B) deixar para depois | **A** | Custa pouco e corrige o convite para o e-mail errado sem esperar a validade acabar. |
 | D8 | Contrato do `store()` | A) mantém a rota, 201 e `message`, acrescenta `pending` e `invitation`<br>B) rota nova de convite e o `store()` antigo passa a responder erro | **A** | O B quebra o único cliente sem benefício e deixaria a rota de adição direta existindo por um período. O A muda o sentido, mas o shape é aditivo e a web é atualizada junto (Constitution §4.1). |
 | D9 | Reconvidar quem recusou | A) livre; o volume fica com o item 128 (throttle)<br>B) bloqueio de alguns dias | **A** | O B adiciona estado e regra para um abuso que o convite pendente já torna inofensivo (sem aceite nada acontece); o incômodo de volume é o item 128. |
+| D10 | O convite continua válido depois que quem convidou sai ou é removido do grupo (achado A3 da revisão de segurança) | A) cancelar os convites vivos de quem sai ou é removido, na mesma transação do `destroy` de membro<br>B) o aceite recusa se quem convidou deixou de ser membro<br>C) manter o convite como está e registrar a decisão | **C** (decidido pelo usuário em 2026-11-03) | A autoridade de convidar vale no momento do convite, e o criador já cancela qualquer convite pendente pela lista (D7-A). A e B mexeriam no `destroy` de membro (feature 086) ou numa regra do aceite, e o usuário preferiu não ampliar o escopo. Fica como limite conhecido (RK9). |
 
 ### 3.5 Falhas e consistência
 
@@ -156,6 +159,7 @@ Rotas novas, aditivas, sob `jwt.auth`. O `store()` mantém a rota, o 201 e o `me
 | RK6 | Spam de convites e de e-mails para endereços alheios | Incômodo de volume | Item 128 (throttle), fora de escopo; sem aceite nada acontece |
 | RK7 | O e-mail do convidado fica visível aos membros na lista de pendentes | Dado pessoal exposto | É o e-mail que um membro digitou; só membros veem; o convidado vê só nome do grupo e de quem convidou (R10) |
 | RK8 | Testes existentes que mudam | Regressão escondida | §2.9: só os dois listados mudam, e a mudança é por design; os demais ficam sem edição |
+| RK9 | Um membro hostil convida cúmplices e depois sai ou é removido | O convite dele segue válido por até 7 dias e o convidado entra com acesso a despesas e saldos | D10-C: o criador vê a lista de pendentes (com quem convidou, em `GET /groups/{id}/invitations`) e cancela à mão; não há aviso automático. Limite conhecido, sem backlog aberto por decisão do usuário |
 
 ## 5. Critérios de aceite
 

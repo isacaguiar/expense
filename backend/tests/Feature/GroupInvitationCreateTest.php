@@ -14,9 +14,11 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\Concerns\BuildsGroupInvitations;
+use Tests\Concerns\CapturesTransactionQueries;
 use Tests\TestCase;
 
 /**
@@ -27,6 +29,7 @@ use Tests\TestCase;
 class GroupInvitationCreateTest extends TestCase
 {
     use BuildsGroupInvitations;
+    use CapturesTransactionQueries;
     use DatabaseTransactions;
 
     protected function tearDown(): void
@@ -426,5 +429,156 @@ class GroupInvitationCreateTest extends TestCase
         Log::shouldHaveReceived('warning')
             ->withArgs(fn ($message) => str_contains($message, 'e-mail de convite'))
             ->once();
+    }
+
+    // --- Revisão de segurança (TASK-576) -----------------------------------
+
+    /**
+     * Domínio de exatamente `$length` caracteres (de 4 a 253), de rótulos de até 60, terminado
+     * em ".com". Cada rótulo conta "tamanho + 1" (o ponto) e o ".com" fecha com mais 3.
+     */
+    private function domainOfLength(int $length): string
+    {
+        $units = $length - 3;
+        $count = (int) ceil($units / 61);
+        $labels = array_fill(0, $count - 1, str_repeat('b', 60));
+        $labels[] = str_repeat('b', $units - 61 * ($count - 1) - 1);
+
+        $domain = implode('.', $labels).'.com';
+        $this->assertSame($length, strlen($domain), 'o gerador de domínio errou o comprimento');
+
+        return $domain;
+    }
+
+    /**
+     * A6: a regra `email` do Laravel aceita endereços de até uns 318 caracteres, e a coluna
+     * `ex_users.email` tem 255. Sem o `max`, um endereço novo e longo dava 500 no `User::create`.
+     */
+    public function test_an_email_longer_than_the_column_is_a_422_and_creates_nothing(): void
+    {
+        Mail::fake();
+        [$group, $member] = $this->groupWithMember();
+        $email = str_repeat('a', 64).'@'.$this->domainOfLength(200);
+        // A premissa do teste: a regra `email` sozinha aceita este endereço de mais de 255 caracteres.
+        $this->assertGreaterThan(255, strlen($email));
+        $this->assertTrue(Validator::make(['email' => $email], ['email' => 'required|email'])->passes());
+
+        $this->invite($member, $group, $email)->assertStatus(422)->assertJsonValidationErrors('email');
+
+        $this->assertSame(0, User::where('email', $email)->count());
+        $this->assertSame(0, GroupInvitation::count());
+        Mail::assertNothingSent();
+    }
+
+    public function test_an_email_of_exactly_255_characters_is_still_accepted(): void
+    {
+        Mail::fake();
+        [$group, $member] = $this->groupWithMember();
+        $email = str_repeat('a', 64).'@'.$this->domainOfLength(190);
+        $this->assertSame(255, strlen($email));
+
+        $this->invite($member, $group, $email)->assertStatus(201);
+
+        $this->assertSame(1, User::where('email', $email)->count());
+    }
+
+    /**
+     * A1: o `bcrypt` de custo 12 (~370 ms) só rodava para e-mail sem conta e denunciava, pelo
+     * tempo, quem já usa o sistema. A senha provisória é um bcrypt de custo 4 (~2 ms).
+     *
+     * O ambiente de teste fixa `BCRYPT_ROUNDS=4`, então sem este ajuste o teste não distinguiria
+     * "o service escolheu o custo 4" de "o padrão já é 4": configura-se o custo de produção (12) e
+     * descartam-se os drivers de hash já resolvidos.
+     */
+    public function test_the_account_created_by_an_invitation_gets_a_cheap_bcrypt_placeholder_password(): void
+    {
+        Mail::fake();
+        config(['hashing.bcrypt.rounds' => 12]);
+        app('hash')->forgetDrivers();
+        [$group, $member] = $this->groupWithMember();
+        $newEmail = 'novo.'.uniqid().'@example.com';
+
+        $this->invite($member, $group, $newEmail)->assertStatus(201);
+
+        $hash = DB::table('ex_users')->where('email', $newEmail)->value('password');
+        // Nunca nula: `Hash::check` lançaria e o login dessa conta daria 500 (ver o teste de ativação).
+        $this->assertNotNull($hash);
+        $info = password_get_info($hash);
+        $this->assertSame('bcrypt', $info['algoName']);
+        $this->assertSame(4, $info['options']['cost']);
+    }
+
+    /**
+     * A1: o SMTP síncrono também só rodava no caminho de e-mail novo. O e-mail de ativação (e o
+     * token) saem depois da resposta, no término da requisição. Chamar o service direto não
+     * envia resposta nenhuma, então nada termina até `app()->terminate()`, que é o que o kernel
+     * faz depois de enviá-la.
+     */
+    public function test_the_activation_mail_leaves_after_the_request_and_not_during_it(): void
+    {
+        Mail::fake();
+        [$group, $member] = $this->groupWithMember();
+        $newEmail = 'novo.'.uniqid().'@example.com';
+
+        app(GroupInvitationService::class)->invite($group, $newEmail, $member);
+
+        Mail::assertNothingSent();
+        $this->assertFalse(Cache::has('invitation-token:'.$newEmail));
+
+        app()->terminate();
+
+        Mail::assertSent(UserInvitedMail::class, 1);
+        Mail::assertSent(UserInvitedMail::class, fn (UserInvitedMail $mail) => $mail->hasTo($newEmail));
+        $this->assertTrue(Cache::has('invitation-token:'.$newEmail));
+
+        // Os callbacks de término não são descartados depois de executados: um segundo término no
+        // mesmo processo (nos testes, a cada requisição) não pode mandar o e-mail de novo.
+        app()->terminate();
+        Mail::assertSent(UserInvitedMail::class, 1);
+    }
+
+    public function test_an_invited_account_without_a_password_can_still_be_activated_and_log_in(): void
+    {
+        Mail::fake();
+        [$group, $member] = $this->groupWithMember();
+        $newEmail = 'novo.'.uniqid().'@example.com';
+        $this->invite($member, $group, $newEmail)->assertStatus(201);
+
+        // Antes de ativar nenhuma senha serve, e a resposta é 401, não um erro do servidor.
+        $this->postJson('/api/login', ['email' => $newEmail, 'password' => 'qualquer-senha'])->assertStatus(401);
+
+        $token = Cache::get('invitation-token:'.$newEmail);
+        $this->assertNotNull($token);
+        $this->postJson('/api/invitations/verify', [
+            'email' => $newEmail,
+            'token' => $token,
+            'password' => 'senha-nova-123',
+            'password_confirmation' => 'senha-nova-123',
+        ])->assertOk();
+
+        $this->postJson('/api/login', ['email' => $newEmail, 'password' => 'senha-nova-123'])
+            ->assertOk()
+            ->assertJsonStructure(['access_token']);
+    }
+
+    /**
+     * Lacuna da TASK-568 (levada ao usuário na TASK-572): a ordem dos locks de `invite()` não
+     * tinha prova. A primeira consulta da transação é o lock do grupo e o segundo `for update` é o
+     * do convite, a mesma ordem de `accept()` (ordem diferente dá deadlock).
+     */
+    public function test_inviting_opens_its_transaction_locking_the_group_and_then_the_invitation(): void
+    {
+        [$group, $member] = $this->groupWithMember();
+        $invitee = User::factory()->create();
+
+        $queries = $this->queriesAfterTheTransactionOpens(
+            fn () => $this->invite($member, $group, $invitee->email)->assertStatus(201)
+        );
+
+        $this->assertStringContainsString('`ex_groups`', $queries[0]);
+        $this->assertStringContainsString(' for update', $queries[0]);
+        $locks = array_values(array_filter($queries, fn (string $sql) => str_contains($sql, ' for update')));
+        $this->assertCount(2, $locks);
+        $this->assertStringContainsString('`ex_group_invitations`', $locks[1]);
     }
 }

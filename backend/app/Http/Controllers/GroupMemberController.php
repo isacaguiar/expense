@@ -36,8 +36,10 @@ class GroupMemberController extends Controller
     public function store(Request $request, $groupId)
     {
         // 1) Valida só o formato do e‑mail
+        // `max:255`: a regra `email` aceita endereços de até uns 318 caracteres, e a coluna
+        // `ex_users.email` tem 255 (sem o limite, um endereço novo e longo dava 500).
         $data = $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|max:255',
         ]);
 
         // 2) Busca o grupo e confirma que quem chama é membro dele
