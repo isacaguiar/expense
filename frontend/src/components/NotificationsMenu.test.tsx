@@ -134,6 +134,73 @@ describe('NotificationsMenu', () => {
     await waitFor(() => expect(onRead).toHaveBeenCalled());
   });
 
+  // Convite pendente (feature 20261103-convite-pendente-no-grupo): o convidado ainda não é
+  // membro, então abrir o grupo daria 404. O aviso não traz `group_id` nem `groupId` e o clique
+  // leva a Meus Grupos, onde ele aceita ou recusa.
+  it('lists an invitation notice and, on click, marks it as read and goes to Meus Grupos', async () => {
+    vi.mocked(axios.get).mockResolvedValue({
+      data: {
+        data: [paidItem({ id: 8, type: 'group_invitation', group_id: null, data: { actorName: 'Ana', groupName: 'Casa' } })]
+      }
+    });
+    const { onClose, onRead } = renderMenu();
+
+    await userEvent.click(await screen.findByText('Ana convidou você para o grupo "Casa"'));
+
+    expect(axios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/api/notifications/read'),
+      { id: 8 },
+      expect.anything()
+    );
+    expect(navigateMock).toHaveBeenCalledTimes(1);
+    expect(navigateMock).toHaveBeenCalledWith('/meus-grupos');
+    expect(onClose).toHaveBeenCalled();
+    await waitFor(() => expect(onRead).toHaveBeenCalled());
+  });
+
+  it('sends an invitation notice to Meus Grupos even if its payload carries a group', async () => {
+    vi.mocked(axios.get).mockResolvedValue({
+      data: {
+        data: [
+          paidItem({ id: 9, type: 'group_invitation', group_id: 7, data: { actorName: 'Ana', groupName: 'Casa', groupId: 7 } })
+        ]
+      }
+    });
+    renderMenu();
+
+    await userEvent.click(await screen.findByText('Ana convidou você para o grupo "Casa"'));
+
+    expect(navigateMock).toHaveBeenCalledWith('/meus-grupos');
+    expect(navigateMock).not.toHaveBeenCalledWith('/groups/7/summary');
+  });
+
+  // Quem convidou é membro e pode abrir o grupo: o aviso de aceite leva `groupId`.
+  it('lists an acceptance notice and, on click, goes to the group summary', async () => {
+    vi.mocked(axios.get).mockResolvedValue({
+      data: {
+        data: [
+          paidItem({
+            id: 10,
+            type: 'group_invitation_accepted',
+            group_id: 7,
+            data: { actorName: 'Bruno', groupName: 'Casa', groupId: 7 }
+          })
+        ]
+      }
+    });
+    const { onClose } = renderMenu();
+
+    await userEvent.click(await screen.findByText('Bruno aceitou o convite para o grupo "Casa"'));
+
+    expect(axios.post).toHaveBeenCalledWith(
+      expect.stringContaining('/api/notifications/read'),
+      { id: 10 },
+      expect.anything()
+    );
+    expect(navigateMock).toHaveBeenCalledWith('/groups/7/summary');
+    expect(onClose).toHaveBeenCalled();
+  });
+
   it('shows the empty state when there is nothing', async () => {
     vi.mocked(axios.get).mockResolvedValue({ data: { data: [] } });
     renderMenu();
