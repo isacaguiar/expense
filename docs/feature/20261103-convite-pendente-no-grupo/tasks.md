@@ -26,7 +26,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: item 133 do backlog (`
 | TASK-571 | Criar `POST /me/invitations/{id}/accept` (`GroupInvitationService::accept`) | backend | plan.md §3, §8 | antes do merge | Concluída |
 | TASK-572 | Criar `POST /me/invitations/{id}/decline` | backend | plan.md §3, §8 | nenhum | Concluída |
 | TASK-573 | Criar `GET /groups/{id}/invitations`, os convites pendentes do grupo | backend | plan.md §4, §8 | nenhum | Concluída |
-| TASK-574 | Criar `DELETE /groups/{id}/invitations/{invitationId}`, que cancela um convite pendente | backend | plan.md §4, §8 | nenhum | Pendente |
+| TASK-574 | Criar `DELETE /groups/{id}/invitations/{invitationId}`, que cancela um convite pendente | backend | plan.md §4, §8 | nenhum | Concluída |
 | TASK-575 | Travar com teste a matriz de autorização do convidado pendente (`PendingInviteeSecurityTest`) | backend | plan.md §3, §5, §12 | nenhum | Pendente |
 | TASK-576 | Rodar o `security-reviewer` nas rotas e controllers novos e tratar os achados | backend | plan.md §8, §12 | nenhum | Pendente |
 | TASK-577 | Mostrar no sino os convites recebido e aceito (textos e clique em `group_invitation`) | frontend | plan.md §9 | nenhum | Pendente |
