@@ -57,7 +57,9 @@ Route::middleware('jwt.auth')->group(function () {
         Route::delete('/{userId}', [GroupMemberController::class, 'destroy']);
     });
 
-    Route::apiResource('expenses', ExpenseController::class);
+    // Sem `index`: o controller não o implementa (a listagem é por grupo, `indexByGroup`), e rota
+    // registrada sem método dá 500 (Constitution §2.4; bugfix 20261103-get-expenses-sem-index-no-controller).
+    Route::apiResource('expenses', ExpenseController::class)->except('index');
     Route::post('/expenses/{expenseId}/stop-recurrence', [ExpenseController::class, 'stopRecurrence']);
     Route::post('/expenses/{expenseId}/pay', [ExpenseController::class, 'pay']);
     Route::post('/expenses/{expenseId}/unpay', [ExpenseController::class, 'unpay']);
