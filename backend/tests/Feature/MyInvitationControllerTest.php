@@ -230,6 +230,30 @@ class MyInvitationControllerTest extends TestCase
         ];
     }
 
+    /**
+     * O id da URL de um convite que `$ana` não pode aceitar nem recusar, de cada tipo (usado
+     * pelo aceite e pela recusa). `$bruno` é a outra pessoa; `'deleted_group'` exclui o grupo
+     * (o aceite dá 404; a recusa não consulta o grupo e continua valendo).
+     */
+    private function unavailableTarget(string $kind, Group $group, User $ana, User $bruno, User $inviter): int|string
+    {
+        return match ($kind) {
+            'other' => $this->makeInvitation($group, $bruno, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id])->id,
+            'expired' => $this->makeExpiredInvitation($group, $ana, $inviter)->id,
+            GroupInvitation::STATUS_ACCEPTED,
+            GroupInvitation::STATUS_DECLINED,
+            GroupInvitation::STATUS_CANCELLED => $this->makeInvitation($group, $ana, $kind, ['invited_by' => $inviter->id])->id,
+            'deleted_group' => (function () use ($group, $ana, $inviter) {
+                $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+                $group->update(['deleted' => true]);
+
+                return $invitation->id;
+            })(),
+            'missing' => 999999999,
+            'suffix' => $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id])->id.'abc',
+        };
+    }
+
     public function test_accepting_requires_authentication(): void
     {
         $this->postJson('/api/me/invitations/1/accept')->assertStatus(401);
@@ -260,6 +284,29 @@ class MyInvitationControllerTest extends TestCase
         $this->as($ana, 'GET', '/api/me/invitations')->assertOk()->assertExactJson([]);
         $members = $this->as($ana, 'GET', "/api/groups/{$group->id}/members")->assertOk()->json();
         $this->assertEqualsCanonicalizing([$inviter->id, $ana->id], collect($members)->pluck('id')->all());
+    }
+
+    /**
+     * Quem tem vários convites aceita o grupo do convite que escolheu, e só ele. A busca do
+     * grupo precisa do `id` do convite, não só do dono: sem o `id` ela devolveria o grupo do
+     * primeiro convite da pessoa e a levaria para o grupo errado.
+     */
+    public function test_accepting_one_of_several_invitations_joins_that_group_only(): void
+    {
+        [$groupA, $inviterA] = $this->groupWithInviter('A');
+        [$groupB, $inviterB] = $this->groupWithInviter('B');
+        $ana = User::factory()->create();
+        $first = $this->makeInvitation($groupA, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviterA->id]);
+        $second = $this->makeInvitation($groupB, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviterB->id]);
+
+        $this->accept($ana, $second->id)->assertOk()->assertJsonPath('group.id', $groupB->id);
+
+        $this->assertTrue($groupB->members()->where('user_id', $ana->id)->exists());
+        $this->assertFalse($groupA->members()->where('user_id', $ana->id)->exists());
+        $this->assertSame(GroupInvitation::STATUS_ACCEPTED, $second->fresh()->status);
+        $this->assertSame(GroupInvitation::STATUS_PENDING, $first->fresh()->status);
+        $listed = $this->as($ana, 'GET', '/api/me/invitations')->assertOk()->json();
+        $this->assertSame([$first->id], collect($listed)->pluck('id')->all());
     }
 
     public function test_accepting_notifies_the_inviter_with_the_group_and_nobody_else(): void
@@ -312,21 +359,7 @@ class MyInvitationControllerTest extends TestCase
         $ana = User::factory()->create();
         $bruno = User::factory()->create();
 
-        $target = match ($kind) {
-            'other' => $this->makeInvitation($group, $bruno, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id])->id,
-            'expired' => $this->makeExpiredInvitation($group, $ana, $inviter)->id,
-            GroupInvitation::STATUS_ACCEPTED,
-            GroupInvitation::STATUS_DECLINED,
-            GroupInvitation::STATUS_CANCELLED => $this->makeInvitation($group, $ana, $kind, ['invited_by' => $inviter->id])->id,
-            'deleted_group' => (function () use ($group, $ana, $inviter) {
-                $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
-                $group->update(['deleted' => true]);
-
-                return $invitation->id;
-            })(),
-            'missing' => 999999999,
-            'suffix' => $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id])->id.'abc',
-        };
+        $target = $this->unavailableTarget($kind, $group, $ana, $bruno, $inviter);
         $baseline = $this->accept($ana, 999999999)->assertStatus(404);
         $before = $this->membershipsInvitationsAndNotices();
 
@@ -459,5 +492,156 @@ class MyInvitationControllerTest extends TestCase
         $this->accept($ana, $invitation->id)->assertOk();
 
         $this->assertTrue($group->members()->where('user_id', $ana->id)->exists());
+    }
+
+    // --- POST /api/me/invitations/{id}/decline ---------------------------
+
+    private function decline(User $user, int|string $invitationId): TestResponse
+    {
+        return $this->as($user, 'POST', "/api/me/invitations/{$invitationId}/decline");
+    }
+
+    public function test_declining_requires_authentication(): void
+    {
+        $this->postJson('/api/me/invitations/1/decline')->assertStatus(401);
+    }
+
+    /** CA-5 e D6-A: recusar fecha o convite, não cria vínculo e não avisa ninguém. */
+    public function test_declining_closes_the_invitation_without_a_membership_and_tells_nobody(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+        $pivotBefore = DB::table('ex_groups_members')->count();
+
+        $response = $this->decline($ana, $invitation->id);
+
+        $response->assertOk()->assertExactJson(['message' => 'Convite recusado.']);
+        $fresh = $invitation->fresh();
+        $this->assertSame(GroupInvitation::STATUS_DECLINED, $fresh->status);
+        $this->assertNotNull($fresh->responded_at);
+        $this->assertSame($pivotBefore, DB::table('ex_groups_members')->count());
+        $this->assertFalse($group->members()->where('user_id', $ana->id)->exists());
+        $this->assertSame(0, Notification::count());
+        $this->as($ana, 'GET', '/api/me/invitations')->assertOk()->assertExactJson([]);
+        $this->as($ana, 'GET', "/api/groups/{$group->id}/members")->assertStatus(404);
+    }
+
+    /**
+     * Mesmos cenários do aceite, menos o do grupo excluído: recusar não consulta o grupo.
+     *
+     * @return array<string, array{0: string}>
+     */
+    public static function unavailableInvitationsToDecline(): array
+    {
+        $scenarios = self::unavailableInvitations();
+        unset($scenarios['grupo excluído']);
+
+        return $scenarios;
+    }
+
+    /**
+     * R8: o que não dá para recusar responde o **mesmo** 404, com o mesmo corpo, e não mexe em
+     * nada (inclusive o convite de outra pessoa, que continua pendente).
+     *
+     * @dataProvider unavailableInvitationsToDecline
+     */
+    public function test_an_unavailable_invitation_cannot_be_declined_and_changes_nothing(string $kind): void
+    {
+        // Em modo debug o corpo do erro traz `file`, `line` e `trace`; produção roda com APP_DEBUG=false.
+        config(['app.debug' => false]);
+
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $bruno = User::factory()->create();
+        $target = $this->unavailableTarget($kind, $group, $ana, $bruno, $inviter);
+        $baseline = $this->decline($ana, 999999999)->assertStatus(404);
+        $before = $this->membershipsInvitationsAndNotices();
+
+        $response = $this->decline($ana, $target);
+
+        $response->assertStatus(404);
+        $this->assertSame($baseline->getContent(), $response->getContent());
+        $this->assertEquals($before, $this->membershipsInvitationsAndNotices());
+    }
+
+    /**
+     * Quem tem vários convites responde um de cada vez: recusar o segundo não pode fechar o
+     * primeiro (o `UPDATE` precisa do `id`, não só do dono).
+     */
+    public function test_declining_one_of_several_invitations_leaves_the_others_pending(): void
+    {
+        [$groupA, $inviterA] = $this->groupWithInviter('A');
+        [$groupB, $inviterB] = $this->groupWithInviter('B');
+        $ana = User::factory()->create();
+        $first = $this->makeInvitation($groupA, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviterA->id]);
+        $second = $this->makeInvitation($groupB, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviterB->id]);
+
+        $this->decline($ana, $second->id)->assertOk();
+
+        $this->assertSame(GroupInvitation::STATUS_PENDING, $first->fresh()->status);
+        $this->assertSame(GroupInvitation::STATUS_DECLINED, $second->fresh()->status);
+        $listed = $this->as($ana, 'GET', '/api/me/invitations')->assertOk()->json();
+        $this->assertSame([$first->id], collect($listed)->pluck('id')->all());
+    }
+
+    public function test_declining_twice_in_a_row_the_second_is_404(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+
+        $this->decline($ana, $invitation->id)->assertOk();
+        $this->decline($ana, $invitation->id)->assertStatus(404);
+
+        $this->assertSame(GroupInvitation::STATUS_DECLINED, $invitation->fresh()->status);
+    }
+
+    public function test_a_declined_invitation_can_no_longer_be_accepted(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+
+        $this->decline($ana, $invitation->id)->assertOk();
+        $this->accept($ana, $invitation->id)->assertStatus(404);
+
+        $this->assertFalse($group->members()->where('user_id', $ana->id)->exists());
+    }
+
+    /**
+     * O plan §3 não consulta o grupo ao recusar: a linha é do próprio convidado e não revela
+     * nada. Este caso registra a escolha (o aceite, ao contrário, dá 404 com o grupo excluído).
+     */
+    public function test_declining_an_invitation_to_a_deleted_group_still_works(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+        $group->update(['deleted' => true]);
+
+        $this->decline($ana, $invitation->id)->assertOk();
+
+        $this->assertSame(GroupInvitation::STATUS_DECLINED, $invitation->fresh()->status);
+    }
+
+    /** D9-A e R13: quem recusou pode ser convidado de novo; o convite volta a `pending`. */
+    public function test_after_declining_the_same_person_can_be_invited_again(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+        $this->decline($ana, $invitation->id)->assertOk();
+
+        $this->as($inviter, 'POST', "/api/groups/{$group->id}/members", ['email' => $ana->email])
+            ->assertStatus(201)
+            ->assertJsonPath('pending', true);
+
+        $this->assertSame(1, GroupInvitation::where('group_id', $group->id)->where('user_id', $ana->id)->count());
+        $reopened = $invitation->fresh();
+        $this->assertSame(GroupInvitation::STATUS_PENDING, $reopened->status);
+        $this->assertNull($reopened->responded_at);
+        $listed = $this->as($ana, 'GET', '/api/me/invitations')->assertOk()->json();
+        $this->assertSame([$invitation->id], collect($listed)->pluck('id')->all());
     }
 }
