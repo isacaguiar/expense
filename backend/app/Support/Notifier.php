@@ -200,21 +200,6 @@ class Notifier
     }
 
     /**
-     * Um usuário foi adicionado a um grupo (`GroupMemberController@store`) →
-     * avisa o próprio usuário adicionado.
-     */
-    public static function groupMemberAdded(Group $group, int $addedUserId, ?string $actorName): void
-    {
-        self::guard('group_member_added', function () use ($group, $addedUserId, $actorName) {
-            self::fanOut([$addedUserId], 'group_member_added', $group->id, [
-                'actorName' => $actorName,
-                'groupId' => $group->id,
-                'groupName' => $group->name,
-            ]);
-        });
-    }
-
-    /**
      * Um usuário foi removido de um grupo por outro (`GroupMemberController@destroy`,
      * só quando não é a própria saída) → avisa o próprio removido.
      *
