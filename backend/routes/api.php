@@ -5,6 +5,7 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupExpenseReportController;
+use App\Http\Controllers\GroupInvitationController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MyInvitationController;
@@ -59,6 +60,10 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/', [GroupMemberController::class, 'index']);
         Route::post('/', [GroupMemberController::class, 'store']);
         Route::delete('/{userId}', [GroupMemberController::class, 'destroy']);
+    });
+
+    Route::prefix('groups/{groupId}/invitations')->group(function () {
+        Route::get('/', [GroupInvitationController::class, 'index']);
     });
 
     // Sem `index`: o controller não o implementa (a listagem é por grupo, `indexByGroup`), e rota
