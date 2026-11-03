@@ -23,7 +23,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: item 133 do backlog (`
 | TASK-568 | Fazer `POST /groups/{id}/members` criar ou renovar um convite pendente em vez de adicionar o membro (`GroupInvitationService::invite`) | backend | plan.md §2, §8 | antes do merge | Concluída |
 | TASK-569 | Trocar o texto do e-mail de convite para o de convite pendente | backend | plan.md §7 | nenhum | Concluída |
 | TASK-570 | Criar `GET /me/invitations`, os convites recebidos pelo usuário | backend | plan.md §5, §8 | nenhum | Concluída |
-| TASK-571 | Criar `POST /me/invitations/{id}/accept` (`GroupInvitationService::accept`) | backend | plan.md §3, §8 | antes do merge | Pendente |
+| TASK-571 | Criar `POST /me/invitations/{id}/accept` (`GroupInvitationService::accept`) | backend | plan.md §3, §8 | antes do merge | Concluída |
 | TASK-572 | Criar `POST /me/invitations/{id}/decline` | backend | plan.md §3, §8 | nenhum | Pendente |
 | TASK-573 | Criar `GET /groups/{id}/invitations`, os convites pendentes do grupo | backend | plan.md §4, §8 | nenhum | Pendente |
 | TASK-574 | Criar `DELETE /groups/{id}/invitations/{invitationId}`, que cancela um convite pendente | backend | plan.md §4, §8 | nenhum | Pendente |

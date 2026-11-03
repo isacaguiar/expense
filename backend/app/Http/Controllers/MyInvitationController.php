@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\GroupInvitation;
+use App\Services\GroupInvitationService;
 
 /**
  * Convites que o usuário autenticado recebeu para entrar em grupos (feature
@@ -43,5 +44,28 @@ class MyInvitationController extends Controller
             ],
             'expires_at' => $invitation->expires_at,
         ])->values());
+    }
+
+    /**
+     * O convidado aceita o convite e vira membro do grupo (R7). Qualquer coisa que impeça
+     * (convite alheio, inexistente, vencido, já respondido, grupo excluído, já é membro) é o
+     * mesmo 404: ver `GroupInvitationService::accept`.
+     *
+     * O id vem da URL: só dígitos conta como id. Sem isso o MySQL compararia "5abc" como 5
+     * e aceitaria o convite 5 (a mesma lição de `GroupMemberController::isMember`).
+     */
+    public function accept($invitationId)
+    {
+        abort_unless(ctype_digit((string) $invitationId), 404);
+
+        $group = app(GroupInvitationService::class)->accept((int) $invitationId, auth()->user());
+
+        return response()->json([
+            'message' => 'Você entrou no grupo.',
+            'group' => [
+                'id' => $group->id,
+                'name' => $group->name,
+            ],
+        ]);
     }
 }
