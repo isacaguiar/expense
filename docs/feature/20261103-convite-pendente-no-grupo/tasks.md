@@ -21,7 +21,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: item 133 do backlog (`
 | TASK-566 | Criar a tabela `ex_group_invitations`, o model `GroupInvitation` (com o escopo `open()`) e o helper de teste de convites | backend | plan.md §1 | antes do deploy/migration em produção | Concluída |
 | TASK-567 | Criar `Notifier::groupInvitation` e `Notifier::groupInvitationAccepted`, e fazer `guard` devolver `bool` | backend | plan.md §6 | nenhum | Concluída |
 | TASK-568 | Fazer `POST /groups/{id}/members` criar ou renovar um convite pendente em vez de adicionar o membro (`GroupInvitationService::invite`) | backend | plan.md §2, §8 | antes do merge | Concluída |
-| TASK-569 | Trocar o texto do e-mail de convite para o de convite pendente | backend | plan.md §7 | nenhum | Pendente |
+| TASK-569 | Trocar o texto do e-mail de convite para o de convite pendente | backend | plan.md §7 | nenhum | Concluída |
 | TASK-570 | Criar `GET /me/invitations`, os convites recebidos pelo usuário | backend | plan.md §5, §8 | nenhum | Pendente |
 | TASK-571 | Criar `POST /me/invitations/{id}/accept` (`GroupInvitationService::accept`) | backend | plan.md §3, §8 | antes do merge | Pendente |
 | TASK-572 | Criar `POST /me/invitations/{id}/decline` | backend | plan.md §3, §8 | nenhum | Pendente |
