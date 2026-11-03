@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\BuildsGroupInvitations;
+use Tests\Concerns\CapturesTransactionQueries;
 use Tests\TestCase;
 
 /**
@@ -22,6 +23,7 @@ use Tests\TestCase;
 class MyInvitationControllerTest extends TestCase
 {
     use BuildsGroupInvitations;
+    use CapturesTransactionQueries;
     use DatabaseTransactions;
 
     protected function tearDown(): void
@@ -477,6 +479,28 @@ class MyInvitationControllerTest extends TestCase
         $this->assertCount(2, $locks);
         $this->assertStringContainsString('`ex_groups`', $locks[0]);
         $this->assertStringContainsString('`ex_group_invitations`', $locks[1]);
+    }
+
+    /**
+     * A2 (revisão de segurança, TASK-576): em REPEATABLE READ a primeira leitura consistente de
+     * uma transação abre o snapshot. Se a busca do convite rodasse dentro da transação, o
+     * snapshot abriria antes de esperar o lock do grupo, e as leituras de "quem convidou ainda é
+     * membro?" veriam o estado de antes da espera (um ex-membro seria avisado). Por isso a busca
+     * roda antes, e a primeira consulta da transação é o próprio lock do grupo.
+     */
+    public function test_accepting_reads_nothing_inside_its_transaction_before_the_group_lock(): void
+    {
+        [$group, $inviter] = $this->groupWithInviter('Casa');
+        $ana = User::factory()->create();
+        $invitation = $this->makeInvitation($group, $ana, GroupInvitation::STATUS_PENDING, ['invited_by' => $inviter->id]);
+        $token = auth('api')->login($ana);
+
+        $queries = $this->queriesAfterTheTransactionOpens(
+            fn () => $this->withToken($token)->postJson("/api/me/invitations/{$invitation->id}/accept")->assertOk()
+        );
+
+        $this->assertStringContainsString('`ex_groups`', $queries[0]);
+        $this->assertStringContainsString(' for update', $queries[0]);
     }
 
     public function test_accepting_is_not_blocked_by_the_limit_of_created_groups(): void
