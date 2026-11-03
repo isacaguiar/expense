@@ -61,12 +61,12 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 | [20260830-login-remover-botao-microsoft.md](20260830-login-remover-botao-microsoft.md) | Botão "Microsoft" morto na tela de login | 2026-08-30 | `fix/20260830-login-remover-botao-microsoft` | Aberto |
 | [20260901-expense-store-update-422.md](20260901-expense-store-update-422.md) | Testes de despesa (store/update/destroy) falham com 422 após virada de mês | 2026-09-01 | `fix/20260901-expense-store-update-422` | Aberto |
 | [20260921-cadastro-codigo-email-nao-chega.md](20260921-cadastro-codigo-email-nao-chega.md) | Código de confirmação do cadastro não chega ao e-mail (produção) | 2026-09-21 | `fix/20260921-cadastro-codigo-email-nao-chega` | Aberto |
-| [20261103-get-expenses-sem-index-no-controller.md](20261103-get-expenses-sem-index-no-controller.md) | `GET /api/expenses` está registrado, mas `ExpenseController@index` não existe: 500 para qualquer usuário autenticado | 2026-11-03 | `fix/20261103-get-expenses-sem-index-no-controller` | Aberto |
 
 ## Concluídos
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/202611/20261103-get-expenses-sem-index-no-controller.md](concluidos/202611/20261103-get-expenses-sem-index-no-controller.md) | `GET /api/expenses` registrado sem `ExpenseController@index`: 500 para qualquer usuário autenticado (corrigido com `->except('index')`) | 2026-11-03 | #266 |
 | [concluidos/202609/20260930-logo-email-marca-novemax.md](concluidos/202609/20260930-logo-email-marca-novemax.md) | Logo e marca "Novemax" nos e-mails do sistema (deveria ser Shared Expense) | 2026-10-30 | #257 (escalado para a feature `20260930-recuperacao-acesso`) |
 | [concluidos/202610/20261027-comprovante-iphone-so-camera.md](concluidos/202610/20261027-comprovante-iphone-so-camera.md) | Comprovante no iPhone abre só a câmera e não deixa escolher foto da galeria nem arquivo | 2026-10-27 | #246 |
 | [concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md](concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md) | Alerta "ainda falta acertar" incoerente depois de pagamentos em ciclo fechado | 2026-10-24 | #234 |

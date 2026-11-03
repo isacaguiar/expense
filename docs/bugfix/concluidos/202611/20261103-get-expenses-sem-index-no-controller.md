@@ -4,7 +4,7 @@ Versão: 1.0 · Criado em: 20261103 · Branch: `fix/20261103-get-expenses-sem-in
 
 > Fluxo BFF — ver `docs/bugfix/README.md`. Se qualquer caixa da Triagem for marcada, este trabalho **não** é BFF: crie `docs/feature/<AAAAMMDD>-<slug>/` com `/nova-feature` e deixe aqui só um ponteiro.
 >
-> Origem: item 132 do backlog (`docs/backlog/get-expenses-registrado-sem-index-no-controller.md`), achado ao atualizar a Constitution §2.4 e o `01-specify.md` na TASK-559 da feature `20261030-saida-e-remocao-de-membro`. Encaminhamento escolhido pelo mantenedor em 2026-11-02: BFF, corrigindo com `->except('index')` (e não implementando um `index`).
+> Origem: item 132 do backlog (`docs/backlog/concluidos/get-expenses-registrado-sem-index-no-controller.md`), achado ao atualizar a Constitution §2.4 e o `01-specify.md` na TASK-559 da feature `20261030-saida-e-remocao-de-membro`. Encaminhamento escolhido pelo mantenedor em 2026-11-02: BFF, corrigindo com `->except('index')` (e não implementando um `index`).
 
 ## Triagem
 
@@ -23,7 +23,7 @@ Nenhuma marcada → segue no BFF.
 - **Sintoma:** `GET /api/expenses` com um token válido responde **500** (`BadMethodCallException`) em vez de um erro de rota inexistente.
 - **Reprodução** (feita em 2026-11-02, no banco de teste, **numa transação desfeita**, sem gravar nada): criar um usuário com a factory, gerar o token com `auth('api')->login($user)` e despachar `GET /api/expenses` com `Authorization: Bearer <token>` e `Accept: application/json`. Resultado: status 500, corpo `Method App\Http\Controllers\ExpenseController::index does not exist.`, e `method_exists(ExpenseController::class, 'index')` é `false`. O corpo com a mensagem aparece porque o ambiente de teste tem `APP_DEBUG` ligado; em produção ele é `false` e a resposta não expõe o caminho do arquivo, mas o status continua 500.
 - **Esperado vs. atual:** esperado, uma rota que a API não oferece responder 405 (o mesmo URI aceita `POST`), como qualquer rota inexistente; atual, 500, que parece falha do servidor, entra nos logs como erro e é acionável por qualquer usuário autenticado.
-- **Causa raiz:** `backend/routes/api.php:60` registra `Route::apiResource('expenses', ExpenseController::class)`, que cria as cinco rotas `index`, `store`, `show`, `update` e `destroy`. O `ExpenseController` tem `store` (`:521`), `show` (`:118`), `update` (`:198`), `destroy` (`:453`) e `indexByGroup` (`:32`), mas **não tem `index`**. A listagem de despesas é por grupo (`GET /api/groups/{id}/expenses`, `indexByGroup`), e `GET /api/expenses` não tem implementação nenhuma no controller. Quebra a Constitution §2.4 (toda rota registrada tem método) e é um resquício do `TASK-016` do Épico C, que previa "implementar ou remover do `apiResource` os verbos não suportados".
+- **Causa raiz:** `backend/routes/api.php:60` (na `dev`, antes desta correção; com os 2 comentários novos a linha do `apiResource` passa a ser a `:62`) registra `Route::apiResource('expenses', ExpenseController::class)`, que cria as cinco rotas `index`, `store`, `show`, `update` e `destroy`. O `ExpenseController` tem `store` (`:521`), `show` (`:118`), `update` (`:198`), `destroy` (`:453`) e `indexByGroup` (`:32`), mas **não tem `index`**. A listagem de despesas é por grupo (`GET /api/groups/{id}/expenses`, `indexByGroup`), e `GET /api/expenses` não tem implementação nenhuma no controller. Quebra a Constitution §2.4 (toda rota registrada tem método) e é um resquício do `TASK-016` do Épico C, que previa "implementar ou remover do `apiResource` os verbos não suportados".
 
 ## 2. Correção
 
@@ -46,3 +46,9 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-11-03 | `cd backend && ./vendor/bin/pint --test` | `PASS ... 205 files` (204 mais o teste novo) |
 | 2026-11-03 | `cd backend && php artisan migrate:fresh --env=testing --force` (MySQL de teste recriado em `127.0.0.1:3307`, banco `ex-db`) e depois `php artisan test` (suíte inteira) | migração com 35 `DONE`, saída 0; `Tests: 981 passed (6012 assertions)`, `Duration: 144.94s`. Antes eram 979 (6009): +2 testes e +3 asserções, todos os testes existentes sem edição |
 | 2026-11-03 | `git diff --stat -- frontend backend/app` | vazio: só `backend/routes/api.php` (1 linha de código e 2 de comentário), o teste novo e documentação |
+| 2026-11-03 | `pr-readiness-checker` (agente) sobre a branch, com o banco de teste de pé | pronto para abrir o PR: `./vendor/bin/pint --test` `PASS ... 205 files`; `php artisan test` `Tests: 981 passed (6012 assertions)`, `Duration: 152.71s`; `GET api/expenses` fora de `php artisan route:list --path=api/expenses`; sem segredo, caminho local nem e-mail real nas 101 linhas adicionadas; frontend, `backend/app`, migrations e Constitution fora do diff |
+
+## Resolução
+Concluído em: 2026-11-03
+Branch: fix/20261103-get-expenses-sem-index-no-controller
+PR: https://github.com/isacaguiar/expense/pull/266
