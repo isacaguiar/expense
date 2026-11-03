@@ -68,4 +68,34 @@ class MyInvitationController extends Controller
             ],
         ]);
     }
+
+    /**
+     * O convidado recusa o convite (R8): não vira membro e **ninguém é avisado** (D6-A:
+     * avisar a recusa expõe a escolha de quem recusou sem benefício a quem convidou).
+     *
+     * Um único `UPDATE` condicional (dono, `pending` e dentro da validade, que é o escopo
+     * `open()`): zero linhas afetadas é o mesmo 404 de convite alheio, inexistente, já
+     * respondido, cancelado ou vencido, e repetir a recusa também cai aí. Se um aceite
+     * concorrente estiver com o convite travado, o `UPDATE` espera o commit e então já não
+     * encontra `pending`. Não consulta o grupo: a linha é do próprio convidado e não revela
+     * nada dele (o convite de grupo excluído some da lista, mas ainda pode ser recusado).
+     *
+     * Sem aviso e sem grupo, não há o que travar nem transação a abrir.
+     */
+    public function decline($invitationId)
+    {
+        abort_unless(ctype_digit((string) $invitationId), 404);
+
+        $declined = GroupInvitation::open()
+            ->where('id', (int) $invitationId)
+            ->where('user_id', auth()->id())
+            ->update([
+                'status' => GroupInvitation::STATUS_DECLINED,
+                'responded_at' => now(),
+            ]);
+
+        abort_if($declined === 0, 404);
+
+        return response()->json(['message' => 'Convite recusado.']);
+    }
 }

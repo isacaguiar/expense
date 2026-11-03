@@ -38,6 +38,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/me/overview', [OverviewController::class, 'show'])->middleware('throttle:overview');
     Route::get('/me/invitations', [MyInvitationController::class, 'index']);
     Route::post('/me/invitations/{invitationId}/accept', [MyInvitationController::class, 'accept']);
+    Route::post('/me/invitations/{invitationId}/decline', [MyInvitationController::class, 'decline']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [AuthController::class, 'dashboard']);
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
