@@ -26,7 +26,7 @@ import { API_BASE_URL } from '../config';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
-import type { GroupDetail, GroupMember, MemberExitBlocker } from '../types/group';
+import type { GroupDetail, GroupMember, MemberExitBlocker, PendingGroupInvitation } from '../types/group';
 
 /** Motivo (`MemberExitBlocker.reason`) em linguagem de tela. */
 const BLOCKER_REASONS: Record<string, string> = {
@@ -35,6 +35,22 @@ const BLOCKER_REASONS: Record<string, string> = {
 };
 
 type ExitErrorResponse = { status?: number; data?: { message?: string; blocking?: MemberExitBlocker[] } };
+
+/** Só o que a tela precisa para desenhar o convite: descarta o que não tem essa forma. */
+const isPendingInvitation = (item: unknown): item is PendingGroupInvitation => {
+  const candidate = item as Partial<PendingGroupInvitation> | null;
+  if (typeof candidate !== 'object' || candidate === null) return false;
+  if (typeof candidate.id !== 'number' || typeof candidate.email !== 'string') return false;
+
+  const inviter = candidate.invited_by;
+  return inviter == null || (typeof inviter === 'object' && typeof inviter.id === 'number' && typeof inviter.name === 'string');
+};
+
+/** "10/11/2026" na hora local de quem vê, ou vazio se a data não for válida. */
+const formatValidity = (iso: string): string => {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString('pt-BR');
+};
 
 const GroupMembersForm: React.FC = () => {
   const { id } = useParams<{ id?: string }>();
@@ -54,8 +70,18 @@ const GroupMembersForm: React.FC = () => {
   const [exitError, setExitError] = useState<string | null>(null);
   const [blocking, setBlocking] = useState<MemberExitBlocker[]>([]);
 
+  // Convites pendentes (feature 20261103-convite-pendente-no-grupo): carga à parte da do grupo e
+  // dos membros, e tolerante, para um problema aqui não derrubar a tela de Participantes.
+  const [invitations, setInvitations] = useState<PendingGroupInvitation[]>([]);
+  const [cancellingIds, setCancellingIds] = useState<Set<number>>(new Set());
+  const [invitationError, setInvitationError] = useState<string | null>(null);
+
   const isCreator = group?.created_by != null && group.created_by === currentUserId;
   const targetIsSelf = target !== null && target.id === currentUserId;
+
+  // Cancela quem convidou ou o criador do grupo (a API confere de novo: 403 para os outros).
+  const canCancelInvitation = (invitation: PendingGroupInvitation) =>
+    isCreator || (currentUserId !== null && invitation.invited_by?.id === currentUserId);
 
   const token = localStorage.getItem('accessToken');
   const config = {
@@ -81,7 +107,58 @@ const GroupMembersForm: React.FC = () => {
     };
 
     fetchData();
+    loadInvitations();
   }, [id]);
+
+  /**
+   * Busca os convites pendentes do grupo. Best effort: erro ou resposta que não é uma lista
+   * deixam a lista como está (vazia na primeira carga), e itens sem a forma de um convite são
+   * descartados.
+   */
+  const loadInvitations = async () => {
+    try {
+      const res = await axios.get<unknown>(`${API_BASE_URL}/api/groups/${id}/invitations`, config);
+      if (Array.isArray(res.data)) {
+        setInvitations(res.data.filter(isPendingInvitation));
+      }
+    } catch {
+      // sem a lista, Participantes segue como sempre foi
+    }
+  };
+
+  const setCancelling = (invitationId: number, cancelling: boolean) =>
+    setCancellingIds(prev => {
+      const next = new Set(prev);
+      if (cancelling) {
+        next.add(invitationId);
+      } else {
+        next.delete(invitationId);
+      }
+      return next;
+    });
+
+  const handleCancelInvitation = async (invitation: PendingGroupInvitation) => {
+    if (cancellingIds.has(invitation.id)) return;
+
+    setCancelling(invitation.id, true);
+    setInvitationError(null);
+    try {
+      await axios.delete(`${API_BASE_URL}/api/groups/${id}/invitations/${invitation.id}`, config);
+    } catch (err) {
+      const status = (err as { response?: { status?: number } } | null)?.response?.status;
+      // 404: o convite já foi respondido, cancelado ou venceu. Não há o que desfazer, só atualizar a lista.
+      if (status !== 404) {
+        setInvitationError('Não foi possível cancelar o convite agora. Tente novamente.');
+        setCancelling(invitation.id, false);
+        return;
+      }
+    }
+
+    // Sai da lista na hora e a recarga traz o que o servidor tem agora (se ela falhar, a lista fica como está).
+    setInvitations(prev => prev.filter(item => item.id !== invitation.id));
+    setCancelling(invitation.id, false);
+    await loadInvitations();
+  };
 
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -250,6 +327,50 @@ const GroupMembersForm: React.FC = () => {
             </CardContent>
           </Card>
         </Grid>
+
+        {invitations.length > 0 && (
+          <Grid size={{ xs: 12 }}>
+            <Card elevation={3} sx={{ borderRadius: 2 }}>
+              <CardContent>
+                <Typography variant="h6" gutterBottom>
+                  Convites pendentes
+                </Typography>
+                {invitationError && (
+                  <Alert severity="error" sx={{ mb: 1 }}>
+                    {invitationError}
+                  </Alert>
+                )}
+                <List disablePadding>
+                  {invitations.map(invitation => {
+                    const until = formatValidity(invitation.expires_at);
+
+                    return (
+                      <ListItem key={invitation.id} divider disableGutters>
+                        <ListItemText
+                          primary={invitation.email}
+                          secondary={`Convidado por ${invitation.invited_by?.name ?? 'alguém'}${until ? ` · válido até ${until}` : ''}`}
+                          sx={{ minWidth: 0, overflowWrap: 'anywhere' }}
+                        />
+                        {canCancelInvitation(invitation) && (
+                          <Button
+                            size="small"
+                            color="error"
+                            disabled={cancellingIds.has(invitation.id)}
+                            onClick={() => handleCancelInvitation(invitation)}
+                            aria-label={`Cancelar convite para ${invitation.email}`}
+                            sx={{ flexShrink: 0 }}
+                          >
+                            Cancelar
+                          </Button>
+                        )}
+                      </ListItem>
+                    );
+                  })}
+                </List>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
       </Grid>
 
       <Dialog open={target !== null} onClose={leaving ? undefined : closeConfirmation} fullWidth maxWidth="xs">
