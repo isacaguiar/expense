@@ -37,3 +37,12 @@ mecanismo real (cache key `invitation-token:`, TTL 2 dias, gerado com
 ainda batem com o código.
 
 Tipo sugerido: doc
+
+## Nota de 2026-11-05 (TASK-581 da feature convite-pendente-no-grupo)
+A TASK-581 reescreveu o **item 2** do §3.2 do `01-specify.md` (agora descreve o convite pendente, o token de cache `invitation-token:` de 2 dias, o `UserInvitedMail` e o `POST /invitations/verify`) e o §3.3. Isto responde à primeira metade da correção sugerida acima. Ao conferir "os demais itens da seção 3.2", como este item pede, achei o que **ficou** e que a TASK-581 não tocou (fora do que o plano dela aprovou):
+- **Item 1** do §3.2 descreve `POST /invitations` (`InvitationController::invite`), que **não existe mais**: foi removido na TASK-192 (commit `597d99f5d5`, "remove fluxo de convite duplicado"); só o `POST /invitations/verify` ficou. A rota e o método sumiram de `routes/api.php` e do controller.
+- O título da seção ("dois fluxos distintos e independentes") e o bloco que a fecha ("Os fluxos 1 e 2 resolvem o mesmo problema... não compartilham código — ver 'Divergências'") dependem do item 1. A seção 6 não tem linha sobre convites, então o "ver Divergências" aponta para o nada. O último ponto do §5 ("Unificar os dois fluxos de convite em um só") foi cumprido pela própria TASK-192.
+- `02-plan.md:89` e `03-tasks.md` também falam dos dois fluxos, mas são congelados pelo ADR-002 e ficam como estão.
+- A linha 42 ("comparado por hash") é o outro item, o 124/120, e não é deste.
+
+Status: segue **Aberto**, com o que sobrou sendo só texto do `01-specify.md` (tipo doc).
