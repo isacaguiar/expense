@@ -263,6 +263,102 @@ describe('GroupMembersForm: convites pendentes', () => {
     expect(axios.delete).toHaveBeenCalledTimes(1);
   });
 
+  // --- Convidar (TASK-580): o formulário fala em convite, e não em adicionar ---
+
+  const typeEmailAndInvite = async (email: string) => {
+    await userEvent.type(screen.getByLabelText(/^E-mail do membro/), email);
+    await userEvent.click(screen.getByRole('button', { name: 'Convidar' }));
+  };
+
+  const membersReads = () => vi.mocked(axios.get).mock.calls.filter(([url]) => String(url).endsWith('/members')).length;
+
+  it('talks about inviting, not adding: the card title and the button', async () => {
+    mockApi();
+    renderForm();
+
+    expect(await screen.findByText('Convidar novo membro')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Convidar' })).toBeInTheDocument();
+    expect(screen.queryByText('Adicionar novo membro')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Adicionar' })).not.toBeInTheDocument();
+    // O campo e o rótulo continuam os mesmos.
+    expect(screen.getByLabelText(/^E-mail do membro/)).toBeInTheDocument();
+  });
+
+  it('shows the new invitation, with Cancelar for who sent it, after inviting', async () => {
+    const server = mockApi({ me: 1, createdBy: 1, invitations: [BY_BRUNO] });
+    vi.mocked(axios.post).mockImplementation(async () => {
+      server.invitations = [BY_BRUNO, invitation(13, 'gabi@example.com', { id: 1, name: 'Ana' })];
+      return { data: { message: 'Convite enviado.', pending: true } };
+    });
+    renderForm();
+    await screen.findByText('eva@example.com');
+
+    await typeEmailAndInvite('gabi@example.com');
+
+    expect(await screen.findByText('Convite enviado para gabi@example.com. A pessoa só entra no grupo depois de aceitar.')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Cancelar convite para gabi@example.com' })).toBeInTheDocument();
+    expect(screen.getByText('eva@example.com')).toBeInTheDocument();
+  });
+
+  it('still says the invitation was sent when only reloading the pending list fails afterwards', async () => {
+    const server = mockApi();
+    vi.mocked(axios.post).mockImplementation(async () => {
+      server.invitationsFail = true; // o convite foi criado, mas a recarga da lista falha
+      return { data: { message: 'Convite enviado.', pending: true } };
+    });
+    renderForm();
+    await screen.findByText('Convidar novo membro');
+
+    await typeEmailAndInvite('gabi@example.com');
+
+    expect(await screen.findByText(/Convite enviado para gabi@example.com/)).toBeInTheDocument();
+    expect(screen.queryByText('Erro ao enviar o convite.')).not.toBeInTheDocument();
+  });
+
+  it('says "Erro ao enviar o convite." when the invitation fails, and keeps the typed e-mail', async () => {
+    mockApi();
+    vi.mocked(axios.post).mockRejectedValue({ response: { status: 500 } });
+    renderForm();
+    await screen.findByText('Convidar novo membro');
+    const readsBefore = membersReads();
+
+    await typeEmailAndInvite('gabi@example.com');
+
+    expect(await screen.findByText('Erro ao enviar o convite.')).toBeInTheDocument();
+    expect(screen.getByLabelText(/^E-mail do membro/)).toHaveValue('gabi@example.com');
+    expect(screen.queryByText(/Convite enviado para/)).not.toBeInTheDocument();
+    expect(membersReads()).toBe(readsBefore);
+    expect(screen.getByRole('button', { name: 'Convidar' })).toBeEnabled();
+  });
+
+  it('clears the previous error when the next invitation goes through', async () => {
+    mockApi();
+    vi.mocked(axios.post).mockRejectedValueOnce({ response: { status: 500 } }).mockResolvedValue({ data: { pending: true } });
+    renderForm();
+    await screen.findByText('Convidar novo membro');
+    await typeEmailAndInvite('gabi@example.com');
+    expect(await screen.findByText('Erro ao enviar o convite.')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Convidar' }));
+
+    expect(await screen.findByText(/Convite enviado para gabi@example.com/)).toBeInTheDocument();
+    expect(screen.queryByText('Erro ao enviar o convite.')).not.toBeInTheDocument();
+  });
+
+  it('removes the success message when the next invitation fails', async () => {
+    mockApi();
+    vi.mocked(axios.post).mockResolvedValueOnce({ data: { pending: true } }).mockRejectedValue({ response: { status: 409 } });
+    renderForm();
+    await screen.findByText('Convidar novo membro');
+    await typeEmailAndInvite('gabi@example.com');
+    expect(await screen.findByText(/Convite enviado para gabi@example.com/)).toBeInTheDocument();
+
+    await typeEmailAndInvite('hugo@example.com');
+
+    expect(await screen.findByText('Erro ao enviar o convite.')).toBeInTheDocument();
+    expect(screen.queryByText(/Convite enviado para/)).not.toBeInTheDocument();
+  });
+
   it('shows no card when there is no pending invitation', async () => {
     mockApi({ invitations: [] });
     renderForm();

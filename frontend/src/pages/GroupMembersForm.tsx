@@ -62,6 +62,8 @@ const GroupMembersForm: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Aviso de convite enviado (feature 20261103-convite-pendente-no-grupo).
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null);
 
   // Sair do grupo / remover membro (item 086): `target` é quem a confirmação está tratando.
   const currentUserId = useCurrentUserId();
@@ -160,22 +162,29 @@ const GroupMembersForm: React.FC = () => {
     await loadInvitations();
   };
 
+  /**
+   * Convida a pessoa (feature 20261103-convite-pendente-no-grupo): o `POST` cria um convite
+   * pendente, e quem convida só vira membro ao aceitar. Por isso a lista de membros não é relida
+   * (nada mudou nela); recarrega-se a de convites pendentes, onde o convite novo aparece.
+   */
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) return;
 
     setSubmitting(true);
+    setError(null);
+    setInviteNotice(null);
     try {
       await axios.post(
         `${API_BASE_URL}/api/groups/${id}/members`,
         { email },
         config
       );
+      setInviteNotice(`Convite enviado para ${email}. A pessoa só entra no grupo depois de aceitar.`);
       setEmail('');
-      const membersRes = await axios.get<GroupMember[]>(`${API_BASE_URL}/api/groups/${id}/members`, config);
-      setMembers(membersRes.data);
+      await loadInvitations();
     } catch {
-      setError('Erro ao adicionar membro.');
+      setError('Erro ao enviar o convite.');
     } finally {
       setSubmitting(false);
     }
@@ -297,7 +306,7 @@ const GroupMembersForm: React.FC = () => {
           <Card elevation={3} sx={{ borderRadius: 2 }}>
             <CardContent>
               <Typography variant="h6" gutterBottom>
-                Adicionar novo membro
+                Convidar novo membro
               </Typography>
               <Box component="form" onSubmit={handleAddMember} sx={{ mt: 2 }}>
                 <TextField
@@ -314,7 +323,7 @@ const GroupMembersForm: React.FC = () => {
                     variant="contained"
                     disabled={submitting}
                   >
-                    Adicionar
+                    Convidar
                   </Button>
                   <Button
                     variant="outlined"
@@ -324,6 +333,11 @@ const GroupMembersForm: React.FC = () => {
                   </Button>
                 </Box>
               </Box>
+              {inviteNotice && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  {inviteNotice}
+                </Alert>
+              )}
             </CardContent>
           </Card>
         </Grid>
