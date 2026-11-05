@@ -2,9 +2,11 @@
 
 > Formato igual ao usado no SDD geral — ver `docs/sdd/03-tasks.md` para a definição completa do formato e a regra de atomicidade ("se a descrição tem 'e' ligando duas entregas independentes, é duas tasks").
 
-Versão: 1.0 · Criado em: 20261103
+Versão: 1.1 · Criado em: 20261103
 
-**Status: v1.0, aguardando aprovação.** O specify (v1.0, D1 a D9 como recomendado) e o plan (v1.0, com os ajustes 1 a 7) foram aprovados em 2026-11-03.
+**v1.1 (2026-11-05):** acrescenta a **TASK-582** (manual e site), a pedido do usuário depois da TASK-581 (item 136 do backlog, decisões D1-A e D2-B). Nenhuma das TASK-566 a 581 mudou.
+
+**Status da v1.0: aguardando aprovação.** O specify (v1.0, D1 a D9 como recomendado) e o plan (v1.0, com os ajustes 1 a 7) foram aprovados em 2026-11-03.
 
 IDs a partir de **TASK-566**: o maior em `docs/` e nas mensagens de commit de todas as refs é TASK-565 (feature `20261030-saida-e-remocao-de-membro`), conferido em 2026-11-03 com `git grep` e `git log --all`. Reconfirmar a numeração antes de criar a primeira branch de task, caso outra feature em andamento reserve IDs.
 
@@ -34,6 +36,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: item 133 do backlog (`
 | TASK-579 | Mostrar em Participantes a lista de convites pendentes com **Cancelar** | frontend | plan.md §9, §11 | nenhum | Concluída |
 | TASK-580 | Trocar "Adicionar" por "Convidar" em Participantes, com a mensagem de convite enviado | frontend | plan.md §11 | nenhum | Concluída |
 | TASK-581 | Atualizar `01-specify.md` §3.2 e §3.3 para o convite pendente | doc | plan.md §13 | nenhum | Concluída |
+| TASK-582 | Corrigir o manual (`MANUAL.md`, `manual.html`, `MANUAL.pdf`) e o site (`manual.php`, `recursos.php`) para o convite pendente | doc | plan.md §13 | nenhum | Concluída |
 
 ## Critérios de aceite
 
@@ -108,6 +111,11 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: item 133 do backlog (`
   - `docs/sdd/01-specify.md` §3.2 item 2 reescrito (hoje fala em `Password::getRepository()`, que o código não usa; passa a descrever o `User` criado quando o e-mail é novo, o token de 2 dias, o `UserInvitedMail` e o **convite pendente**) e a linha de `GET/POST /groups/{groupId}/members` em §3.3 atualizada (o `POST` cria o convite, o aceite é do convidado e as cinco rotas novas), com o cabeçalho de versão e data do documento atualizado se houver (**CA-18**).
   - `git grep -n -i "adicionar\|adiciona" -- docs/sdd` e a leitura de cada ocorrência que fale de adição direta de membro: nenhuma fica desatualizada, ou cada uma é corrigida na task; os documentos de `docs/feature/concluidas` ficam como estão (snapshots).
   - CRLF preservado (conferido por bytes, não por `grep -c`); `git diff --stat -- docs/sdd/00-constitution.md` **vazio** (a Constitution é só sinalizada ao usuário, nunca editada).
+- **TASK-582** (item 136 do backlog; acrescentada em 2026-11-05):
+  - Os quatro textos que diziam que a pessoa convidada "entra direto", "passa a ver o grupo na hora" ou é "adicionada" (`MANUAL.md`, `docs/manual/manual.html`, `site/public/manual.php` e `site/public/recursos.php`) passam a descrever **convidar e aceitar**; `git grep -n -i -E "entra direto|já entra no grupo|passa a ver o|adicione as pessoas|adicione participantes|ao ser adicionado" -- site/public site/src docs/manual MANUAL.md` volta **vazio**.
+  - O manual ganha o que faltava: em Meus Grupos, **Convites recebidos** com **Aceitar** e **Recusar** (recusar não avisa ninguém), a validade de 7 dias e o que a pessoa vê antes de aceitar (só o nome do grupo); em Participantes, **Convidar** e **Convites pendentes** com **Cancelar** (quem convidou ou quem criou o grupo). O `MANUAL.md`, o `manual.html` e a página do site dizem a mesma coisa (`docs/manual/README.md`).
+  - `MANUAL.pdf` regerado por `docs/manual/gerar-pdf.ps1` a partir do `manual.html`: o texto novo aparece no PDF e o número de páginas continua o mesmo (7), ou a diferença é explicada no log.
+  - `php -l` nos dois arquivos do site; CRLF preservado (conferido por bytes); `git diff --stat -- backend frontend docs/sdd/00-constitution.md` **vazio**. Nenhum deploy: o site só sai quando o usuário mergear em `main` (`deploy-site.yml`).
 
 ## Cobertura dos critérios de aceite do specify
 
@@ -128,4 +136,4 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: item 133 do backlog (`
 | CA-15 | TASK-579, TASK-580 |
 | CA-16 | TASK-577 |
 | CA-17 | TASK-577 a TASK-580 e o checklist final (`tsc`, Vitest dos arquivos tocados e suíte inteira com `--maxWorkers=1`) |
-| CA-18 | TASK-581 |
+| CA-18 | TASK-581 (e, pelo terceiro ponto do plan §13, TASK-582) |
