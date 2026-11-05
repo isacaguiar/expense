@@ -76,9 +76,20 @@ require __DIR__ . '/../src/templates/nav.php';
   <section id="convidar">
     <h2>3. Convidar as pessoas</h2>
     <p>
-      Dentro do grupo, adicione participantes pelo e-mail. Quem já tem conta passa a ver o
-      grupo na hora. Quem ainda não tem recebe um e-mail com um link para definir a própria
-      senha, e entra direto no grupo.
+      Dentro do grupo, em <strong>Participantes</strong>, informe o e-mail da pessoa e clique
+      em <strong>Convidar</strong>. Ela só entra no grupo depois de <strong>aceitar</strong> o
+      convite, que vale 7 dias.
+    </p>
+    <p>
+      Quem já tem conta vê o convite em <strong>Meus Grupos</strong>, em "Convites recebidos",
+      e no sino de notificações. Quem ainda não tem recebe também um e-mail com um link para
+      definir a própria senha e, depois de entrar, aceita o convite no mesmo lugar, com o
+      botão <strong>Aceitar</strong>. <strong>Recusar</strong> descarta o convite sem avisar ninguém. Até aceitar, a pessoa não
+      vê nada do grupo além do nome.
+    </p>
+    <p>
+      Os convites que ainda não foram respondidos aparecem em Participantes, em
+      "Convites pendentes". Quem convidou, ou quem criou o grupo, pode <strong>Cancelar</strong>.
     </p>
   </section>
 

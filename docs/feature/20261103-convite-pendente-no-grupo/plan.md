@@ -152,6 +152,7 @@ Versão: 1.0 · Criado em: 20261103
 - **`docs/sdd/01-specify.md`**: §3.2 item 2 é reescrito (hoje fala em `Password::getRepository()`, que o código já não usa desde o token de convite em cache; passa a descrever: cria o `User` quando o e-mail é novo, token de 2 dias, `UserInvitedMail` e **convite pendente**) e a linha de `GET/POST /groups/{groupId}/members` em §3.3 é atualizada (o `POST` cria o convite; as cinco rotas novas; a regra de aceite).
 - A **Constitution não é editada**. O que ficar desatualizado nela é sinalizado ao usuário, e a §4.1 já está sinalizada no ajuste 6.
 - Se o `docs/sdd/06-context-backend.md` ou outro documento citar a adição direta de membro, atualizo na mesma task; a conferência é um `git grep` nas docs vivas (fora de `docs/feature/concluidas`, que são snapshots).
+- **Manual e site (TASK-582, acrescentada em 2026-11-05 a pedido do usuário; item 136 do backlog):** a varredura da TASK-581 achou, fora de `docs/sdd`, quatro textos para o usuário final que dizem que a pessoa convidada entra direto (`MANUAL.md`, `docs/manual/manual.html`, `site/public/manual.php`, `site/public/recursos.php`) e um PDF gerado do `manual.html`. Por serem conteúdo público, ficaram de fora da 581 e viraram a TASK-582: corrige os quatro, acrescenta Convites recebidos e Convites pendentes ao manual e regera o `MANUAL.pdf` com `docs/manual/gerar-pdf.ps1`. Sem imagem nova (as capturas de tela do manual seguem válidas) e sem deploy dentro da feature.
 
 ## 14. Ordem de execução
 

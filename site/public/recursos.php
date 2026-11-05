@@ -20,7 +20,7 @@ $blocks = [
         'title' => 'Grupos e pessoas',
         'items' => [
             ['icon' => 'users', 'title' => 'Grupos para cada contexto', 'text' => 'Uma república, a família, a viagem com os amigos. Cada grupo tem os seus participantes e as suas despesas, sem se misturar.'],
-            ['icon' => 'user-plus', 'title' => 'Convite por e-mail', 'text' => 'Convide alguém pelo e-mail. Quem ainda não tem conta recebe um link para definir a própria senha e já entra no grupo.'],
+            ['icon' => 'user-plus', 'title' => 'Convite por e-mail', 'text' => 'Convide alguém pelo e-mail. A pessoa só entra no grupo depois de aceitar o convite, e quem ainda não tem conta recebe um link para definir a própria senha.'],
             ['icon' => 'settings', 'title' => 'Dia de fechamento por grupo', 'text' => 'Cada grupo define em que dia do mês o ciclo fecha, para bater com o calendário real das contas.'],
         ],
     ],
