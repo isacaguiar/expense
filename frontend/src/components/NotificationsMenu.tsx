@@ -37,7 +37,8 @@ interface NotificationsMenuProps {
 /**
  * Lista de notificações aberta pelo sino do cabeçalho. Busca a 1ª página de
  * `GET /api/notifications` só quando abre; permite marcar todas como lidas e,
- * ao clicar num item, navega para o grupo dele e marca aquele item como lido.
+ * ao clicar num item, navega para o grupo dele (o convite recebido, `group_invitation`,
+ * leva a Meus Grupos, onde se responde) e marca aquele item como lido.
  * Ver docs/feature/concluidas/202609/20260903-notificacoes-in-app/plan.md §4.
  */
 const NotificationsMenu: React.FC<NotificationsMenuProps> = ({ anchorEl, open, onClose, onRead }) => {
@@ -93,9 +94,16 @@ const NotificationsMenu: React.FC<NotificationsMenuProps> = ({ anchorEl, open, o
         // best-effort: navegar é o que importa no clique
       });
 
-    const groupId = item.data?.groupId ?? item.group_id;
-    if (groupId != null) {
-      navigate(`/groups/${groupId}/summary`);
+    if (item.type === 'group_invitation') {
+      // O convidado ainda não é membro: abrir o grupo daria 404. Ele responde ao convite em
+      // Meus Grupos (feature 20261103-convite-pendente-no-grupo). Vale pelo tipo, e não pela
+      // ausência de `groupId`, para uma linha com grupo no payload também cair aqui.
+      navigate('/meus-grupos');
+    } else {
+      const groupId = item.data?.groupId ?? item.group_id;
+      if (groupId != null) {
+        navigate(`/groups/${groupId}/summary`);
+      }
     }
     onClose();
   };

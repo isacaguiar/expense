@@ -31,7 +31,7 @@ class GroupMemberControllerTest extends TestCase
         return auth('api')->login($user);
     }
 
-    public function test_member_can_add_member_to_group(): void
+    public function test_member_inviting_an_existing_user_creates_a_pending_invitation_not_a_member(): void
     {
         $member = User::factory()->create();
         $group = Group::create(['name' => 'Grupo de teste']);
@@ -42,8 +42,15 @@ class GroupMemberControllerTest extends TestCase
         $response = $this->withToken($this->tokenFor($member))
             ->postJson('/api/groups/'.$group->id.'/members', ['email' => $existingUser->email]);
 
-        $response->assertStatus(201);
-        $this->assertTrue($group->members()->where('user_id', $existingUser->id)->exists());
+        // Convite pendente (feature 20261103-convite-pendente-no-grupo): só vira membro quem aceita.
+        $response->assertStatus(201)->assertJsonPath('pending', true);
+        $this->assertFalse($group->members()->where('user_id', $existingUser->id)->exists());
+        $this->assertDatabaseHas('ex_group_invitations', [
+            'group_id' => $group->id,
+            'user_id' => $existingUser->id,
+            'invited_by' => $member->id,
+            'status' => 'pending',
+        ]);
     }
 
     public function test_non_member_cannot_add_member_to_group(): void

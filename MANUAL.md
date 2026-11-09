@@ -29,14 +29,19 @@ mês a mês, quem deve quanto a quem, e paga/cobra por Pix dentro do próprio ap
 ### Login
 ![Tela de login](docs/manual/images/01-login.jpg)
 Informe e-mail e senha e clique em **Entrar**. Novos usuários entram por convite:
-ao ser adicionado a um grupo, você recebe um e-mail com um link para criar a
-senha e ativar a conta.
+quando alguém convida você para um grupo, você recebe um e-mail com um link para
+criar a senha e ativar a conta. Depois de entrar, aceite o convite em **Meus
+Grupos**.
 
 ### Meus Grupos
 ![Lista de grupos do usuário](docs/manual/images/02-meus-grupos.jpg)
 Ponto de partida. Lista os grupos de que você participa, com o responsável e os
 integrantes. **Novo Grupo** cria um grupo (informe nome, descrição e, se quiser,
 um "dia de fechamento"). Clique no nome do grupo para abrir a Home dele.
+Quando alguém convida você para um grupo, o convite aparece no alto da página, em
+**Convites recebidos** (e no sino de notificações): **Aceitar** leva você ao grupo e
+**Recusar** descarta o convite, sem avisar ninguém. O convite vale 7 dias, e
+enquanto você não aceita, você não vê nada do grupo além do nome.
 
 ### Home (resumo do grupo)
 ![Home do grupo com totais e saldo por pessoa](docs/manual/images/03-resumo.jpg)
@@ -124,9 +129,13 @@ daquele ciclo ficam congelados e passam a aparecer em Relatórios.
 
 ## Passo a passo
 
-1. **Ative sua conta** pelo link do convite e faça login.
+1. **Ative sua conta** pelo link do convite, faça login e aceite o convite em
+   **Meus Grupos**.
 2. Em **Configurações → Minha Conta**, cadastre sua **chave Pix** (para receber).
-3. **Crie o grupo** e, em **Participantes**, adicione as pessoas por e-mail.
+3. **Crie o grupo** e, em **Participantes**, convide as pessoas por e-mail. Cada
+   pessoa só entra depois de **aceitar o convite** (vale 7 dias); os convites ainda
+   sem resposta ficam em **Convites pendentes**, onde quem convidou, ou quem criou o
+   grupo, pode **Cancelar**.
 4. Em **Despesas**, lance os gastos do mês:
    - contas recorrentes → tipo **Fixa** (uma vez só);
    - compras do dia a dia → **À Vista** ou **Parcelada**.

@@ -42,6 +42,28 @@ describe('notificationText', () => {
     expect(notificationText('group_member_removed', {})).not.toContain('undefined');
   });
 
+  // Convite pendente (feature 20261103-convite-pendente-no-grupo): o convidado ainda não é
+  // membro, então o texto fala em convite e não em "adicionou você".
+  it('group_invitation says who invited the recipient to which group', () => {
+    expect(notificationText('group_invitation', { actorName: 'Ana', groupName: 'Casa' })).toBe(
+      'Ana convidou você para o grupo "Casa"'
+    );
+  });
+
+  it('group_invitation does not print "undefined" when the payload is incomplete', () => {
+    expect(notificationText('group_invitation', {})).not.toContain('undefined');
+  });
+
+  it('group_invitation_accepted says who accepted the invitation to which group', () => {
+    expect(notificationText('group_invitation_accepted', { actorName: 'Bruno', groupName: 'Casa' })).toBe(
+      'Bruno aceitou o convite para o grupo "Casa"'
+    );
+  });
+
+  it('group_invitation_accepted does not print "undefined" when the payload is incomplete', () => {
+    expect(notificationText('group_invitation_accepted', {})).not.toContain('undefined');
+  });
+
   it('expense_created names the actor and the expense', () => {
     expect(notificationText('expense_created', { actorName: 'Ana', expenseDescription: 'Internet' })).toBe(
       'Ana adicionou a despesa "Internet"'

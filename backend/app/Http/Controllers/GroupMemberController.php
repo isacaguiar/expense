@@ -2,16 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use App\Mail\UserInvitedMail;
 use App\Models\Group;
-use App\Models\User;
+use App\Services\GroupInvitationService;
 use App\Services\MemberExitBlockers;
 use App\Support\Notifier;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 
 class GroupMemberController extends Controller
 {
@@ -29,11 +25,21 @@ class GroupMemberController extends Controller
         return response()->json($group->members);
     }
 
+    /**
+     * Convida uma pessoa para o grupo (feature 20261103-convite-pendente-no-grupo): cria
+     * (ou renova, ou reabre) um **convite pendente**; ninguém vira membro sem aceitar. A
+     * rota e o 201 são os de antes, mas o 201 deixa de significar "virou membro".
+     *
+     * A resposta é a mesma para e-mail com e sem conta (R4): não revela quem já usa o
+     * sistema. O `email` devolvido é o que quem chama digitou.
+     */
     public function store(Request $request, $groupId)
     {
         // 1) Valida só o formato do e‑mail
+        // `max:255`: a regra `email` aceita endereços de até uns 318 caracteres, e a coluna
+        // `ex_users.email` tem 255 (sem o limite, um endereço novo e longo dava 500).
         $data = $request->validate([
-            'email' => 'required|email',
+            'email' => 'required|email|max:255',
         ]);
 
         // 2) Busca o grupo e confirma que quem chama é membro dele
@@ -45,50 +51,23 @@ class GroupMemberController extends Controller
         // antigo que o grupo ainda "existe" para escrita.
         abort_if($group->deleted, 404);
 
-        // 3) Tenta carregar o usuário
-        $user = User::where('email', $data['email'])->first();
-        $isNewUser = false;
+        // 3) Cria, renova ou reabre o convite; `null` = a pessoa já é membro.
+        $invitation = app(GroupInvitationService::class)->invite($group, $data['email'], auth()->user());
 
-        if (! $user) {
-            $isNewUser = true;
-
-            // 3.1) Cria senha aleatória e preenche name (pode ajustar)
-            $password = Str::random(10);
-            $user = User::create([
-                'name' => explode('@', $data['email'])[0],
-                'email' => $data['email'],
-                'password' => bcrypt($password),
-            ]);
-
-            // 3.2) Gera token de convite dedicado (2 dias) — não usa
-            // Password::getRepository()/config('auth.passwords.users.expire'),
-            // que é infraestrutura genérica de "esqueci senha" (60 min).
-            $token = bin2hex(random_bytes(32));
-            Cache::put('invitation-token:'.$user->email, $token, now()->addDays(2));
-
-            // 3.3) Dispara e‑mail de convite
-            Mail::to($user->email)
-                ->send(new UserInvitedMail($user, $group, $token, auth()->user()));
-        }
-
-        // 4) Evita duplicata no pivot
-        if ($group->members()->where('user_id', $user->id)->exists()) {
+        if ($invitation === null) {
             return response()->json([
                 'message' => 'Usuário já é membro deste grupo.',
             ], 409);
         }
 
-        // 5) Associa ao grupo
-        $group->members()->attach($user->id);
-
-        // Chegar aqui é attach real — o passo 4 já devolveu 409 se o usuário
-        // já era membro.
-        Notifier::groupMemberAdded($group, $user->id, auth()->user()->name);
-
         return response()->json([
-            'message' => $isNewUser
-                ? 'Usuário criado e convidado com sucesso.'
-                : 'Membro adicionado com sucesso.',
+            'message' => 'Convite enviado.',
+            'pending' => true,
+            'invitation' => [
+                'id' => $invitation->id,
+                'email' => $data['email'],
+                'expires_at' => $invitation->expires_at,
+            ],
         ], 201);
     }
 

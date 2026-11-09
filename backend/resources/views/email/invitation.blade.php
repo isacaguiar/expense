@@ -59,6 +59,11 @@
       <p><em>Mensagem:</em> "{{ $inviteMessage }}"</p>
     @endif
 
+    <p>
+      Este é um <strong>convite pendente</strong>: você só entra em <strong>{{ $groupName }}</strong> se aceitar.
+      Depois de ativar a conta e entrar, o convite aparece em <strong>Meus Grupos</strong>, onde você pode aceitar ou recusar.
+    </p>
+
     <p>Para começar, clique no botão abaixo e ative sua conta:</p>
 
     <p style="text-align: center;">

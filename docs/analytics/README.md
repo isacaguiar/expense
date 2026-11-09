@@ -2,7 +2,7 @@
 
 > Documento vivo: o que o Expense mede no Google Analytics 4, como nomear os links de campanha e como ler o resultado por canal. Origem: item 066 do backlog (`docs/backlog/metricas-aquisicao-ativacao.md`), construído na feature `20261004-metricas-aquisicao-ativacao` (a pasta vai para `docs/feature/concluidas/` quando o PR mergeia em `dev`). A propriedade GA4 e o consentimento vêm da feature concluída `20260920-analytics-app-e-consentimento`.
 
-Versão: 1.0 · Última atualização: 2026-10-04
+Versão: 1.1 · Última atualização: 2026-11-05
 
 ---
 
@@ -25,9 +25,9 @@ Regras que valem para todos:
 
 - Disparam **depois** da resposta de sucesso da API e dentro do handler da ação, nunca em efeito de montagem. Falha da API, validação local que bloqueia o envio e recarregar a tela não medem.
 - Todos levam `page_location` sanitizado (`pageLocation.ts`). O gtag, sozinho, usaria o endereço real, que na tela do convite traz e-mail e token.
-- `login` não é medido; adicionar um membro ao grupo (`member_invited`) fica para o item 065 do backlog; edição, exclusão e Pix não entram.
-- Quem é convidado **não** gera `group_joined`: a pessoa já é membro do grupo no momento do convite (feito no servidor por quem convidou), então não existe um momento de "entrar" no navegador.
-- Quem já tinha conta e é adicionado a um grupo não gera `sign_up`: não é um cadastro novo.
+- `login` não é medido; convidar alguém para o grupo (`member_invited`) fica para o item 065 do backlog; edição, exclusão e Pix não entram.
+- Quem é convidado só entra no grupo ao **aceitar** o convite em Meus Grupos (`POST /me/invitations/{id}/accept`), desde a feature `20261103-convite-pendente-no-grupo`. Esse momento existe no navegador, mas **não é medido**: não há evento `group_joined` e o aceite não dispara nenhum evento. Medi-lo seria um evento novo (veja "Acrescentar um evento novo", abaixo); a decisão está no item 135 do backlog.
+- Quem já tinha conta e é convidado para um grupo não gera `sign_up`: não é um cadastro novo.
 
 **Acrescentar um evento novo**, nesta ordem: (1) incluir o evento e seus parâmetros em `PARAMETROS_PERMITIDOS` e na assinatura de `frontend/src/analytics/trackEvent.ts`; (2) teste em `trackEvent.test.ts` e na página que dispara; (3) esta tabela; (4) o texto da política de privacidade (`site/src/legal/privacidade.php`), se a ação ainda não estiver descrita; (5) marcar como evento-chave no GA4, se for uma conversão.
 
@@ -60,7 +60,7 @@ Como o app trata a campanha: lê as quatro etiquetas na hora em que o app carreg
 
 Uma pessoa está **ativada** quando registrou ao menos uma despesa (`expense_created`) em até **7 dias** depois do cadastro (`sign_up`).
 
-- Não exige criar grupo: quem foi convidado já é membro desde o convite. Quem se cadastra sozinho precisa de um grupo para lançar despesa, e isso entra na conta sem evento próprio.
+- Não exige criar grupo: quem foi convidado passa a ser membro ao aceitar o convite (enquanto o convite está pendente, a pessoa não tem acesso ao grupo e não consegue lançar despesa nele). Quem se cadastra sozinho precisa de um grupo para lançar despesa, e isso entra na conta sem evento próprio.
 - Ativação é uma **definição de leitura**, não um evento: ela sai do cruzamento de `sign_up` e `expense_created` no relatório. Os 7 dias são uma convenção; se a exploração de funil do GA4 não permitir impor a janela, leia por coorte semanal de cadastro e anote no relatório o que o GA4 não conseguiu impor.
 
 ## 5. Relatório por canal
