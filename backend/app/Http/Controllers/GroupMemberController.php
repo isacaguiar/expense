@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Group;
 use App\Services\GroupInvitationService;
 use App\Services\MemberExitBlockers;
+use App\Services\MemberResponsibleService;
 use App\Support\Notifier;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,7 +23,13 @@ class GroupMemberController extends Controller
         abort_if($group === null, 404);
         $this->authorizeMembership($group);
 
-        return response()->json($group->members);
+        // Quem paga por quem (feature 20261109-responsavel-do-devedor, R13): uma consulta para o grupo todo.
+        // Só `id` e `name` de cada responsável, para não vazar e-mail, Pix nem contato.
+        $members = $group->members;
+        $responsibles = app(MemberResponsibleService::class)->responsiblesByDebtor($group->id);
+        $members->each(fn ($member) => $member->setAttribute('responsibles', $responsibles->get($member->id, [])));
+
+        return response()->json($members);
     }
 
     /**
@@ -115,6 +122,10 @@ class GroupMemberController extends Controller
             }
 
             $locked->members()->detach($userId);
+
+            // Os vínculos "quem paga por quem" de quem saiu somem, como devedor e como responsável (R12).
+            // Depois do bloqueio acima: o 422 não apaga nada.
+            app(MemberResponsibleService::class)->clearFor($locked->id, (int) $userId);
 
             if ($locked->members()->count() === 0) {
                 $locked->update(['deleted' => true]);
