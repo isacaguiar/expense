@@ -28,7 +28,7 @@ Tipo sugerido: feature, via `/promover-backlog 133`; exige migration aditiva (ga
 
 ## Resolução
 Concluído em: 2026-11-09
-Feature: docs/feature/20261103-convite-pendente-no-grupo/   (vai para docs/feature/concluidas/202611/ quando o PR mergear em `dev`, ADR-009)
+Feature: docs/feature/concluidas/202611/20261103-convite-pendente-no-grupo/
 Tasks: TASK-566 a TASK-582
 PRs: https://github.com/isacaguiar/expense/pull/267
 

@@ -1,7 +1,7 @@
 # Medir a entrada no grupo por convite (o aceite) no analytics
 
 ID: 135
-Origem: feature `docs/feature/20261103-convite-pendente-no-grupo/` (TASK-581, ao corrigir `docs/analytics/README.md` §2 e §4, que diziam que quem é convidado já é membro desde o convite)
+Origem: feature `docs/feature/concluidas/202611/20261103-convite-pendente-no-grupo/` (TASK-581, ao corrigir `docs/analytics/README.md` §2 e §4, que diziam que quem é convidado já é membro desde o convite)
 Criado em: 2026-11-05
 Prioridade: BAIXA
 Status: Aberto
