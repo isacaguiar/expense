@@ -252,6 +252,24 @@ class Notifier
     }
 
     /**
+     * O devedor escolheu alguém para pagar por ele (`GroupMemberResponsibleController@update`) → avisa
+     * esse responsável, um por pessoa que **entrou** na lista (quem já estava e quem saiu não recebem).
+     *
+     * Com `group_id` e `groupId`, ao contrário do convite: o responsável é membro do grupo e o sino pode
+     * abrir o resumo dele. Feature 20261109-responsavel-do-devedor, specify R11.
+     */
+    public static function paymentResponsibleAssigned(Group $group, int $responsibleId, ?string $debtorName): void
+    {
+        self::guard('payment_responsible_assigned', function () use ($group, $responsibleId, $debtorName) {
+            self::fanOut([$responsibleId], 'payment_responsible_assigned', $group->id, [
+                'actorName' => $debtorName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+            ]);
+        });
+    }
+
+    /**
      * O devedor confirmou o acerto do ciclo via Pix, com comprovante
      * (`ExpenseController@confirmSettlement`) → avisa o credor.
      */

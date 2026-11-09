@@ -19,7 +19,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: pedido do usuário na 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-583 | Criar a tabela `ex_group_member_responsibles`, o model `GroupMemberResponsible` e o `MemberResponsibleService` | backend | plan.md §1, §2 | antes do deploy/migration em produção | Concluída |
-| TASK-584 | Criar `PUT /groups/{id}/members/{userId}/responsibles`, que substitui a lista de responsáveis, e o aviso `payment_responsible_assigned` | backend | plan.md §3, §7 | antes do merge | Pendente |
+| TASK-584 | Criar `PUT /groups/{id}/members/{userId}/responsibles`, que substitui a lista de responsáveis, e o aviso `payment_responsible_assigned` | backend | plan.md §3, §7 | antes do merge | Concluída |
 | TASK-585 | Trazer `responsibles` em `GET /groups/{id}/members` e apagar os vínculos na saída ou remoção de membro | backend | plan.md §4 | nenhum | Pendente |
 | TASK-586 | Acrescentar `confirmed_by` a `ex_settlement_confirmations` e a relação `confirmedByUser` | backend | plan.md §1 | antes do deploy/migration em produção | Pendente |
 | TASK-587 | Fazer `POST /groups/{id}/settlements/confirm` aceitar `from_user_id` do dependente e gravar `confirmed_by` | backend | plan.md §5, §7 | antes do merge | Pendente |
