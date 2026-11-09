@@ -272,22 +272,28 @@ class Notifier
     /**
      * O devedor confirmou o acerto do ciclo via Pix, com comprovante
      * (`ExpenseController@confirmSettlement`) → avisa o credor.
+     *
+     * `$debtorName` é o nome do devedor, de quem é o acerto (`actorName`). Quando outra pessoa pagou por
+     * ele, `$paidByName` é o nome dela e entra no `data` como `paidByName`; sem ele (o próprio devedor
+     * enviou) a chave não existe, e a notificação é idêntica à de antes. Feature
+     * 20261109-responsavel-do-devedor, specify R10.
      */
     public static function settlementConfirmed(
         Group $group,
         int $creditorId,
         ?string $debtorName,
         float|string $amount,
-        mixed $cycleStart
+        mixed $cycleStart,
+        ?string $paidByName = null
     ): void {
-        self::guard('settlement_confirmed', function () use ($group, $creditorId, $debtorName, $amount, $cycleStart) {
+        self::guard('settlement_confirmed', function () use ($group, $creditorId, $debtorName, $amount, $cycleStart, $paidByName) {
             self::fanOut([$creditorId], 'settlement_confirmed', $group->id, [
                 'actorName' => $debtorName,
                 'groupId' => $group->id,
                 'groupName' => $group->name,
                 'amount' => self::amount($amount),
                 'cycleLabel' => self::cycleLabel($cycleStart),
-            ]);
+            ] + ($paidByName !== null ? ['paidByName' => $paidByName] : []));
         });
     }
 
