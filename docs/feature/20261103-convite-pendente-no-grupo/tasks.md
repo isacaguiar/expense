@@ -6,7 +6,7 @@ Versão: 1.1 · Criado em: 20261103
 
 **v1.1 (2026-11-05):** acrescenta a **TASK-582** (manual e site), a pedido do usuário depois da TASK-581 (item 136 do backlog, decisões D1-A e D2-B). Nenhuma das TASK-566 a 581 mudou.
 
-**Status da v1.0: aguardando aprovação.** O specify (v1.0, D1 a D9 como recomendado) e o plan (v1.0, com os ajustes 1 a 7) foram aprovados em 2026-11-03.
+**Status: aprovada em 2026-11-03; as 17 tasks (TASK-566 a 582) estão concluídas e integradas na branch da feature.** O specify (v1.0, D1 a D9 como recomendado) e o plan (v1.0, com os ajustes 1 a 7) foram aprovados em 2026-11-03.
 
 IDs a partir de **TASK-566**: o maior em `docs/` e nas mensagens de commit de todas as refs é TASK-565 (feature `20261030-saida-e-remocao-de-membro`), conferido em 2026-11-03 com `git grep` e `git log --all`. Reconfirmar a numeração antes de criar a primeira branch de task, caso outra feature em andamento reserve IDs.
 
