@@ -4,7 +4,7 @@ ID: 136
 Origem: feature `docs/feature/20261103-convite-pendente-no-grupo/` (TASK-581, varredura das docs vivas que citam a adição direta de membro, `plan.md` §13)
 Criado em: 2026-11-05
 Prioridade: MEDIA
-Status: Promovido para TASK-582
+Status: Concluído (PR #267)
 
 ## Descrição
 Com a feature do convite pendente, quem é convidado só entra no grupo ao aceitar (**Aceitar** em Meus Grupos), e o botão de Participantes passou de "Adicionar" a "Convidar". Quatro textos para o usuário final ainda descrevem a entrada como imediata. Eles **não foram editados** na TASK-581: são conteúdo público (o site é publicado por FTP pelo `deploy-site.yml`) e o manual tem uma fonte, uma cópia em texto e um PDF gerado que precisam dizer a mesma coisa (`docs/manual/README.md`).
@@ -33,3 +33,11 @@ No dia em que a feature for ao ar, o site e o manual passam a prometer uma entra
 Relacionado: 133 (convite pendente), 135.
 
 Tipo sugerido: doc (com regeração do `MANUAL.pdf`).
+
+## Resolução
+Concluído em: 2026-11-09
+Feature: docs/feature/20261103-convite-pendente-no-grupo/   (vai para docs/feature/concluidas/202611/ quando o PR mergear em `dev`, ADR-009)
+Tasks: TASK-582
+PRs: https://github.com/isacaguiar/expense/pull/267
+
+Decisões do usuário em 2026-11-05: D1-A (task nova na própria feature, antes do PR) e D2-B (corrigir e acrescentar o que faltava sobre convites recebidos e pendentes). `MANUAL.md`, `docs/manual/manual.html`, `site/public/manual.php` e `site/public/recursos.php` passam a descrever convidar e aceitar, e o `MANUAL.pdf` foi regerado por `docs/manual/gerar-pdf.ps1` (7 páginas). O site só sai no merge em `main` (`deploy-site.yml`).

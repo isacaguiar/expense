@@ -4,7 +4,7 @@ ID: 133
 Origem: feature `20261030-saida-e-remocao-de-membro` (PR #262, item 086 do backlog): decisão D1 e risco RK1 do `specify.md` e a lista de fora de escopo (§6), em `docs/feature/concluidas/202610/20261030-saida-e-remocao-de-membro/` (a pasta é arquivada pelo PR #264); `backend/app/Http/Controllers/GroupMemberController.php` (`store`, `:32-92`)
 Criado em: 2026-11-02
 Prioridade: MEDIA
-Status: Promovido para TASK-566
+Status: Concluído (PR #267)
 
 ## Descrição
 - **Como a entrada funciona hoje** (lido em `GroupMemberController::store`): qualquer membro informa um e-mail. Se já existe `User` com ele, o `store()` faz `attach` direto em `ex_groups_members` e chama `Notifier::groupMemberAdded`. Se o e-mail é novo, cria o `User` com senha aleatória, grava um token de convite (cache, 2 dias), envia o `UserInvitedMail` e **também** faz o `attach` direto. Em nenhum dos dois casos a pessoa aceita ou recusa: ela já é membro quando fica sabendo.
@@ -25,3 +25,13 @@ Status: Promovido para TASK-566
 Relacionado: o item 128 (sem `throttle` em `POST /groups/{id}/members`) trata do abuso em volume e continua valendo mesmo com o convite pendente; o item 095 (qualquer membro apaga o grupo em cascata) e o 091 (oráculo de e-mail do `GET /pix/generate`) são independentes.
 
 Tipo sugerido: feature, via `/promover-backlog 133`; exige migration aditiva (gate humano antes de qualquer banco compartilhado) e decisão de produto sobre a validade e o contrato.
+
+## Resolução
+Concluído em: 2026-11-09
+Feature: docs/feature/20261103-convite-pendente-no-grupo/   (vai para docs/feature/concluidas/202611/ quando o PR mergear em `dev`, ADR-009)
+Tasks: TASK-566 a TASK-582
+PRs: https://github.com/isacaguiar/expense/pull/267
+
+Entregue como o specify v1.1 aprovou (D1 a D9 como recomendado, mais a D10-C): `POST /groups/{groupId}/members` cria um convite pendente e só o aceite insere em `ex_groups_members`; cinco rotas novas (`GET /me/invitations`, `POST /me/invitations/{id}/accept` e `.../decline`, `GET /groups/{groupId}/invitations`, `DELETE /groups/{groupId}/invitations/{id}`); na web, o sino, Convites recebidos (Meus Grupos), Convites pendentes com Cancelar e o botão Convidar (Participantes). O 201 da rota existente passou a significar "convite criado" (Constitution §4.1, sinalizado e não editada).
+
+Desdobramentos: item 134 (login de conta sem senha dá 500, anterior à feature), item 135 (o aceite não é medido no analytics) e item 136 (manual e site diziam que o convidado entra direto, resolvido pela TASK-582); notas nos itens 057, 095, 098 e 128. Limite conhecido, sem item aberto por decisão do usuário: o convite segue válido se quem convidou sair do grupo antes do aceite (D10-C e RK9 do specify).
