@@ -21,7 +21,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: pedido do usuário na 
 | TASK-583 | Criar a tabela `ex_group_member_responsibles`, o model `GroupMemberResponsible` e o `MemberResponsibleService` | backend | plan.md §1, §2 | antes do deploy/migration em produção | Concluída |
 | TASK-584 | Criar `PUT /groups/{id}/members/{userId}/responsibles`, que substitui a lista de responsáveis, e o aviso `payment_responsible_assigned` | backend | plan.md §3, §7 | antes do merge | Concluída |
 | TASK-585 | Trazer `responsibles` em `GET /groups/{id}/members` e apagar os vínculos na saída ou remoção de membro | backend | plan.md §4 | nenhum | Concluída |
-| TASK-586 | Acrescentar `confirmed_by` a `ex_settlement_confirmations` e a relação `confirmedByUser` | backend | plan.md §1 | antes do deploy/migration em produção | Pendente |
+| TASK-586 | Acrescentar `confirmed_by` a `ex_settlement_confirmations` e a relação `confirmedByUser` | backend | plan.md §1 | antes do deploy/migration em produção | Concluída |
 | TASK-587 | Fazer `POST /groups/{id}/settlements/confirm` aceitar `from_user_id` do dependente e gravar `confirmed_by` | backend | plan.md §5, §7 | antes do merge | Pendente |
 | TASK-588 | Expor `confirmedBy` nos acertos de `summary`, `close` e `reopen` | backend | plan.md §6 | nenhum | Pendente |
 | TASK-589 | Cobrir a matriz de autorização do `from_user_id` e rodar a revisão de segurança | backend | plan.md §11 | antes do merge | Pendente |
@@ -61,7 +61,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: pedido do usuário na 
 - **TASK-587**:
   - `ExpenseController::confirmSettlement` na forma do plan §5: `from_user_id` opcional (`nullable|integer|exists:ex_users,id`), o 403 **antes** de qualquer consulta de ciclo e de `ProofStorage::store`, `$debtorId` no lugar de `auth()->id()` na busca e na chave, `confirmed_by` gravado, helper privado `responsibles()`; `Notifier::settlementConfirmed` com o último parâmetro `?string $paidByName = null`.
   - Em `SettlementConfirmationOnBehalfTest`: `test_responsible_confirms_the_debtors_settlement` (200, linha com `from_user_id` do dependente e `confirmed_by` do responsável, arquivo gravado), `test_debtor_confirmation_keeps_confirmed_by_null`, `test_explicit_from_user_id_equal_to_the_caller_behaves_as_today`, `test_resend_by_the_debtor_after_the_responsible_resets_confirmed_by_and_leaves_one_file` (foco 1), `test_resend_by_the_responsible_after_the_debtor_replaces_the_proof_and_sets_confirmed_by`, `test_responsible_removed_from_the_list_loses_the_right_at_once_and_a_new_one_passes` (foco 3), `test_two_responsibles_can_each_confirm_for_the_same_debtor` (o último vence), `test_confirmation_keeps_confirmed_by_after_the_link_is_removed` (F9), `test_responsible_who_is_also_the_creditor_is_accepted` (foco 4), `test_responsible_confirm_requires_a_closed_cycle` (422, R9), `test_creditor_is_notified_with_paid_by_name_and_the_debtor_as_actor`, `test_debtor_confirmation_notification_has_no_paid_by_name`, `test_whatsapp_to_the_creditor_still_names_the_debtor`.
-  - `php artisan test --filter=SettlementConfirmationControllerTest` segue verde, com os 30 testes e **sem edição** do arquivo.
+  - `php artisan test --filter=SettlementConfirmationControllerTest` segue verde, com os 28 testes e **sem edição** do arquivo.
   - Mutation check: trocar `canPayFor` por `true` faz `test_responsible_removed_from_the_list_loses_the_right_at_once_and_a_new_one_passes` e a matriz da TASK-589 falharem.
 
 - **TASK-588**:

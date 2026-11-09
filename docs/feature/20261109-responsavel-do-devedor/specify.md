@@ -69,7 +69,7 @@ Cada linha só tem "Sair do grupo" ou, para o criador, "Remover" (`GroupMembersF
 
 ### 2.11 Os testes existentes absorvem a mudança sem edição
 
-`GroupMemberControllerTest` afirma `assertJsonStructure` e `assertJsonCount` sobre os membros (`:126`, `:179`, `:201`), nunca JSON exato da lista: o campo novo `responsibles` é aditivo. `SettlementConfirmationControllerTest` cobre `confirmSettlement` (30 testes) e continua valendo sem `from_user_id`.
+`GroupMemberControllerTest` afirma `assertJsonStructure` e `assertJsonCount` sobre os membros (`:126`, `:179`, `:201`), nunca JSON exato da lista: o campo novo `responsibles` é aditivo. `SettlementConfirmationControllerTest` cobre `confirmSettlement` (28 testes) e continua valendo sem `from_user_id`.
 
 ## 3. Requisitos
 
@@ -190,7 +190,7 @@ O mockup desta tela foi mostrado na conversa de 2026-11-09 e **não está versio
 - **CA-3**: `GET /members` traz `responsibles` (lista de `{id, name}`, vazia quando não há) e nunca e-mail, Pix ou contato do responsável.
 - **CA-4**: `confirmSettlement` com `from_user_id` do dependente, enviado pelo responsável, devolve 200; a linha tem `from_user_id` do dependente e `confirmed_by` do responsável; o credor é notificado com `paidByName`; o selo do ciclo funciona como hoje.
 - **CA-5**: sem vínculo, com vínculo de **outro grupo**, com vínculo **desfeito** ou de **outro devedor**, o mesmo `POST` dá 403, sem arquivo gravado e sem linha criada.
-- **CA-6**: sem `from_user_id`, ou igual ao de quem chama, o comportamento é o de hoje e `confirmed_by` fica nulo; os 30 testes de `SettlementConfirmationControllerTest` passam sem edição.
+- **CA-6**: sem `from_user_id`, ou igual ao de quem chama, o comportamento é o de hoje e `confirmed_by` fica nulo; os 28 testes de `SettlementConfirmationControllerTest` passam sem edição.
 - **CA-7**: reenvio por outra pessoa substitui foto, nota e `confirmed_by`; a foto anterior sai do disco.
 - **CA-8**: `summary`, `close` e `reopen` trazem `confirmedBy` só quando o remetente difere do devedor.
 - **CA-9**: sair ou ser removido apaga o vínculo nas duas direções, na transação de `destroy`.
