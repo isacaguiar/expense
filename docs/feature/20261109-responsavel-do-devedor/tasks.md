@@ -25,7 +25,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: pedido do usuário na 
 | TASK-587 | Fazer `POST /groups/{id}/settlements/confirm` aceitar `from_user_id` do dependente e gravar `confirmed_by` | backend | plan.md §5, §7 | antes do merge | Concluída |
 | TASK-588 | Expor `confirmedBy` nos acertos de `summary`, `close` e `reopen` | backend | plan.md §6 | nenhum | Concluída |
 | TASK-589 | Cobrir a matriz de autorização do `from_user_id` e rodar a revisão de segurança | backend | plan.md §11 | antes do merge | Concluída |
-| TASK-590 | Acrescentar os tipos `MemberResponsible` e `confirmedBy` e os textos do sino | frontend | plan.md §8 | nenhum | Pendente |
+| TASK-590 | Acrescentar os tipos `MemberResponsible` e `confirmedBy` e os textos do sino | frontend | plan.md §8 | nenhum | Concluída |
 | TASK-591 | Criar o diálogo "Quem pode pagar por você" e mostrar os vínculos em Participantes | frontend | plan.md §9 | nenhum | Pendente |
 | TASK-592 | Mostrar e enviar o pagamento por quem o usuário paga em Pagamentos | frontend | plan.md §10 | nenhum | Pendente |
 | TASK-593 | Documentar o vínculo em `docs/sdd/01-specify.md` | doc | plan.md §12 | nenhum | Pendente |

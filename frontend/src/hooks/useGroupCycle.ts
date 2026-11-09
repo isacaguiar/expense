@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../config';
 import type { ExpenseType } from '../types/expense';
+import type { MemberResponsible } from '../types/group';
 
 // 'closed_manually': competência fechada manualmente (POST .../expenses/close)
 // mas ainda dentro do mês vigente — revisável (reabrir) até a virada do mês,
@@ -86,6 +87,9 @@ export type SummarySettlement = {
   // vivo pelo backend, mas fixtures e respostas antigas podem não trazê-la).
   confirmedNote?: string | null;
   confirmedAt: string | null;
+  // Quem enviou o comprovante, só quando difere do devedor (o responsável que pagou por ele); `null`
+  // quando foi o próprio devedor ou ninguém confirmou. Opcional pelo mesmo motivo de `confirmedNote`.
+  confirmedBy?: MemberResponsible | null;
 };
 
 export type Summary = {
