@@ -67,6 +67,32 @@ export type GroupListItem = GroupDetail & {
 export type GroupOption = Pick<Group, 'id' | 'name'>;
 
 /**
+ * Convite para entrar num grupo, como `GET /api/me/invitations` devolve
+ * (`MyInvitationController::index()`, feature 20261103-convite-pendente-no-grupo): só o nome
+ * do grupo e de quem convidou, porque quem recebe ainda não é membro. `invited_by` é nulo
+ * quando a conta de quem convidou deixou de existir.
+ */
+export type ReceivedGroupInvitation = {
+  id: number;
+  group: { id: number; name: string };
+  invited_by: { id: number; name: string } | null;
+  expires_at: string;
+};
+
+/**
+ * Convite pendente de um grupo, como `GET /api/groups/{id}/invitations` devolve
+ * (`GroupInvitationController::index()`, feature 20261103-convite-pendente-no-grupo): o e-mail que
+ * um membro digitou, quem convidou e a validade. Só membros veem esta lista. `invited_by` é nulo
+ * quando a conta de quem convidou deixou de existir.
+ */
+export type PendingGroupInvitation = {
+  id: number;
+  email: string;
+  invited_by: { id: number; name: string } | null;
+  expires_at: string;
+};
+
+/**
  * Uma despesa que impede a saída ou a remoção de um membro: item de `blocking` na
  * resposta 422 de `DELETE /api/groups/{id}/members/{userId}` (`MemberExitBlockers`).
  * `reason` é `creditor_open_quotas` (credor de parcela em aberto de outra pessoa) ou

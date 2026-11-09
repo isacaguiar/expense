@@ -42,6 +42,7 @@ import { API_BASE_URL } from '../config';
 import { getInitials } from '../layouts/group/getInitials';
 import { brandColors } from '../theme/brandColors';
 import GroupGrossDebtsPanel from '../components/GroupGrossDebtsPanel';
+import ReceivedInvitations from '../components/ReceivedInvitations';
 import type { GroupListItem } from '../types/group';
 
 const Dashboard: React.FC = () => {
@@ -228,6 +229,8 @@ const Dashboard: React.FC = () => {
 
   return (
     <>
+      <ReceivedInvitations />
+
       <Box display="flex" justifyContent="space-between" alignItems="center" gap={2} mb={3} flexWrap="wrap">
         <TextField
           label="Buscar grupo"

@@ -5,8 +5,10 @@ use App\Http\Controllers\ExpenseController;
 use App\Http\Controllers\GoogleAuthController;
 use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupExpenseReportController;
+use App\Http\Controllers\GroupInvitationController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\InvitationController;
+use App\Http\Controllers\MyInvitationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PixController;
@@ -35,6 +37,9 @@ Route::post('/pre-register/resend', [PreRegisterController::class, 'resend'])->m
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::get('/me/overview', [OverviewController::class, 'show'])->middleware('throttle:overview');
+    Route::get('/me/invitations', [MyInvitationController::class, 'index']);
+    Route::post('/me/invitations/{invitationId}/accept', [MyInvitationController::class, 'accept']);
+    Route::post('/me/invitations/{invitationId}/decline', [MyInvitationController::class, 'decline']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/dashboard', [AuthController::class, 'dashboard']);
     Route::post('/user/pix', [UserController::class, 'atualizarPix']);
@@ -57,7 +62,14 @@ Route::middleware('jwt.auth')->group(function () {
         Route::delete('/{userId}', [GroupMemberController::class, 'destroy']);
     });
 
-    Route::apiResource('expenses', ExpenseController::class);
+    Route::prefix('groups/{groupId}/invitations')->group(function () {
+        Route::get('/', [GroupInvitationController::class, 'index']);
+        Route::delete('/{invitationId}', [GroupInvitationController::class, 'destroy']);
+    });
+
+    // Sem `index`: o controller não o implementa (a listagem é por grupo, `indexByGroup`), e rota
+    // registrada sem método dá 500 (Constitution §2.4; bugfix 20261103-get-expenses-sem-index-no-controller).
+    Route::apiResource('expenses', ExpenseController::class)->except('index');
     Route::post('/expenses/{expenseId}/stop-recurrence', [ExpenseController::class, 'stopRecurrence']);
     Route::post('/expenses/{expenseId}/pay', [ExpenseController::class, 'pay']);
     Route::post('/expenses/{expenseId}/unpay', [ExpenseController::class, 'unpay']);

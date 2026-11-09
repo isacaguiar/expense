@@ -66,6 +66,7 @@ Quando o PR do bugfix estiver aberto (não é preciso esperar o merge):
 
 | Arquivo | Título | Concluído em | PR |
 |---|---|---|---|
+| [concluidos/202611/20261103-get-expenses-sem-index-no-controller.md](concluidos/202611/20261103-get-expenses-sem-index-no-controller.md) | `GET /api/expenses` registrado sem `ExpenseController@index`: 500 para qualquer usuário autenticado (corrigido com `->except('index')`) | 2026-11-03 | #266 |
 | [concluidos/202609/20260930-logo-email-marca-novemax.md](concluidos/202609/20260930-logo-email-marca-novemax.md) | Logo e marca "Novemax" nos e-mails do sistema (deveria ser Shared Expense) | 2026-10-30 | #257 (escalado para a feature `20260930-recuperacao-acesso`) |
 | [concluidos/202610/20261027-comprovante-iphone-so-camera.md](concluidos/202610/20261027-comprovante-iphone-so-camera.md) | Comprovante no iPhone abre só a câmera e não deixa escolher foto da galeria nem arquivo | 2026-10-27 | #246 |
 | [concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md](concluidos/202610/20261024-alerta-ciclo-fechado-apos-pagamento.md) | Alerta "ainda falta acertar" incoerente depois de pagamentos em ciclo fechado | 2026-10-24 | #234 |
