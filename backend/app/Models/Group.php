@@ -54,4 +54,10 @@ class Group extends Model
     {
         return $this->hasMany(GroupInvitation::class, 'group_id');
     }
+
+    /** Quem paga por quem neste grupo (feature 20261109-responsavel-do-devedor). */
+    public function memberResponsibles()
+    {
+        return $this->hasMany(GroupMemberResponsible::class, 'group_id');
+    }
 }
