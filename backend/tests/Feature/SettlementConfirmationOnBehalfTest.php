@@ -351,4 +351,113 @@ class SettlementConfirmationOnBehalfTest extends TestCase
             ['type' => 'text', 'text' => 'ago/2026'],
         ]);
     }
+
+    // --- TASK-588: confirmedBy no resumo (R10) ----------------------------
+
+    private function summaryOf(User $viewer, Group $group): TestResponse
+    {
+        return $this->withToken($this->tokenFor($viewer))->getJson("/api/groups/{$group->id}/expenses/summary");
+    }
+
+    /** O acerto do devedor no `settlements` de uma resposta. */
+    private function settlementOf(TestResponse $response, User $debtor): array
+    {
+        return collect($response->json('settlements'))->firstWhere('from_user_id', $debtor->id);
+    }
+
+    public function test_summary_exposes_confirmed_by_only_when_the_sender_differs_from_the_debtor(): void
+    {
+        [$group, $creditor, $debtor, $responsible] = $this->scenario();
+        $other = User::factory()->create();
+        $group->members()->attach($other->id);
+        $this->makeSettlement($group, $creditor, $other, 100, false);
+        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
+        $this->confirm($other, $group, $creditor)->assertOk();
+
+        $response = $this->summaryOf($creditor, $group)->assertOk();
+
+        $this->assertSame(
+            ['id' => $responsible->id, 'name' => $responsible->name],
+            $this->settlementOf($response, $debtor)['confirmedBy'],
+            'pagou o responsável: aparece quem enviou, só id e nome'
+        );
+        $this->assertNull($this->settlementOf($response, $other)['confirmedBy'], 'o próprio devedor enviou');
+    }
+
+    public function test_summary_confirmed_by_is_null_when_the_debtor_sent_it(): void
+    {
+        [$group, $creditor, $debtor] = $this->scenario();
+        $this->confirm($debtor, $group, $creditor)->assertOk();
+
+        $settlement = $this->settlementOf($this->summaryOf($creditor, $group)->assertOk(), $debtor);
+        $this->assertNotNull($settlement['confirmedAt']);
+        $this->assertNull($settlement['confirmedBy']);
+
+        // Defesa: mesmo que a linha traga o próprio devedor em `confirmed_by`, só aparece quando difere.
+        SettlementConfirmation::where('group_id', $group->id)->update(['confirmed_by' => $debtor->id]);
+
+        $this->assertNull($this->settlementOf($this->summaryOf($creditor, $group)->assertOk(), $debtor)['confirmedBy']);
+    }
+
+    public function test_summary_confirmed_by_is_null_when_nobody_confirmed(): void
+    {
+        [$group, $creditor, $debtor] = $this->scenario();
+
+        $settlement = $this->settlementOf($this->summaryOf($creditor, $group)->assertOk(), $debtor);
+
+        $this->assertArrayHasKey('confirmedBy', $settlement, 'a chave existe mesmo sem confirmação');
+        $this->assertNull($settlement['confirmedBy']);
+        $this->assertNull($settlement['confirmedAt']);
+    }
+
+    public function test_close_and_reopen_also_expose_confirmed_by(): void
+    {
+        [$group, $creditor, $debtor, $responsible] = $this->scenario(closeCycle: false);
+        $token = $this->tokenFor($creditor);
+        $this->withToken($token)->postJson("/api/groups/{$group->id}/expenses/close")->assertOk();
+        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
+        $expected = ['id' => $responsible->id, 'name' => $responsible->name];
+
+        $reopened = $this->withToken($this->tokenFor($creditor))->postJson("/api/groups/{$group->id}/expenses/reopen")->assertOk();
+        $this->assertSame($expected, $this->settlementOf($reopened, $debtor)['confirmedBy'], 'reopen');
+
+        $closedAgain = $this->withToken($this->tokenFor($creditor))->postJson("/api/groups/{$group->id}/expenses/close")->assertOk();
+        $this->assertSame($expected, $this->settlementOf($closedAgain, $debtor)['confirmedBy'], 'close');
+    }
+
+    public function test_a_snapshot_cycle_decorates_confirmed_by_live(): void
+    {
+        [$group, $creditor, $debtor, $responsible] = $this->scenario(closeCycle: false);
+        // O fechamento grava os acertos no snapshot, ainda sem nenhuma confirmação.
+        $this->withToken($this->tokenFor($creditor))->postJson("/api/groups/{$group->id}/expenses/close")->assertOk();
+        $this->assertNull($this->settlementOf($this->summaryOf($creditor, $group)->assertOk(), $debtor)['confirmedBy']);
+
+        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
+
+        $this->assertSame(
+            ['id' => $responsible->id, 'name' => $responsible->name],
+            $this->settlementOf($this->summaryOf($creditor, $group)->assertOk(), $debtor)['confirmedBy'],
+            'o snapshot não guarda a confirmação: ela é lida ao vivo'
+        );
+    }
+
+    public function test_confirmed_by_is_eager_loaded_without_one_query_per_settlement(): void
+    {
+        $creditor = User::factory()->create();
+        $group = Group::create(['name' => 'Casa']);
+        $settlements = [];
+        foreach (range(1, 3) as $i) {
+            $debtor = User::factory()->create();
+            $sender = User::factory()->create();
+            $this->makeConfirmation($group, $debtor, $creditor, ['confirmed_by' => $sender->id]);
+            $settlements[] = ['from_user_id' => $debtor->id, 'to_user_id' => $creditor->id, 'amount' => 10.0];
+        }
+
+        \DB::enableQueryLog();
+        $decorated = app(\App\Services\CycleSummaryService::class)->withConfirmations($group->id, Carbon::parse('2026-08-01'), $settlements);
+        $userQueries = collect(\DB::getQueryLog())->filter(fn ($q) => str_contains($q['query'], 'from `ex_users`'))->count();
+
+        $this->assertCount(3, array_filter(array_column($decorated, 'confirmedBy')), 'os três têm quem enviou');
+        $this->assertSame(1, $userQueries, 'os remetentes vêm numa consulta só, não uma por acerto');
+    }
 }
