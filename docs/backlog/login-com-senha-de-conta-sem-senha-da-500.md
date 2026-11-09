@@ -1,7 +1,7 @@
 # Login por senha de uma conta sem senha (criada pelo Google) lança `RuntimeException` e responde 500, e o status denuncia a conta
 
 ID: 134
-Origem: revisão de segurança da feature `docs/feature/20261103-convite-pendente-no-grupo/` (TASK-576, achado derivado do A1); `backend/app/Http/Controllers/AuthController.php` (`login`, `Auth::guard('api')->attempt`), `GoogleAuthController.php:218` (`'password' => null`), `backend/config/hashing.php` (`verify => true`)
+Origem: revisão de segurança da feature `docs/feature/concluidas/202611/20261103-convite-pendente-no-grupo/` (TASK-576, achado derivado do A1); `backend/app/Http/Controllers/AuthController.php` (`login`, `Auth::guard('api')->attempt`), `GoogleAuthController.php:218` (`'password' => null`), `backend/config/hashing.php` (`verify => true`)
 Criado em: 2026-11-03
 Prioridade: BAIXA
 Status: Aberto

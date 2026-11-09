@@ -61,7 +61,7 @@ Relacionado: 085 (fechou o `index` de membros e originou este achado), 080 (`POS
 Tipo sugerido: backend
 
 ## Achado adicional (2026-11-03): `exists:ex_groups,id` em `POST /api/expenses` confirma a existência do grupo por outro caminho
-Revisão de segurança da feature `docs/feature/20261103-convite-pendente-no-grupo/` (TASK-576, achado A5), por leitura do código e **sem reprodução em teste do 422**:
+Revisão de segurança da feature `docs/feature/concluidas/202611/20261103-convite-pendente-no-grupo/` (TASK-576, achado A5), por leitura do código e **sem reprodução em teste do 422**:
 - `ExpenseController::store` (`ExpenseController.php:523-528`) valida `'group_id' => 'required|exists:ex_groups,id'` **antes** de `Group::findOrFail` e de `authorizeGroupMembership`. Um usuário autenticado que não é membro recebe **422** (`The selected group id is invalid`) para um grupo que não existe e **404** para um grupo que existe, o que confirma a existência do grupo por um canal diferente do corpo do 404 tratado acima. O 404 do grupo existente já é provado pelo `PendingInviteeSecurityTest` (`POST /api/expenses` entra na matriz); o 422 do inexistente não.
 - `GroupMemberController::store` segue com `Group::findOrFail($groupId)` (já na lista de 17 chamadas deste item). Os controllers novos de convite (`GroupInvitationController`, `MyInvitationController`) usam `Group::find` mais `abort(404)`, o padrão a seguir.
 - Ao tratar este item: trocar a regra `exists:ex_groups,id` por `find` mais `abort(404)` depois da autorização, e incluir `POST /api/expenses` com `group_id` inexistente e existente no teste parametrizado (opção A da decisão acima).
