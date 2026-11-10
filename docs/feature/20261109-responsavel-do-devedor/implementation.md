@@ -98,3 +98,40 @@ Decisões dele sobre os achados, "siga com as recomendadas": BAIXA-3 corrigida n
 **Documentos acertados:** specify v1.2 (R1 e a linha da rota em §3.3), plan v1.2 (o `validate` do §3) e `docs/sdd/01-specify.md` (o bloco "Escolher" de §3.3 cita o teto).
 
 **Limite conhecido, sem tratamento:** o diálogo do front não impede escolher a 51ª pessoa; num grupo com mais de 50 membros isso mostraria o erro genérico do `PUT`. Fica registrado porque um grupo desse tamanho não existe hoje.
+
+## 6. Validação local no navegador (2026-11-10)
+
+Fecha os "ainda não visto em navegador" das TASK-591 e 592 (§2). Feita por mim no painel do app, com viewport emulado; **a conferência dele, no Chrome dele, segue pendente** (gate).
+
+**Ambiente:** MySQL descartável `mysql-expense-test` (3307, banco migrado até `2026_11_09_000001`), backend `php artisan serve --env=testing` na 8001 e Vite na 3001, sem tocar a stack dele (3000/8000). Grupo "Casa Validacao" (id 9313) com Ana, Bruno (criador e credor), Carla e Davi; Bruno pagou R$ 400 em 10/10/2026, dividido pelos quatro, e a competência de outubro está fechada pela data (cada um dos três deve R$ 100,00 a Bruno). Dados criados por script fora do repositório, com trava que aborta se a porta do MySQL não for 3307.
+
+| # | Passo | Resultado |
+|---|---|---|
+| 1 | Ana abre Participantes | "Quem paga por mim" e "Sair do grupo" só na linha dela; as de Bruno, Carla e Davi sem botão (D7) |
+| 2 | Ana abre o diálogo e escolhe Carla | a lista oferece só os outros três (Ana não aparece); "Escolha salva."; a linha de Ana ganha "Quem paga por você: Carla Teste" e a de Carla o selo "Paga por Ana Teste". Banco: 1 vínculo (Ana→Carla) e 1 aviso `payment_responsible_assigned`, para Carla; **nenhum para Ana** (D9-A) |
+| 3 | Carla abre o sino | "Você agora pode pagar por Ana Teste no grupo "Casa Validacao""; o clique abre `/groups/9313/summary` |
+| 4 | Carla em Pagamentos | ordem: o acerto dela, o de Ana (selo "Você paga por Ana Teste", "Pagar com Pix" e "Enviar comprovante") e o de Davi, sem botões |
+| 5 | Carla envia um PNG (5 KB) no acerto de Ana | `POST .../settlements/confirm` 200; banco: `from_user_id` Ana, `to_user_id` Bruno, `confirmed_by` Carla; o acerto vai para "Valores pagos" com "Comprovante enviado" e "Enviado por Carla Teste" |
+| 6 | Bruno (credor) | "Pagou a você", "Comprovante enviado", "Enviado por Carla Teste" e "Confirmar pagamento"; sino: "Carla Teste confirmou um pagamento de R$ 100,00 por Ana Teste" (`actorName` Ana, `paidByName` Carla) |
+| 7 | Ana (devedora) | vê "Enviado por Carla Teste" e ainda pode "Reenviar comprovante" (R8); sino 0; sem botão nos acertos de Carla e Davi |
+| 8 | Celular (375 px) | o cartão de Pagamentos de Carla (selo, "Comprovante enviado", legenda e dois botões) cabe sem vazar; a linha de Ana em Participantes cabe, mas apertada (e-mail em 2 linhas, legenda em 3) |
+
+Depois do teste, o ambiente foi devolvido ao estado "vínculo Ana→Carla feito, nada pago": confirmação e arquivo de teste removidos, aviso ao Bruno removido, aviso de Carla marcado como não lido.
+
+### Achado V1: a linha própria de Participantes não cabe entre ~900 e ~1300 px (aberto)
+
+Medido na linha de Ana (a única com dois botões), largura da coluna do e-mail:
+
+| Viewport | Card | Coluna do e-mail | Resultado |
+|---|---|---|---|
+| 375 px | 343 px | 107 px | e-mail em 2 linhas, legenda em 3 |
+| 768 px | 720 px | 366 px | 1 linha, bom |
+| **1024 px** | 329 px | **0 px** | e-mail com 1 caractere por linha (16 linhas) e "Sair do grupo" vaza do card |
+| 1280 px | 464 px | 110 px | e-mail em 2 linhas |
+| 1440 px | 544 px | 190 px | 1 linha; a legenda "Quem paga por você: …" quebra em 2 |
+
+**Causa:** em `GroupMembersForm.tsx` o `Box` dos dois botões tem `flexShrink: 0` e vira linha a partir de `sm` (148 + 115 px), dentro de um card de meia largura (`md: 6`) ao lado do menu lateral fixo; sobra zero para o `ListItemText`. Antes da feature era um botão só (115 px). É defeito da TASK-591, não de dado nem de regra.
+
+**Fora da feature:** o texto vermelho "Erro ao carregar informações do grupo." ficou na tela depois de uma falha transitória de rede (`ERR_NETWORK_CHANGED`) na primeira das duas rodadas do efeito em modo dev; o efeito é de 17/08 e nunca limpa o erro. Não é desta feature; não vira item.
+
+**Observação já registrada (§2, TASK-592):** o popup de envio diz "o comprovante do **seu** pagamento" mesmo quando Carla envia o de Ana; segue como está por mandato da specify §3.6.
