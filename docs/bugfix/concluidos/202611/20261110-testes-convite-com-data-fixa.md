@@ -43,3 +43,8 @@ Uma linha por verificação. Comando real + resultado obtido — não "testado" 
 | 2026-11-10 | `cd backend && ./vendor/bin/phpunit` (suíte inteira, código da `dev`, MySQL descartável recém-migrado) | `OK (1123 tests, 6779 assertions)`, 2:21 |
 
 O resultado dos dois testes deixou de depender do dia em que rodam: o relógio é congelado dentro deles e o `tearDown` das duas classes o desfaz. Nenhum valor esperado mudou. Triagem sem nenhuma caixa marcada.
+
+## Resolução
+Concluído em: 2026-11-10
+Branch: fix/20261110-testes-convite-com-data-fixa
+PR: https://github.com/isacaguiar/expense/pull/270
