@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardContent,
+  Chip,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -22,6 +23,7 @@ import {
   Typography
 } from '@mui/material';
 import axios from 'axios';
+import PaymentResponsibleDialog from '../components/PaymentResponsibleDialog';
 import { API_BASE_URL } from '../config';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
 import { getInitials } from '../layouts/group/getInitials';
@@ -72,6 +74,10 @@ const GroupMembersForm: React.FC = () => {
   const [exitError, setExitError] = useState<string | null>(null);
   const [blocking, setBlocking] = useState<MemberExitBlocker[]>([]);
 
+  // Quem paga por quem (feature 20261109-responsavel-do-devedor): o diálogo e o aviso de sucesso.
+  const [responsibleOpen, setResponsibleOpen] = useState(false);
+  const [responsibleNotice, setResponsibleNotice] = useState<string | null>(null);
+
   // Convites pendentes (feature 20261103-convite-pendente-no-grupo): carga à parte da do grupo e
   // dos membros, e tolerante, para um problema aqui não derrubar a tela de Participantes.
   const [invitations, setInvitations] = useState<PendingGroupInvitation[]>([]);
@@ -80,6 +86,12 @@ const GroupMembersForm: React.FC = () => {
 
   const isCreator = group?.created_by != null && group.created_by === currentUserId;
   const targetIsSelf = target !== null && target.id === currentUserId;
+
+  // Quem paga por um membro vem na linha dele (`responsibles`); quem ele paga se deriva dos outros membros.
+  const responsiblesOf = (user: GroupMember) => user.responsibles ?? [];
+  const dependentsOf = (user: GroupMember) =>
+    members.filter(member => responsiblesOf(member).some(responsible => responsible.id === user.id));
+  const targetDependents = target ? dependentsOf(target) : [];
 
   // Cancela quem convidou ou o criador do grupo (a API confere de novo: 403 para os outros).
   const canCancelInvitation = (invitation: PendingGroupInvitation) =>
@@ -242,6 +254,48 @@ const GroupMembersForm: React.FC = () => {
     setTarget(null);
   };
 
+  const openResponsible = () => {
+    setResponsibleNotice(null);
+    setResponsibleOpen(true);
+  };
+
+  /** Depois de salvar: mostra o aviso e relê os membros, que trazem os `responsibles` de agora. */
+  const handleResponsibleChanged = async (message: string) => {
+    setResponsibleNotice(message);
+    try {
+      const membersRes = await axios.get<GroupMember[]>(`${API_BASE_URL}/api/groups/${id}/members`, config);
+      setMembers(membersRes.data);
+    } catch {
+      setResponsibleNotice(null);
+      setError('Escolha salva, mas não foi possível atualizar a lista. Recarregue a página.');
+    }
+  };
+
+  /** Texto e selos de quem paga por quem na linha do membro (nada, quando não há vínculo). */
+  const renderPaymentLinks = (user: GroupMember): React.ReactNode => {
+    const responsibles = responsiblesOf(user);
+    const dependents = dependentsOf(user);
+    if (responsibles.length === 0 && dependents.length === 0) return undefined;
+
+    const label = user.id === currentUserId ? 'Quem paga por você' : `Quem paga por ${user.name}`;
+    return (
+      <>
+        {responsibles.length > 0 && (
+          <Typography variant="body2" color="text.secondary" component="span" display="block">
+            {`${label}: ${responsibles.map(responsible => responsible.name).join(', ')}`}
+          </Typography>
+        )}
+        {dependents.length > 0 && (
+          <Box component="span" sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+            {dependents.map(dependent => (
+              <Chip key={dependent.id} size="small" label={`Paga por ${dependent.name}`} />
+            ))}
+          </Box>
+        )}
+      </>
+    );
+  };
+
   if (loading) {
     return (
       <Box display="flex" justifyContent="center" mt={4}>
@@ -284,11 +338,29 @@ const GroupMembersForm: React.FC = () => {
                           {getInitials(user.email)}
                         </Avatar>
                       </ListItemAvatar>
-                      <ListItemText primary={user.email} sx={{ minWidth: 0, overflowWrap: 'anywhere' }} />
+                      <ListItemText
+                        primary={user.email}
+                        secondary={renderPaymentLinks(user)}
+                        slotProps={{ secondary: { component: 'div' } }}
+                        sx={{ minWidth: 0, overflowWrap: 'anywhere' }}
+                      />
                       {user.id === currentUserId ? (
-                        <Button size="small" color="error" onClick={() => openConfirmation(user)} sx={{ flexShrink: 0 }}>
-                          Sair do grupo
-                        </Button>
+                        <Box
+                          sx={{
+                            display: 'flex',
+                            flexDirection: { xs: 'column', sm: 'row' },
+                            alignItems: { xs: 'flex-end', sm: 'center' },
+                            gap: 0.5,
+                            flexShrink: 0
+                          }}
+                        >
+                          <Button size="small" onClick={openResponsible}>
+                            Quem paga por mim
+                          </Button>
+                          <Button size="small" color="error" onClick={() => openConfirmation(user)}>
+                            Sair do grupo
+                          </Button>
+                        </Box>
                       ) : isCreator ? (
                         <Button size="small" color="error" onClick={() => openConfirmation(user)} sx={{ flexShrink: 0 }}>
                           Remover
@@ -297,6 +369,11 @@ const GroupMembersForm: React.FC = () => {
                     </ListItem>
                   ))}
                 </List>
+              )}
+              {responsibleNotice && (
+                <Alert severity="success" sx={{ mt: 2 }}>
+                  {responsibleNotice}
+                </Alert>
               )}
             </CardContent>
           </Card>
@@ -395,6 +472,11 @@ const GroupMembersForm: React.FC = () => {
               ? `Sair do grupo "${group?.name}" não apaga as suas despesas nem as suas dívidas neste grupo. Quem for credor continua vendo o que você deve.`
               : `Remover ${target?.email} do grupo "${group?.name}" não apaga as despesas nem as dívidas dessa pessoa neste grupo. Quem for credor continua vendo o que ela deve.`}
           </DialogContentText>
+          {targetDependents.length > 0 && (
+            <DialogContentText sx={{ mt: 1 }}>
+              {`${target?.email} também paga por ${targetDependents.map(dependent => dependent.name).join(', ')}; essa escolha será desfeita.`}
+            </DialogContentText>
+          )}
           {exitError && (
             <Alert severity="error" sx={{ mt: 2 }}>
               {exitError}
@@ -419,6 +501,18 @@ const GroupMembersForm: React.FC = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {currentUserId !== null && (
+        <PaymentResponsibleDialog
+          open={responsibleOpen}
+          groupId={id ?? ''}
+          currentUserId={currentUserId}
+          members={members}
+          current={members.find(member => member.id === currentUserId)?.responsibles ?? []}
+          onClose={() => setResponsibleOpen(false)}
+          onChanged={handleResponsibleChanged}
+        />
+      )}
     </>
   );
 };
