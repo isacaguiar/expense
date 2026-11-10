@@ -29,6 +29,7 @@ import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProo
 import PixPaymentDialog from '../components/PixPaymentDialog';
 import UserAvatar from '../components/UserAvatar';
 import DespesasThemeScope from '../theme/DespesasThemeScope';
+import type { MemberResponsible } from '../types/group';
 import { formatShortDate } from '../utils/dates';
 import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
 import ExpenseFilterBar from '../components/ExpenseFilterBar';
@@ -37,7 +38,15 @@ import { useExpenseFilters } from '../hooks/useExpenseFilters';
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-type GroupMemberPix = { id: number; name: string; email: string; pix: string | null; avatar_url: string | null };
+type GroupMemberPix = {
+  id: number;
+  name: string;
+  email: string;
+  pix: string | null;
+  avatar_url: string | null;
+  // Quem paga por este membro neste grupo (feature 20261109-responsavel-do-devedor).
+  responsibles?: MemberResponsible[];
+};
 
 const Payments: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
@@ -67,6 +76,18 @@ const Payments: React.FC = () => {
       .then(res => setMembers(res.data))
       .catch(err => console.error('Erro ao carregar membros do grupo:', err));
   }, [groupId]);
+
+  // Ids de quem o usuário logado paga: os membros cuja lista `responsibles` o contém. Nos acertos deles
+  // a tela oferece os mesmos botões do devedor (feature 20261109-responsavel-do-devedor, plan.md §10).
+  const payForUserIds = useMemo(
+    () =>
+      currentUserId === null
+        ? []
+        : members
+            .filter(member => (member.responsibles ?? []).some(responsible => responsible.id === currentUserId))
+            .map(member => member.id),
+    [members, currentUserId]
+  );
 
   const {
     payingExpenseId,
@@ -164,6 +185,11 @@ const Payments: React.FC = () => {
     const token = localStorage.getItem('accessToken');
     const form = new FormData();
     form.append('to_user_id', String(confirmSettlementTarget.to_user_id));
+    // Só ao pagar por um dependente: o backend confere o vínculo (403 sem ele). Pagar por si mesmo segue
+    // como sempre, sem o campo.
+    if (confirmSettlementTarget.from_user_id !== currentUserId) {
+      form.append('from_user_id', String(confirmSettlementTarget.from_user_id));
+    }
     form.append('comprovante', file);
     if (note) form.append('descricao', note);
     // Sem isto o backend assume o ciclo corrente (aberto) e recusa o acerto de um
@@ -364,6 +390,7 @@ const Payments: React.FC = () => {
                 onTabChange={setSettlementsTab}
                 onPayWithPix={handleSelectSettlement}
                 onSendProof={openConfirmSettlementDialog}
+                payForUserIds={payForUserIds}
               />
             </Grid>
           </Grid>

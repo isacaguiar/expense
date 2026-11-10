@@ -18,6 +18,15 @@ export type GroupCreator = {
 };
 
 /**
+ * Quem paga por um membro num grupo (feature 20261109-responsavel-do-devedor): só `id` e `name`,
+ * nunca e-mail, Pix ou contato.
+ */
+export type MemberResponsible = {
+  id: number;
+  name: string;
+};
+
+/**
  * Membro como `GET /api/groups/{id}/members` devolve (`GroupMemberController::index()`):
  * models `User` inteiros — `password`, `remember_token`, `google_id` e
  * `photo_path` ficam de fora por `$hidden`, e `avatar_url` sai resolvido pelo
@@ -28,10 +37,18 @@ export type GroupMember = {
   name: string;
   email: string;
   avatar_url: string | null;
+  /**
+   * Quem pode pagar por este membro neste grupo (lista vazia quando ninguém). Opcional no tipo para as
+   * fixtures e respostas anteriores à feature, que não o trazem; a API sempre o devolve.
+   */
+  responsibles?: MemberResponsible[];
 };
 
-/** Membro como vem embutido em `GET /api/groups` — lá o eager load é `members:id,name,email`. */
-export type GroupMemberBasic = Omit<GroupMember, 'avatar_url'>;
+/**
+ * Membro como vem embutido em `GET /api/groups` — lá o eager load é `members:id,name,email`, sem
+ * `avatar_url` e sem `responsibles` (que só `GET /api/groups/{id}/members` devolve).
+ */
+export type GroupMemberBasic = Omit<GroupMember, 'avatar_url' | 'responsibles'>;
 
 /**
  * Colunas de `ex_groups`. `description`, `closing_day` e `created_by` são

@@ -19,7 +19,11 @@ type PaymentSettlementsPanelProps = {
   onTabChange: (tab: SettlementsTab) => void;
   onPayWithPix: (settlement: SummarySettlement) => void;
   onSendProof: (settlement: SummarySettlement) => void;
+  // Ids de quem o usuário logado paga (feature 20261109-responsavel-do-devedor): vão à lista e à ordenação.
+  payForUserIds?: readonly number[];
 };
+
+const NO_ONE: readonly number[] = [];
 
 const TAB_ID = (tab: SettlementsTab) => `settlements-tab-${tab}`;
 const PANEL_ID = 'settlements-tabpanel';
@@ -47,15 +51,16 @@ const PaymentSettlementsPanel: React.FC<PaymentSettlementsPanelProps> = ({
   tab,
   onTabChange,
   onPayWithPix,
-  onSendProof
+  onSendProof,
+  payForUserIds = NO_ONE
 }) => {
   const { toPay, paid } = useMemo(() => splitSettlementsByConfirmation(settlements), [settlements]);
 
   const visible = useMemo(() => {
     const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
     const nameFor = (userId: number): string => nameById.get(userId) ?? 'Desconhecido';
-    return orderSettlementsForViewer(tab === 'toPay' ? toPay : paid, currentUserId, nameFor);
-  }, [balances, currentUserId, paid, tab, toPay]);
+    return orderSettlementsForViewer(tab === 'toPay' ? toPay : paid, currentUserId, nameFor, payForUserIds);
+  }, [balances, currentUserId, paid, payForUserIds, tab, toPay]);
 
   const hasAny = toPay.length + paid.length > 0;
 
@@ -87,6 +92,7 @@ const PaymentSettlementsPanel: React.FC<PaymentSettlementsPanelProps> = ({
           cycleSettled={cycleSettled}
           onPayWithPix={onPayWithPix}
           onSendProof={onSendProof}
+          payForUserIds={payForUserIds}
           emptyMessage={hasAny ? EMPTY_MESSAGE[tab] : NO_SETTLEMENTS_MESSAGE}
         />
       </Box>
