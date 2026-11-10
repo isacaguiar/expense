@@ -126,6 +126,9 @@ class MyInvitationControllerTest extends TestCase
 
     public function test_the_payload_names_the_group_and_who_invited(): void
     {
+        // Relógio fixo: o convite vence em 2026-11-10 12:00 (7 dias depois de 11-03) e o teste não
+        // pode depender do dia em que roda; o `tearDown` desfaz.
+        Carbon::setTestNow('2026-11-03 12:00:00');
         $inviter = User::factory()->create(['name' => 'Convidante']);
         $group = Group::create(['name' => 'Casa']);
         $group->members()->attach($inviter->id);
