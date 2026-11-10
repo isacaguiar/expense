@@ -9,6 +9,8 @@ import UserAvatar from './UserAvatar';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 import { isSettlementConfirmed } from '../utils/cycleOrdering';
 
+const NO_ONE: readonly number[] = [];
+
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -20,6 +22,9 @@ type PayableSettlementListProps = {
   cycleSettled: boolean;
   onPayWithPix: (settlement: SummarySettlement) => void;
   onSendProof: (settlement: SummarySettlement) => void;
+  // Ids de quem o usuário logado paga (feature 20261109-responsavel-do-devedor): nos acertos deles ele
+  // vê o selo "Você paga por {nome}" e os mesmos botões do devedor.
+  payForUserIds?: readonly number[];
   // Texto de lista vazia. O padrão serve a Pagamentos sem abas e ao Painel; as abas
   // "Valores a pagar"/"Valores pagos" passam o delas.
   emptyMessage?: string;
@@ -33,7 +38,9 @@ type PayableSettlementListProps = {
  * settlement (§6) — conceito distinto de confirmar uma despesa (isso
  * continua 100% com o credor, em Despesas/Payments, inalterado). Só o
  * devedor daquele par (`currentUserId === from_user_id`) vê os botões de
- * ação; qualquer membro vê o status de confirmação.
+ * ação; qualquer membro vê o status de confirmação. Quem paga por um dependente
+ * (`payForUserIds`) ganha os mesmos botões nos acertos dele, menos naqueles que ele
+ * próprio recebe.
  *
  * `canConfirm` = o backend aceita o comprovante do devedor agora (competência
  * fechada e não selada — ver docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado
@@ -47,6 +54,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   cycleSettled,
   onPayWithPix,
   onSendProof,
+  payForUserIds = NO_ONE,
   emptyMessage = 'Ninguém deve nada a ninguém neste ciclo.'
 }) => {
   const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
@@ -71,6 +79,11 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
         const confirmed = isSettlementConfirmed(settlement);
         // Valor que o usuário logado tem a receber: marcado com texto, sem botões de devedor.
         const isReceiver = currentUserId !== null && currentUserId === settlement.to_user_id;
+        // Quem o usuário paga: os mesmos botões do devedor, exceto quando o usuário é quem recebe o
+        // acerto (R14), que já é o credor dele.
+        const canPayFor =
+          currentUserId !== null && !isDebtor && !isReceiver && payForUserIds.includes(settlement.from_user_id);
+        const canAct = isDebtor || canPayFor;
         // A nota só faz sentido junto de um comprovante enviado.
         const note = confirmed ? settlement.confirmedNote : null;
 
@@ -118,6 +131,10 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                 />
               )}
 
+              {canPayFor && (
+                <Chip label={`Você paga por ${nameFor(settlement.from_user_id)}`} color="primary" size="small" variant="outlined" />
+              )}
+
               {confirmed &&
                 (settlement.confirmedProofUrl ? (
                   <Chip
@@ -143,7 +160,13 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                   />
                 ))}
 
-              {isDebtor && canConfirm && (
+              {confirmed && settlement.confirmedBy && (
+                <Typography variant="caption" color="text.secondary">
+                  {`Enviado por ${settlement.confirmedBy.name}`}
+                </Typography>
+              )}
+
+              {canAct && canConfirm && (
                 <>
                   <Button
                     size="small"
@@ -164,7 +187,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                 </>
               )}
 
-              {isDebtor && !canConfirm && !confirmed && (
+              {canAct && !canConfirm && !confirmed && (
                 <Typography variant="caption" color="text.secondary">
                   {cycleSettled ? 'Ciclo encerrado.' : 'Disponível após o fechamento do ciclo.'}
                 </Typography>

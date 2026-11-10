@@ -84,7 +84,9 @@ export const splitSettlementsByConfirmation = (
 
 /**
  * Ordem dos acertos de **uma aba**. Primeiro as saídas do usuário logado (valor
- * decrescente, depois nome do credor e id). Depois os demais devedores, pelo total
+ * decrescente, depois nome do credor e id). Depois as saídas de quem o usuário paga
+ * (`alsoFirstIds`, feature 20261109-responsavel-do-devedor), com o mesmo critério dos
+ * demais; por fim os demais devedores, pelo total
  * do devedor **na lista recebida** (soma dos acertos dele naquela aba) decrescente,
  * com empate por nome e id; dentro do devedor, valor decrescente, nome do credor e
  * id. O que o logado tem a receber fica entre os demais, no grupo de quem deve.
@@ -93,7 +95,8 @@ export const splitSettlementsByConfirmation = (
 export const orderSettlementsForViewer = (
   settlements: readonly SummarySettlement[],
   viewerId: number | null | undefined,
-  nameFor: (userId: number) => string
+  nameFor: (userId: number) => string,
+  alsoFirstIds: readonly number[] = []
 ): SummarySettlement[] => {
   const debtorTotals = new Map<number, number>();
   for (const settlement of settlements) {
@@ -106,8 +109,14 @@ export const orderSettlementsForViewer = (
   const isViewerOutgoing = (settlement: SummarySettlement): boolean =>
     viewerId != null && settlement.from_user_id === viewerId;
 
+  // 0 = saídas do usuário; 1 = saídas de quem ele paga; 2 = as demais.
+  const group = (settlement: SummarySettlement): number => {
+    if (isViewerOutgoing(settlement)) return 0;
+    return alsoFirstIds.includes(settlement.from_user_id) ? 1 : 2;
+  };
+
   return [...settlements].sort((a, b) => {
-    if (isViewerOutgoing(a) !== isViewerOutgoing(b)) return isViewerOutgoing(a) ? -1 : 1;
+    if (group(a) !== group(b)) return group(a) - group(b);
 
     const byDebtor =
       (debtorTotals.get(b.from_user_id) ?? 0) - (debtorTotals.get(a.from_user_id) ?? 0) ||
