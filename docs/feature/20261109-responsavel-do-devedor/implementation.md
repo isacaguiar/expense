@@ -101,7 +101,7 @@ Decisões dele sobre os achados, "siga com as recomendadas": BAIXA-3 corrigida n
 
 ## 6. Validação local no navegador (2026-11-10)
 
-Fecha os "ainda não visto em navegador" das TASK-591 e 592 (§2). Feita por mim no painel do app, com viewport emulado; **a conferência dele, no Chrome dele, segue pendente** (gate).
+Fecha os "ainda não visto em navegador" das TASK-591 e 592 (§2). Feita por mim no painel do app, com viewport emulado; **a conferência dele, no Chrome dele, foi feita em 2026-11-10** (§8).
 
 **Ambiente:** MySQL descartável `mysql-expense-test` (3307, banco migrado até `2026_11_09_000001`), backend `php artisan serve --env=testing` na 8001 e Vite na 3001, sem tocar a stack dele (3000/8000). Grupo "Casa Validacao" (id 9313) com Ana, Bruno (criador e credor), Carla e Davi; Bruno pagou R$ 400 em 10/10/2026, dividido pelos quatro, e a competência de outubro está fechada pela data (cada um dos três deve R$ 100,00 a Bruno). Dados criados por script fora do repositório, com trava que aborta se a porta do MySQL não for 3307.
 
@@ -162,4 +162,27 @@ Decisão dele, "siga com a opção A" (2026-11-10): os dois botões da linha pr�
 
 Nas cinco larguras os dois botões ficam na mesma linha, abaixo do texto e dentro do card, sem rolagem horizontal. O preço é a altura: a linha própria passa a ter 108 px em qualquer largura (a 768 px ou mais eram ~57 px), por escolha dele.
 
-**Limite:** o jsdom não mede layout; os 4 testes guardam a estrutura (item com `wrap`, botões com `flex-basis: 100%`, depois do texto, `wrap` entre si, à direita, outras linhas intactas), e a prova de largura é a medição acima. A conferência dele no Chrome segue pendente.
+**Limite:** o jsdom não mede layout; os 4 testes guardam a estrutura (item com `wrap`, botões com `flex-basis: 100%`, depois do texto, `wrap` entre si, à direita, outras linhas intactas), e a prova de largura é a medição acima. A conferência dele no Chrome foi feita (§8).
+
+## 8. Verificação final antes do PR (2026-11-10)
+
+**Conferência dele:** "validei", no Chrome dele em `localhost:3001`. Ele também confirmou a **D9-A** e a **D10-A** como estão (specify §3.4, linhas D9 e D10). Decisão dele: o PR desta feature sai agora; o pedido de o responsável se declarar sem aceite vira a feature seguinte (backlog 144).
+
+Checklist de `docs/sdd/04-implementation.md` §1 (itens 3 e 5) no HEAD `0a754b741a`, rodado pelo agent `pr-readiness-checker` e conferido por mim. O banco de teste foi **zerado** antes das suítes.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Banco zerado | `php artisan migrate:fresh --env=testing --force` (alvo conferido: porta 3307) | as duas migrations da feature `DONE` (262 ms e 126 ms) |
+| Backend, 1ª tentativa, com os dados da validação ainda no banco | `./vendor/bin/phpunit` | `Tests: 1195, Assertions: 7038, Errors: 2, Failures: 15`: os 15 eram sobra dos dados da validação (contagens globais erradas por 1) |
+| Backend, banco limpo | `./vendor/bin/phpunit` | `Tests: 1195, Assertions: 7062, Errors: 2`, 2:51. Os 2 erros são testes da `dev` com data fixa (abaixo), não da branch |
+| Estilo | `./vendor/bin/pint --test` | `PASS 232 files` |
+| Tipos | `npx tsc --noEmit` | exit 0 |
+| Front, suíte inteira | `npx vitest run --maxWorkers=1 --reporter=verbose` | `84 passed (84)` arquivos e `1138 passed (1138)` testes (os 1134 de antes mais os 4 do §7), 725 s |
+| Migrations | leitura das duas | só `Schema::create` e `Schema::table` aditivos, sem `drop`, `rename` nem `change` (os `drop*` só em `down()`); índices com 25 e 39 caracteres, chaves estrangeiras até 56 (limite 64) |
+| Segredos | `git diff origin/dev...HEAD` (48 arquivos, +4498 −28) | nenhum `.env`, dump, log, binário, comprovante nem credencial; e-mails só `@example.com` e fictícios |
+
+**Os 2 erros não são desta branch.** `GroupInvitationControllerTest::test_the_payload_has_exactly_the_agreed_keys` e `MyInvitationControllerTest::test_the_payload_names_the_group_and_who_invited` (TASK-576, já na `dev`) fixam `expires_at = 2026-11-10 12:00:00` sem congelar o relógio e passaram a falhar depois das 12:00 UTC de hoje, também na `dev`; o CI de qualquer PR contra `dev` ficaria vermelho neles. O conserto saiu à parte, no bugfix `20261110-testes-convite-com-data-fixa` (PR #270, que congela o relógio nos dois testes). **Este PR só abre depois do merge dele e de trazer a `dev` para esta branch**, para o CI sair verde.
+
+**Para quem rodar a suíte cheia depois da validação local:** o estado "vínculo Ana→Carla" do §6 deixa 15 testes falhando (`Expense::count()`, `Notification::count()` e `GroupMemberResponsible::count()` erram por 1), porque os testes usam `DatabaseTransactions` e enxergam as linhas que a validação deixou. Rode `php artisan migrate:fresh --env=testing --force` antes de `./vendor/bin/phpunit`.
+
+**Números que ficaram para trás nos §4 e §5** (são fotografias da data deles): "15 commits" e "45 arquivos, +4218 −27" no §4 são hoje 20 commits, 48 arquivos, +4498 −28; "`git diff --stat 7d1a4a5100 HEAD -- frontend` vazio" no §4 deixou de valer com o §7; o `OK (1193 tests)` do §4 foi superado pelo `OK (1195 tests, 7072 assertions)` do §5 (7062 assertions quando os 2 testes da `dev` erram).
