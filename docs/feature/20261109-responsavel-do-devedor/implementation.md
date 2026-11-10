@@ -44,9 +44,9 @@ Agente `security-reviewer`, somente leitura, sobre `git diff 6bc93b4369..HEAD --
 
 | # | Severidade | Achado | Tratamento |
 |---|---|---|---|
-| BAIXA-1 | Baixa | Alternar `PUT []` e `PUT [R]` grava uma notificação nova para R a cada volta (assédio entre co-membros; R não pode recusar, RK4) | Adiado; aguarda decisão do usuário (corrigir na feature ou virar item de backlog) |
-| BAIXA-2 | Baixa | Janela de milissegundos entre `canPayFor` (`:1763`) e a escrita (`:1805`): um vínculo removido nesse intervalo ainda grava `confirmed_by` (F5 do specify; o devedor reenvia) | Adiado; mesma decisão |
-| BAIXA-3 | Baixa | `responsible_user_ids` sem teto de tamanho: uma lista enorme prende o lock do grupo e, acima de 65535 ids, dá 500 sem expor dado | Adiado; mesma decisão (correção sugerida: `max:` na validação) |
+| BAIXA-1 | Baixa | Alternar `PUT []` e `PUT [R]` grava uma notificação nova para R a cada volta (assédio entre co-membros; R não pode recusar, RK4) | **Backlog 141** (decisão dele em 2026-11-10: "siga com as recomendadas") |
+| BAIXA-2 | Baixa | Janela de milissegundos entre `canPayFor` (`:1763`) e a escrita (`:1805`): um vínculo removido nesse intervalo ainda grava `confirmed_by` (F5 do specify; o devedor reenvia) | **Backlog 142** (mesma decisão) |
+| BAIXA-3 | Baixa | `responsible_user_ids` sem teto de tamanho: uma lista enorme prende o lock do grupo e, acima de 65535 ids, dá 500 sem expor dado | **Corrigido na feature** (mesma decisão): `max:50` e a mensagem "Escolha no máximo 50 pessoas." no `validate` de `update`; ver §5 |
 | INFO-1 | Informativa | O deploy publica o código antes do `migrate` (`deploy-backend.yml`): na janela, `GET /members`, a saída de membro e `confirmSettlement` dão 500 | Registrar no PR de promoção (ADR-008) |
 | INFO-2 | Informativa | O último a enviar apaga o comprovante anterior, inclusive o do devedor (R8), sem histórico | Aceito: coberto pela D1 e pelo RK2 |
 | INFO-3 | Informativa | `confirmSettlement` não checa `deleted` do grupo (anterior à feature) | Fora de escopo |
@@ -75,8 +75,26 @@ Item 5 do checklist de `docs/sdd/04-implementation.md` §1, rodado na branch int
 
 | # | Severidade | Achado | Tratamento |
 |---|---|---|---|
-| REV-1 | Informativa | R14: quando o responsável é também o credor, `Notifier::fanOut` não pula o autor, então ele recebe `settlement_confirmed` ("X confirmou um pagamento de R$ … por Y") sobre a própria ação, e o WhatsApp do credor (`WhatsAppNotifier::settlementProofConfirmed`, que escreve para `toUser`) também vai para ele quando está ligado e ele aceitou receber. O teste `test_responsible_who_is_also_the_creditor_is_accepted` cobre a aceitação e o `confirmed_by`, não o aviso. Não move dinheiro nem expõe dado de ninguém. | Decisão dele: backlog (recomendado, caso raro) ou corrigir agora (pular o aviso quando o credor é quem enviou, com teste e mutation check). |
+| REV-1 | Informativa | R14: quando o responsável é também o credor, `Notifier::fanOut` não pula o autor, então ele recebe `settlement_confirmed` ("X confirmou um pagamento de R$ … por Y") sobre a própria ação, e o WhatsApp do credor (`WhatsAppNotifier::settlementProofConfirmed`, que escreve para `toUser`) também vai para ele quando está ligado e ele aceitou receber. O teste `test_responsible_who_is_also_the_creditor_is_accepted` cobre a aceitação e o `confirmed_by`, não o aviso. Só ocorre por chamada direta à API, porque a interface não oferece os botões ao recebedor (R14). Não move dinheiro nem expõe dado de ninguém. | **Backlog 143** (decisão dele em 2026-11-10: "siga com as recomendadas"). |
 | REV-2 | Informativa | O Painel pessoal e `GET /me/overview` não enxergam quem paga por quem (D6, RK7). | Backlog 139. |
 | REV-3 | Informativa | `MANUAL.md` e o PDF, `manual.php` e `recursos.php` não descrevem "Quem paga por mim"; o popup do comprovante diz "seu pagamento" mesmo quando quem envia é o responsável. | Backlog 140. |
 
-**Pendências que dependem dele antes do PR:** (1) o destino de BAIXA-1, BAIXA-2 e BAIXA-3 da §3 e o número do teto de BAIXA-3; (2) REV-1; (3) a validação local no navegador, que também cobre o que os testes não veem (selo, botões e o layout dos dois botões da linha própria em tela estreita); (4) a confirmação das D9 e D10 (a D10 é o `DELETE` físico do vínculo e a leitura da linha 105 da Constitution, INFO-4); (5) o gate de rodar as duas migrations em banco compartilhado ou produção, lembrando que o deploy as aplica ao mergear em `main` (ADR-008, INFO-1). Push só com refspec explícito e depois da validação local; um único PR contra `dev`, citando D10, INFO-1 e este registro.
+**Pendências que dependem dele antes do PR:** (1) a validação local no navegador, que também cobre o que os testes não veem (selo, botões e o layout dos dois botões da linha própria em tela estreita); (2) a confirmação das D9 e D10 (a D10 é o `DELETE` físico do vínculo e a leitura da linha 105 da Constitution, INFO-4); (3) o gate de rodar as duas migrations em banco compartilhado ou produção, lembrando que o deploy as aplica ao mergear em `main` (ADR-008, INFO-1). Push só com refspec explícito e depois da validação local; um único PR contra `dev`, citando D10, INFO-1 e este registro.
+
+## 5. Ajustes depois da revisão final (2026-11-10)
+
+Decisões dele sobre os achados, "siga com as recomendadas": BAIXA-3 corrigida na feature com teto de **50**; BAIXA-1, BAIXA-2 e REV-1 viraram os itens 141, 142 e 143 do backlog.
+
+**Teto de 50 pessoas por lista (BAIXA-3).** `GroupMemberResponsibleController::MAX_RESPONSIBLES = 50`; o `validate` de `update` ganha `max:50` e a mensagem "Escolha no máximo 50 pessoas.", que sai como 422 com `errors.responsible_user_ids`. A lista anterior fica intacta quando o teto é estourado, porque o validador roda antes do service.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| RED (executado) | `./vendor/bin/phpunit --filter="test_put_with_more_than_the_maximum_ids\|test_put_with_exactly_the_maximum_ids"` com a constante declarada e ainda sem a regra | `Tests: 2, Failures: 1`: o de 51 ids falhou com `Failed asserting that an array has the key 'responsible_user_ids'`; o de 50 é guarda e passa |
+| GREEN | `./vendor/bin/phpunit --filter=GroupMemberResponsibleControllerTest` | `OK (21 tests, 88 assertions)` (19 antes, mais 2) |
+| Mutation check (3 mutantes, todos mortos) | sem o `max`; teto 49; teto 51 | sem o `max` e teto 51: o teste de 51 ids; teto 49: o teste de exatamente 50; arquivo restaurado idêntico ao backup |
+| Suíte inteira do backend | `./vendor/bin/phpunit` | `OK (1195 tests, 7072 assertions)`, 2:30 (1193 antes, mais os 2 novos) |
+| Estilo | `./vendor/bin/pint --test` | `PASS 232 files` |
+
+**Documentos acertados:** specify v1.2 (R1 e a linha da rota em §3.3), plan v1.2 (o `validate` do §3) e `docs/sdd/01-specify.md` (o bloco "Escolher" de §3.3 cita o teto).
+
+**Limite conhecido, sem tratamento:** o diálogo do front não impede escolher a 51ª pessoa; num grupo com mais de 50 membros isso mostraria o erro genérico do `PUT`. Fica registrado porque um grupo desse tamanho não existe hoje.

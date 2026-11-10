@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\GroupMemberResponsibleController;
 use App\Models\Group;
 use App\Models\GroupMemberResponsible;
 use App\Models\Notification;
@@ -123,6 +124,38 @@ class GroupMemberResponsibleControllerTest extends TestCase
         $this->putAs($debtor, $group, $debtor->id, [])
             ->assertStatus(422)
             ->assertJsonValidationErrors('responsible_user_ids');
+    }
+
+    // --- Teto da lista (BAIXA-3 da revisão de segurança) ------------------
+
+    public function test_put_with_more_than_the_maximum_ids_returns_422_and_keeps_the_previous_list(): void
+    {
+        [$debtor, $ana] = User::factory()->count(2)->create()->all();
+        $group = $this->groupWith([$debtor, $ana]);
+        $this->setList($debtor, $group, [$ana->id])->assertOk();
+
+        $tooMany = range(1000, 1000 + GroupMemberResponsibleController::MAX_RESPONSIBLES);
+
+        $this->setList($debtor, $group, $tooMany)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('responsible_user_ids')
+            ->assertJsonPath('errors.responsible_user_ids.0', 'Escolha no máximo 50 pessoas.');
+
+        $this->assertSame([$ana->id], $this->responsibleIdsOf($group, $debtor), 'a lista anterior fica');
+    }
+
+    public function test_put_with_exactly_the_maximum_ids_passes_the_validator(): void
+    {
+        [$debtor, $other] = User::factory()->count(2)->create()->all();
+        $group = $this->groupWith([$debtor, $other]);
+
+        // 50 ids que não são membros: passam pelo validador e caem na regra do service, com a mensagem dela.
+        $atTheLimit = range(1000, 999 + GroupMemberResponsibleController::MAX_RESPONSIBLES);
+        $this->assertCount(GroupMemberResponsibleController::MAX_RESPONSIBLES, $atTheLimit);
+
+        $this->setList($debtor, $group, $atTheLimit)
+            ->assertStatus(422)
+            ->assertExactJson(['message' => 'Escolha só membros deste grupo.']);
     }
 
     // --- R2, CA-1: quem pode, e 404 --------------------------------------

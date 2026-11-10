@@ -2,7 +2,9 @@
 
 > Feature: um membro de um grupo pode indicar **nenhum, um ou vários outros membros para pagar por ele**. Hoje só o devedor envia o comprovante do próprio acerto do ciclo; com o vínculo, quem foi indicado também pode enviá-lo em nome do devedor, e o credor vê quem pagou. Pedido novo do usuário (conversa de 2026-11-09), sem item prévio em `docs/sdd/03-tasks.md` nem em `docs/backlog/`.
 
-Versão: 1.1 · Criado em: 20261109
+Versão: 1.2 · Criado em: 20261109
+
+**v1.2 (2026-11-10):** a revisão de segurança (BAIXA-3) levou a um **teto de 50 pessoas por lista** no `PUT .../responsibles` (422 com `Escolha no máximo 50 pessoas.`). Muda a R1 e a linha da rota em §3.3; nada mais.
 
 **v1.1 (2026-11-09):** a **D3** passa de A (um responsável) para **B (nenhum ou vários)**, a pedido do usuário, e a D2-A (por grupo) foi reconfirmada. Mudam R1, R3, R4, R8, R11, R12, R13, o contrato (um único `PUT .../responsibles` com a lista inteira, sem `DELETE`), F1 a F3, F5, F9, a interface e os CA-1 a CA-3, CA-10 e CA-11. Nenhuma outra decisão mudou.
 
@@ -87,7 +89,7 @@ Não dependem de decisão; as que dependem estão em §3.4.
 
 | # | Regra |
 |---|---|
-| R1 | O vínculo é **(grupo, devedor, responsável)**. Cada devedor tem, **em cada grupo**, **nenhum, um ou vários** responsáveis, sem limite além de serem membros do grupo (D2, D3-B). |
+| R1 | O vínculo é **(grupo, devedor, responsável)**. Cada devedor tem, **em cada grupo**, **nenhum, um ou vários** responsáveis, até **50 por lista** (teto da validação, BAIXA-3) e sempre membros do grupo (D2, D3-B). |
 | R2 | **Só o próprio devedor** define, troca ou desfaz o seu vínculo (D1). Qualquer outro usuário, inclusive o criador do grupo, recebe 403. |
 | R3 | Cada responsável tem de ser **membro do grupo** e **diferente do devedor**, e a lista não pode repetir ninguém; senão 422 com mensagem e **nada** é alterado. |
 | R4 | O `PUT` **substitui a lista inteira** (a lista vazia desfaz tudo) e vale na hora: quem sai da lista perde o direito imediatamente, quem entra ganha, e quem continua não é afetado (a linha do vínculo dele não é recriada). |
@@ -110,7 +112,7 @@ Rota nova e campos novos, todos aditivos, sob `jwt.auth`.
 
 | Rota | Quem | Efeito |
 |---|---|---|
-| `PUT /groups/{groupId}/members/{userId}/responsibles` | o próprio devedor (`userId` = quem chama) | corpo `{responsible_user_ids: [...]}`: a lista **inteira** (vazia = nenhum), que substitui o conjunto; 200 `{message, responsibles: [{id, name}]}`; 403 se `userId` não é quem chama; 404 se não é membro ou o grupo foi excluído; 422 se algum responsável não é membro, é o próprio devedor, repete, ou o corpo não traz a lista (nada é alterado) |
+| `PUT /groups/{groupId}/members/{userId}/responsibles` | o próprio devedor (`userId` = quem chama) | corpo `{responsible_user_ids: [...]}`: a lista **inteira** (vazia = nenhum), que substitui o conjunto; 200 `{message, responsibles: [{id, name}]}`; 403 se `userId` não é quem chama; 404 se não é membro ou o grupo foi excluído; 422 se algum responsável não é membro, é o próprio devedor, repete, passa de 50 pessoas ou o corpo não traz a lista (nada é alterado) |
 | `GET /groups/{id}/members` (existente) | membro | cada membro ganha `responsibles` (lista) |
 | `POST /groups/{id}/settlements/confirm` (existente) | devedor ou seu responsável | ganha `from_user_id` opcional |
 | `summary`, `close`, `reopen` (existentes) | membro | `settlements[]` ganha `confirmedBy` |

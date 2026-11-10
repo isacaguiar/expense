@@ -15,13 +15,17 @@ use Illuminate\Http\Request;
  */
 class GroupMemberResponsibleController extends Controller
 {
+    /** Teto de pessoas numa lista (BAIXA-3 da revisão de segurança: uma lista enorme prendia o lock do grupo). */
+    public const MAX_RESPONSIBLES = 50;
+
     /**
      * `PUT /groups/{groupId}/members/{userId}/responsibles`.
      *
      * Só o próprio devedor define a lista dele (R2, D1-A): qualquer outro membro, inclusive o criador
      * do grupo, recebe 403. Quem não é membro, ou o grupo excluído, recebe 404, como o resto das rotas
      * de membros. Corpo: `responsible_user_ids`, a lista **inteira** (`present`, e não `required`, para
-     * aceitar a vazia). Repetidos e quem não é membro viram 422 do service, sem alterar nada.
+     * aceitar a vazia) e com no máximo `MAX_RESPONSIBLES` pessoas. Repetidos e quem não é membro viram
+     * 422 do service, sem alterar nada.
      */
     public function update(Request $request, $groupId, $userId)
     {
@@ -32,8 +36,10 @@ class GroupMemberResponsibleController extends Controller
         abort_unless(ctype_digit((string) $userId) && (int) $userId === (int) auth()->id(), 403);
 
         $data = $request->validate([
-            'responsible_user_ids' => 'present|array',
+            'responsible_user_ids' => 'present|array|max:'.self::MAX_RESPONSIBLES,
             'responsible_user_ids.*' => 'integer',
+        ], [
+            'responsible_user_ids.max' => 'Escolha no máximo '.self::MAX_RESPONSIBLES.' pessoas.',
         ]);
 
         $service = app(MemberResponsibleService::class);

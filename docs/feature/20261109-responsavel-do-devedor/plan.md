@@ -2,7 +2,9 @@
 
 > Traduz `specify.md` em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
 
-Versão: 1.1 · Criado em: 20261109
+Versão: 1.2 · Criado em: 20261109
+
+**v1.2 (2026-11-10):** o `validate` de `update` (§3) ganha `max:50` e a mensagem `Escolha no máximo 50 pessoas.` (BAIXA-3 da revisão de segurança; specify v1.2).
 
 **v1.1 (2026-11-09):** acompanha o specify v1.1 (D3-B, nenhum ou vários responsáveis). Mudam os §1 a §4, §8 a §11 e o ajuste 8 do topo; os §5 a §7, o §12 e o §13 só no que cita a rota.
 
@@ -77,7 +79,7 @@ Casos que o specify implica mas que ninguém lembraria de testar, do mais prová
 `backend/app/Http/Controllers/GroupMemberResponsibleController.php`, dentro do grupo de rotas `groups/{groupId}/members` que já existe em `routes/api.php`:
 
 - **Uma** rota: `PUT /{userId}/responsibles` → `update(Request $request, $groupId, $userId)`. Não há `DELETE`: a lista vazia desfaz tudo (um `DELETE` nessa URL dá 405).
-- **Ordem das checagens em `update`:** `Group::find` e 404 se nulo ou excluído → `authorizeGroupMembership` (base; 404) → `userId` precisa ser dígitos e igual a `auth()->id()`, senão **403** (R2, vale também para o criador) → `validate(['responsible_user_ids' => 'present|array', 'responsible_user_ids.*' => 'integer|distinct'])` (422; `present`, e não `required`, para aceitar a lista vazia) → `MemberResponsibleService::replace` (`MemberResponsibleRefused` vira 422 com `message`) → um `Notifier::paymentResponsibleAssigned` para **cada** id em `added` (R11) → 200 `{message, responsibles: [{id, name}]}` com a lista já gravada.
+- **Ordem das checagens em `update`:** `Group::find` e 404 se nulo ou excluído → `authorizeGroupMembership` (base; 404) → `userId` precisa ser dígitos e igual a `auth()->id()`, senão **403** (R2, vale também para o criador) → `validate(['responsible_user_ids' => 'present|array|max:50', 'responsible_user_ids.*' => 'integer|distinct'])` (422; `present`, e não `required`, para aceitar a lista vazia) → `MemberResponsibleService::replace` (`MemberResponsibleRefused` vira 422 com `message`) → um `Notifier::paymentResponsibleAssigned` para **cada** id em `added` (R11) → 200 `{message, responsibles: [{id, name}]}` com a lista já gravada.
 - Mensagens 422: "Escolha só membros deste grupo.", "Você não pode ser quem paga por você mesmo." e "A lista não pode repetir ninguém."
 
 ## 4. Membros: `index` traz `responsibles`, `destroy` limpa os vínculos (Specify R12, R13, CA-3, CA-9, 2.8, 2.11)
