@@ -44,7 +44,7 @@ type PaymentResponsibleDialogProps = {
  * "Quem pode pagar por você": o usuário escolhe nenhuma, uma ou várias pessoas do grupo que também
  * podem enviar o comprovante dos acertos dele. Um único `PUT .../responsibles` com a lista inteira;
  * não há botão de desfazer: esvaziar o seletor e salvar desfaz tudo.
- * docs/feature/20261109-responsavel-do-devedor/plan.md §9
+ * docs/feature/concluidas/202611/20261109-responsavel-do-devedor/plan.md §9
  */
 const PaymentResponsibleDialog: React.FC<PaymentResponsibleDialogProps> = ({
   open,

@@ -1,7 +1,7 @@
 # Dividir por assunto os dois arquivos de teste gigantes do frontend (ExpenseManager e Payments)
 
 ID: 138
-Origem: docs/feature/20261109-responsavel-do-devedor/ (análise do Vitest após a TASK-590); `frontend/src/pages/ExpenseManager.test.tsx` (2756 linhas) e `frontend/src/pages/Payments.test.tsx` (1864 linhas, 76 testes)
+Origem: docs/feature/concluidas/202611/20261109-responsavel-do-devedor/ (análise do Vitest após a TASK-590); `frontend/src/pages/ExpenseManager.test.tsx` (2756 linhas) e `frontend/src/pages/Payments.test.tsx` (1864 linhas, 76 testes)
 Criado em: 2026-11-10
 Prioridade: BAIXA
 Status: Aberto

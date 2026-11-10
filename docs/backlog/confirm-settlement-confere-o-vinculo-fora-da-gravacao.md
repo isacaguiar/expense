@@ -1,7 +1,7 @@
 # `confirmSettlement` confere o vínculo "quem paga por quem" fora da gravação: janela de milissegundos
 
 ID: 142
-Origem: TASK-589 (revisão de segurança, BAIXA-2) da feature `docs/feature/20261109-responsavel-do-devedor/`; `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`: a checagem de `canPayFor` vem logo depois da validação e a gravação é o `updateOrCreate` mais abaixo); specify F5
+Origem: TASK-589 (revisão de segurança, BAIXA-2) da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/`; `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`: a checagem de `canPayFor` vem logo depois da validação e a gravação é o `updateOrCreate` mais abaixo); specify F5
 Criado em: 2026-11-10
 Prioridade: BAIXA
 Status: Aberto

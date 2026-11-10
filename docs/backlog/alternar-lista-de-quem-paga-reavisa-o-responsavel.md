@@ -1,7 +1,7 @@
 # Alternar a lista de "quem paga por mim" avisa o mesmo responsável a cada volta
 
 ID: 141
-Origem: TASK-589 (revisão de segurança, BAIXA-1) da feature `docs/feature/20261109-responsavel-do-devedor/`; `backend/app/Http/Controllers/GroupMemberResponsibleController.php` (`update`) e `Notifier::paymentResponsibleAssigned`; specify R11 e RK4
+Origem: TASK-589 (revisão de segurança, BAIXA-1) da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/`; `backend/app/Http/Controllers/GroupMemberResponsibleController.php` (`update`) e `Notifier::paymentResponsibleAssigned`; specify R11 e RK4
 Criado em: 2026-11-10
 Prioridade: BAIXA
 Status: Aberto

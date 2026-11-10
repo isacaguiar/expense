@@ -188,3 +188,11 @@ Checklist de `docs/sdd/04-implementation.md` §1 (itens 3 e 5) no HEAD `0a754b74
 **Números que ficaram para trás nos §4 e §5** (são fotografias da data deles): "15 commits" e "45 arquivos, +4218 −27" no §4 são hoje 20 commits, 48 arquivos, +4498 −28; "`git diff --stat 7d1a4a5100 HEAD -- frontend` vazio" no §4 deixou de valer com o §7; o `OK (1193 tests)` do §4 foi superado pelo `OK (1195 tests, 7072 assertions)` do §5 (7062 assertions quando os 2 testes da `dev` erram).
 
 **Depois do merge do bugfix #270 (`044f3e590e`):** o PR do bugfix passou nos dois checks do CI ("Pint + PHPUnit (backend)" e "Type-check, testes e build (frontend)"). Trouxe-se a `dev` com `git merge --no-ff origin/dev` (merge `41b4a34c18`, sem conflito; a `dev` só trouxe os dois testes, o README e o arquivo do bugfix). Na branch integrada: `./vendor/bin/phpunit` → `OK (1195 tests, 7072 assertions)`, 2:46, com o banco zerado; `./vendor/bin/pint --test` → `PASS 232 files`. O front não mudou com o merge, então vale a suíte inteira de acima (`84 passed (84)` arquivos, `1138 passed (1138)` testes). Os 2 erros de data fixa desapareceram.
+
+## 9. Arquivamento (2026-11-10)
+
+Feature concluída: o PR #271 foi mergeado em `dev` por ele em 2026-11-10 (merge `a4672cfd76`, CI verde), depois do bugfix #270. A pasta foi movida (ADR-009) de `docs/feature/20261109-responsavel-do-devedor/` para `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/`.
+
+**Ponteiros atualizados:** o glossário de `docs/sdd/01-specify.md` (a nota "Ponteiro a atualizar no arquivamento" da TASK-593, em §2, está cumprida), o campo Origem dos itens de backlog 137 a 144 e dois comentários de código (`PaymentResponsibleDialog.tsx` e `MemberResponsibleRefused.php`). Este log guarda os caminhos antigos como foram escritos na época.
+
+**Segue fora desta pasta:** backlog 137 a 144 (o 144 é o pedido novo dele); as duas migrations aplicam no deploy ao mergear em `main` (INFO-1); promoção `dev` → `main` e tag são dele.

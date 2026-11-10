@@ -1,7 +1,7 @@
 # Manual e site não descrevem "Quem paga por mim"; o popup do comprovante diz "seu pagamento"
 
 ID: 140
-Origem: revisão final da branch da feature `docs/feature/20261109-responsavel-do-devedor/`; `MANUAL.md` (seção Pagamentos e o passo 6 do roteiro), `MANUAL.pdf`, `site/public/manual.php` (seção 7, "Pagar e comprovar"), `site/public/recursos.php` (`:47`) e `frontend/src/pages/Payments.tsx` (descrição do popup "Enviar comprovante do Pix")
+Origem: revisão final da branch da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/`; `MANUAL.md` (seção Pagamentos e o passo 6 do roteiro), `MANUAL.pdf`, `site/public/manual.php` (seção 7, "Pagar e comprovar"), `site/public/recursos.php` (`:47`) e `frontend/src/pages/Payments.tsx` (descrição do popup "Enviar comprovante do Pix")
 Criado em: 2026-11-10
 Prioridade: BAIXA
 Status: Aberto
