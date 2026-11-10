@@ -332,4 +332,55 @@ describe('GroupMembersForm: quem paga por quem', () => {
       expect(screen.getByRole('dialog', { name: 'Quem pode pagar por você' })).toBeInTheDocument();
     });
   });
+
+  describe('layout da linha própria (achado V1 da validação local)', () => {
+    // O jsdom não mede layout. O que se guarda aqui é a estrutura que impede o aperto medido no
+    // navegador (coluna do e-mail com 0 px a ~1024 px): os dois botões numa linha só deles, abaixo do
+    // e-mail, em qualquer largura. A largura real foi conferida no navegador (implementation.md §7).
+    const ownRow = async () => {
+      mockApi({ me: 1, createdBy: 1, members: fixed(person(1, 'Ana', [BRUNO_PAYER]), person(2, 'Bruno', [])) });
+      renderForm();
+      await screen.findByText('bruno@example.com');
+      const row = rowOf('ana@example.com');
+      const actions = within(row).getByRole('button', { name: SET_BUTTON }).parentElement as HTMLElement;
+      return { row, actions };
+    };
+
+    it('puts the two buttons on a line of their own: the row wraps and the buttons take the whole line', async () => {
+      const { row, actions } = await ownRow();
+
+      expect(within(actions).getByRole('button', { name: 'Sair do grupo' })).toBeInTheDocument();
+      expect(row).toHaveStyle('flex-wrap: wrap');
+      expect(actions).toHaveStyle('flex-basis: 100%');
+    });
+
+    it('places the buttons after the e-mail text, so that they land below it', async () => {
+      const { row, actions } = await ownRow();
+      const text = row.querySelector('.MuiListItemText-root') as HTMLElement;
+
+      expect(text.compareDocumentPosition(actions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(text).toHaveTextContent('ana@example.com');
+    });
+
+    it('leaves the rows of the other members as they were: no wrap, and the Remover button stays beside the e-mail', async () => {
+      mockApi({ me: 1, createdBy: 1, members: fixed(person(1, 'Ana', []), person(2, 'Bruno', [])) });
+      renderForm();
+      await screen.findByText('bruno@example.com');
+
+      const other = rowOf('bruno@example.com');
+      const remove = within(other).getByRole('button', { name: 'Remover' });
+
+      expect(other).not.toHaveStyle('flex-wrap: wrap');
+      expect(remove.parentElement).toBe(other);
+    });
+
+    it('lets the two buttons wrap between themselves when the line is too narrow', async () => {
+      const { actions } = await ownRow();
+
+      expect(actions).toHaveStyle('display: flex');
+      expect(actions).toHaveStyle('flex-wrap: wrap');
+      // Continuam no canto direito, onde ficavam ao lado do e-mail.
+      expect(actions).toHaveStyle('justify-content: flex-end');
+    });
+  });
 });

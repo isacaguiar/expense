@@ -332,7 +332,12 @@ const GroupMembersForm: React.FC = () => {
               ) : (
                 <List disablePadding>
                   {members.map(user => (
-                    <ListItem key={user.id} divider disableGutters>
+                    <ListItem
+                      key={user.id}
+                      divider
+                      disableGutters
+                      sx={user.id === currentUserId ? { flexWrap: 'wrap' } : undefined}
+                    >
                       <ListItemAvatar>
                         <Avatar sx={{ bgcolor: brandColors.primaryLight, color: brandColors.primary, fontSize: '0.85rem' }}>
                           {getInitials(user.email)}
@@ -347,11 +352,14 @@ const GroupMembersForm: React.FC = () => {
                       {user.id === currentUserId ? (
                         <Box
                           sx={{
+                            // Os dois botões ficam numa linha só deles, abaixo do e-mail, em qualquer
+                            // largura: ao lado do texto sobravam 0 px para o e-mail a ~1024 px (V1).
                             display: 'flex',
-                            flexDirection: { xs: 'column', sm: 'row' },
-                            alignItems: { xs: 'flex-end', sm: 'center' },
+                            flexWrap: 'wrap',
+                            justifyContent: 'flex-end',
                             gap: 0.5,
-                            flexShrink: 0
+                            flexBasis: '100%',
+                            mt: 0.5
                           }}
                         >
                           <Button size="small" onClick={openResponsible}>

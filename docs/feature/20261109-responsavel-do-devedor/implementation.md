@@ -118,7 +118,7 @@ Fecha os "ainda não visto em navegador" das TASK-591 e 592 (§2). Feita por mim
 
 Depois do teste, o ambiente foi devolvido ao estado "vínculo Ana→Carla feito, nada pago": confirmação e arquivo de teste removidos, aviso ao Bruno removido, aviso de Carla marcado como não lido.
 
-### Achado V1: a linha própria de Participantes não cabe entre ~900 e ~1300 px (aberto)
+### Achado V1: a linha própria de Participantes não cabe entre ~900 e ~1300 px (corrigido na §7, opção A)
 
 Medido na linha de Ana (a única com dois botões), largura da coluna do e-mail:
 
@@ -135,3 +135,31 @@ Medido na linha de Ana (a única com dois botões), largura da coluna do e-mail:
 **Fora da feature:** o texto vermelho "Erro ao carregar informações do grupo." ficou na tela depois de uma falha transitória de rede (`ERR_NETWORK_CHANGED`) na primeira das duas rodadas do efeito em modo dev; o efeito é de 17/08 e nunca limpa o erro. Não é desta feature; não vira item.
 
 **Observação já registrada (§2, TASK-592):** o popup de envio diz "o comprovante do **seu** pagamento" mesmo quando Carla envia o de Ana; segue como está por mandato da specify §3.6.
+
+## 7. Ajuste depois da validação local: linha própria de Participantes (V1, opção A)
+
+Decisão dele, "siga com a opção A" (2026-11-10): os dois botões da linha própria ficam numa **segunda linha, abaixo do e-mail, em qualquer largura**.
+
+**Mudança** (só `frontend/src/pages/GroupMembersForm.tsx`, CRLF preservado): o `ListItem` da linha própria ganha `flexWrap: 'wrap'` (as outras linhas não mudam); o grupo dos dois botões deixa de ser coluna em `xs` e linha em `sm` com `flexShrink: 0` e vira `display: flex`, `flexWrap: 'wrap'`, `justifyContent: 'flex-end'`, `gap: 0.5`, `flexBasis: '100%'` e `mt: 0.5`. **Desvio na execução:** a primeira versão recuava os botões 56 px para alinhá-los ao texto (`pl: { xs: 0, sm: 7 }`); a 1024 px sobravam 248 px para 267 px dos dois botões e eles se empilhavam, então tirei o recuo e mantive o alinhamento à direita, onde os botões já ficavam.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| RED (executado) | `npx vitest run src/pages/GroupMembersForm.responsible.test.tsx -t "layout da linha" --maxWorkers=1` com os testes escritos e o componente ainda sem a mudança | `2 failed, 1 passed`: `flex-wrap` e `flex-basis` ausentes. O de ordem no DOM já passava (os botões já vinham depois do texto): é guarda, não RED. O de "outras linhas não mudam" entrou depois |
+| GREEN | o mesmo comando, depois da mudança e do quarto teste | `4 passed` |
+| Mutation check (5 mutantes, todos mortos) | `run_mutants.sh`: baseline e um mutante por rodada, arquivo restaurado e conferido com `cmp` | sem `flexWrap` no item: o de "linha própria" falhou; sem `flexBasis`: o mesmo; sem `flexWrap` nos botões: o de "quebrar entre si" falhou; sem `justifyContent`: o mesmo; `flexWrap` em todas as linhas: o de "outras linhas" falhou |
+| Tipos | `npx tsc --noEmit` | exit 0 |
+| Testes relacionados | `npx vitest related src/pages/GroupMembersForm.tsx --run --maxWorkers=2` | `5 passed`, `57 passed` (os 3 arquivos antigos de `GroupMembersForm` sem edição) |
+
+**Largura real, medida no navegador** (coluna do e-mail da linha de Ana, antes → depois; `getBoundingClientRect` e captura):
+
+| Viewport | Antes | Depois |
+|---|---|---|
+| 375 px | 107 px, e-mail em 2 linhas | 255 px, 1 linha |
+| 768 px | 366 px | 632 px |
+| **1024 px** | **0 px** (e-mail em 16 linhas, "Sair do grupo" vazava) | **248 px**, 1 linha |
+| 1280 px | 110 px, e-mail em 2 linhas | 376 px, 1 linha |
+| 1440 px | 190 px | 456 px |
+
+Nas cinco larguras os dois botões ficam na mesma linha, abaixo do texto e dentro do card, sem rolagem horizontal. O preço é a altura: a linha própria passa a ter 108 px em qualquer largura (a 768 px ou mais eram ~57 px), por escolha dele.
+
+**Limite:** o jsdom não mede layout; os 4 testes guardam a estrutura (item com `wrap`, botões com `flex-basis: 100%`, depois do texto, `wrap` entre si, à direita, outras linhas intactas), e a prova de largura é a medição acima. A conferência dele no Chrome segue pendente.
