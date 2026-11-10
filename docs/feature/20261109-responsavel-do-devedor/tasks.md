@@ -28,7 +28,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: pedido do usuário na 
 | TASK-590 | Acrescentar os tipos `MemberResponsible` e `confirmedBy` e os textos do sino | frontend | plan.md §8 | nenhum | Concluída |
 | TASK-591 | Criar o diálogo "Quem pode pagar por você" e mostrar os vínculos em Participantes | frontend | plan.md §9 | nenhum | Concluída |
 | TASK-592 | Mostrar e enviar o pagamento por quem o usuário paga em Pagamentos | frontend | plan.md §10 | nenhum | Concluída |
-| TASK-593 | Documentar o vínculo em `docs/sdd/01-specify.md` | doc | plan.md §12 | nenhum | Pendente |
+| TASK-593 | Documentar o vínculo em `docs/sdd/01-specify.md` | doc | plan.md §12 | nenhum | Concluída |
 
 ## Critérios de aceite
 
