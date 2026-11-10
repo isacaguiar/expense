@@ -7,6 +7,7 @@ use App\Http\Controllers\GroupController;
 use App\Http\Controllers\GroupExpenseReportController;
 use App\Http\Controllers\GroupInvitationController;
 use App\Http\Controllers\GroupMemberController;
+use App\Http\Controllers\GroupMemberResponsibleController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MyInvitationController;
 use App\Http\Controllers\NotificationController;
@@ -60,6 +61,8 @@ Route::middleware('jwt.auth')->group(function () {
         Route::get('/', [GroupMemberController::class, 'index']);
         Route::post('/', [GroupMemberController::class, 'store']);
         Route::delete('/{userId}', [GroupMemberController::class, 'destroy']);
+        // Só `PUT`: a lista vazia desfaz tudo, não há `DELETE` (feature 20261109-responsavel-do-devedor).
+        Route::put('/{userId}/responsibles', [GroupMemberResponsibleController::class, 'update']);
     });
 
     Route::prefix('groups/{groupId}/invitations')->group(function () {

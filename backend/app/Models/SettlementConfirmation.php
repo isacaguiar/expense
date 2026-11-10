@@ -22,6 +22,7 @@ class SettlementConfirmation extends Model
         'cycle_end',
         'from_user_id',
         'to_user_id',
+        'confirmed_by',
         'amount',
         'proof_path',
         'note',
@@ -47,6 +48,15 @@ class SettlementConfirmation extends Model
     public function toUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'to_user_id');
+    }
+
+    /**
+     * Quem enviou o comprovante: o responsável do devedor, ou nulo quando foi o próprio devedor
+     * (feature 20261109-responsavel-do-devedor). O acerto segue sendo de `fromUser`.
+     */
+    public function confirmedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'confirmed_by');
     }
 
     /**

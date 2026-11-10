@@ -19,8 +19,15 @@ export function notificationText(type: string, data: NotificationData): string {
   switch (type) {
     case 'expense_paid':
       return `${str(data.actorName)} marcou "${str(data.expenseDescription)}" como paga`;
-    case 'settlement_confirmed':
-      return `${str(data.actorName)} confirmou um pagamento de ${brl(data.amount)}`;
+    case 'settlement_confirmed': {
+      // `paidByName` só existe quando outra pessoa pagou por quem deve (`actorName`); sem ele, o texto de sempre.
+      const paidBy = str(data.paidByName);
+      return paidBy
+        ? `${paidBy} confirmou um pagamento de ${brl(data.amount)} por ${str(data.actorName)}`
+        : `${str(data.actorName)} confirmou um pagamento de ${brl(data.amount)}`;
+    }
+    case 'payment_responsible_assigned':
+      return `Você agora pode pagar por ${str(data.actorName)} no grupo "${str(data.groupName)}"`;
     case 'cycle_settled':
       return `O ciclo de ${str(data.cycleLabel)} de "${str(data.groupName)}" foi quitado`;
     case 'cycle_closed':

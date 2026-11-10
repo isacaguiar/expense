@@ -4,7 +4,7 @@
 >
 > Fontes usadas para levantar este documento: `backend/routes/api.php`, `backend/app/Models/*`, `backend/app/Http/Controllers/*`, `backend/database/migrations/*`, `frontend/src/pages/*`.
 
-Versão: 1.2 · Última atualização: 2026-11-05
+Versão: 1.3 · Última atualização: 2026-11-10
 
 ---
 
@@ -23,6 +23,7 @@ Permitir que um grupo de pessoas (família, república, grupo de amigos) registr
 | `Quota` | `ex_quotas` | `expense_id`, `number`, `value_quota`, `date_expected`, `paid` | Parcela da despesa. Para `IN_CASH`, ainda é criada 1 quota. |
 | Pré-cadastro | `ex_user_pre_create` | `name`, `email`, `whatsapp`, `password` (hash), `code_hash`, `handle_hash`, `attempts`, `resend_count`, `expires_at`, `last_sent_at`, `consumed_at` | Dados do formulário de auto-cadastro **antes** de existir um `User`. Vira `User` quando o código de 6 dígitos é confirmado; a linha é marcada `consumed_at` (nunca apagada) e tem o material de credencial esvaziado. |
 | `Participation` | `ex_participations` | `group_id`, `quota_id`, `state` | **Existe na migration/model mas não é populada por nenhum endpoint hoje** — ver seção 6, "Divergências". |
+| Quem paga por quem | `ex_group_member_responsibles` | `group_id`, `user_id` (o devedor), `responsible_user_id` | Vínculo **por grupo** entre um devedor e quem pode pagar por ele, isto é, enviar o comprovante dos acertos dele; cada devedor tem nenhum, um ou vários. Na interface é "Quem paga por você": "Responsável" na tela continua sendo o criador do grupo. Quem enviou cada comprovante fica em `ex_settlement_confirmations.confirmed_by` (nula = o próprio devedor). |
 
 ## 3. Fluxos implementados
 
@@ -62,6 +63,13 @@ Permitir que um grupo de pessoas (família, república, grupo de amigos) registr
   - **Avisos**: o convite cria a notificação `group_invitation` para quem foi convidado (de novo só se o último aviso tem mais de 24 h) e o aceite cria `group_invitation_accepted` para quem convidou. Os dois são best effort: se falharem, vira log e o convite existe do mesmo jeito. A notificação `group_member_added` deixou de ser criada (as antigas continuam legíveis).
   - **Telas**: em Participantes o botão é **Convidar** e há a lista **Convites pendentes** com **Cancelar**; em Meus Grupos há **Convites recebidos** com **Aceitar** e **Recusar**; o clique na notificação `group_invitation` leva a Meus Grupos.
   - **Limite conhecido** (D10 da feature): o convite segue válido se quem convidou sair do grupo antes do aceite; o criador vê a lista de pendentes e cancela à mão, e quem convidou só é avisado do aceite enquanto ainda for membro.
+- **Quem paga por quem** (feature `docs/feature/20261109-responsavel-do-devedor/`; tabela `ex_group_member_responsibles`, uma linha por grupo × devedor × responsável). Um membro indica **nenhuma, uma ou várias** pessoas do mesmo grupo que também podem enviar o comprovante do pagamento dele; só isso, sem ver nada que já não veja como membro.
+  - **Escolher** (`PUT /groups/{groupId}/members/{userId}/responsibles`, `GroupMemberResponsibleController`, corpo `{ responsible_user_ids: [...] }`): a lista **inteira**, que substitui a anterior, com no máximo **50 pessoas**; a lista vazia desfaz tudo (não há `DELETE`). **Só o próprio devedor** (`userId` = quem chama) escolhe: outro membro, inclusive o criador do grupo, recebe **403**; não membro, grupo inexistente ou excluído recebem **404**. Responsável que não é membro, o próprio devedor, repetido ou lista com mais de 50 dá **422** e nada muda. Responde 200 `{ message: 'Responsáveis atualizados.', responsibles: [{ id, name }] }`. Quem entra na lista recebe a notificação `payment_responsible_assigned`; quem já estava ou sai não é avisado.
+  - **Ler** (`GET /groups/{groupId}/members`): cada membro traz `responsibles` (`[{ id, name }]`, vazia quando não há), visível a todos os membros; nunca e-mail, Pix ou contato do responsável.
+  - **Pagar** (`POST /groups/{groupId}/settlements/confirm`): ganha `from_user_id` opcional. Quando difere de quem chama, exige o vínculo (este grupo, esse devedor, quem chama); sem ele, **403**, antes de gravar o arquivo ou a linha. O acerto **continua do devedor**: valores, saldos, selo e snapshots não mudam, e `confirmed_by` registra quem enviou; reenviar substitui foto, nota e `confirmed_by` (o último vence). Todo o resto da regra vale para o responsável: competência fechada e não selada, comprovante obrigatório, nota de até 500 caracteres. `pay()` (o "recebi" do credor) não muda. `summary`, `close` e `reopen` trazem `settlements[].confirmedBy` (`{ id, name }`, só quando difere do devedor, senão `null`), e a notificação `settlement_confirmed` do credor ganha `paidByName` nesse caso.
+  - **Saída e remoção**: os vínculos somem, nos dois sentidos (como devedor e como responsável), na mesma transação de `GroupMemberController::destroy`. É exclusão física de uma relação, não de dado de negócio.
+  - **Telas**: em Participantes, o botão **Quem paga por mim** (só na linha do próprio usuário) abre o diálogo "Quem pode pagar por você"; as linhas mostram `Quem paga por você: A, B` ou `Quem paga por {membro}: …` e o selo `Paga por {dependente}`; o diálogo de sair ou remover avisa que a escolha será desfeita. Em Pagamentos, nos acertos de quem o usuário paga, o selo `Você paga por {nome}` e os botões de hoje (sem botão quando o usuário é quem recebe o acerto), `Enviado por {nome}` ao lado de "Comprovante enviado", e as saídas de quem ele paga logo depois das dele.
+  - **Limite conhecido** (D6 da feature): só a tela Pagamentos do grupo enxerga quem paga por quem; o Painel pessoal e `GET /me/overview` seguem assumindo o usuário logado como devedor de tudo.
 
 ### 3.4 Despesas
 - `POST /expenses` (`ExpenseController::store`, autenticado): cria a despesa, associa `payers` (sem desassociar antigos — `syncWithoutDetaching`) e cria as `Quota`s recebidas do cliente (o front já calcula datas/valores de cada parcela e envia pronto).
@@ -87,6 +95,7 @@ Permitir que um grupo de pessoas (família, república, grupo de amigos) registr
 3. O valor é dividido **igualmente** entre os `payers` da despesa (não necessariamente todos os membros do grupo).
 4. Relatórios de "quem deve a quem" excluem o próprio pagador da lista de devedores dele mesmo.
 5. Grupo e despesa nunca são apagados fisicamente por essas rotas — apenas marcados `deleted = true`.
+6. **Só o devedor escolhe quem paga por ele.** Por grupo, nenhuma, uma ou várias pessoas do mesmo grupo, nunca ele mesmo. Quem é escolhido só pode enviar o comprovante dos acertos dele; o acerto continua do devedor, e `confirmed_by` registra quem enviou.
 
 ## 5. Fora de escopo hoje / backlog de negócio
 

@@ -11,6 +11,7 @@ use App\Models\SettlementConfirmation;
 use App\Models\User;
 use App\Services\CycleSummaryService;
 use App\Services\ExpensePaymentService;
+use App\Services\MemberResponsibleService;
 use App\Support\BillingCycle;
 use App\Support\ClosingBreakdown;
 use App\Support\ExpenseRequestFingerprint;
@@ -1732,6 +1733,12 @@ class ExpenseController extends Controller
      * anterior (`updateOrCreate` — sem endpoint de "desfazer", ver
      * docs/feature/concluidas/202608/20260825-pagamentos-grid-pix/specify.md §4). Ao confirmar o
      * último acerto pendente de um ciclo já todo pago, sela o ciclo.
+     *
+     * `from_user_id` (opcional, feature 20261109-responsavel-do-devedor): o devedor de quem é o
+     * comprovante. Sem ele, ou igual ao usuário autenticado, o devedor é quem chama, como sempre. Por
+     * outro devedor, exige o vínculo "quem paga por quem" (403 sem ele, antes de gravar arquivo ou
+     * linha). O acerto continua sendo do devedor: `confirmed_by` guarda quem enviou (nulo = o próprio
+     * devedor) e o último a enviar vence.
      */
     public function confirmSettlement(Request $request, $groupId)
     {
@@ -1740,11 +1747,22 @@ class ExpenseController extends Controller
 
         $data = $request->validate([
             'to_user_id' => 'required|integer|exists:ex_users,id',
+            'from_user_id' => 'nullable|integer|exists:ex_users,id',
             'comprovante' => 'required|image|max:5120',
             // Opcional; trim e "" → null vêm dos middlewares globais.
             'descricao' => 'nullable|string|max:500',
             'cycles_ago' => 'nullable|integer|min:0',
         ]);
+
+        // Quem paga por outra pessoa (feature 20261109-responsavel-do-devedor, R6): sem `from_user_id`,
+        // ou igual ao de quem chama, o devedor é quem chama. Por outro devedor, exige o vínculo (este
+        // grupo, esse devedor, quem chama); sem ele, 403 **antes** de qualquer consulta de ciclo e de
+        // gravar arquivo ou linha.
+        $debtorId = (int) ($data['from_user_id'] ?? auth()->id());
+
+        if ($debtorId !== auth()->id() && ! $this->responsibles()->canPayFor((int) $groupId, auth()->id(), $debtorId)) {
+            abort(403, 'Você não pode pagar por esse membro.');
+        }
 
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
 
@@ -1766,7 +1784,7 @@ class ExpenseController extends Controller
         $summary = $this->cycles()->compute($group, $cycle['start'], $cycle['end']);
 
         $settlement = collect($summary['settlements'])->first(
-            fn ($s) => $s['from_user_id'] === auth()->id() && $s['to_user_id'] === (int) $data['to_user_id']
+            fn ($s) => $s['from_user_id'] === $debtorId && $s['to_user_id'] === (int) $data['to_user_id']
         );
 
         if (! $settlement) {
@@ -1776,7 +1794,7 @@ class ExpenseController extends Controller
         $key = [
             'group_id' => $groupId,
             'cycle_start' => $cycle['start']->toDateString(),
-            'from_user_id' => auth()->id(),
+            'from_user_id' => $debtorId,
             'to_user_id' => $data['to_user_id'],
         ];
 
@@ -1792,6 +1810,8 @@ class ExpenseController extends Controller
             // anterior é limpa, igual à foto que é trocada.
             'note' => $data['descricao'] ?? null,
             'confirmed_at' => Carbon::now(),
+            // Quem enviou: nulo quando é o próprio devedor. O último a enviar vence (R7, R8).
+            'confirmed_by' => $debtorId === auth()->id() ? null : auth()->id(),
         ]);
 
         if ($previousProofPath && $previousProofPath !== $path) {
@@ -1803,12 +1823,17 @@ class ExpenseController extends Controller
         // Só na 1ª confirmação desse par no ciclo — reenviar o comprovante
         // (`updateOrCreate` que atualiza) não gera notificação nova.
         if ($confirmation->wasRecentlyCreated) {
+            // O acerto é do devedor: é o nome dele que o credor lê (`actorName`). Quem pagou por ele, se foi
+            // outra pessoa, vai em `paidByName` (R10).
+            $paidOnBehalf = $debtorId !== auth()->id();
+
             Notifier::settlementConfirmed(
                 $group,
                 (int) $data['to_user_id'],
-                auth()->user()->name,
+                $paidOnBehalf ? User::find($debtorId)?->name : auth()->user()->name,
                 $settlement['amount'],
                 $cycle['start'],
+                $paidOnBehalf ? auth()->user()->name : null,
             );
         }
 
@@ -1861,6 +1886,15 @@ class ExpenseController extends Controller
     private function payments(): ExpensePaymentService
     {
         return app(ExpensePaymentService::class);
+    }
+
+    /**
+     * Regras de "quem paga por quem" (feature 20261109-responsavel-do-devedor). Resolvido pelo
+     * container, sem construtor, pelo mesmo motivo de `cycles()` e `payments()`.
+     */
+    private function responsibles(): MemberResponsibleService
+    {
+        return app(MemberResponsibleService::class);
     }
 
     /**

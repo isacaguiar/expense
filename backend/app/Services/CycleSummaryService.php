@@ -361,7 +361,9 @@ class CycleSummaryService
      */
     public function withConfirmations($groupId, Carbon $start, array $settlements): array
     {
-        $confirmations = SettlementConfirmation::where('group_id', $groupId)
+        // `confirmedByUser` vem junto, numa consulta só para todos os acertos (sem uma por acerto).
+        $confirmations = SettlementConfirmation::with('confirmedByUser:id,name')
+            ->where('group_id', $groupId)
             ->where('cycle_start', $start->toDateString())
             ->get()
             ->keyBy(fn ($c) => "{$c->from_user_id}-{$c->to_user_id}");
@@ -373,6 +375,14 @@ class CycleSummaryService
                 $settlement['confirmedProofUrl'] = $confirmation?->proof_url;
                 $settlement['confirmedNote'] = $confirmation?->note;
                 $settlement['confirmedAt'] = $confirmation?->confirmed_at?->toIso8601String();
+
+                // Quem enviou o comprovante, só quando difere do devedor (feature
+                // 20261109-responsavel-do-devedor, R10): nulo se o próprio devedor enviou ou se
+                // ninguém confirmou. Só `id` e `name`, nunca e-mail, Pix ou contato.
+                $sender = $confirmation?->confirmedByUser;
+                $settlement['confirmedBy'] = $sender !== null && (int) $confirmation->confirmed_by !== (int) $confirmation->from_user_id
+                    ? ['id' => $sender->id, 'name' => $sender->name]
+                    : null;
 
                 return $settlement;
             })

@@ -252,24 +252,48 @@ class Notifier
     }
 
     /**
+     * O devedor escolheu alguém para pagar por ele (`GroupMemberResponsibleController@update`) → avisa
+     * esse responsável, um por pessoa que **entrou** na lista (quem já estava e quem saiu não recebem).
+     *
+     * Com `group_id` e `groupId`, ao contrário do convite: o responsável é membro do grupo e o sino pode
+     * abrir o resumo dele. Feature 20261109-responsavel-do-devedor, specify R11.
+     */
+    public static function paymentResponsibleAssigned(Group $group, int $responsibleId, ?string $debtorName): void
+    {
+        self::guard('payment_responsible_assigned', function () use ($group, $responsibleId, $debtorName) {
+            self::fanOut([$responsibleId], 'payment_responsible_assigned', $group->id, [
+                'actorName' => $debtorName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+            ]);
+        });
+    }
+
+    /**
      * O devedor confirmou o acerto do ciclo via Pix, com comprovante
      * (`ExpenseController@confirmSettlement`) → avisa o credor.
+     *
+     * `$debtorName` é o nome do devedor, de quem é o acerto (`actorName`). Quando outra pessoa pagou por
+     * ele, `$paidByName` é o nome dela e entra no `data` como `paidByName`; sem ele (o próprio devedor
+     * enviou) a chave não existe, e a notificação é idêntica à de antes. Feature
+     * 20261109-responsavel-do-devedor, specify R10.
      */
     public static function settlementConfirmed(
         Group $group,
         int $creditorId,
         ?string $debtorName,
         float|string $amount,
-        mixed $cycleStart
+        mixed $cycleStart,
+        ?string $paidByName = null
     ): void {
-        self::guard('settlement_confirmed', function () use ($group, $creditorId, $debtorName, $amount, $cycleStart) {
+        self::guard('settlement_confirmed', function () use ($group, $creditorId, $debtorName, $amount, $cycleStart, $paidByName) {
             self::fanOut([$creditorId], 'settlement_confirmed', $group->id, [
                 'actorName' => $debtorName,
                 'groupId' => $group->id,
                 'groupName' => $group->name,
                 'amount' => self::amount($amount),
                 'cycleLabel' => self::cycleLabel($cycleStart),
-            ]);
+            ] + ($paidByName !== null ? ['paidByName' => $paidByName] : []));
         });
     }
 
