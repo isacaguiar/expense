@@ -54,3 +54,29 @@ Agente `security-reviewer`, somente leitura, sobre `git diff 6bc93b4369..HEAD --
 | INFO-5 | Informativa | O `exists` de `from_user_id` distingue id existente de inexistente (422 contra 403) | Aceito: `to_user_id` já se comporta assim |
 | INFO-6 | Informativa | `nullOnDelete` faz `confirmedBy` virar nulo se a conta de quem pagou for apagada | Aceito (F8); não há rota de exclusão de conta |
 | INFO-7 | Informativa | `updateOrCreate` não é atômico (anterior à feature): dois envios simultâneos podem dar 500 ou deixar um arquivo órfão | Fora de escopo |
+
+## 4. Revisão final da branch (2026-11-10)
+
+Item 5 do checklist de `docs/sdd/04-implementation.md` §1, rodado na branch integrada `feature/20261109-responsavel-do-devedor`: 15 commits sobre `origin/dev` (`6bc93b4369`, que não andou, então não há divergência), e `git merge-tree --write-tree HEAD origin/dev` → sem conflito. Revisão de segurança do backend: §3. Só leitura e execução de comandos; nenhum código foi alterado nesta etapa.
+
+| Verificação | Comando | Resultado |
+|---|---|---|
+| Escopo | `git diff --shortstat origin/dev...HEAD` | 45 arquivos, +4218 −27 (antes do commit deste registro): `backend/` 19, `frontend/` 16, `docs/` 10 |
+| Estilo do backend | `./vendor/bin/pint --test` | `PASS 232 files` |
+| Suíte do backend | `./vendor/bin/phpunit` | `OK (1193 tests, 7063 assertions)`, 3:07; os 5 arquivos de teste da feature estão na suíte |
+| Backend desde a TASK-589 | `git diff --stat 0c071e4ce1 HEAD -- backend` | vazio: é a mesma árvore que a suíte de 1193 testes já tinha coberto |
+| Tipos do front | `npx tsc --noEmit` | exit 0 (TASK-592); `git diff --stat 7d1a4a5100 HEAD -- frontend` vazio, nada mudou desde |
+| Suíte do front | `npx vitest run --maxWorkers=1 --reporter=verbose` | `84 passed (84)` arquivos, `1134 passed` testes, 697 s (TASK-592) |
+| Segredos e arquivos | `git diff origin/dev...HEAD` com varredura de padrões (`password`, `secret`, `token`, chaves, `AKIA…`, `ghp_…`) e de nomes (`.env`, `.pem`, `.sql`, `.log`, `vendor/`, `dist/`) | nenhum: os acertos são helpers de teste (`tokenFor`), uma chave Pix de mentira (`chave-secreta-da-ana`) e a leitura de `accessToken` que já existia; nenhum arquivo binário nem com mais de 900 linhas adicionadas |
+| Fim de linha | `git ls-files --eol` | índice em LF em todos os arquivos tocados (o CRLF é só do checkout) |
+| Contrato (Constitution §4.1) | leitura das rotas e das respostas | só aditivo: rota nova, `responsibles` em `GET /members`, `from_user_id` opcional em `settlements/confirm`, `confirmedBy` no resumo; `app/` (Flutter) ainda não existe, então a web é o único consumidor |
+
+**Leitura crítica, sem achado que bloqueie.** Migrations aditivas, com `down()` que desfaz só o que criaram, nome explícito nos dois índices e `nullOnDelete` na coluna nova. `MemberResponsibleService`, `GroupMemberResponsibleController`, `confirmSettlement`, `GroupMemberController` (`index` e `destroy`), `CycleSummaryService::withConfirmations` e `Notifier` conferidos contra a specify R1 a R16: o 404 de não membro vem antes do 403, e o 403 do `from_user_id` vem antes de qualquer consulta de ciclo e de gravar arquivo. No front, o contrato com o backend (`responsibles`, `confirmedBy`, `from_user_id`) confere com os tipos, e o clique do sino em `payment_responsible_assigned` abre `/groups/{groupId}/summary`, sem rota nova.
+
+| # | Severidade | Achado | Tratamento |
+|---|---|---|---|
+| REV-1 | Informativa | R14: quando o responsável é também o credor, `Notifier::fanOut` não pula o autor, então ele recebe `settlement_confirmed` ("X confirmou um pagamento de R$ … por Y") sobre a própria ação, e o WhatsApp do credor (`WhatsAppNotifier::settlementProofConfirmed`, que escreve para `toUser`) também vai para ele quando está ligado e ele aceitou receber. O teste `test_responsible_who_is_also_the_creditor_is_accepted` cobre a aceitação e o `confirmed_by`, não o aviso. Não move dinheiro nem expõe dado de ninguém. | Decisão dele: backlog (recomendado, caso raro) ou corrigir agora (pular o aviso quando o credor é quem enviou, com teste e mutation check). |
+| REV-2 | Informativa | O Painel pessoal e `GET /me/overview` não enxergam quem paga por quem (D6, RK7). | Backlog 139. |
+| REV-3 | Informativa | `MANUAL.md` e o PDF, `manual.php` e `recursos.php` não descrevem "Quem paga por mim"; o popup do comprovante diz "seu pagamento" mesmo quando quem envia é o responsável. | Backlog 140. |
+
+**Pendências que dependem dele antes do PR:** (1) o destino de BAIXA-1, BAIXA-2 e BAIXA-3 da §3 e o número do teto de BAIXA-3; (2) REV-1; (3) a validação local no navegador, que também cobre o que os testes não veem (selo, botões e o layout dos dois botões da linha própria em tela estreita); (4) a confirmação das D9 e D10 (a D10 é o `DELETE` físico do vínculo e a leitura da linha 105 da Constitution, INFO-4); (5) o gate de rodar as duas migrations em banco compartilhado ou produção, lembrando que o deploy as aplica ao mergear em `main` (ADR-008, INFO-1). Push só com refspec explícito e depois da validação local; um único PR contra `dev`, citando D10, INFO-1 e este registro.
