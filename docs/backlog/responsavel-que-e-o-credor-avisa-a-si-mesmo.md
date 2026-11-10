@@ -1,7 +1,7 @@
 # Responsável que também é o credor recebe o aviso da própria confirmação
 
 ID: 143
-Origem: revisão final da branch da feature `docs/feature/20261109-responsavel-do-devedor/` (REV-1; specify R14); `backend/app/Support/Notifier.php` (`fanOut` não pula o autor), `ExpenseController::confirmSettlement` (aviso quando a confirmação é criada) e `backend/app/Support/WhatsApp/WhatsAppNotifier.php` (`settlementProofConfirmed`, que escreve para o credor)
+Origem: revisão final da branch da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/` (REV-1; specify R14); `backend/app/Support/Notifier.php` (`fanOut` não pula o autor), `ExpenseController::confirmSettlement` (aviso quando a confirmação é criada) e `backend/app/Support/WhatsApp/WhatsAppNotifier.php` (`settlementProofConfirmed`, que escreve para o credor)
 Criado em: 2026-11-10
 Prioridade: BAIXA
 Status: Aberto

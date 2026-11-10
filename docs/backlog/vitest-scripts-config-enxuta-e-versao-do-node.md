@@ -1,7 +1,7 @@
 # Vitest do frontend: scripts de teste e typecheck, config enxuta e versão do Node registrada
 
 ID: 137
-Origem: docs/feature/20261109-responsavel-do-devedor/ (TASK-590: a suíte inteira do front não concluiu na máquina de desenvolvimento e a análise do Vitest que se seguiu); `frontend/vite.config.js`, `frontend/package.json`, `.github/workflows/ci-frontend.yml`
+Origem: docs/feature/concluidas/202611/20261109-responsavel-do-devedor/ (TASK-590: a suíte inteira do front não concluiu na máquina de desenvolvimento e a análise do Vitest que se seguiu); `frontend/vite.config.js`, `frontend/package.json`, `.github/workflows/ci-frontend.yml`
 Criado em: 2026-11-10
 Prioridade: BAIXA
 Status: Aberto

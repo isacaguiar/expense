@@ -1,7 +1,7 @@
 # Quem paga declara por quem paga, sem aceite do devedor, e o credor pode recusar o comprovante
 
 ID: 144
-Origem: validação local da feature `docs/feature/20261109-responsavel-do-devedor/` (pedido dele em 2026-11-10); specify daquela feature (D1, R2, RK2, RK4 e §2.2); `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`, `sealCycleIfSettled`) e `backend/app/Services/CycleSummaryService.php` (`summaryIsFullySettled`)
+Origem: validação local da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/` (pedido dele em 2026-11-10); specify daquela feature (D1, R2, RK2, RK4 e §2.2); `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`, `sealCycleIfSettled`) e `backend/app/Services/CycleSummaryService.php` (`summaryIsFullySettled`)
 Criado em: 2026-11-10
 Prioridade: MÉDIA
 Status: Aberto

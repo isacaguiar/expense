@@ -1,7 +1,7 @@
 # Painel pessoal e `GET /me/overview` não enxergam quem paga por quem
 
 ID: 139
-Origem: docs/feature/20261109-responsavel-do-devedor/specify.md RK7 e D6 (o alcance da primeira entrega ficou só na tela Pagamentos do grupo); `frontend/src/components/GroupPositionCard.tsx` (`:106-112`, assume o usuário logado como devedor de tudo) e `OverviewController::show` (`GET /me/overview`, `backend/routes/api.php:40`)
+Origem: docs/feature/concluidas/202611/20261109-responsavel-do-devedor/specify.md RK7 e D6 (o alcance da primeira entrega ficou só na tela Pagamentos do grupo); `frontend/src/components/GroupPositionCard.tsx` (`:106-112`, assume o usuário logado como devedor de tudo) e `OverviewController::show` (`GET /me/overview`, `backend/routes/api.php:40`)
 Criado em: 2026-11-10
 Prioridade: BAIXA
 Status: Aberto
