@@ -4,7 +4,7 @@ ID: 144
 Origem: validação local da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/` (pedido dele em 2026-11-10); specify daquela feature (D1, R2, RK2, RK4 e §2.2); `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`, `sealCycleIfSettled`) e `backend/app/Services/CycleSummaryService.php` (`summaryIsFullySettled`)
 Criado em: 2026-11-10
 Prioridade: MÉDIA
-Status: Aberto
+Status: Promovido para TASK-594
 
 ## Descrição
 Hoje só o **devedor** escolhe quem paga por ele (D1-A e R2 da feature `responsavel-do-devedor`): o vínculo é uma permissão que ele dá, e é isso que impede um membro de mandar comprovante em nome de outro. Ele pediu o caminho inverso: **quem paga poder declarar "eu pago por Ana e Davi"**, sem a confirmação do dependente. O caso que motiva: uma criança que não acessa o app nunca aceitaria um pedido, então o vínculo ficaria pendente para sempre (por isso a D1-B da specify original, "o responsável propõe e o devedor aceita", não serve).

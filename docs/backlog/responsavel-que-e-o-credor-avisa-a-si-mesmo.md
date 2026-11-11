@@ -4,7 +4,7 @@ ID: 143
 Origem: revisão final da branch da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/` (REV-1; specify R14); `backend/app/Support/Notifier.php` (`fanOut` não pula o autor), `ExpenseController::confirmSettlement` (aviso quando a confirmação é criada) e `backend/app/Support/WhatsApp/WhatsAppNotifier.php` (`settlementProofConfirmed`, que escreve para o credor)
 Criado em: 2026-11-10
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-602
 
 ## Descrição
 Se o responsável de um devedor é também o **credor** do acerto, o backend aceita o envio do comprovante (R14: sem efeito financeiro) e avisa o credor, que é o próprio autor: ele recebe no sino "X confirmou um pagamento de R$ … por Y" e, com o WhatsApp ligado e o aceite dele, também a mensagem de WhatsApp, sobre a ação que acabou de fazer. O teste `test_responsible_who_is_also_the_creditor_is_accepted` cobre a aceitação e o `confirmed_by`, não o aviso.

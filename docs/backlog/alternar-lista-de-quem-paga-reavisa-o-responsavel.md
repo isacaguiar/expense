@@ -4,7 +4,7 @@ ID: 141
 Origem: TASK-589 (revisão de segurança, BAIXA-1) da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/`; `backend/app/Http/Controllers/GroupMemberResponsibleController.php` (`update`) e `Notifier::paymentResponsibleAssigned`; specify R11 e RK4
 Criado em: 2026-11-10
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-603
 
 ## Descrição
 Quem entra na lista de "quem paga por mim" recebe a notificação `payment_responsible_assigned`; quem sai não recebe, e quem já estava não é avisado de novo (R11). Mas o devedor pode mandar `PUT []` e depois `PUT [R]` em sequência: R sai e volta, e recebe um aviso novo a cada volta. R não pode recusar (RK4) e só o limiter global `api` (60 requisições por minuto por usuário) segura o ritmo. O alcance é só entre membros do mesmo grupo, porque o devedor só escolhe membros.
