@@ -33,7 +33,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **144**, agrup
 | TASK-606 | Acrescentar os tipos e os textos do sino dos três avisos novos | frontend | plan.md §9 | nenhum | Concluída |
 | TASK-607 | Criar o diálogo "Eu pago por…" e o botão e o texto na linha própria de Participantes | frontend | plan.md §10 | nenhum | Concluída |
 | TASK-608 | Criar o hook `useSettlementDecision` e os botões e selos de aceitar, recusar e excluir em Pagamentos | frontend | plan.md §11 | antes do merge | Concluída |
-| TASK-609 | Documentar o fluxo em `docs/sdd/01-specify.md` v1.4 | doc | plan.md §13 | nenhum | Pendente |
+| TASK-609 | Documentar o fluxo em `docs/sdd/01-specify.md` v1.4 | doc | plan.md §13 | nenhum | Concluída |
 
 ## Critérios de aceite
 
