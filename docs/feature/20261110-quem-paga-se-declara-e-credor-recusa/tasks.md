@@ -32,7 +32,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **144**, agrup
 | TASK-605 | Escrever a matriz de autorização das rotas novas, o mutation check e rodar a revisão do `security-reviewer` | backend | plan.md §8 | antes do merge | Concluída |
 | TASK-606 | Acrescentar os tipos e os textos do sino dos três avisos novos | frontend | plan.md §9 | nenhum | Concluída |
 | TASK-607 | Criar o diálogo "Eu pago por…" e o botão e o texto na linha própria de Participantes | frontend | plan.md §10 | nenhum | Concluída |
-| TASK-608 | Criar o hook `useSettlementDecision` e os botões e selos de aceitar, recusar e excluir em Pagamentos | frontend | plan.md §11 | antes do merge | Pendente |
+| TASK-608 | Criar o hook `useSettlementDecision` e os botões e selos de aceitar, recusar e excluir em Pagamentos | frontend | plan.md §11 | antes do merge | Concluída |
 | TASK-609 | Documentar o fluxo em `docs/sdd/01-specify.md` v1.4 | doc | plan.md §13 | nenhum | Pendente |
 
 ## Critérios de aceite

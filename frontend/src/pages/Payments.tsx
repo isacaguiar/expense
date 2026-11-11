@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import {
   Box,
@@ -24,6 +24,7 @@ import { API_BASE_URL } from '../config';
 import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } from '../hooks/useGroupCycle';
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
+import { useSettlementDecision, type SettlementDecisionAction } from '../hooks/useSettlementDecision';
 import PaymentSettlementsPanel, { SettlementsTab } from '../components/PaymentSettlementsPanel';
 import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
@@ -34,6 +35,12 @@ import { formatShortDate } from '../utils/dates';
 import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
 import ExpenseFilterBar from '../components/ExpenseFilterBar';
 import { useExpenseFilters } from '../hooks/useExpenseFilters';
+
+const DECISION_NOTICE: Record<SettlementDecisionAction, string> = {
+  accept: 'Comprovante aceito.',
+  refuse: 'Comprovante recusado.',
+  destroy: 'Comprovante excluído.'
+};
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -213,6 +220,19 @@ const Payments: React.FC = () => {
       .finally(() => setConfirmingSettlement(false));
   };
 
+  // Aceitar, recusar e excluir o comprovante de um acerto (feature 20261110-quem-paga-se-declara-e-credor-
+  // recusa, plan §11). Depois de cada ação a tela avisa e recarrega o ciclo; a falha mostra a mensagem do
+  // servidor e reabilita os botões.
+  const [decisionNotice, setDecisionNotice] = useState<string | null>(null);
+  const handleDecisionSuccess = useCallback(
+    (action: SettlementDecisionAction) => {
+      setDecisionNotice(DECISION_NOTICE[action]);
+      reload();
+    },
+    [reload]
+  );
+  const decision = useSettlementDecision(groupId, handleDecisionSuccess);
+
   const expenses = summary?.expenses ?? [];
 
   // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Substitui o
@@ -391,6 +411,10 @@ const Payments: React.FC = () => {
                 onPayWithPix={handleSelectSettlement}
                 onSendProof={openConfirmSettlementDialog}
                 payForUserIds={payForUserIds}
+                onAccept={settlement => decision.accept(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
+                onRefuse={settlement => decision.refuse(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
+                onDelete={settlement => decision.destroy(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
+                decisionBusy={decision.busy}
               />
             </Grid>
           </Grid>
@@ -496,6 +520,28 @@ const Payments: React.FC = () => {
       >
         <Alert onClose={() => setSettlementConfirmSuccess(false)} severity="success" variant="filled">
           Comprovante enviado.
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={decisionNotice !== null}
+        autoHideDuration={4000}
+        onClose={() => setDecisionNotice(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setDecisionNotice(null)} severity="success" variant="filled">
+          {decisionNotice}
+        </Alert>
+      </Snackbar>
+
+      <Snackbar
+        open={decision.error !== null}
+        autoHideDuration={6000}
+        onClose={decision.clearError}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={decision.clearError} severity="error" variant="filled">
+          {decision.error}
         </Alert>
       </Snackbar>
 

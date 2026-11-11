@@ -1,5 +1,17 @@
-import React from 'react';
-import { Box, Button, Card, Chip, Stack, Typography } from '@mui/material';
+import React, { useState } from 'react';
+import {
+  Box,
+  Button,
+  Card,
+  Chip,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Stack,
+  Typography
+} from '@mui/material';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import QrCode2OutlinedIcon from '@mui/icons-material/QrCode2Outlined';
 import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
@@ -28,6 +40,14 @@ type PayableSettlementListProps = {
   // Texto de lista vazia. O padrão serve a Pagamentos sem abas e ao Painel; as abas
   // "Valores a pagar"/"Valores pagos" passam o delas.
   emptyMessage?: string;
+  // Aceitar, recusar e excluir o comprovante enviado por quem paga por outra pessoa (feature
+  // 20261110-quem-paga-se-declara-e-credor-recusa, plan §11). Opcionais: sem eles (o Painel) a lista só
+  // mostra o estado, sem botões de decisão.
+  onAccept?: (settlement: SummarySettlement) => void;
+  onRefuse?: (settlement: SummarySettlement) => void;
+  onDelete?: (settlement: SummarySettlement) => void;
+  // Uma decisão em andamento: desabilita os botões dela.
+  decisionBusy?: boolean;
 };
 
 /**
@@ -45,6 +65,11 @@ type PayableSettlementListProps = {
  * `canConfirm` = o backend aceita o comprovante do devedor agora (competência
  * fechada e não selada — ver docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado
  * §2.2). Enquanto `false`, o devedor vê só um aviso no lugar dos botões.
+ *
+ * O comprovante enviado por quem paga por outra pessoa passa pelo aceite do credor (feature
+ * 20261110-quem-paga-se-declara-e-credor-recusa): o credor vê Aceitar e Recusar; o devedor e quem enviou veem
+ * Excluir (o backend só os deixa excluir, não os outros que pagam pelo devedor); o aceito é definitivo e perde
+ * os botões de reenvio.
  */
 const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   settlements,
@@ -55,8 +80,15 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   onPayWithPix,
   onSendProof,
   payForUserIds = NO_ONE,
-  emptyMessage = 'Ninguém deve nada a ninguém neste ciclo.'
+  emptyMessage = 'Ninguém deve nada a ninguém neste ciclo.',
+  onAccept,
+  onRefuse,
+  onDelete,
+  decisionBusy = false
 }) => {
+  // O comprovante que a pessoa está prestes a excluir: a exclusão é definitiva e pede confirmação.
+  const [deleting, setDeleting] = useState<SummarySettlement | null>(null);
+
   const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
   const nameFor = (userId: number): string => nameById.get(userId) ?? 'Desconhecido';
   const avatarById = new Map(balances.map(balance => [balance.user_id, balance.avatarUrl]));
@@ -86,6 +118,20 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
         const canAct = isDebtor || canPayFor;
         // A nota só faz sentido junto de um comprovante enviado.
         const note = confirmed ? settlement.confirmedNote : null;
+
+        // Estado do comprovante. Respostas de antes da feature não trazem `confirmationStatus`: um comprovante
+        // conta como enviado, e sem comprovante não há estado.
+        const status = settlement.confirmationStatus ?? (confirmed ? 'sent' : null);
+        const awaiting = status === 'awaiting_acceptance';
+        const refused = status === 'refused';
+        const accepted = status === 'accepted';
+        // Quem enviou o comprovante (só vem preenchido quando difere do devedor).
+        const isSender = currentUserId !== null && settlement.confirmedBy?.id === currentUserId;
+        // As ações só valem com o ciclo fechado e não encerrado (`canConfirm`), a janela do backend.
+        const canDecide = isReceiver && awaiting && canConfirm && onAccept !== undefined && onRefuse !== undefined;
+        const canDelete = (isDebtor || isSender) && (awaiting || refused) && canConfirm && onDelete !== undefined;
+        // O aceito é definitivo: nem Pix nem reenvio.
+        const canResend = canAct && canConfirm && !accepted;
 
         return (
           <Card key={`${settlement.from_user_id}-${settlement.to_user_id}-${index}`} variant="outlined" sx={{ p: 2 }}>
@@ -124,7 +170,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
               {isReceiver && (
                 <Chip
                   icon={<CallReceivedOutlinedIcon fontSize="small" />}
-                  label={confirmed ? 'Pagou a você' : 'Deve pagar a você'}
+                  label={confirmed && !awaiting ? 'Pagou a você' : 'Deve pagar a você'}
                   color="info"
                   size="small"
                   variant="outlined"
@@ -134,6 +180,26 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
               {canPayFor && (
                 <Chip label={`Você paga por ${nameFor(settlement.from_user_id)}`} color="primary" size="small" variant="outlined" />
               )}
+
+              {awaiting && (
+                <Chip
+                  label={isReceiver ? 'Aguardando seu aceite' : 'Aguardando aceite do credor'}
+                  color="warning"
+                  size="small"
+                  variant="outlined"
+                />
+              )}
+
+              {refused && (
+                <Chip
+                  label={isReceiver ? 'Você recusou o comprovante' : `Recusado por ${nameFor(settlement.to_user_id)}`}
+                  color="error"
+                  size="small"
+                  variant="outlined"
+                />
+              )}
+
+              {accepted && <Chip label="Aceito pelo credor" color="success" size="small" />}
 
               {confirmed &&
                 (settlement.confirmedProofUrl ? (
@@ -166,7 +232,36 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                 </Typography>
               )}
 
-              {canAct && canConfirm && (
+              {canDecide && (
+                <>
+                  <Button
+                    size="small"
+                    variant="contained"
+                    color="success"
+                    disabled={decisionBusy}
+                    onClick={() => onAccept?.(settlement)}
+                  >
+                    Aceitar
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
+                    color="error"
+                    disabled={decisionBusy}
+                    onClick={() => onRefuse?.(settlement)}
+                  >
+                    Recusar
+                  </Button>
+                </>
+              )}
+
+              {canDelete && (
+                <Button size="small" color="error" disabled={decisionBusy} onClick={() => setDeleting(settlement)}>
+                  Excluir
+                </Button>
+              )}
+
+              {canResend && (
                 <>
                   <Button
                     size="small"
@@ -196,6 +291,27 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
           </Card>
         );
       })}
+
+      <Dialog open={deleting !== null} onClose={() => setDeleting(null)}>
+        <DialogTitle>Excluir comprovante?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {`O comprovante enviado por ${deleting?.confirmedBy?.name ?? 'quem enviou'} será excluído de vez e não poderá ser recuperado. Quem deve poderá enviar outro.`}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleting(null)}>Cancelar</Button>
+          <Button
+            color="error"
+            onClick={() => {
+              if (deleting) onDelete?.(deleting);
+              setDeleting(null);
+            }}
+          >
+            Excluir
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Stack>
   );
 };
