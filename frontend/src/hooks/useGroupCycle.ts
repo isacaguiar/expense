@@ -78,6 +78,11 @@ export type SummaryBalance = {
   formerMember?: boolean;
 };
 
+// Estado do comprovante de um acerto, derivado no servidor (feature 20261110-quem-paga-se-declara-e-credor-
+// recusa, R5/R6): `awaiting_acceptance` é o enviado por quem paga por outra pessoa, que só vale depois do
+// aceite do credor; `refused` volta o par a "a pagar". O cliente só exibe, não recalcula.
+export type ConfirmationStatus = 'sent' | 'awaiting_acceptance' | 'accepted' | 'refused';
+
 export type SummarySettlement = {
   from_user_id: number;
   to_user_id: number;
@@ -90,6 +95,11 @@ export type SummarySettlement = {
   // Quem enviou o comprovante, só quando difere do devedor (o responsável que pagou por ele); `null`
   // quando foi o próprio devedor ou ninguém confirmou. Opcional pelo mesmo motivo de `confirmedNote`.
   confirmedBy?: MemberResponsible | null;
+  // Estado do comprovante; `null` quando ninguém enviou. Opcional: fixtures e respostas antigas não o trazem,
+  // e a tela trata a ausência como "enviado" (o comportamento de antes).
+  confirmationStatus?: ConfirmationStatus | null;
+  // Quando o credor recusou; só vem preenchido no estado `refused`.
+  refusedAt?: string | null;
 };
 
 export type Summary = {
