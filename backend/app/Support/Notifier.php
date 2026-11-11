@@ -321,6 +321,34 @@ class Notifier
     }
 
     /**
+     * O credor recusou o comprovante que um responsável enviou (`SettlementDecisionController@refuse`)
+     * → avisa quem enviou e o devedor, de quem é o acerto. `$creditorName` é o credor (`actorName`) e
+     * `$debtorName`, o devedor (`debtorName`), para o texto dizer de quem é o comprovante. Quem chama monta
+     * `$recipientIds` sem o autor da ação (feature 20261110-quem-paga-se-declara-e-credor-recusa, R12).
+     *
+     * @param  array<int, int>  $recipientIds
+     */
+    public static function settlementRefused(
+        Group $group,
+        array $recipientIds,
+        ?string $creditorName,
+        ?string $debtorName,
+        float|string $amount,
+        mixed $cycleStart
+    ): void {
+        self::guard('settlement_refused', function () use ($group, $recipientIds, $creditorName, $debtorName, $amount, $cycleStart) {
+            self::fanOut($recipientIds, 'settlement_refused', $group->id, [
+                'actorName' => $creditorName,
+                'debtorName' => $debtorName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+                'amount' => self::amount($amount),
+                'cycleLabel' => self::cycleLabel($cycleStart),
+            ]);
+        });
+    }
+
+    /**
      * Grava uma linha por destinatário.
      *
      * @param  iterable<int>  $userIds

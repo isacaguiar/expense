@@ -23,7 +23,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **144**, agrup
 | TASK-596 | Extrair o selo do ciclo para `CycleSealingService::sealIfSettled`, sem mudar comportamento | backend | plan.md §2 | antes do merge | Concluída |
 | TASK-597 | Fazer o selo contar só o comprovante que vale e expor `confirmationStatus` e `refusedAt` em `withConfirmations` | backend | plan.md §3 | antes do merge | Concluída |
 | TASK-598 | Criar `POST /groups/{id}/settlements/accept`, o `SettlementConfirmationService` e o aviso `settlement_accepted` | backend | plan.md §4 | antes do merge | Concluída |
-| TASK-599 | Criar `POST /groups/{id}/settlements/refuse` e o aviso `settlement_refused` | backend | plan.md §4 | antes do merge | Pendente |
+| TASK-599 | Criar `POST /groups/{id}/settlements/refuse` e o aviso `settlement_refused` | backend | plan.md §4 | antes do merge | Concluída |
 | TASK-600 | Criar `DELETE /groups/{id}/settlements/confirmation`, que exclui o próprio comprovante | backend | plan.md §4 | antes do merge (hard delete aprovado) | Pendente |
 | TASK-601 | Fazer `confirmSettlement` respeitar o aceite, limpar a recusa no reenvio e reavisar o credor | backend | plan.md §5 | antes do merge | Pendente |
 | TASK-602 | Não avisar o credor (sino e WhatsApp) da confirmação que ele mesmo enviou (item 143) | backend | plan.md §5 | antes do merge | Pendente |

@@ -62,19 +62,13 @@ class SettlementConfirmationService
         $cycle = $this->decidableCycle($group, $cyclesAgo);
 
         $confirmation = DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId) {
-            $confirmation = $this->lockedConfirmation($group, $cycle['start'], $fromUserId, $creditorId);
-
-            if (! $confirmation->isThirdParty()) {
-                throw new SettlementDecisionRefused('Só o comprovante enviado por quem paga por outra pessoa passa pelo aceite.');
-            }
-
-            if ($confirmation->status() === SettlementConfirmation::STATUS_ACCEPTED) {
-                throw new SettlementDecisionRefused('Este comprovante já foi aceito.');
-            }
-
-            if ($confirmation->status() === SettlementConfirmation::STATUS_REFUSED) {
-                throw new SettlementDecisionRefused('Este comprovante foi recusado: quem enviou precisa reenviar.');
-            }
+            $confirmation = $this->lockedAwaitingConfirmation(
+                $group,
+                $cycle['start'],
+                $fromUserId,
+                $creditorId,
+                'Este comprovante foi recusado: quem enviou precisa reenviar.'
+            );
 
             $confirmation->update(['accepted_at' => Carbon::now()]);
 
@@ -82,6 +76,58 @@ class SettlementConfirmationService
         });
 
         $this->sealing->sealIfSettled($group, $cycle['start'], $cycle['end']);
+
+        return $confirmation;
+    }
+
+    /**
+     * O credor `$creditorId` recusa o comprovante que um responsável enviou do acerto de `$fromUserId`.
+     * Só de `awaiting_acceptance`; grava `refused_at` com a linha travada e relida. **Não apaga a linha nem
+     * o arquivo** (D4-B): o acerto volta a pendente na API e quem enviou reenvia (ou exclui, TASK-600).
+     *
+     * @throws SettlementDecisionRefused
+     */
+    public function refuse(Group $group, int $fromUserId, int $creditorId, int $cyclesAgo): SettlementConfirmation
+    {
+        $cycle = $this->decidableCycle($group, $cyclesAgo);
+
+        return DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId) {
+            $confirmation = $this->lockedAwaitingConfirmation(
+                $group,
+                $cycle['start'],
+                $fromUserId,
+                $creditorId,
+                'Este comprovante já foi recusado.'
+            );
+
+            $confirmation->update(['refused_at' => Carbon::now()]);
+
+            return $confirmation;
+        });
+    }
+
+    /**
+     * O comprovante do par, travado, e só se ainda aguarda a decisão do credor: de responsável (R6), nem
+     * aceito (definitivo, R8) nem recusado. `$whenRefused` é a mensagem do caso "recusado", que muda com a
+     * ação (aceitar ou recusar de novo).
+     *
+     * @throws SettlementDecisionRefused
+     */
+    private function lockedAwaitingConfirmation(Group $group, Carbon $cycleStart, int $fromUserId, int $creditorId, string $whenRefused): SettlementConfirmation
+    {
+        $confirmation = $this->lockedConfirmation($group, $cycleStart, $fromUserId, $creditorId);
+
+        if (! $confirmation->isThirdParty()) {
+            throw new SettlementDecisionRefused('Só o comprovante enviado por quem paga por outra pessoa passa pelo aceite.');
+        }
+
+        if ($confirmation->status() === SettlementConfirmation::STATUS_ACCEPTED) {
+            throw new SettlementDecisionRefused('Este comprovante já foi aceito.');
+        }
+
+        if ($confirmation->status() === SettlementConfirmation::STATUS_REFUSED) {
+            throw new SettlementDecisionRefused($whenRefused);
+        }
 
         return $confirmation;
     }

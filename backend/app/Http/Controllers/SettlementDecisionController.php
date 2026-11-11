@@ -26,11 +26,7 @@ class SettlementDecisionController extends Controller
      */
     public function accept(Request $request, $groupId)
     {
-        $group = $this->findGroup($groupId);
-        $this->authorizeGroupMembership($group);
-
-        $data = $this->validatedPair($request);
-        abort_unless((int) $data['to_user_id'] === (int) auth()->id(), 403, 'Só o credor deste acerto pode aceitar o comprovante.');
+        [$group, $data] = $this->creditorsPair($request, $groupId, 'Só o credor deste acerto pode aceitar o comprovante.');
 
         try {
             $confirmation = app(SettlementConfirmationService::class)->accept(
@@ -59,6 +55,68 @@ class SettlementDecisionController extends Controller
             'message' => 'Comprovante aceito.',
             'confirmationStatus' => SettlementConfirmation::STATUS_ACCEPTED,
         ]);
+    }
+
+    /**
+     * `POST /groups/{groupId}/settlements/refuse`: o mesmo corpo, a mesma ordem de respostas e as mesmas
+     * regras de `accept`, mas grava `refused_at`. **Não apaga a linha nem o arquivo** (D4-B). Quem enviou e o
+     * devedor são avisados, menos quem fez a ação.
+     */
+    public function refuse(Request $request, $groupId)
+    {
+        [$group, $data] = $this->creditorsPair($request, $groupId, 'Só o credor deste acerto pode recusar o comprovante.');
+
+        try {
+            $confirmation = app(SettlementConfirmationService::class)->refuse(
+                $group,
+                (int) $data['from_user_id'],
+                (int) $data['to_user_id'],
+                (int) ($data['cycles_ago'] ?? 0)
+            );
+        } catch (SettlementDecisionRefused $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        // Quem enviou e o devedor (de quem é o acerto) sabem da recusa; o credor, que a fez, não.
+        $recipients = collect([$confirmation->confirmed_by, $confirmation->from_user_id])
+            ->filter(fn ($id) => $id !== null && (int) $id !== (int) auth()->id())
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($recipients !== []) {
+            Notifier::settlementRefused(
+                $group,
+                $recipients,
+                auth()->user()->name,
+                $confirmation->fromUser?->name,
+                $confirmation->amount,
+                $confirmation->cycle_start
+            );
+        }
+
+        return response()->json([
+            'message' => 'Comprovante recusado.',
+            'confirmationStatus' => SettlementConfirmation::STATUS_REFUSED,
+        ]);
+    }
+
+    /**
+     * O preâmbulo de `accept` e `refuse`: o grupo (404), a autorização de membro (404), o corpo (422) e,
+     * por último, que `to_user_id` seja quem chama (403, antes de qualquer consulta do comprovante).
+     *
+     * @return array{0: Group, 1: array{from_user_id: int, to_user_id: int, cycles_ago?: int|null}}
+     */
+    private function creditorsPair(Request $request, $groupId, string $forbiddenMessage): array
+    {
+        $group = $this->findGroup($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $data = $this->validatedPair($request);
+        abort_unless((int) $data['to_user_id'] === (int) auth()->id(), 403, $forbiddenMessage);
+
+        return [$group, $data];
     }
 
     /** O grupo, ou 404 se o id não é só dígitos, não existe ou foi excluído (`find('5abc')` acharia o 5). */
