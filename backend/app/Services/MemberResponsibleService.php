@@ -90,6 +90,100 @@ class MemberResponsibleService
     }
 
     /**
+     * O responsável `$responsibleId` troca a lista de quem **ele** paga em `$group` por `$debtorIds` (a
+     * lista vazia larga todos os papéis), **sem o aceite do devedor** (feature
+     * 20261110-quem-paga-se-declara-e-credor-recusa, specify R1 e D1-A: o caso de quem não abre o app).
+     * É o `replace` visto pelo outro lado: a lista atual são todos os devedores cujo responsável é quem
+     * chama, inclusive os vínculos que o devedor criou, e o que sai é apagado (D8). Só mexe nas linhas
+     * de quem chama; as de terceiros e a lista do devedor ficam como estão (R1, R2).
+     *
+     * O que entra é criado com `created_by = $responsibleId` (R3, D3); quem continua não tem a linha
+     * recriada nem a autoria reescrita. O grupo é travado e relido, e tudo é conferido com o lock e
+     * **antes** de qualquer escrita, então uma lista recusada não altera nada (F1).
+     *
+     * @param  array<int, int>  $debtorIds
+     * @return array{added: list<int>, removed: list<int>} os devedores que entraram e os que saíram
+     *
+     * @throws MemberResponsibleRefused quem chama na própria lista, id repetido ou quem não é membro
+     */
+    public function declare(Group $group, int $responsibleId, array $debtorIds): array
+    {
+        $ids = array_map('intval', array_values($debtorIds));
+
+        return DB::transaction(function () use ($group, $responsibleId, $ids) {
+            $locked = Group::lockForUpdate()->find($group->id);
+            abort_if($locked === null || $locked->deleted, 404);
+
+            if (in_array($responsibleId, $ids, true)) {
+                throw new MemberResponsibleRefused('Você não pode pagar por você mesmo.');
+            }
+
+            if (count($ids) !== count(array_unique($ids))) {
+                throw new MemberResponsibleRefused('A lista não pode repetir ninguém.');
+            }
+
+            $memberIds = $locked->members()
+                ->whereIn('ex_users.id', [...$ids, $responsibleId])
+                ->pluck('ex_users.id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            if (! in_array($responsibleId, $memberIds, true)) {
+                throw new MemberResponsibleRefused('Quem escolhe precisa ser membro deste grupo.');
+            }
+
+            if (array_diff($ids, $memberIds) !== []) {
+                throw new MemberResponsibleRefused('Escolha só membros deste grupo.');
+            }
+
+            $current = GroupMemberResponsible::where('group_id', $locked->id)
+                ->where('responsible_user_id', $responsibleId)
+                ->pluck('user_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+
+            $added = array_values(array_diff($ids, $current));
+            $removed = array_values(array_diff($current, $ids));
+
+            if ($removed !== []) {
+                GroupMemberResponsible::where('group_id', $locked->id)
+                    ->where('responsible_user_id', $responsibleId)
+                    ->whereIn('user_id', $removed)
+                    ->delete();
+            }
+
+            foreach ($added as $debtorId) {
+                GroupMemberResponsible::create([
+                    'group_id' => $locked->id,
+                    'user_id' => $debtorId,
+                    'responsible_user_id' => $responsibleId,
+                    'created_by' => $responsibleId,
+                ]);
+            }
+
+            return ['added' => $added, 'removed' => $removed];
+        });
+    }
+
+    /**
+     * Os devedores por quem `$responsibleId` paga em `$groupId`, ordenados por nome, e só `id` e `name`
+     * (nunca e-mail, Pix ou contato, como em `responsiblesByDebtor`).
+     *
+     * @return list<array{id: int, name: string}>
+     */
+    public function paysFor(int $groupId, int $responsibleId): array
+    {
+        return GroupMemberResponsible::where('group_id', $groupId)
+            ->where('responsible_user_id', $responsibleId)
+            ->with('debtor:id,name')
+            ->get()
+            ->map(fn (GroupMemberResponsible $row) => ['id' => $row->debtor->id, 'name' => $row->debtor->name])
+            ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
+    }
+
+    /**
      * Apaga os vínculos de `$userId` em `$groupId`, nas duas direções: como devedor e como
      * responsável (R12, usado na saída ou remoção de membro). Devolve quantas linhas apagou.
      */

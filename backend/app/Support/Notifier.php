@@ -282,6 +282,27 @@ class Notifier
     }
 
     /**
+     * Alguém se declarou como quem paga por esse devedor (`GroupPaysForController@update`), sem o aceite
+     * dele → avisa o devedor: é a única chance de um adulto notar, e ele pode remover o vínculo em
+     * "Quem paga por mim" (feature 20261110-quem-paga-se-declara-e-credor-recusa, specify D2). `actorName`
+     * é quem se declarou. Uma vez por 24 h por par (R11), como `paymentResponsibleAssigned`.
+     */
+    public static function paymentResponsibleSelfDeclared(Group $group, int $debtorId, int $responsibleId, ?string $responsibleName): void
+    {
+        self::guard('payment_responsible_self_declared', function () use ($group, $debtorId, $responsibleId, $responsibleName) {
+            self::oncePer(
+                self::linkNoticeKey($group, $debtorId, $responsibleId, 'payment_responsible_self_declared'),
+                self::LINK_NOTICE_WINDOW_MINUTES,
+                fn () => self::fanOut([$debtorId], 'payment_responsible_self_declared', $group->id, [
+                    'actorName' => $responsibleName,
+                    'groupId' => $group->id,
+                    'groupName' => $group->name,
+                ])
+            );
+        });
+    }
+
+    /**
      * O devedor confirmou o acerto do ciclo via Pix, com comprovante
      * (`ExpenseController@confirmSettlement`) → avisa o credor.
      *

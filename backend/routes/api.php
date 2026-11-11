@@ -8,6 +8,7 @@ use App\Http\Controllers\GroupExpenseReportController;
 use App\Http\Controllers\GroupInvitationController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\GroupMemberResponsibleController;
+use App\Http\Controllers\GroupPaysForController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MyInvitationController;
 use App\Http\Controllers\NotificationController;
@@ -65,6 +66,10 @@ Route::middleware('jwt.auth')->group(function () {
         // Só `PUT`: a lista vazia desfaz tudo, não há `DELETE` (feature 20261109-responsavel-do-devedor).
         Route::put('/{userId}/responsibles', [GroupMemberResponsibleController::class, 'update']);
     });
+
+    // O responsável se declara, sem o aceite do devedor (feature 20261110-quem-paga-se-declara-e-credor-recusa).
+    // Sempre sobre quem chama: não há `userId` na rota. Só `PUT`: a lista vazia larga todos os papéis.
+    Route::put('/groups/{groupId}/me/pays-for', [GroupPaysForController::class, 'update']);
 
     Route::prefix('groups/{groupId}/invitations')->group(function () {
         Route::get('/', [GroupInvitationController::class, 'index']);
