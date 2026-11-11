@@ -7,6 +7,7 @@ use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\SettlementConfirmation;
 use App\Support\BillingCycle;
+use App\Support\ProofStorage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -104,6 +105,49 @@ class SettlementConfirmationService
 
             return $confirmation;
         });
+    }
+
+    /**
+     * Quem enviou o comprovante, ou o devedor, o **exclui** enquanto o credor não o aceitou (D7-A). É a
+     * **única exclusão física** desta feature, com o aval de hard delete dele em 2026-11-10 (specify §2.8 e
+     * §3.4), limitada ao comprovante que passa pelo aceite (o de responsável) e, por `decidableCycle`, ao
+     * ciclo que ainda não está encerrado. Vale em `awaiting_acceptance` e em `refused`; o aceito é definitivo.
+     *
+     * A linha sai primeiro, com ela travada e relida, e o arquivo depois da transação: só se nenhuma outra
+     * linha de acerto nem parcela o usa (`ProofStorage::deleteIfUnreferenced` olha o banco, então precisa
+     * rodar **depois** de a linha sumir). Não exige o vínculo "quem paga por quem": quem saiu da lista ainda
+     * exclui o próprio comprovante. O credor, o criador do grupo e os demais membros recebem 403.
+     *
+     * @throws SettlementDecisionRefused
+     */
+    public function destroy(Group $group, int $fromUserId, int $creditorId, int $callerId, int $cyclesAgo): void
+    {
+        $cycle = $this->decidableCycle($group, $cyclesAgo);
+
+        $path = DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId, $callerId) {
+            $confirmation = $this->lockedConfirmation($group, $cycle['start'], $fromUserId, $creditorId);
+
+            abort_unless(
+                $callerId === (int) $confirmation->from_user_id || $callerId === (int) $confirmation->confirmed_by,
+                403,
+                'Só quem enviou o comprovante ou o devedor pode excluí-lo.'
+            );
+
+            if (! $confirmation->isThirdParty()) {
+                throw new SettlementDecisionRefused('Só o comprovante enviado por quem paga por outra pessoa pode ser excluído.');
+            }
+
+            if ($confirmation->status() === SettlementConfirmation::STATUS_ACCEPTED) {
+                throw new SettlementDecisionRefused('Este comprovante já foi aceito e não pode ser excluído.');
+            }
+
+            $path = $confirmation->proof_path;
+            $confirmation->delete();
+
+            return $path;
+        });
+
+        ProofStorage::deleteIfUnreferenced($path);
     }
 
     /**

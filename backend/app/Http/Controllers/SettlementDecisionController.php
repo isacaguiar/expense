@@ -103,6 +103,35 @@ class SettlementDecisionController extends Controller
     }
 
     /**
+     * `DELETE /groups/{groupId}/settlements/confirmation?from_user_id=&to_user_id=&cycles_ago=`: quem
+     * enviou o comprovante, ou o devedor, o exclui (D7-A, o único `DELETE` físico da feature, com o aval
+     * de hard delete dele). Ordem: 404 para grupo inexistente, excluído ou de quem não é membro; 422 de
+     * validação; depois, no service, 422 de ciclo, 404 sem comprovante, **403** para quem não é quem enviou
+     * nem o devedor, e 422 para o comprovante que não passa pelo aceite ou já foi aceito. Ninguém é avisado.
+     */
+    public function destroy(Request $request, $groupId)
+    {
+        $group = $this->findGroup($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $data = $this->validatedPair($request);
+
+        try {
+            app(SettlementConfirmationService::class)->destroy(
+                $group,
+                (int) $data['from_user_id'],
+                (int) $data['to_user_id'],
+                (int) auth()->id(),
+                (int) ($data['cycles_ago'] ?? 0)
+            );
+        } catch (SettlementDecisionRefused $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        return response()->json(['message' => 'Comprovante excluído.']);
+    }
+
+    /**
      * O preâmbulo de `accept` e `refuse`: o grupo (404), a autorização de membro (404), o corpo (422) e,
      * por último, que `to_user_id` seja quem chama (403, antes de qualquer consulta do comprovante).
      *

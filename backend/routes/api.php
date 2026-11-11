@@ -83,6 +83,8 @@ Route::middleware('jwt.auth')->group(function () {
     // O credor decide sobre o comprovante que um responsável enviou (feature 20261110-quem-paga-se-declara-e-credor-recusa).
     Route::post('/groups/{groupId}/settlements/accept', [SettlementDecisionController::class, 'accept']);
     Route::post('/groups/{groupId}/settlements/refuse', [SettlementDecisionController::class, 'refuse']);
+    // Único DELETE físico da feature: o próprio comprovante, com o aval de hard delete (D7-A).
+    Route::delete('/groups/{groupId}/settlements/confirmation', [SettlementDecisionController::class, 'destroy']);
 
     Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
     Route::get('/groups/{groupId}/expenses/monthly', [ExpenseController::class, 'getMonthlyExpenses']);
