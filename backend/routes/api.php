@@ -15,6 +15,7 @@ use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PixController;
 use App\Http\Controllers\PreRegisterController;
 use App\Http\Controllers\ProofDownloadController;
+use App\Http\Controllers\SettlementDecisionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPhotoController;
 use Illuminate\Support\Facades\Route;
@@ -79,6 +80,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/expenses/{expenseId}/undo-purchase', [ExpenseController::class, 'undoPurchase']);
     Route::post('/expenses/{expenseId}/payment-proof', [ExpenseController::class, 'updatePaymentProof']);
     Route::post('/groups/{groupId}/settlements/confirm', [ExpenseController::class, 'confirmSettlement']);
+    // O credor decide sobre o comprovante que um responsável enviou (feature 20261110-quem-paga-se-declara-e-credor-recusa).
+    Route::post('/groups/{groupId}/settlements/accept', [SettlementDecisionController::class, 'accept']);
 
     Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
     Route::get('/groups/{groupId}/expenses/monthly', [ExpenseController::class, 'getMonthlyExpenses']);

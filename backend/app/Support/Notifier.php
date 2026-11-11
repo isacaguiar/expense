@@ -298,6 +298,29 @@ class Notifier
     }
 
     /**
+     * O credor aceitou o comprovante que um responsável enviou (`SettlementDecisionController@accept`)
+     * → avisa quem enviou. `$creditorName` é o credor (`actorName`). Quem chama não avisa o próprio credor
+     * quando foi ele quem enviou (feature 20261110-quem-paga-se-declara-e-credor-recusa, specify R12).
+     */
+    public static function settlementAccepted(
+        Group $group,
+        int $senderId,
+        ?string $creditorName,
+        float|string $amount,
+        mixed $cycleStart
+    ): void {
+        self::guard('settlement_accepted', function () use ($group, $senderId, $creditorName, $amount, $cycleStart) {
+            self::fanOut([$senderId], 'settlement_accepted', $group->id, [
+                'actorName' => $creditorName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+                'amount' => self::amount($amount),
+                'cycleLabel' => self::cycleLabel($cycleStart),
+            ]);
+        });
+    }
+
+    /**
      * Grava uma linha por destinatário.
      *
      * @param  iterable<int>  $userIds
