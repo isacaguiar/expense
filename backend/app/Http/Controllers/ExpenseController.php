@@ -13,6 +13,7 @@ use App\Services\CycleSealingService;
 use App\Services\CycleSummaryService;
 use App\Services\ExpensePaymentService;
 use App\Services\MemberResponsibleService;
+use App\Services\SettlementConfirmationService;
 use App\Support\BillingCycle;
 use App\Support\ClosingBreakdown;
 use App\Support\ExpenseRequestFingerprint;
@@ -1740,6 +1741,12 @@ class ExpenseController extends Controller
      * outro devedor, exige o vínculo "quem paga por quem" (403 sem ele, antes de gravar arquivo ou
      * linha). O acerto continua sendo do devedor: `confirmed_by` guarda quem enviou (nulo = o próprio
      * devedor) e o último a enviar vence.
+     *
+     * Feature 20261110-quem-paga-se-declara-e-credor-recusa: o comprovante que o credor **aceitou** é
+     * definitivo (422 "Este comprovante já foi aceito.", antes de gravar o arquivo e de novo, com a linha
+     * travada, na gravação). Reenviar limpa `accepted_at` e `refused_at`, e o credor é avisado do reenvio
+     * de um comprovante que ele recusou. O devedor que reenvia por cima do de um responsável o assume
+     * (`confirmed_by` nulo).
      */
     public function confirmSettlement(Request $request, $groupId)
     {
@@ -1799,21 +1806,43 @@ class ExpenseController extends Controller
             'to_user_id' => $data['to_user_id'],
         ];
 
-        $previousProofPath = SettlementConfirmation::where($key)->value('proof_path');
+        $existing = SettlementConfirmation::where($key)->first();
+
+        // O comprovante aceito pelo credor é definitivo (feature 20261110-quem-paga-se-declara-e-credor-
+        // recusa, R8): nem o devedor nem o responsável o substituem. Antes de gravar o arquivo.
+        if ($existing?->status() === SettlementConfirmation::STATUS_ACCEPTED) {
+            return response()->json(['error' => 'Este comprovante já foi aceito.'], 422);
+        }
 
         $path = ProofStorage::store($request->file('comprovante'), (int) $groupId);
 
-        $confirmation = SettlementConfirmation::updateOrCreate($key, [
-            'cycle_end' => $cycle['end']->toDateString(),
-            'amount' => $settlement['amount'],
-            'proof_path' => $path,
-            // Reenvio substitui o comprovante inteiro: sem `descricao` a nota
-            // anterior é limpa, igual à foto que é trocada.
-            'note' => $data['descricao'] ?? null,
-            'confirmed_at' => Carbon::now(),
-            // Quem enviou: nulo quando é o próprio devedor. O último a enviar vence (R7, R8).
-            'confirmed_by' => $debtorId === auth()->id() ? null : auth()->id(),
-        ]);
+        try {
+            // A gravação relê a linha com lock: se o credor aceitou entre a checagem acima e agora, ela
+            // não grava (F6). Reenviar limpa `accepted_at` e `refused_at`.
+            ['confirmation' => $confirmation, 'previousPath' => $previousProofPath, 'wasRefused' => $wasRefused]
+                = $this->settlementConfirmations()->submitProof($key, [
+                    'cycle_end' => $cycle['end']->toDateString(),
+                    'amount' => $settlement['amount'],
+                    'proof_path' => $path,
+                    // Reenvio substitui o comprovante inteiro: sem `descricao` a nota
+                    // anterior é limpa, igual à foto que é trocada.
+                    'note' => $data['descricao'] ?? null,
+                    'confirmed_at' => Carbon::now(),
+                    // Quem enviou: nulo quando é o próprio devedor. O último a enviar vence (R7, R8).
+                    'confirmed_by' => $debtorId === auth()->id() ? null : auth()->id(),
+                ], $existing !== null);
+        } catch (\Throwable $e) {
+            // O banco não apontou para o arquivo novo: não deixa órfão.
+            ProofStorage::delete($path);
+
+            throw $e;
+        }
+
+        if ($confirmation === null) {
+            ProofStorage::delete($path);
+
+            return response()->json(['error' => 'Este comprovante já foi aceito.'], 422);
+        }
 
         if ($previousProofPath && $previousProofPath !== $path) {
             ProofStorage::delete($previousProofPath);
@@ -1821,9 +1850,10 @@ class ExpenseController extends Controller
 
         $this->sealCycleIfSettled($group, $groupId, $cycle['start'], $cycle['end']);
 
-        // Só na 1ª confirmação desse par no ciclo — reenviar o comprovante
-        // (`updateOrCreate` que atualiza) não gera notificação nova.
-        if ($confirmation->wasRecentlyCreated) {
+        // Na 1ª confirmação desse par no ciclo, ou no reenvio de um comprovante que o credor recusou
+        // (ele precisa saber que há um novo para decidir). Reenviar um que não foi recusado não avisa de
+        // novo.
+        if ($confirmation->wasRecentlyCreated || $wasRefused) {
             // O acerto é do devedor: é o nome dele que o credor lê (`actorName`). Quem pagou por ele, se foi
             // outra pessoa, vai em `paidByName` (R10).
             $paidOnBehalf = $debtorId !== auth()->id();
@@ -1878,6 +1908,15 @@ class ExpenseController extends Controller
     private function cycles(): CycleSummaryService
     {
         return app(CycleSummaryService::class);
+    }
+
+    /**
+     * Gravação do comprovante de acerto com a linha travada (feature 20261110-quem-paga-se-declara-e-
+     * credor-recusa). Resolvido pelo container, sem construtor, pelo mesmo motivo de `cycles()`.
+     */
+    private function settlementConfirmations(): SettlementConfirmationService
+    {
+        return app(SettlementConfirmationService::class);
     }
 
     /**

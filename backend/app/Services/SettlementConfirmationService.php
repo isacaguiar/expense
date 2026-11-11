@@ -151,6 +151,44 @@ class SettlementConfirmationService
     }
 
     /**
+     * Cria ou substitui o comprovante do par (`ExpenseController::confirmSettlement`). Reenviar é mandar um
+     * comprovante novo: volta sem `accepted_at` e sem `refused_at`, então o de responsável volta a "aguardando
+     * aceite" e o do devedor a "enviado".
+     *
+     * **O aceito é definitivo** (R8): com a linha travada e relida, se o credor aceitou entre a checagem do
+     * controller e esta gravação, nada é gravado e `confirmation` volta nulo (F6). Só se trava a linha que
+     * já existe (`$hadRow`): travar um par sem linha tomaria um gap lock, e dois primeiros envios ao mesmo
+     * tempo se travariam um ao outro.
+     *
+     * `previousPath` é o arquivo que o reenvio substituiu e `wasRefused` diz se o comprovante anterior estava
+     * recusado (o credor é avisado do reenvio).
+     *
+     * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
+     * @param  array<string, mixed>  $values
+     * @return array{confirmation: SettlementConfirmation|null, previousPath: string|null, wasRefused: bool}
+     */
+    public function submitProof(array $key, array $values, bool $hadRow): array
+    {
+        return DB::transaction(function () use ($key, $values, $hadRow) {
+            $current = $hadRow ? SettlementConfirmation::where($key)->lockForUpdate()->first() : null;
+
+            if ($current?->status() === SettlementConfirmation::STATUS_ACCEPTED) {
+                return ['confirmation' => null, 'previousPath' => null, 'wasRefused' => false];
+            }
+
+            $previousPath = $current?->proof_path;
+            $wasRefused = $current?->status() === SettlementConfirmation::STATUS_REFUSED;
+
+            $confirmation = SettlementConfirmation::updateOrCreate($key, $values + [
+                'accepted_at' => null,
+                'refused_at' => null,
+            ]);
+
+            return ['confirmation' => $confirmation, 'previousPath' => $previousPath, 'wasRefused' => $wasRefused];
+        });
+    }
+
+    /**
      * O comprovante do par, travado, e só se ainda aguarda a decisão do credor: de responsável (R6), nem
      * aceito (definitivo, R8) nem recusado. `$whenRefused` é a mensagem do caso "recusado", que muda com a
      * ação (aceitar ou recusar de novo).

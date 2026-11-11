@@ -25,7 +25,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **144**, agrup
 | TASK-598 | Criar `POST /groups/{id}/settlements/accept`, o `SettlementConfirmationService` e o aviso `settlement_accepted` | backend | plan.md §4 | antes do merge | Concluída |
 | TASK-599 | Criar `POST /groups/{id}/settlements/refuse` e o aviso `settlement_refused` | backend | plan.md §4 | antes do merge | Concluída |
 | TASK-600 | Criar `DELETE /groups/{id}/settlements/confirmation`, que exclui o próprio comprovante | backend | plan.md §4 | antes do merge (hard delete aprovado) | Concluída |
-| TASK-601 | Fazer `confirmSettlement` respeitar o aceite, limpar a recusa no reenvio e reavisar o credor | backend | plan.md §5 | antes do merge | Pendente |
+| TASK-601 | Fazer `confirmSettlement` respeitar o aceite, limpar a recusa no reenvio e reavisar o credor | backend | plan.md §5 | antes do merge | Concluída |
 | TASK-602 | Não avisar o credor (sino e WhatsApp) da confirmação que ele mesmo enviou (item 143) | backend | plan.md §5 | antes do merge | Pendente |
 | TASK-603 | Criar a janela de 24 h contra aviso repetido de vínculo no `Notifier` (item 141) | backend | plan.md §6 | nenhum | Pendente |
 | TASK-604 | Criar `PUT /groups/{id}/me/pays-for`, `MemberResponsibleService::declare` e o aviso `payment_responsible_self_declared` | backend | plan.md §7 | antes do merge | Pendente |
