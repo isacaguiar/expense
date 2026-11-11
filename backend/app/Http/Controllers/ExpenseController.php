@@ -9,6 +9,7 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Models\User;
+use App\Services\CycleSealingService;
 use App\Services\CycleSummaryService;
 use App\Services\ExpensePaymentService;
 use App\Services\MemberResponsibleService;
@@ -1898,59 +1899,16 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Se o ciclo [start, end] está totalmente quitado, congela a foto num
-     * `GroupCycleSnapshot` com `settled_at` — a partir daí `summary()` serve
-     * essa cópia e o ciclo vira histórico. `updateOrCreate` não passa
-     * `closed_manually_at`/`reopened_at`, então preserva o registro de
-     * fechamento manual, se houver. Devolve `true` se selou, `false` se ainda
-     * há pendência.
+     * Se o ciclo [start, end] está totalmente quitado, congela a foto num `GroupCycleSnapshot` e avisa o
+     * grupo na transição para selado. Devolve `true` se selou, `false` se ainda há pendência.
+     *
+     * A regra mora em `CycleSealingService::sealIfSettled` (a rota de aceite do comprovante também sela,
+     * feature 20261110-quem-paga-se-declara-e-credor-recusa, plan §2). Este método fino continua aqui
+     * porque `pay`, `confirmSettlement`, `close` e o `focus` o chamam desde antes da extração.
      */
     private function sealCycleIfSettled(Group $group, $groupId, Carbon $start, Carbon $end): bool
     {
-        if (! $this->cycleIsFullySettled($group, $groupId, $start, $end)) {
-            return false;
-        }
-
-        $summary = $this->cycles()->compute($group, $start, $end);
-
-        // Ciclo sem despesa REAL nem acerto não vira "histórico selado": não há
-        // foto a congelar e um `settled_at` aqui só travaria o `reopen()` à toa.
-        // "Real" exclui entry `bornPaid` (parcela retroativa nascida quitada,
-        // specify.md §2.3 de 20260904-parcela-retroativa-contabilizacao) — ela
-        // fica em `expenses` como linha "Paga" (histórico), mas sozinha não é
-        // motivo pra selar o mês nem disparar Notifier::cycleSettled.
-        // `cycleIsFullySettled` já devolve `true` pra esse caso (nada pendente),
-        // então o `focus-cycle` pula o ciclo mesmo sem selar.
-        $hasRealExpense = collect($summary['expenses'])->contains(fn ($expense) => empty($expense['bornPaid']));
-
-        if (! $hasRealExpense && empty($summary['settlements'])) {
-            return false;
-        }
-
-        $wasSealed = GroupCycleSnapshot::where('group_id', $groupId)
-            ->where('cycle_start', $start->toDateString())
-            ->first()?->isSealed() ?? false;
-
-        GroupCycleSnapshot::updateOrCreate(
-            ['group_id' => $groupId, 'cycle_start' => $start->toDateString()],
-            [
-                'cycle_end' => $end->toDateString(),
-                'totals' => $summary['totals'],
-                'expenses' => $summary['expenses'],
-                'balances' => $summary['balances'],
-                'settlements' => $summary['settlements'],
-                'settled_at' => Carbon::now(),
-            ]
-        );
-
-        // Só na transição não-selado → selado: chamadas repetidas de
-        // `sealCycleIfSettled` num ciclo já selado (inclusive as preguiçosas
-        // de `summary()`) não geram notificação nova.
-        if (! $wasSealed) {
-            Notifier::cycleSettled($group, $start);
-        }
-
-        return true;
+        return app(CycleSealingService::class)->sealIfSettled($group, $start, $end);
     }
 
     /**

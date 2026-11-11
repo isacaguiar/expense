@@ -2,7 +2,9 @@
 
 > Formato igual ao usado no SDD geral — ver `docs/sdd/03-tasks.md` para a definição completa do formato e a regra de atomicidade ("se a descrição tem 'e' ligando duas entregas independentes, é duas tasks").
 
-Versão: 1.0 · Criado em: 20261110
+Versão: 1.1 · Criado em: 20261110
+
+**v1.1 (2026-11-10):** na TASK-596 o selo extraído vai para `CycleSealingService` (plan v1.1), e não para `CycleSummaryService`; só o nome da classe muda.
 
 **Status: aprovada em 2026-11-10 ("aprovado, siga com a TASK-594") e em execução.** Specify v1.1 (aprovado por ele em 2026-11-10, D2, D3, D4-B, D6 e D8 a D12 como recomendado, D5 com a leitura confirmada e **D7-A com o aval de hard delete**), plan v1.0 (aprovado em 2026-11-10) e estas tasks. A execução é no modo nativo, parando após cada task.
 
@@ -18,7 +20,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **144**, agrup
 |---|---|---|---|---|---|
 | TASK-594 | Adicionar `created_by` ao vínculo `ex_group_member_responsibles` e gravá-lo em `MemberResponsibleService::replace` | backend | plan.md §1 | antes do deploy/migration em produção | Concluída |
 | TASK-595 | Adicionar `accepted_at` e `refused_at` a `ex_settlement_confirmations` e os estados e o escopo no model `SettlementConfirmation` | backend | plan.md §1 | antes do deploy/migration em produção | Concluída |
-| TASK-596 | Extrair o selo do ciclo para `CycleSummaryService::sealIfSettled`, sem mudar comportamento | backend | plan.md §2 | antes do merge | Pendente |
+| TASK-596 | Extrair o selo do ciclo para `CycleSealingService::sealIfSettled`, sem mudar comportamento | backend | plan.md §2 | antes do merge | Concluída |
 | TASK-597 | Fazer o selo contar só o comprovante que vale e expor `confirmationStatus` e `refusedAt` em `withConfirmations` | backend | plan.md §3 | antes do merge | Pendente |
 | TASK-598 | Criar `POST /groups/{id}/settlements/accept`, o `SettlementConfirmationService` e o aviso `settlement_accepted` | backend | plan.md §4 | antes do merge | Pendente |
 | TASK-599 | Criar `POST /groups/{id}/settlements/refuse` e o aviso `settlement_refused` | backend | plan.md §4 | antes do merge | Pendente |
@@ -48,8 +50,8 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **144**, agrup
   - Em arquivo novo, com dataset: `test_status_for_every_combination` (as quatro saídas e a precedência do recusado) e `test_counts_for_settlement_scope_selects_only_the_ones_that_count`. Os testes de `SettlementConfirmation` que já existem seguem verdes sem edição. Mutation check: trocar a precedência e a condição do escopo derruba os testes.
 
 - **TASK-596**:
-  - `CycleSummaryService::sealIfSettled(Group, Carbon $start, Carbon $end): bool` tem o corpo de `ExpenseController::sealCycleIfSettled` sem mudança de comportamento: sela só se `isFullySettled`, não sela ciclo sem despesa real nem acerto, grava o `GroupCycleSnapshot` preservando `closed_manually_at` e `reopened_at`, e dispara `Notifier::cycleSettled` **só** na transição para selado.
-  - `ExpenseController::sealCycleIfSettled` devolve `$this->cycles()->sealIfSettled(...)`; `unsealIfBroken` e `cycleIsFullySettled` ficam como estão.
+  - `CycleSealingService::sealIfSettled(Group, Carbon $start, Carbon $end): bool` (service novo, o lado de escrita) tem o corpo de `ExpenseController::sealCycleIfSettled` sem mudança de comportamento: sela só se `isFullySettled`, não sela ciclo sem despesa real nem acerto, grava o `GroupCycleSnapshot` preservando `closed_manually_at` e `reopened_at`, e dispara `Notifier::cycleSettled` **só** na transição para selado.
+  - `ExpenseController::sealCycleIfSettled` delega a `CycleSealingService::sealIfSettled`; `unsealIfBroken` e `cycleIsFullySettled` ficam como estão.
   - Em arquivo novo: `test_it_seals_a_fully_settled_cycle`, `test_it_does_not_seal_with_a_pending_entry`, `test_it_does_not_seal_a_cycle_without_a_real_expense_or_settlement`, `test_it_notifies_only_on_the_transition_to_sealed`, `test_it_preserves_the_manual_closure_fields`.
   - **A suíte inteira do backend, com banco zerado, passa sem editar nenhum teste.** Mutation check: inverter a condição e a guarda do ciclo vazio derruba os testes novos.
 

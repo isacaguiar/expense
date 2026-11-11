@@ -2,18 +2,20 @@
 
 > Traduz `specify.md` em decisão técnica, item por item. Toda task em `tasks.md` aponta para uma seção daqui.
 
-Versão: 1.0 · Criado em: 20261110
+Versão: 1.1 · Criado em: 20261110
+
+**v1.1 (2026-11-10):** o selo extraído na TASK-596 vai para um **service novo, `CycleSealingService`**, e não para `CycleSummaryService` (§2 e ajuste 4): o docblock de `CycleSummaryService` a define como o lado de **leitura** ("Nada aqui grava"), usado também pelo Painel Financeiro Pessoal. Só muda o nome da classe; nenhuma decisão do specify mudou.
 
 **Status: aprovado por ele em 2026-11-10** ("aprovado, siga com as tasks"), sobre o specify v1.1.
 
-**Resumo.** *Objetivo:* quem paga se declara responsável por outros membros sem aceite do devedor, e o credor aceita ou recusa o comprovante enviado por responsável, só em ciclo não encerrado. *Arquitetura:* duas colunas aditivas em `ex_settlement_confirmations` (`accepted_at`, `refused_at`) e uma em `ex_group_member_responsibles` (`created_by`); o **estado do comprovante é derivado** dessas colunas e de `confirmed_by`, sem coluna `status`; o selo do ciclo passa a contar só o comprovante "que vale"; um service novo concentra aceitar, recusar e excluir; o selo sai do controller para o `CycleSummaryService`; o front ganha o diálogo "Eu pago por…" e as ações do credor em Pagamentos. *Escopo:* backlog 144, 141 e 143.
+**Resumo.** *Objetivo:* quem paga se declara responsável por outros membros sem aceite do devedor, e o credor aceita ou recusa o comprovante enviado por responsável, só em ciclo não encerrado. *Arquitetura:* duas colunas aditivas em `ex_settlement_confirmations` (`accepted_at`, `refused_at`) e uma em `ex_group_member_responsibles` (`created_by`); o **estado do comprovante é derivado** dessas colunas e de `confirmed_by`, sem coluna `status`; o selo do ciclo passa a contar só o comprovante "que vale"; um service novo concentra aceitar, recusar e excluir; o selo sai do controller para o `CycleSealingService`; o front ganha o diálogo "Eu pago por…" e as ações do credor em Pagamentos. *Escopo:* backlog 144, 141 e 143.
 
 > **O que este plano ajusta ou acrescenta ao Specify** (nada aqui muda uma decisão aprovada):
 >
 > 1. **Sem `refused_by` nem `accepted_by`.** Só o credor do par aceita ou recusa, então quem decidiu é sempre `to_user_id`; a coluna seria redundante. A D4-B fica com `refused_at` e `accepted_at`.
 > 2. **Estado derivado, sem coluna `status`.** `refused_at` preenchido = recusado; senão `accepted_at` = aceito; senão `confirmed_by` não nulo = aguardando aceite; senão = enviado pelo próprio devedor. Um `status` gravado poderia ficar inconsistente com as datas.
 > 3. **Recusado aparece como "não confirmado" na API.** Em `withConfirmations`, o acerto recusado sai com `confirmedAt`, `confirmedProofUrl` e `confirmedNote` **nulos** (a linha e o arquivo continuam no banco, D4-B), e ganha `confirmationStatus` e `refusedAt`. Assim os oito arquivos do front que leem `confirmedAt` (`cycleOrdering.ts`, `useGroupCycle.ts`, `PaymentSettlementsPanel.tsx`, `PayableSettlementList.tsx`, `SettlementList.tsx`, `GroupPositionCard.tsx`, `CycleClosingAlert.tsx`, `ClosingReportPanel.tsx`) já tratam o recusado como "a pagar" sem edição.
-> 4. **O selo sai do controller para o `CycleSummaryService`.** `accept` precisa selar o ciclo, e `sealCycleIfSettled` é `private` em `ExpenseController` (2000 linhas). Extrai-se para `CycleSummaryService::sealIfSettled`; o método privado do controller vira um delegado de uma linha, porque `ExpenseControllerCycleIsFullySettledTest` o chama por reflexão. É uma task própria, sem mudar comportamento.
+> 4. **O selo sai do controller para um service novo, `CycleSealingService`** (e não para `CycleSummaryService`, o lado de leitura, cujo docblock diz "Nada aqui grava"). `accept` precisa selar o ciclo, e `sealCycleIfSettled` é `private` em `ExpenseController` (2000 linhas). Extrai-se para `CycleSealingService::sealIfSettled`; o método privado do controller vira um delegado de uma linha, porque `ExpenseControllerCycleIsFullySettledTest` o chama por reflexão. É uma task própria, sem mudar comportamento.
 > 5. **Aceitar vale só para "aguardando aceite".** Recusar **não se desfaz**: quem enviou reenvia (o comprovante volta a "aguardando aceite"). É o mais simples e o recusado nem tem URL de arquivo na API para o credor rever.
 > 6. **O credor que é o próprio remetente pode aceitar o seu comprovante** (senão o ciclo nunca selaria nesse caso, que só ocorre por chamada direta à API); os avisos nunca vão para quem fez a ação (R12).
 > 7. **"Excluir" vale só para comprovante com `confirmed_by`** (o que passa pelo aceite). O comprovante que o devedor envia por conta própria não ganha exclusão nova.
@@ -58,7 +60,7 @@ Casos que o specify implica mas que ninguém lembraria de testar, do mais prová
 
 ## 2. Extrair o selo do ciclo (Specify 2.5; ajuste 4)
 
-- **TASK-596:** `CycleSummaryService::sealIfSettled(Group $group, Carbon $start, Carbon $end): bool` recebe o corpo de `ExpenseController::sealCycleIfSettled` (`:1908-1954`) **sem mudar uma linha de comportamento**: mesma condição (`isFullySettled`), mesmo `GroupCycleSnapshot::updateOrCreate`, mesma notificação `Notifier::cycleSettled` só na transição. `ExpenseController::sealCycleIfSettled` vira `return $this->cycles()->sealIfSettled($group, $start, $end);` e `unsealIfBroken` e `cycleIsFullySettled` ficam como estão (reflexão em `ExpenseControllerCycleIsFullySettledTest`).
+- **TASK-596:** `CycleSealingService::sealIfSettled(Group $group, Carbon $start, Carbon $end): bool` (service novo, com o `CycleSummaryService` injetado) recebe o corpo de `ExpenseController::sealCycleIfSettled` (`:1908-1954`) **sem mudar uma linha de comportamento**: mesma condição (`isFullySettled`), mesmo `GroupCycleSnapshot::updateOrCreate`, mesma notificação `Notifier::cycleSettled` só na transição. `ExpenseController::sealCycleIfSettled` vira `return app(CycleSealingService::class)->sealIfSettled($group, $start, $end);` e `unsealIfBroken` e `cycleIsFullySettled` ficam como estão (reflexão em `ExpenseControllerCycleIsFullySettledTest`).
 - **Por que task à parte:** é refatoração de uma rota financeira; a prova é a suíte atual inteira verde **sem edição** (CA-4) e um teste novo do método extraído. Se algo quebrar, o problema está isolado.
 
 ## 3. O selo conta só o comprovante que vale; a API expõe o estado (Specify R5, 2.2, CA-4)
