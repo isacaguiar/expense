@@ -1850,10 +1850,14 @@ class ExpenseController extends Controller
 
         $this->sealCycleIfSettled($group, $groupId, $cycle['start'], $cycle['end']);
 
+        // Ninguém é avisado da ação que ele mesmo fez (R12, item 143): o credor que é o responsável do
+        // devedor e envia o comprovante não recebe nem o sino nem o WhatsApp sobre o próprio envio.
+        $creditorIsSender = (int) $data['to_user_id'] === (int) auth()->id();
+
         // Na 1ª confirmação desse par no ciclo, ou no reenvio de um comprovante que o credor recusou
         // (ele precisa saber que há um novo para decidir). Reenviar um que não foi recusado não avisa de
         // novo.
-        if ($confirmation->wasRecentlyCreated || $wasRefused) {
+        if (! $creditorIsSender && ($confirmation->wasRecentlyCreated || $wasRefused)) {
             // O acerto é do devedor: é o nome dele que o credor lê (`actorName`). Quem pagou por ele, se foi
             // outra pessoa, vai em `paidByName` (R10).
             $paidOnBehalf = $debtorId !== auth()->id();
@@ -1868,17 +1872,20 @@ class ExpenseController extends Controller
             );
         }
 
-        // Devedor confirmou o acerto com comprovante → avisa o credor por
-        // WhatsApp, depois da resposta. No-op se a feature está desligada.
-        $confirmationId = $confirmation->id;
+        // Devedor (ou quem paga por ele) confirmou o acerto com comprovante → avisa o credor por
+        // WhatsApp, depois da resposta, menos quando o próprio credor enviou. No-op se a feature está
+        // desligada.
+        if (! $creditorIsSender) {
+            $confirmationId = $confirmation->id;
 
-        dispatch(function () use ($confirmationId) {
-            $confirmation = SettlementConfirmation::with('fromUser', 'toUser')->find($confirmationId);
+            dispatch(function () use ($confirmationId) {
+                $confirmation = SettlementConfirmation::with('fromUser', 'toUser')->find($confirmationId);
 
-            if ($confirmation) {
-                WhatsAppNotifier::settlementProofConfirmed($confirmation);
-            }
-        })->afterResponse();
+                if ($confirmation) {
+                    WhatsAppNotifier::settlementProofConfirmed($confirmation);
+                }
+            })->afterResponse();
+        }
 
         return response()->json($confirmation->fresh());
     }

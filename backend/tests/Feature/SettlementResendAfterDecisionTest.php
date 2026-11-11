@@ -10,10 +10,8 @@ use App\Models\User;
 use App\Services\SettlementConfirmationService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Testing\TestResponse;
 use Tests\Concerns\BuildsSettlementScenarios;
 use Tests\Concerns\BuildsThirdPartyProofScenarios;
 use Tests\TestCase;
@@ -37,41 +35,6 @@ class SettlementResendAfterDecisionTest extends TestCase
         parent::tearDown();
     }
 
-    /**
-     * O cenário do comprovante de responsável (agosto/2026 fechado, R$ 100,00, ainda sem decisão), com o
-     * vínculo "quem paga por quem" que a rota exige e o arquivo do comprovante no disco falso.
-     *
-     * @return array{0: Group, 1: User, 2: User, 3: User, 4: SettlementConfirmation, 5: User}
-     */
-    private function scenario(bool $paid = false): array
-    {
-        Storage::fake('local');
-
-        $scenario = $this->thirdPartyScenario($paid);
-        [$group, , $debtor, $responsible, $proof] = $scenario;
-
-        GroupMemberResponsible::create([
-            'group_id' => $group->id,
-            'user_id' => $debtor->id,
-            'responsible_user_id' => $responsible->id,
-        ]);
-        Storage::disk('local')->put($proof->proof_path, 'comprovante anterior');
-
-        return $scenario;
-    }
-
-    /** `$caller` envia o comprovante do acerto ao credor; `$fromUserId` só vai quando é por outra pessoa. */
-    private function confirm(User $caller, Group $group, User $creditor, ?int $fromUserId = null): TestResponse
-    {
-        $body = ['to_user_id' => $creditor->id, 'comprovante' => UploadedFile::fake()->image('comprovante.jpg')];
-
-        if ($fromUserId !== null) {
-            $body['from_user_id'] = $fromUserId;
-        }
-
-        return $this->withToken($this->tokenFor($caller))->post("/api/groups/{$group->id}/settlements/confirm", $body);
-    }
-
     /** @return list<string> */
     private function proofFiles(Group $group): array
     {
@@ -87,13 +50,13 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_resending_an_accepted_proof_returns_422_and_writes_nothing(): void
     {
-        [$group, $creditor, $debtor, $responsible, $proof] = $this->scenario();
+        [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
         $proof->update(['accepted_at' => '2026-08-20 11:00:00']);
         $before = $proof->fresh()->toArray();
 
         DB::enableQueryLog();
         foreach ([[$responsible, $debtor->id], [$debtor, null]] as [$caller, $for]) {
-            $this->confirm($caller, $group, $creditor, $for)
+            $this->confirmAs($caller, $group, $creditor, $for)
                 ->assertStatus(422)
                 ->assertJson(['error' => 'Este comprovante já foi aceito.']);
         }
@@ -109,7 +72,7 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_an_accept_that_commits_between_the_check_and_the_write_wins(): void
     {
-        [$group, $creditor, $debtor, $responsible, $proof] = $this->scenario();
+        [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
         $accepted = false;
 
         // O credor aceita e commita depois da checagem do reenvio e antes de ele travar a linha: o
@@ -123,7 +86,7 @@ class SettlementResendAfterDecisionTest extends TestCase
             DB::table('ex_settlement_confirmations')->where('id', $proof->id)->update(['accepted_at' => '2026-08-20 11:00:00']);
         });
 
-        $this->confirm($responsible, $group, $creditor, $debtor->id)
+        $this->confirmAs($responsible, $group, $creditor, $debtor->id)
             ->assertStatus(422)
             ->assertJson(['error' => 'Este comprovante já foi aceito.']);
 
@@ -136,7 +99,7 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_an_acceptance_that_appears_after_the_first_read_never_survives_on_the_new_proof(): void
     {
-        [$group, $creditor, $debtor, $responsible, $proof] = $this->scenario();
+        [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
         $proof->delete();
         $reads = 0;
         $appeared = false;
@@ -169,7 +132,7 @@ class SettlementResendAfterDecisionTest extends TestCase
             ]);
         });
 
-        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
+        $this->confirmAs($responsible, $group, $creditor, $debtor->id)->assertOk();
 
         $this->assertTrue($appeared, 'a linha aceita apareceu entre a leitura e a gravação');
         $row = SettlementConfirmation::where('group_id', $group->id)->sole();
@@ -180,12 +143,12 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_a_failure_while_saving_leaves_no_orphan_file_and_keeps_the_previous_one(): void
     {
-        [$group, $creditor, $debtor, $responsible, $proof] = $this->scenario();
+        [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
         $this->mock(SettlementConfirmationService::class, function ($mock) {
             $mock->shouldReceive('submitProof')->once()->andThrow(new \RuntimeException('falha ao gravar'));
         });
 
-        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertStatus(500);
+        $this->confirmAs($responsible, $group, $creditor, $debtor->id)->assertStatus(500);
 
         $this->assertSame([$proof->proof_path], $this->proofFiles($group), 'o arquivo novo não fica órfão e o anterior segue');
         $this->assertSame(SettlementConfirmation::STATUS_AWAITING_ACCEPTANCE, $proof->fresh()->status());
@@ -196,11 +159,11 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_resending_after_a_refusal_clears_the_refusal_and_renotifies_the_creditor(): void
     {
-        [$group, $creditor, $debtor, $responsible, $proof] = $this->scenario();
+        [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
         $proof->update(['refused_at' => '2026-08-20 11:00:00']);
         $oldPath = $proof->proof_path;
 
-        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
+        $this->confirmAs($responsible, $group, $creditor, $debtor->id)->assertOk();
 
         $row = $proof->fresh();
         $this->assertNull($row->refused_at);
@@ -220,11 +183,11 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_resending_an_unrefused_proof_does_not_renotify(): void
     {
-        [$group, $creditor, $debtor, $responsible] = $this->scenario();
+        [$group, $creditor, $debtor, $responsible] = $this->linkedScenario();
 
         // Aguardando aceite (o do responsável) e depois enviado (o do devedor): nenhum dos dois reenvios avisa.
-        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
-        $this->confirm($debtor, $group, $creditor)->assertOk();
+        $this->confirmAs($responsible, $group, $creditor, $debtor->id)->assertOk();
+        $this->confirmAs($debtor, $group, $creditor)->assertOk();
 
         $this->assertSame(0, $this->settlementNotices());
     }
@@ -233,11 +196,11 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_the_debtor_resending_over_a_responsible_proof_takes_it_over(): void
     {
-        [$group, $creditor, $debtor, , $proof] = $this->scenario(paid: true);
+        [$group, $creditor, $debtor, , $proof] = $this->linkedScenario(paid: true);
         $this->assertSame(SettlementConfirmation::STATUS_AWAITING_ACCEPTANCE, $proof->status());
         $this->assertNull($this->sealedSnapshot($group), 'o do responsável ainda não sela');
 
-        $this->confirm($debtor, $group, $creditor)->assertOk();
+        $this->confirmAs($debtor, $group, $creditor)->assertOk();
 
         $row = $proof->fresh();
         $this->assertNull($row->confirmed_by, 'agora o comprovante é do devedor');
@@ -248,10 +211,10 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_the_debtor_resending_over_a_refused_proof_makes_it_count_and_renotifies(): void
     {
-        [$group, $creditor, $debtor, , $proof] = $this->scenario(paid: true);
+        [$group, $creditor, $debtor, , $proof] = $this->linkedScenario(paid: true);
         $proof->update(['refused_at' => '2026-08-20 11:00:00']);
 
-        $this->confirm($debtor, $group, $creditor)->assertOk();
+        $this->confirmAs($debtor, $group, $creditor)->assertOk();
 
         $row = $proof->fresh();
         $this->assertNull($row->refused_at);
@@ -263,7 +226,7 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_another_responsible_resending_becomes_the_new_sender(): void
     {
-        [$group, $creditor, $debtor, $responsible, $proof] = $this->scenario();
+        [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
         $other = User::factory()->create();
         $group->members()->attach($other->id);
         GroupMemberResponsible::create([
@@ -272,7 +235,7 @@ class SettlementResendAfterDecisionTest extends TestCase
             'responsible_user_id' => $other->id,
         ]);
 
-        $this->confirm($other, $group, $creditor, $debtor->id)->assertOk();
+        $this->confirmAs($other, $group, $creditor, $debtor->id)->assertOk();
 
         $row = $proof->fresh();
         $this->assertSame($other->id, (int) $row->confirmed_by);
@@ -284,10 +247,10 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_resending_reads_the_existing_proof_with_a_lock(): void
     {
-        [$group, $creditor, $debtor, $responsible] = $this->scenario();
+        [$group, $creditor, $debtor, $responsible] = $this->linkedScenario();
 
         DB::enableQueryLog();
-        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
+        $this->confirmAs($responsible, $group, $creditor, $debtor->id)->assertOk();
         $queries = collect(DB::getQueryLog())->pluck('query');
 
         $this->assertTrue(
@@ -298,11 +261,11 @@ class SettlementResendAfterDecisionTest extends TestCase
 
     public function test_the_first_send_takes_no_row_lock(): void
     {
-        [$group, $creditor, $debtor, , $proof] = $this->scenario();
+        [$group, $creditor, $debtor, , $proof] = $this->linkedScenario();
         $proof->delete();
 
         DB::enableQueryLog();
-        $this->confirm($debtor, $group, $creditor)->assertOk();
+        $this->confirmAs($debtor, $group, $creditor)->assertOk();
         $queries = collect(DB::getQueryLog())->pluck('query');
 
         $this->assertFalse(
