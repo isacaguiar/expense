@@ -1856,8 +1856,9 @@ class ExpenseController extends Controller
     /**
      * Um ciclo [start, end] está "totalmente quitado" quando toda entrada da
      * competência está paga (`totals.pending == 0`) E todo par de `settlements`
-     * tem uma `SettlementConfirmation` correspondente. Ciclo sem entradas conta
-     * como quitado. Base da selagem (`sealCycleIfSettled`) e do endpoint
+     * tem um comprovante que vale (só o do devedor e o de responsável aceito, nunca o
+     * recusado; veja `CycleSummaryService::summaryIsFullySettled`). Ciclo sem entradas
+     * conta como quitado. Base da selagem (`sealCycleIfSettled`) e do endpoint
      * focus-cycle — ver docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §0.3.
      *
      * A regra mora em `CycleSummaryService::isFullySettled`. Este método fino
