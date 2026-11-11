@@ -1808,10 +1808,16 @@ class ExpenseController extends Controller
 
         $existing = SettlementConfirmation::where($key)->first();
 
-        // O comprovante aceito pelo credor é definitivo (feature 20261110-quem-paga-se-declara-e-credor-
-        // recusa, R8): nem o devedor nem o responsável o substituem. Antes de gravar o arquivo.
-        if ($existing?->status() === SettlementConfirmation::STATUS_ACCEPTED) {
-            return response()->json(['error' => 'Este comprovante já foi aceito.'], 422);
+        // Quem enviou: nulo quando é o próprio devedor. O último a enviar vence (R7, R8), com duas exceções
+        // que valem antes de gravar o arquivo: o comprovante aceito pelo credor é definitivo (R8) e o do
+        // próprio devedor só ele substitui (revisão de segurança da TASK-605): quem paga por outra pessoa não
+        // sobrescreve um comprovante "enviado".
+        $paidOnBehalf = $debtorId !== auth()->id();
+        $sentBy = $paidOnBehalf ? auth()->id() : null;
+
+        $blockedBy = SettlementConfirmationService::resendBlockedBy($existing, $sentBy);
+        if ($blockedBy !== null) {
+            return response()->json(['error' => SettlementConfirmationService::blockedMessage($blockedBy)], 422);
         }
 
         $path = ProofStorage::store($request->file('comprovante'), (int) $groupId);
@@ -1819,7 +1825,7 @@ class ExpenseController extends Controller
         try {
             // A gravação relê a linha com lock: se o credor aceitou entre a checagem acima e agora, ela
             // não grava (F6). Reenviar limpa `accepted_at` e `refused_at`.
-            ['confirmation' => $confirmation, 'previousPath' => $previousProofPath, 'wasRefused' => $wasRefused]
+            ['confirmation' => $confirmation, 'previousPath' => $previousProofPath, 'wasRefused' => $wasRefused, 'blockedBy' => $blockedBy]
                 = $this->settlementConfirmations()->submitProof($key, [
                     'cycle_end' => $cycle['end']->toDateString(),
                     'amount' => $settlement['amount'],
@@ -1828,8 +1834,7 @@ class ExpenseController extends Controller
                     // anterior é limpa, igual à foto que é trocada.
                     'note' => $data['descricao'] ?? null,
                     'confirmed_at' => Carbon::now(),
-                    // Quem enviou: nulo quando é o próprio devedor. O último a enviar vence (R7, R8).
-                    'confirmed_by' => $debtorId === auth()->id() ? null : auth()->id(),
+                    'confirmed_by' => $sentBy,
                 ], $existing !== null);
         } catch (\Throwable $e) {
             // O banco não apontou para o arquivo novo: não deixa órfão.
@@ -1841,7 +1846,7 @@ class ExpenseController extends Controller
         if ($confirmation === null) {
             ProofStorage::delete($path);
 
-            return response()->json(['error' => 'Este comprovante já foi aceito.'], 422);
+            return response()->json(['error' => SettlementConfirmationService::blockedMessage((string) $blockedBy)], 422);
         }
 
         if ($previousProofPath && $previousProofPath !== $path) {
@@ -1857,11 +1862,11 @@ class ExpenseController extends Controller
         // Na 1ª confirmação desse par no ciclo, ou no reenvio de um comprovante que o credor recusou
         // (ele precisa saber que há um novo para decidir). Reenviar um que não foi recusado não avisa de
         // novo.
-        if (! $creditorIsSender && ($confirmation->wasRecentlyCreated || $wasRefused)) {
+        $firstOrAfterRefusal = $confirmation->wasRecentlyCreated || $wasRefused;
+
+        if (! $creditorIsSender && $firstOrAfterRefusal) {
             // O acerto é do devedor: é o nome dele que o credor lê (`actorName`). Quem pagou por ele, se foi
             // outra pessoa, vai em `paidByName` (R10).
-            $paidOnBehalf = $debtorId !== auth()->id();
-
             Notifier::settlementConfirmed(
                 $group,
                 (int) $data['to_user_id'],
@@ -1874,8 +1879,11 @@ class ExpenseController extends Controller
 
         // Devedor (ou quem paga por ele) confirmou o acerto com comprovante → avisa o credor por
         // WhatsApp, depois da resposta, menos quando o próprio credor enviou. No-op se a feature está
-        // desligada.
-        if (! $creditorIsSender) {
+        // desligada. O devedor que reenvia o próprio comprovante avisa de novo, como sempre; quem envia
+        // **por outra pessoa** segue a regra do sino (só na 1ª vez e depois de uma recusa): com o vínculo sem
+        // aceite do devedor, qualquer membro poderia, senão, encher o WhatsApp do credor (revisão de
+        // segurança da TASK-605).
+        if (! $creditorIsSender && (! $paidOnBehalf || $firstOrAfterRefusal)) {
             $confirmationId = $confirmation->id;
 
             dispatch(function () use ($confirmationId) {

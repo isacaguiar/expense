@@ -18,6 +18,11 @@ use Illuminate\Support\Facades\DB;
  */
 class SettlementConfirmationService
 {
+    /** Motivos de `resendBlockedBy`: o comprovante atual do par não pode ser substituído por este envio. */
+    public const BLOCKED_ACCEPTED = 'accepted';
+
+    public const BLOCKED_DEBTOR_PROOF = 'debtor_proof';
+
     public function __construct(private CycleSealingService $sealing) {}
 
     /**
@@ -163,17 +168,23 @@ class SettlementConfirmationService
      * `previousPath` é o arquivo que o reenvio substituiu e `wasRefused` diz se o comprovante anterior estava
      * recusado (o credor é avisado do reenvio).
      *
+     * **Só o devedor substitui o comprovante dele** (revisão de segurança, TASK-605): quem envia por outra
+     * pessoa (`confirmed_by` preenchido) não sobrescreve um comprovante "enviado", o do próprio devedor, que
+     * já vale para o selo; senão qualquer membro que se declarasse responsável o trocaria e apagaria o
+     * arquivo dele. Com `confirmation` nulo, `blockedBy` diz o motivo (`resendBlockedBy`).
+     *
      * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
      * @param  array<string, mixed>  $values
-     * @return array{confirmation: SettlementConfirmation|null, previousPath: string|null, wasRefused: bool}
+     * @return array{confirmation: SettlementConfirmation|null, previousPath: string|null, wasRefused: bool, blockedBy: string|null}
      */
     public function submitProof(array $key, array $values, bool $hadRow): array
     {
         return DB::transaction(function () use ($key, $values, $hadRow) {
             $current = $hadRow ? SettlementConfirmation::where($key)->lockForUpdate()->first() : null;
 
-            if ($current?->status() === SettlementConfirmation::STATUS_ACCEPTED) {
-                return ['confirmation' => null, 'previousPath' => null, 'wasRefused' => false];
+            $blockedBy = self::resendBlockedBy($current, $values['confirmed_by'] ?? null);
+            if ($blockedBy !== null) {
+                return ['confirmation' => null, 'previousPath' => null, 'wasRefused' => false, 'blockedBy' => $blockedBy];
             }
 
             $previousPath = $current?->proof_path;
@@ -184,8 +195,32 @@ class SettlementConfirmationService
                 'refused_at' => null,
             ]);
 
-            return ['confirmation' => $confirmation, 'previousPath' => $previousPath, 'wasRefused' => $wasRefused];
+            return ['confirmation' => $confirmation, 'previousPath' => $previousPath, 'wasRefused' => $wasRefused, 'blockedBy' => null];
         });
+    }
+
+    /**
+     * Por que um reenvio não pode substituir o comprovante atual do par, ou nulo se pode: o aceito é
+     * definitivo (R8), e o comprovante do próprio devedor só o devedor substitui. `$sentBy` é o `confirmed_by`
+     * do envio novo (nulo quando é o próprio devedor). O controller usa o mesmo veredito antes de gravar o
+     * arquivo e `submitProof`, de novo, com a linha travada.
+     */
+    public static function resendBlockedBy(?SettlementConfirmation $current, ?int $sentBy): ?string
+    {
+        return match (true) {
+            $current?->status() === SettlementConfirmation::STATUS_ACCEPTED => self::BLOCKED_ACCEPTED,
+            $sentBy !== null && $current?->status() === SettlementConfirmation::STATUS_SENT => self::BLOCKED_DEBTOR_PROOF,
+            default => null,
+        };
+    }
+
+    /** A mensagem de 422 de cada motivo de `resendBlockedBy`. */
+    public static function blockedMessage(string $blockedBy): string
+    {
+        return match ($blockedBy) {
+            self::BLOCKED_DEBTOR_PROOF => 'O devedor já enviou o comprovante deste acerto.',
+            default => 'Este comprovante já foi aceito.',
+        };
     }
 
     /**

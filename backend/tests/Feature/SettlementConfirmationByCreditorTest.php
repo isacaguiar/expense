@@ -99,7 +99,9 @@ class SettlementConfirmationByCreditorTest extends TestCase
         $this->confirmAs($creditor, $group, $creditor, $debtor->id)->assertOk();
         Http::assertNothingSent();
 
-        // Controle: com a mesma configuração, o envio de outra pessoa chega ao credor.
+        // Controle: com a mesma configuração, o primeiro envio de outra pessoa chega ao credor (reenviar por
+        // cima de um comprovante que aguarda aceite não avisa de novo: `SettlementProofOwnershipTest`).
+        SettlementConfirmation::where('group_id', $group->id)->delete();
         $this->confirmAs($responsible, $group, $creditor, $debtor->id)->assertOk();
         Http::assertSentCount(1);
     }

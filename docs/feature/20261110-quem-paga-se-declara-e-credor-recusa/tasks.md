@@ -29,7 +29,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **144**, agrup
 | TASK-602 | Não avisar o credor (sino e WhatsApp) da confirmação que ele mesmo enviou (item 143) | backend | plan.md §5 | antes do merge | Concluída |
 | TASK-603 | Criar a janela de 24 h contra aviso repetido de vínculo no `Notifier` (item 141) | backend | plan.md §6 | nenhum | Concluída |
 | TASK-604 | Criar `PUT /groups/{id}/me/pays-for`, `MemberResponsibleService::declare` e o aviso `payment_responsible_self_declared` | backend | plan.md §7 | antes do merge | Concluída |
-| TASK-605 | Escrever a matriz de autorização das rotas novas, o mutation check e rodar a revisão do `security-reviewer` | backend | plan.md §8 | antes do merge | Pendente |
+| TASK-605 | Escrever a matriz de autorização das rotas novas, o mutation check e rodar a revisão do `security-reviewer` | backend | plan.md §8 | antes do merge | Concluída |
 | TASK-606 | Acrescentar os tipos e os textos do sino dos três avisos novos | frontend | plan.md §9 | nenhum | Pendente |
 | TASK-607 | Criar o diálogo "Eu pago por…" e o botão e o texto na linha própria de Participantes | frontend | plan.md §10 | nenhum | Pendente |
 | TASK-608 | Criar o hook `useSettlementDecision` e os botões e selos de aceitar, recusar e excluir em Pagamentos | frontend | plan.md §11 | antes do merge | Pendente |
