@@ -9,6 +9,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Vínculo "quem paga por quem" (feature 20261109-responsavel-do-devedor): `responsible_user_id`
  * pode enviar o comprovante dos acertos de `user_id` (o devedor) dentro de `group_id`. Uma linha
  * por (grupo, devedor, responsável); as regras ficam em `MemberResponsibleService`.
+ *
+ * `created_by` guarda quem criou o vínculo: o devedor (ao escolher a lista) ou o próprio responsável
+ * (ao se declarar, feature 20261110-quem-paga-se-declara-e-credor-recusa). Nulo nos vínculos
+ * anteriores à coluna, que são todos do devedor.
  */
 class GroupMemberResponsible extends Model
 {
@@ -18,6 +22,7 @@ class GroupMemberResponsible extends Model
         'group_id',
         'user_id',
         'responsible_user_id',
+        'created_by',
     ];
 
     public function group(): BelongsTo

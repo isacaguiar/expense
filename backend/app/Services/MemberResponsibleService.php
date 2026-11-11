@@ -80,6 +80,8 @@ class MemberResponsibleService
                     'group_id' => $locked->id,
                     'user_id' => $debtorId,
                     'responsible_user_id' => $responsibleId,
+                    // Quem escolhe a lista é o devedor; a declaração do responsável grava o próprio id.
+                    'created_by' => $debtorId,
                 ]);
             }
 

@@ -16,7 +16,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **144**, agrup
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-594 | Adicionar `created_by` ao vínculo `ex_group_member_responsibles` e gravá-lo em `MemberResponsibleService::replace` | backend | plan.md §1 | antes do deploy/migration em produção | Pendente |
+| TASK-594 | Adicionar `created_by` ao vínculo `ex_group_member_responsibles` e gravá-lo em `MemberResponsibleService::replace` | backend | plan.md §1 | antes do deploy/migration em produção | Concluída |
 | TASK-595 | Adicionar `accepted_at` e `refused_at` a `ex_settlement_confirmations` e os estados e o escopo no model `SettlementConfirmation` | backend | plan.md §1 | antes do deploy/migration em produção | Pendente |
 | TASK-596 | Extrair o selo do ciclo para `CycleSummaryService::sealIfSettled`, sem mudar comportamento | backend | plan.md §2 | antes do merge | Pendente |
 | TASK-597 | Fazer o selo contar só o comprovante que vale e expor `confirmationStatus` e `refusedAt` em `withConfirmations` | backend | plan.md §3 | antes do merge | Pendente |
