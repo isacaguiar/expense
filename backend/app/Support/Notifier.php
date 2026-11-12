@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Models\Quota;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -30,6 +31,9 @@ class Notifier
         5 => 'maio', 6 => 'junho', 7 => 'julho', 8 => 'agosto',
         9 => 'setembro', 10 => 'outubro', 11 => 'novembro', 12 => 'dezembro',
     ];
+
+    /** Janela em que o mesmo aviso de vínculo (grupo, devedor, responsável e tipo) não se repete: 24 h. */
+    private const LINK_NOTICE_WINDOW_MINUTES = 24 * 60;
 
     /**
      * Uma despesa foi criada (`ExpenseController@store`) → avisa os pagadores
@@ -257,15 +261,44 @@ class Notifier
      *
      * Com `group_id` e `groupId`, ao contrário do convite: o responsável é membro do grupo e o sino pode
      * abrir o resumo dele. Feature 20261109-responsavel-do-devedor, specify R11.
+     *
+     * Não se repete para o mesmo par em 24 h (`LINK_NOTICE_WINDOW_MINUTES`): quem tira e põe a mesma pessoa
+     * na lista não a faz receber um aviso a cada vez (feature 20261110-quem-paga-se-declara-e-credor-
+     * recusa, item 141, specify R11). `$debtorId` entra na chave da janela.
      */
-    public static function paymentResponsibleAssigned(Group $group, int $responsibleId, ?string $debtorName): void
+    public static function paymentResponsibleAssigned(Group $group, int $debtorId, int $responsibleId, ?string $debtorName): void
     {
-        self::guard('payment_responsible_assigned', function () use ($group, $responsibleId, $debtorName) {
-            self::fanOut([$responsibleId], 'payment_responsible_assigned', $group->id, [
-                'actorName' => $debtorName,
-                'groupId' => $group->id,
-                'groupName' => $group->name,
-            ]);
+        self::guard('payment_responsible_assigned', function () use ($group, $debtorId, $responsibleId, $debtorName) {
+            self::oncePer(
+                self::linkNoticeKey($group, $debtorId, $responsibleId, 'payment_responsible_assigned'),
+                self::LINK_NOTICE_WINDOW_MINUTES,
+                fn () => self::fanOut([$responsibleId], 'payment_responsible_assigned', $group->id, [
+                    'actorName' => $debtorName,
+                    'groupId' => $group->id,
+                    'groupName' => $group->name,
+                ])
+            );
+        });
+    }
+
+    /**
+     * Alguém se declarou como quem paga por esse devedor (`GroupPaysForController@update`), sem o aceite
+     * dele → avisa o devedor: é a única chance de um adulto notar, e ele pode remover o vínculo em
+     * "Quem paga por mim" (feature 20261110-quem-paga-se-declara-e-credor-recusa, specify D2). `actorName`
+     * é quem se declarou. Uma vez por 24 h por par (R11), como `paymentResponsibleAssigned`.
+     */
+    public static function paymentResponsibleSelfDeclared(Group $group, int $debtorId, int $responsibleId, ?string $responsibleName): void
+    {
+        self::guard('payment_responsible_self_declared', function () use ($group, $debtorId, $responsibleId, $responsibleName) {
+            self::oncePer(
+                self::linkNoticeKey($group, $debtorId, $responsibleId, 'payment_responsible_self_declared'),
+                self::LINK_NOTICE_WINDOW_MINUTES,
+                fn () => self::fanOut([$debtorId], 'payment_responsible_self_declared', $group->id, [
+                    'actorName' => $responsibleName,
+                    'groupId' => $group->id,
+                    'groupName' => $group->name,
+                ])
+            );
         });
     }
 
@@ -298,6 +331,57 @@ class Notifier
     }
 
     /**
+     * O credor aceitou o comprovante que um responsável enviou (`SettlementDecisionController@accept`)
+     * → avisa quem enviou. `$creditorName` é o credor (`actorName`). Quem chama não avisa o próprio credor
+     * quando foi ele quem enviou (feature 20261110-quem-paga-se-declara-e-credor-recusa, specify R12).
+     */
+    public static function settlementAccepted(
+        Group $group,
+        int $senderId,
+        ?string $creditorName,
+        float|string $amount,
+        mixed $cycleStart
+    ): void {
+        self::guard('settlement_accepted', function () use ($group, $senderId, $creditorName, $amount, $cycleStart) {
+            self::fanOut([$senderId], 'settlement_accepted', $group->id, [
+                'actorName' => $creditorName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+                'amount' => self::amount($amount),
+                'cycleLabel' => self::cycleLabel($cycleStart),
+            ]);
+        });
+    }
+
+    /**
+     * O credor recusou o comprovante que um responsável enviou (`SettlementDecisionController@refuse`)
+     * → avisa quem enviou e o devedor, de quem é o acerto. `$creditorName` é o credor (`actorName`) e
+     * `$debtorName`, o devedor (`debtorName`), para o texto dizer de quem é o comprovante. Quem chama monta
+     * `$recipientIds` sem o autor da ação (feature 20261110-quem-paga-se-declara-e-credor-recusa, R12).
+     *
+     * @param  array<int, int>  $recipientIds
+     */
+    public static function settlementRefused(
+        Group $group,
+        array $recipientIds,
+        ?string $creditorName,
+        ?string $debtorName,
+        float|string $amount,
+        mixed $cycleStart
+    ): void {
+        self::guard('settlement_refused', function () use ($group, $recipientIds, $creditorName, $debtorName, $amount, $cycleStart) {
+            self::fanOut($recipientIds, 'settlement_refused', $group->id, [
+                'actorName' => $creditorName,
+                'debtorName' => $debtorName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+                'amount' => self::amount($amount),
+                'cycleLabel' => self::cycleLabel($cycleStart),
+            ]);
+        });
+    }
+
+    /**
      * Grava uma linha por destinatário.
      *
      * @param  iterable<int>  $userIds
@@ -312,6 +396,44 @@ class Notifier
                 'group_id' => $groupId,
                 'data' => $data,
             ]);
+        }
+    }
+
+    /**
+     * A chave da janela de um aviso de vínculo: um por (grupo, devedor, responsável, tipo), para que um
+     * par não afete outro nem um tipo de aviso o outro.
+     */
+    private static function linkNoticeKey(Group $group, int $debtorId, int $responsibleId, string $type): string
+    {
+        return "payment-responsible:{$group->id}:{$debtorId}:{$responsibleId}:{$type}";
+    }
+
+    /**
+     * Roda `$send` só se `$key` ainda não existia no cache: `Cache::add` marca a chave por `$minutes`
+     * minutos e devolve `false` se já estava marcada. Se o envio falha, a marca é desfeita (`forget`) e a
+     * exceção sobe, para a próxima tentativa não esperar a janela inteira por um aviso que nem saiu. Fica
+     * dentro de `guard`: se o próprio cache lançar, vira log e a ação segue, **sem** o aviso (o assédio
+     * que a janela evita pesa mais que um aviso perdido, e o aviso é best effort, R13).
+     *
+     * `add` não é atômico em todo driver (o de arquivo faz `get` e `put`): dois pedidos no mesmo
+     * milissegundo podem passar os dois, o que custa um aviso a mais, nunca um a menos.
+     */
+    private static function oncePer(string $key, int $minutes, callable $send): void
+    {
+        if (! Cache::add($key, true, now()->addMinutes($minutes))) {
+            return;
+        }
+
+        try {
+            $send();
+        } catch (\Throwable $e) {
+            try {
+                Cache::forget($key);
+            } catch (\Throwable) {
+                // O cache também falhou: a exceção que importa é a do envio.
+            }
+
+            throw $e;
         }
     }
 

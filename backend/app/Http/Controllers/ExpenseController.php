@@ -9,9 +9,11 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Models\User;
+use App\Services\CycleSealingService;
 use App\Services\CycleSummaryService;
 use App\Services\ExpensePaymentService;
 use App\Services\MemberResponsibleService;
+use App\Services\SettlementConfirmationService;
 use App\Support\BillingCycle;
 use App\Support\ClosingBreakdown;
 use App\Support\ExpenseRequestFingerprint;
@@ -1739,6 +1741,12 @@ class ExpenseController extends Controller
      * outro devedor, exige o vínculo "quem paga por quem" (403 sem ele, antes de gravar arquivo ou
      * linha). O acerto continua sendo do devedor: `confirmed_by` guarda quem enviou (nulo = o próprio
      * devedor) e o último a enviar vence.
+     *
+     * Feature 20261110-quem-paga-se-declara-e-credor-recusa: o comprovante que o credor **aceitou** é
+     * definitivo (422 "Este comprovante já foi aceito.", antes de gravar o arquivo e de novo, com a linha
+     * travada, na gravação). Reenviar limpa `accepted_at` e `refused_at`, e o credor é avisado do reenvio
+     * de um comprovante que ele recusou. O devedor que reenvia por cima do de um responsável o assume
+     * (`confirmed_by` nulo).
      */
     public function confirmSettlement(Request $request, $groupId)
     {
@@ -1798,21 +1806,48 @@ class ExpenseController extends Controller
             'to_user_id' => $data['to_user_id'],
         ];
 
-        $previousProofPath = SettlementConfirmation::where($key)->value('proof_path');
+        $existing = SettlementConfirmation::where($key)->first();
+
+        // Quem enviou: nulo quando é o próprio devedor. O último a enviar vence (R7, R8), com duas exceções
+        // que valem antes de gravar o arquivo: o comprovante aceito pelo credor é definitivo (R8) e o do
+        // próprio devedor só ele substitui (revisão de segurança da TASK-605): quem paga por outra pessoa não
+        // sobrescreve um comprovante "enviado".
+        $paidOnBehalf = $debtorId !== auth()->id();
+        $sentBy = $paidOnBehalf ? auth()->id() : null;
+
+        $blockedBy = SettlementConfirmationService::resendBlockedBy($existing, $sentBy);
+        if ($blockedBy !== null) {
+            return response()->json(['error' => SettlementConfirmationService::blockedMessage($blockedBy)], 422);
+        }
 
         $path = ProofStorage::store($request->file('comprovante'), (int) $groupId);
 
-        $confirmation = SettlementConfirmation::updateOrCreate($key, [
-            'cycle_end' => $cycle['end']->toDateString(),
-            'amount' => $settlement['amount'],
-            'proof_path' => $path,
-            // Reenvio substitui o comprovante inteiro: sem `descricao` a nota
-            // anterior é limpa, igual à foto que é trocada.
-            'note' => $data['descricao'] ?? null,
-            'confirmed_at' => Carbon::now(),
-            // Quem enviou: nulo quando é o próprio devedor. O último a enviar vence (R7, R8).
-            'confirmed_by' => $debtorId === auth()->id() ? null : auth()->id(),
-        ]);
+        try {
+            // A gravação relê a linha com lock: se o credor aceitou entre a checagem acima e agora, ela
+            // não grava (F6). Reenviar limpa `accepted_at` e `refused_at`.
+            ['confirmation' => $confirmation, 'previousPath' => $previousProofPath, 'wasRefused' => $wasRefused, 'blockedBy' => $blockedBy]
+                = $this->settlementConfirmations()->submitProof($key, [
+                    'cycle_end' => $cycle['end']->toDateString(),
+                    'amount' => $settlement['amount'],
+                    'proof_path' => $path,
+                    // Reenvio substitui o comprovante inteiro: sem `descricao` a nota
+                    // anterior é limpa, igual à foto que é trocada.
+                    'note' => $data['descricao'] ?? null,
+                    'confirmed_at' => Carbon::now(),
+                    'confirmed_by' => $sentBy,
+                ], $existing !== null);
+        } catch (\Throwable $e) {
+            // O banco não apontou para o arquivo novo: não deixa órfão.
+            ProofStorage::delete($path);
+
+            throw $e;
+        }
+
+        if ($confirmation === null) {
+            ProofStorage::delete($path);
+
+            return response()->json(['error' => SettlementConfirmationService::blockedMessage((string) $blockedBy)], 422);
+        }
 
         if ($previousProofPath && $previousProofPath !== $path) {
             ProofStorage::delete($previousProofPath);
@@ -1820,13 +1855,18 @@ class ExpenseController extends Controller
 
         $this->sealCycleIfSettled($group, $groupId, $cycle['start'], $cycle['end']);
 
-        // Só na 1ª confirmação desse par no ciclo — reenviar o comprovante
-        // (`updateOrCreate` que atualiza) não gera notificação nova.
-        if ($confirmation->wasRecentlyCreated) {
+        // Ninguém é avisado da ação que ele mesmo fez (R12, item 143): o credor que é o responsável do
+        // devedor e envia o comprovante não recebe nem o sino nem o WhatsApp sobre o próprio envio.
+        $creditorIsSender = (int) $data['to_user_id'] === (int) auth()->id();
+
+        // Na 1ª confirmação desse par no ciclo, ou no reenvio de um comprovante que o credor recusou
+        // (ele precisa saber que há um novo para decidir). Reenviar um que não foi recusado não avisa de
+        // novo.
+        $firstOrAfterRefusal = $confirmation->wasRecentlyCreated || $wasRefused;
+
+        if (! $creditorIsSender && $firstOrAfterRefusal) {
             // O acerto é do devedor: é o nome dele que o credor lê (`actorName`). Quem pagou por ele, se foi
             // outra pessoa, vai em `paidByName` (R10).
-            $paidOnBehalf = $debtorId !== auth()->id();
-
             Notifier::settlementConfirmed(
                 $group,
                 (int) $data['to_user_id'],
@@ -1837,17 +1877,23 @@ class ExpenseController extends Controller
             );
         }
 
-        // Devedor confirmou o acerto com comprovante → avisa o credor por
-        // WhatsApp, depois da resposta. No-op se a feature está desligada.
-        $confirmationId = $confirmation->id;
+        // Devedor (ou quem paga por ele) confirmou o acerto com comprovante → avisa o credor por
+        // WhatsApp, depois da resposta, menos quando o próprio credor enviou. No-op se a feature está
+        // desligada. O devedor que reenvia o próprio comprovante avisa de novo, como sempre; quem envia
+        // **por outra pessoa** segue a regra do sino (só na 1ª vez e depois de uma recusa): com o vínculo sem
+        // aceite do devedor, qualquer membro poderia, senão, encher o WhatsApp do credor (revisão de
+        // segurança da TASK-605).
+        if (! $creditorIsSender && (! $paidOnBehalf || $firstOrAfterRefusal)) {
+            $confirmationId = $confirmation->id;
 
-        dispatch(function () use ($confirmationId) {
-            $confirmation = SettlementConfirmation::with('fromUser', 'toUser')->find($confirmationId);
+            dispatch(function () use ($confirmationId) {
+                $confirmation = SettlementConfirmation::with('fromUser', 'toUser')->find($confirmationId);
 
-            if ($confirmation) {
-                WhatsAppNotifier::settlementProofConfirmed($confirmation);
-            }
-        })->afterResponse();
+                if ($confirmation) {
+                    WhatsAppNotifier::settlementProofConfirmed($confirmation);
+                }
+            })->afterResponse();
+        }
 
         return response()->json($confirmation->fresh());
     }
@@ -1855,8 +1901,9 @@ class ExpenseController extends Controller
     /**
      * Um ciclo [start, end] está "totalmente quitado" quando toda entrada da
      * competência está paga (`totals.pending == 0`) E todo par de `settlements`
-     * tem uma `SettlementConfirmation` correspondente. Ciclo sem entradas conta
-     * como quitado. Base da selagem (`sealCycleIfSettled`) e do endpoint
+     * tem um comprovante que vale (só o do devedor e o de responsável aceito, nunca o
+     * recusado; veja `CycleSummaryService::summaryIsFullySettled`). Ciclo sem entradas
+     * conta como quitado. Base da selagem (`sealCycleIfSettled`) e do endpoint
      * focus-cycle — ver docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §0.3.
      *
      * A regra mora em `CycleSummaryService::isFullySettled`. Este método fino
@@ -1879,6 +1926,15 @@ class ExpenseController extends Controller
     }
 
     /**
+     * Gravação do comprovante de acerto com a linha travada (feature 20261110-quem-paga-se-declara-e-
+     * credor-recusa). Resolvido pelo container, sem construtor, pelo mesmo motivo de `cycles()`.
+     */
+    private function settlementConfirmations(): SettlementConfirmationService
+    {
+        return app(SettlementConfirmationService::class);
+    }
+
+    /**
      * Regras do pagamento registrado no cadastro (feature
      * 20261027-pagamento-no-cadastro-despesa). Resolvido pelo container, sem
      * construtor, pelo mesmo motivo de `cycles()`.
@@ -1898,59 +1954,16 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Se o ciclo [start, end] está totalmente quitado, congela a foto num
-     * `GroupCycleSnapshot` com `settled_at` — a partir daí `summary()` serve
-     * essa cópia e o ciclo vira histórico. `updateOrCreate` não passa
-     * `closed_manually_at`/`reopened_at`, então preserva o registro de
-     * fechamento manual, se houver. Devolve `true` se selou, `false` se ainda
-     * há pendência.
+     * Se o ciclo [start, end] está totalmente quitado, congela a foto num `GroupCycleSnapshot` e avisa o
+     * grupo na transição para selado. Devolve `true` se selou, `false` se ainda há pendência.
+     *
+     * A regra mora em `CycleSealingService::sealIfSettled` (a rota de aceite do comprovante também sela,
+     * feature 20261110-quem-paga-se-declara-e-credor-recusa, plan §2). Este método fino continua aqui
+     * porque `pay`, `confirmSettlement`, `close` e o `focus` o chamam desde antes da extração.
      */
     private function sealCycleIfSettled(Group $group, $groupId, Carbon $start, Carbon $end): bool
     {
-        if (! $this->cycleIsFullySettled($group, $groupId, $start, $end)) {
-            return false;
-        }
-
-        $summary = $this->cycles()->compute($group, $start, $end);
-
-        // Ciclo sem despesa REAL nem acerto não vira "histórico selado": não há
-        // foto a congelar e um `settled_at` aqui só travaria o `reopen()` à toa.
-        // "Real" exclui entry `bornPaid` (parcela retroativa nascida quitada,
-        // specify.md §2.3 de 20260904-parcela-retroativa-contabilizacao) — ela
-        // fica em `expenses` como linha "Paga" (histórico), mas sozinha não é
-        // motivo pra selar o mês nem disparar Notifier::cycleSettled.
-        // `cycleIsFullySettled` já devolve `true` pra esse caso (nada pendente),
-        // então o `focus-cycle` pula o ciclo mesmo sem selar.
-        $hasRealExpense = collect($summary['expenses'])->contains(fn ($expense) => empty($expense['bornPaid']));
-
-        if (! $hasRealExpense && empty($summary['settlements'])) {
-            return false;
-        }
-
-        $wasSealed = GroupCycleSnapshot::where('group_id', $groupId)
-            ->where('cycle_start', $start->toDateString())
-            ->first()?->isSealed() ?? false;
-
-        GroupCycleSnapshot::updateOrCreate(
-            ['group_id' => $groupId, 'cycle_start' => $start->toDateString()],
-            [
-                'cycle_end' => $end->toDateString(),
-                'totals' => $summary['totals'],
-                'expenses' => $summary['expenses'],
-                'balances' => $summary['balances'],
-                'settlements' => $summary['settlements'],
-                'settled_at' => Carbon::now(),
-            ]
-        );
-
-        // Só na transição não-selado → selado: chamadas repetidas de
-        // `sealCycleIfSettled` num ciclo já selado (inclusive as preguiçosas
-        // de `summary()`) não geram notificação nova.
-        if (! $wasSealed) {
-            Notifier::cycleSettled($group, $start);
-        }
-
-        return true;
+        return app(CycleSealingService::class)->sealIfSettled($group, $start, $end);
     }
 
     /**

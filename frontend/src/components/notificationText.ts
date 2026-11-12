@@ -21,13 +21,20 @@ export function notificationText(type: string, data: NotificationData): string {
       return `${str(data.actorName)} marcou "${str(data.expenseDescription)}" como paga`;
     case 'settlement_confirmed': {
       // `paidByName` só existe quando outra pessoa pagou por quem deve (`actorName`); sem ele, o texto de sempre.
+      // O comprovante enviado por outra pessoa só vale depois que o credor (quem lê este aviso) o aceita.
       const paidBy = str(data.paidByName);
       return paidBy
-        ? `${paidBy} confirmou um pagamento de ${brl(data.amount)} por ${str(data.actorName)}`
+        ? `${paidBy} confirmou um pagamento de ${brl(data.amount)} por ${str(data.actorName)}. Aguarda o seu aceite.`
         : `${str(data.actorName)} confirmou um pagamento de ${brl(data.amount)}`;
     }
     case 'payment_responsible_assigned':
       return `Você agora pode pagar por ${str(data.actorName)} no grupo "${str(data.groupName)}"`;
+    case 'payment_responsible_self_declared':
+      return `${str(data.actorName)} agora paga por você no grupo "${str(data.groupName)}"`;
+    case 'settlement_refused':
+      return `${str(data.actorName)} recusou o comprovante de ${str(data.debtorName)} de ${brl(data.amount)}`;
+    case 'settlement_accepted':
+      return `${str(data.actorName)} aceitou o comprovante de ${brl(data.amount)}`;
     case 'cycle_settled':
       return `O ciclo de ${str(data.cycleLabel)} de "${str(data.groupName)}" foi quitado`;
     case 'cycle_closed':
