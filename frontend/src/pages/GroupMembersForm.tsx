@@ -299,7 +299,9 @@ const GroupMembersForm: React.FC = () => {
             {`Você paga por: ${dependents.map(dependent => dependent.name).join(', ')}`}
           </Typography>
         )}
-        {dependents.length > 0 && (
+        {/* Os selos só vão nas linhas dos outros: na própria linha o texto "Você paga por" acima já diz (feature
+            20261112-ajustes-de-texto-participantes-e-pagamentos). */}
+        {dependents.length > 0 && user.id !== currentUserId && (
           <Box component="span" sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
             {dependents.map(dependent => (
               <Chip key={dependent.id} size="small" label={`Paga por ${dependent.name}`} />
