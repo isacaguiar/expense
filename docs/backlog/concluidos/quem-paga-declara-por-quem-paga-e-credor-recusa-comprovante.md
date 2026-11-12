@@ -45,7 +45,7 @@ Tipo sugerido: feature (backend e frontend), por `/promover-backlog 144`, com ap
 
 ## Resolução
 Concluído em: 2026-11-12
-Feature: docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/
+Feature: docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/
 Tasks: TASK-594 a TASK-609
 PRs: https://github.com/isacaguiar/expense/pull/274
 

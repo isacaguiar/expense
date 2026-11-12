@@ -24,7 +24,7 @@ Tipo sugerido: backend (só se a decisão for A).
 
 ## Resolução
 Concluído em: 2026-11-12
-Feature: docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/
+Feature: docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/
 Tasks: TASK-602
 PRs: https://github.com/isacaguiar/expense/pull/274
 

@@ -1,7 +1,7 @@
 # Histórico de comprovantes do acerto e complemento com justificativa
 
 ID: 150
-Origem: pedido dele em 2026-11-11, durante a TASK-605 da feature `docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/`, em resposta ao limite que o achado 1 do `security-reviewer` impôs (só o devedor substitui o comprovante dele); `backend/app/Services/SettlementConfirmationService.php` (`submitProof`, `destroy`), `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`, `:1853`), `backend/app/Services/CycleSummaryService.php` (`withConfirmations`)
+Origem: pedido dele em 2026-11-11, durante a TASK-605 da feature `docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/`, em resposta ao limite que o achado 1 do `security-reviewer` impôs (só o devedor substitui o comprovante dele); `backend/app/Services/SettlementConfirmationService.php` (`submitProof`, `destroy`), `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`, `:1853`), `backend/app/Services/CycleSummaryService.php` (`withConfirmations`)
 Criado em: 2026-11-11
 Prioridade: MÉDIA
 Status: Aberto

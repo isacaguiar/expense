@@ -1,7 +1,7 @@
 # Teste do relatório ao vivo falha de vez em quando: os valores "777" e "999" aparecem dentro de ids autoincrementados
 
 ID: 145
-Origem: docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-603; achado ao rodar a suíte completa do backend); `backend/tests/Feature/ExpenseControllerClosingReportTest.php` (`test_a_live_report_never_mixes_in_data_from_another_group_of_the_same_members`, a lista de `$foreign` na linha 531)
+Origem: docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-603; achado ao rodar a suíte completa do backend); `backend/tests/Feature/ExpenseControllerClosingReportTest.php` (`test_a_live_report_never_mixes_in_data_from_another_group_of_the_same_members`, a lista de `$foreign` na linha 531)
 Criado em: 2026-11-11
 Prioridade: MEDIA
 Status: Aberto

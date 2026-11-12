@@ -39,7 +39,7 @@ function errorMessage(err: unknown): string {
  * o par na query). Todos levam o par (devedor e credor) e o `cycles_ago`, como `useConfirmSettlement`: sem ele o
  * backend assume o ciclo corrente. Uma ação por vez (`busy`); `onSuccess` recebe qual foi, para a tela avisar e
  * recarregar o ciclo.
- * docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/plan.md §11.
+ * docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/plan.md §11.
  */
 export function useSettlementDecision(
   groupId: string | number | undefined,
