@@ -6,7 +6,7 @@ Versão: 1.1 · Criado em: 20261110
 
 **v1.1 (2026-11-10):** na TASK-596 o selo extraído vai para `CycleSealingService` (plan v1.1), e não para `CycleSummaryService`; só o nome da classe muda.
 
-**Status: aprovada em 2026-11-10 ("aprovado, siga com a TASK-594") e em execução.** Specify v1.1 (aprovado por ele em 2026-11-10, D2, D3, D4-B, D6 e D8 a D12 como recomendado, D5 com a leitura confirmada e **D7-A com o aval de hard delete**), plan v1.0 (aprovado em 2026-11-10) e estas tasks. A execução é no modo nativo, parando após cada task.
+**Status: aprovada em 2026-11-10 ("aprovado, siga com a TASK-594"); TASK-594 a 609 concluídas, resta o fechamento (validação local dele, PR e arquivamento).** Specify v1.1 (aprovado por ele em 2026-11-10, D2, D3, D4-B, D6 e D8 a D12 como recomendado, D5 com a leitura confirmada e **D7-A com o aval de hard delete**), plan v1.0 (aprovado em 2026-11-10) e estas tasks. A execução é no modo nativo, parando após cada task.
 
 IDs a partir de **TASK-594**: o maior em `docs/` e nas mensagens de commit de todas as refs é TASK-593 (feature `20261109-responsavel-do-devedor`), conferido em 2026-11-10 com busca em `docs/sdd/03-tasks.md`, em todos os `docs/feature/**/tasks.md` e em `git log --all`.
 
