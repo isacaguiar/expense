@@ -11,8 +11,8 @@ use Illuminate\Http\Request;
 
 /**
  * A decisão do credor sobre o comprovante que um responsável enviou do acerto de outra pessoa (feature
- * 20261110-quem-paga-se-declara-e-credor-recusa, plan §4): aceitar e, nas tasks seguintes, recusar e
- * excluir. A regra mora em `SettlementConfirmationService`; aqui ficam a autorização, o corpo e os avisos.
+ * 20261110-quem-paga-se-declara-e-credor-recusa, plan §4): aceitar, recusar e excluir. A regra mora em
+ * `SettlementConfirmationService`; aqui ficam a autorização, o corpo e os avisos.
  */
 class SettlementDecisionController extends Controller
 {
