@@ -21,6 +21,12 @@ type PaymentSettlementsPanelProps = {
   onSendProof: (settlement: SummarySettlement) => void;
   // Ids de quem o usuário logado paga (feature 20261109-responsavel-do-devedor): vão à lista e à ordenação.
   payForUserIds?: readonly number[];
+  // Aceitar, recusar e excluir o comprovante (feature 20261110-quem-paga-se-declara-e-credor-recusa):
+  // repassados à lista, que decide quem os vê.
+  onAccept?: (settlement: SummarySettlement) => void;
+  onRefuse?: (settlement: SummarySettlement) => void;
+  onDelete?: (settlement: SummarySettlement) => void;
+  decisionBusy?: boolean;
 };
 
 const NO_ONE: readonly number[] = [];
@@ -52,7 +58,11 @@ const PaymentSettlementsPanel: React.FC<PaymentSettlementsPanelProps> = ({
   onTabChange,
   onPayWithPix,
   onSendProof,
-  payForUserIds = NO_ONE
+  payForUserIds = NO_ONE,
+  onAccept,
+  onRefuse,
+  onDelete,
+  decisionBusy
 }) => {
   const { toPay, paid } = useMemo(() => splitSettlementsByConfirmation(settlements), [settlements]);
 
@@ -93,6 +103,10 @@ const PaymentSettlementsPanel: React.FC<PaymentSettlementsPanelProps> = ({
           onPayWithPix={onPayWithPix}
           onSendProof={onSendProof}
           payForUserIds={payForUserIds}
+          onAccept={onAccept}
+          onRefuse={onRefuse}
+          onDelete={onDelete}
+          decisionBusy={decisionBusy}
           emptyMessage={hasAny ? EMPTY_MESSAGE[tab] : NO_SETTLEMENTS_MESSAGE}
         />
       </Box>

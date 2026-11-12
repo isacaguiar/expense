@@ -51,10 +51,11 @@ class GroupMemberResponsibleController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        // Só quem entrou na lista é avisado (R11); fora do service, depois do commit, e best effort:
-        // uma falha do `Notifier` vira log e não desfaz o vínculo (R15).
+        // Só quem entrou na lista é avisado (R11), e não de novo em 24 h para o mesmo par (item 141);
+        // fora do service, depois do commit, e best effort: uma falha do `Notifier` vira log e não
+        // desfaz o vínculo (R15).
         foreach ($result['added'] as $responsibleId) {
-            Notifier::paymentResponsibleAssigned($group, $responsibleId, auth()->user()->name);
+            Notifier::paymentResponsibleAssigned($group, $debtorId, $responsibleId, auth()->user()->name);
         }
 
         return response()->json([

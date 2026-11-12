@@ -113,7 +113,9 @@ describe('GroupMembersForm: quem paga por quem', () => {
       await screen.findByRole('button', { name: SET_BUTTON });
       const buttons = within(rowOf('ana@example.com')).getAllByRole('button');
 
-      expect(buttons.map(button => button.textContent)).toEqual([SET_BUTTON, 'Sair do grupo']);
+      // A feature 20261110 (TASK-607) acrescentou "Eu pago por…" entre os dois; a ordem completa está em
+      // `GroupMembersForm.paysFor.test.tsx`.
+      expect(buttons.map(button => button.textContent)).toEqual([SET_BUTTON, 'Eu pago por…', 'Sair do grupo']);
     });
   });
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\GroupExpenseReportController;
 use App\Http\Controllers\GroupInvitationController;
 use App\Http\Controllers\GroupMemberController;
 use App\Http\Controllers\GroupMemberResponsibleController;
+use App\Http\Controllers\GroupPaysForController;
 use App\Http\Controllers\InvitationController;
 use App\Http\Controllers\MyInvitationController;
 use App\Http\Controllers\NotificationController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\OverviewController;
 use App\Http\Controllers\PixController;
 use App\Http\Controllers\PreRegisterController;
 use App\Http\Controllers\ProofDownloadController;
+use App\Http\Controllers\SettlementDecisionController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserPhotoController;
 use Illuminate\Support\Facades\Route;
@@ -65,6 +67,10 @@ Route::middleware('jwt.auth')->group(function () {
         Route::put('/{userId}/responsibles', [GroupMemberResponsibleController::class, 'update']);
     });
 
+    // O responsável se declara, sem o aceite do devedor (feature 20261110-quem-paga-se-declara-e-credor-recusa).
+    // Sempre sobre quem chama: não há `userId` na rota. Só `PUT`: a lista vazia larga todos os papéis.
+    Route::put('/groups/{groupId}/me/pays-for', [GroupPaysForController::class, 'update']);
+
     Route::prefix('groups/{groupId}/invitations')->group(function () {
         Route::get('/', [GroupInvitationController::class, 'index']);
         Route::delete('/{invitationId}', [GroupInvitationController::class, 'destroy']);
@@ -79,6 +85,11 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/expenses/{expenseId}/undo-purchase', [ExpenseController::class, 'undoPurchase']);
     Route::post('/expenses/{expenseId}/payment-proof', [ExpenseController::class, 'updatePaymentProof']);
     Route::post('/groups/{groupId}/settlements/confirm', [ExpenseController::class, 'confirmSettlement']);
+    // O credor decide sobre o comprovante que um responsável enviou (feature 20261110-quem-paga-se-declara-e-credor-recusa).
+    Route::post('/groups/{groupId}/settlements/accept', [SettlementDecisionController::class, 'accept']);
+    Route::post('/groups/{groupId}/settlements/refuse', [SettlementDecisionController::class, 'refuse']);
+    // Único DELETE físico da feature: o próprio comprovante, com o aval de hard delete (D7-A).
+    Route::delete('/groups/{groupId}/settlements/confirmation', [SettlementDecisionController::class, 'destroy']);
 
     Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
     Route::get('/groups/{groupId}/expenses/monthly', [ExpenseController::class, 'getMonthlyExpenses']);

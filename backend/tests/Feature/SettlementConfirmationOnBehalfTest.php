@@ -207,7 +207,13 @@ class SettlementConfirmationOnBehalfTest extends TestCase
         $this->assertSame(1, SettlementConfirmation::where('group_id', $group->id)->count());
     }
 
-    public function test_resend_by_the_responsible_after_the_debtor_replaces_the_proof_and_sets_confirmed_by(): void
+    /**
+     * Antes (feature 20261109), "o último a enviar vence" valia também para o responsável por cima do
+     * comprovante do devedor. Com o vínculo sem aceite do devedor (feature 20261110, D1-A) qualquer membro
+     * poderia trocá-lo e apagar o arquivo dele: só o devedor substitui o comprovante dele (achado médio da
+     * revisão de segurança da TASK-605; o detalhe está em `SettlementProofOwnershipTest`).
+     */
+    public function test_resend_by_the_responsible_after_the_debtor_does_not_replace_the_debtors_proof(): void
     {
         [$group, $creditor, $debtor, $responsible] = $this->scenario();
         $this->confirm($debtor, $group, $creditor)->assertOk();
@@ -215,12 +221,12 @@ class SettlementConfirmationOnBehalfTest extends TestCase
         $firstPath = $row->proof_path;
         $this->assertNull($row->confirmed_by);
 
-        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
+        $this->confirm($responsible, $group, $creditor, $debtor->id)->assertStatus(422);
 
         $row = $row->fresh();
-        $this->assertSame($responsible->id, (int) $row->confirmed_by);
-        $this->assertNotSame($firstPath, $row->proof_path);
-        Storage::disk('local')->assertMissing($firstPath);
+        $this->assertNull($row->confirmed_by, 'segue sendo o comprovante do devedor');
+        $this->assertSame($firstPath, $row->proof_path);
+        Storage::disk('local')->assertExists($firstPath);
         $this->assertCount(1, $this->proofFiles($group));
         $this->assertSame(1, SettlementConfirmation::where('group_id', $group->id)->count());
     }

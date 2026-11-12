@@ -22,7 +22,8 @@ describe('notificationText: quem paga por quem', () => {
       amount: '100.00'
     });
 
-    expect(text).toMatch(/^Maria confirmou um pagamento de R\$\s?100,00 por João$/);
+    // Sem o `$` final: a TASK-606 acrescenta "Aguarda o seu aceite." (o texto completo está em notificationText.acceptance.test.ts).
+    expect(text).toMatch(/^Maria confirmou um pagamento de R\$\s?100,00 por João\./);
   });
 
   it('settlement_confirmed without paidByName keeps the text it always had', () => {

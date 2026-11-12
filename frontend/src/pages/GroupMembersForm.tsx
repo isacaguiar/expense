@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import PaymentResponsibleDialog from '../components/PaymentResponsibleDialog';
+import PaysForDialog from '../components/PaysForDialog';
 import { API_BASE_URL } from '../config';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
 import { getInitials } from '../layouts/group/getInitials';
@@ -77,6 +78,9 @@ const GroupMembersForm: React.FC = () => {
   // Quem paga por quem (feature 20261109-responsavel-do-devedor): o diálogo e o aviso de sucesso.
   const [responsibleOpen, setResponsibleOpen] = useState(false);
   const [responsibleNotice, setResponsibleNotice] = useState<string | null>(null);
+  // "Eu pago por…" (feature 20261110-quem-paga-se-declara-e-credor-recusa): o diálogo reaproveita o aviso de
+  // sucesso e a releitura dos membros do "Quem paga por mim".
+  const [paysForOpen, setPaysForOpen] = useState(false);
 
   // Convites pendentes (feature 20261103-convite-pendente-no-grupo): carga à parte da do grupo e
   // dos membros, e tolerante, para um problema aqui não derrubar a tela de Participantes.
@@ -259,6 +263,11 @@ const GroupMembersForm: React.FC = () => {
     setResponsibleOpen(true);
   };
 
+  const openPaysFor = () => {
+    setResponsibleNotice(null);
+    setPaysForOpen(true);
+  };
+
   /** Depois de salvar: mostra o aviso e relê os membros, que trazem os `responsibles` de agora. */
   const handleResponsibleChanged = async (message: string) => {
     setResponsibleNotice(message);
@@ -283,6 +292,11 @@ const GroupMembersForm: React.FC = () => {
         {responsibles.length > 0 && (
           <Typography variant="body2" color="text.secondary" component="span" display="block">
             {`${label}: ${responsibles.map(responsible => responsible.name).join(', ')}`}
+          </Typography>
+        )}
+        {dependents.length > 0 && user.id === currentUserId && (
+          <Typography variant="body2" color="text.secondary" component="span" display="block">
+            {`Você paga por: ${dependents.map(dependent => dependent.name).join(', ')}`}
           </Typography>
         )}
         {dependents.length > 0 && (
@@ -352,8 +366,9 @@ const GroupMembersForm: React.FC = () => {
                       {user.id === currentUserId ? (
                         <Box
                           sx={{
-                            // Os dois botões ficam numa linha só deles, abaixo do e-mail, em qualquer
-                            // largura: ao lado do texto sobravam 0 px para o e-mail a ~1024 px (V1).
+                            // Os botões ficam numa linha só deles, abaixo do e-mail, em qualquer
+                            // largura: ao lado do texto sobravam 0 px para o e-mail a ~1024 px (V1). Com
+                            // três, o grupo quebra em duas linhas no celular, o que é esperado.
                             display: 'flex',
                             flexWrap: 'wrap',
                             justifyContent: 'flex-end',
@@ -364,6 +379,9 @@ const GroupMembersForm: React.FC = () => {
                         >
                           <Button size="small" onClick={openResponsible}>
                             Quem paga por mim
+                          </Button>
+                          <Button size="small" onClick={openPaysFor}>
+                            Eu pago por…
                           </Button>
                           <Button size="small" color="error" onClick={() => openConfirmation(user)}>
                             Sair do grupo
@@ -518,6 +536,20 @@ const GroupMembersForm: React.FC = () => {
           members={members}
           current={members.find(member => member.id === currentUserId)?.responsibles ?? []}
           onClose={() => setResponsibleOpen(false)}
+          onChanged={handleResponsibleChanged}
+        />
+      )}
+
+      {currentUserId !== null && (
+        <PaysForDialog
+          open={paysForOpen}
+          groupId={id ?? ''}
+          currentUserId={currentUserId}
+          members={members}
+          current={members
+            .filter(member => responsiblesOf(member).some(responsible => responsible.id === currentUserId))
+            .map(({ id: memberId, name }) => ({ id: memberId, name }))}
+          onClose={() => setPaysForOpen(false)}
           onChanged={handleResponsibleChanged}
         />
       )}

@@ -372,9 +372,18 @@ class CycleSummaryService
             ->map(function (array $settlement) use ($confirmations) {
                 $confirmation = $confirmations->get("{$settlement['from_user_id']}-{$settlement['to_user_id']}");
 
-                $settlement['confirmedProofUrl'] = $confirmation?->proof_url;
-                $settlement['confirmedNote'] = $confirmation?->note;
-                $settlement['confirmedAt'] = $confirmation?->confirmed_at?->toIso8601String();
+                // Estado do comprovante (feature 20261110-quem-paga-se-declara-e-credor-recusa, plan §3):
+                // `sent`, `awaiting_acceptance`, `refused` ou `accepted`; nulo sem comprovante. O recusado
+                // sai como "não confirmado" (campos do comprovante nulos, a linha e o arquivo ficam no banco,
+                // D4-B), para que a tela já o trate como "a pagar"; `confirmedBy` segue para dizer quem enviou.
+                $status = $confirmation?->status();
+                $refused = $status === SettlementConfirmation::STATUS_REFUSED;
+
+                $settlement['confirmedProofUrl'] = $refused ? null : $confirmation?->proof_url;
+                $settlement['confirmedNote'] = $refused ? null : $confirmation?->note;
+                $settlement['confirmedAt'] = $refused ? null : $confirmation?->confirmed_at?->toIso8601String();
+                $settlement['confirmationStatus'] = $status;
+                $settlement['refusedAt'] = $confirmation?->refused_at?->toIso8601String();
 
                 // Quem enviou o comprovante, só quando difere do devedor (feature
                 // 20261109-responsavel-do-devedor, R10): nulo se o próprio devedor enviou ou se
@@ -396,8 +405,9 @@ class CycleSummaryService
     /**
      * Um ciclo [start, end] está "totalmente quitado" quando toda entrada da
      * competência está paga (`totals.pending == 0`) E todo par de `settlements`
-     * tem uma `SettlementConfirmation` correspondente. Ciclo sem entradas conta
-     * como quitado. Base da selagem (`ExpenseController::sealCycleIfSettled`) e do
+     * tem um comprovante **que vale** (`SettlementConfirmation::scopeCountsForSettlement`: o do
+     * devedor e o de responsável já aceito pelo credor, nunca o recusado). Ciclo sem entradas conta
+     * como quitado. Base da selagem (`CycleSealingService::sealIfSettled`) e do
      * endpoint focus-cycle — ver
      * docs/feature/concluidas/202609/20260902-pagamento-ciclo-fechado/plan.md §0.3.
      */
@@ -424,8 +434,11 @@ class CycleSummaryService
             return true;
         }
 
+        // Só o comprovante que vale entra: o do devedor e o de responsável já aceito, nunca o recusado
+        // (feature 20261110-quem-paga-se-declara-e-credor-recusa, specify R5; `countsForSettlement`).
         $confirmedPairs = SettlementConfirmation::where('group_id', $groupId)
             ->where('cycle_start', $start->toDateString())
+            ->countsForSettlement()
             ->get()
             ->map(fn ($confirmation) => "{$confirmation->from_user_id}-{$confirmation->to_user_id}")
             ->all();
