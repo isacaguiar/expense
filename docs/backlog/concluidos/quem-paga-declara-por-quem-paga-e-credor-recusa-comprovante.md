@@ -4,7 +4,7 @@ ID: 144
 Origem: validação local da feature `docs/feature/concluidas/202611/20261109-responsavel-do-devedor/` (pedido dele em 2026-11-10); specify daquela feature (D1, R2, RK2, RK4 e §2.2); `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`, `sealCycleIfSettled`) e `backend/app/Services/CycleSummaryService.php` (`summaryIsFullySettled`)
 Criado em: 2026-11-10
 Prioridade: MÉDIA
-Status: Promovido para TASK-594
+Status: Concluído (PR #274)
 
 ## Descrição
 Hoje só o **devedor** escolhe quem paga por ele (D1-A e R2 da feature `responsavel-do-devedor`): o vínculo é uma permissão que ele dá, e é isso que impede um membro de mandar comprovante em nome de outro. Ele pediu o caminho inverso: **quem paga poder declarar "eu pago por Ana e Davi"**, sem a confirmação do dependente. O caso que motiva: uma criança que não acessa o app nunca aceitaria um pedido, então o vínculo ficaria pendente para sempre (por isso a D1-B da specify original, "o responsável propõe e o devedor aceita", não serve).
@@ -42,3 +42,13 @@ A D1 e a D5 são dele; as demais são recomendações a aprovar na specify.
 Backend: `MemberResponsibleService` (acrescentar `attach`/`detach`; `replace` continua sendo do devedor), `GroupMemberResponsibleController`, `Notifier::guard` e `fanOut`, `ExpenseController::confirmSettlement` e `sealCycleIfSettled`, `SettlementConfirmation` (ganha um marcador de aceite), `ProofStorage::delete`, `CycleSummaryService::summaryIsFullySettled` e `withConfirmations` (o selo passa a contar só comprovante de responsável aceito), e a janela de 24 h sem reaviso do convite (`notified_at`) contra aviso repetido. Front: `PaymentResponsibleDialog`, `PayableSettlementList` (visão do credor: Aceitar e Recusar) e `notificationText.ts`. Exige nova revisão do `security-reviewer` e atualização da specify da feature anterior (R2 e D1).
 
 Tipo sugerido: feature (backend e frontend), por `/promover-backlog 144`, com aprovação entre Specify, Plan e Tasks.
+
+## Resolução
+Concluído em: 2026-11-12
+Feature: docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/
+Tasks: TASK-594 a TASK-609
+PRs: https://github.com/isacaguiar/expense/pull/274
+
+Entregue como o specify v1.1 aprovou (D1 a D12, com a D4-B no lugar da D4-A e a D7-A com o aval de hard delete dele): `PUT /groups/{id}/me/pays-for` (quem paga se declara, sem aceite do devedor, com `created_by`), `POST .../settlements/accept` e `.../refuse` (só o credor do par, só em ciclo fechado e não encerrado) e `DELETE .../settlements/confirmation` (a única exclusão física de comprovante), estado do comprovante derivado de `accepted_at`, `refused_at` e `confirmed_by`, selo do ciclo que só conta o comprovante que vale (`CycleSealingService`), avisos novos e, na web, "Eu pago por…" em Participantes e Aceitar, Recusar e Excluir em Pagamentos. A recusa não apaga nada (D4-B); o ciclo encerrado nunca reabre (D5-A).
+
+Desvio registrado: a revisão de segurança (TASK-605) impôs que **só o devedor substitui o comprovante que ele mesmo enviou** (a R8 da feature anterior, "o último vence", deixou de valer no sentido responsável sobre devedor). Desdobramentos: itens 145 (teste intermitente do relatório de fechamento), 146 a 149 (achados da revisão de segurança) e 150 (histórico de comprovantes e complemento com justificativa, feature própria). Limites conhecidos: o comprovante aguardando aceite fica na aba "Valores pagos" e o Painel pessoal o mostra como confirmado (itens 139 e 149).
