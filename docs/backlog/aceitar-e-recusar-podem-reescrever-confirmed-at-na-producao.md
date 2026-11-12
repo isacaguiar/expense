@@ -1,7 +1,7 @@
 # Aceitar e recusar um comprovante podem reescrever `confirmed_at` se a produção tiver `explicit_defaults_for_timestamp` desligado
 
 ID: 147
-Origem: docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-605, revisão do `security-reviewer`, achado 4, **hipótese**); `backend/database/migrations/2026_08_25_220000_create_ex_settlement_confirmations_table.php:31`, `backend/app/Services/SettlementConfirmationService.php` (`accept` e `refuse`)
+Origem: docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-605, revisão do `security-reviewer`, achado 4, **hipótese**); `backend/database/migrations/2026_08_25_220000_create_ex_settlement_confirmations_table.php:31`, `backend/app/Services/SettlementConfirmationService.php` (`accept` e `refuse`)
 Criado em: 2026-11-11
 Prioridade: BAIXA
 Status: Aberto

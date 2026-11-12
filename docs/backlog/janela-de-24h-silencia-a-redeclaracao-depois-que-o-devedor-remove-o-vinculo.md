@@ -1,7 +1,7 @@
 # A janela de 24 h do aviso "quem paga por você" silencia a re-declaração depois que o devedor removeu o vínculo
 
 ID: 148
-Origem: docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-605, revisão do `security-reviewer`, achado 5); `backend/app/Support/Notifier.php` (`paymentResponsibleSelfDeclared`, `oncePer`, `linkNoticeKey`), specify R11
+Origem: docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-605, revisão do `security-reviewer`, achado 5); `backend/app/Support/Notifier.php` (`paymentResponsibleSelfDeclared`, `oncePer`, `linkNoticeKey`), specify R11
 Criado em: 2026-11-11
 Prioridade: BAIXA
 Status: Aberto

@@ -1,7 +1,7 @@
 # Achados informativos da revisão de segurança da feature "quem paga se declara e o credor recusa"
 
 ID: 149
-Origem: docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-605, revisão do `security-reviewer`, achados INFO); nenhum bloqueia o PR
+Origem: docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-605, revisão do `security-reviewer`, achados INFO); nenhum bloqueia o PR
 Criado em: 2026-11-11
 Prioridade: BAIXA
 Status: Aberto

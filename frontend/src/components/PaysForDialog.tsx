@@ -44,7 +44,7 @@ type PaysForDialogProps = {
  * "Eu pago por…": o usuário declara por quais pessoas do grupo ele paga, sem o aceite delas (o caso de quem
  * não usa o aplicativo). Um único `PUT .../me/pays-for` com a lista inteira; esvaziar o seletor e salvar larga
  * todas. O credor ainda decide sobre cada comprovante enviado por outra pessoa.
- * docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/plan.md §10
+ * docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/plan.md §10
  */
 const PaysForDialog: React.FC<PaysForDialogProps> = ({
   open,

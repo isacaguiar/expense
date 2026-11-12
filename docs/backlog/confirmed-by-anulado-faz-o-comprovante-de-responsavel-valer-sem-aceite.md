@@ -1,7 +1,7 @@
 # Apagar a conta de quem enviou o comprovante zera `confirmed_by` e o comprovante de responsável passa a valer sem o aceite do credor
 
 ID: 146
-Origem: docs/feature/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-605, revisão do `security-reviewer`, achado 3); `backend/database/migrations/2026_11_09_000001_add_confirmed_by_to_ex_settlement_confirmations_table.php` (`nullOnDelete`), `backend/app/Models/SettlementConfirmation.php` (`isThirdParty`, `scopeCountsForSettlement`)
+Origem: docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/ (TASK-605, revisão do `security-reviewer`, achado 3); `backend/database/migrations/2026_11_09_000001_add_confirmed_by_to_ex_settlement_confirmations_table.php` (`nullOnDelete`), `backend/app/Models/SettlementConfirmation.php` (`isThirdParty`, `scopeCountsForSettlement`)
 Criado em: 2026-11-11
 Prioridade: BAIXA (hoje; sobe para ALTA quando existir exclusão de conta)
 Status: Aberto
