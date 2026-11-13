@@ -48,6 +48,11 @@ type PayableSettlementListProps = {
   onDelete?: (settlement: SummarySettlement) => void;
   // Uma decisão em andamento: desabilita os botões dela.
   decisionBusy?: boolean;
+  // Arranjo do topo de cada acerto (feature 20261112-ajustes-de-texto-participantes-e-pagamentos). `'sentence'`
+  // (o padrão, o Painel) é a frase "X deve pagar R$ N a Y" de sempre; `'route'` (as abas de Pagamentos) põe os
+  // avatares nas pontas, "pagador → credor" numa linha e o valor abaixo, sem "deve pagar" nem "a", e ganha os
+  // `data-testid` `settlement-card`, `-payer`, `-payee` e `-amount`. Nota, selos e botões são iguais nos dois.
+  rowLayout?: 'sentence' | 'route';
 };
 
 /**
@@ -84,8 +89,10 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   onAccept,
   onRefuse,
   onDelete,
-  decisionBusy = false
+  decisionBusy = false,
+  rowLayout = 'sentence'
 }) => {
+  const route = rowLayout === 'route';
   // O comprovante que a pessoa está prestes a excluir: a exclusão é definitiva e pede confirmação.
   const [deleting, setDeleting] = useState<SummarySettlement | null>(null);
 
@@ -134,24 +141,65 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
         const canResend = canAct && canConfirm && !accepted;
 
         return (
-          <Card key={`${settlement.from_user_id}-${settlement.to_user_id}-${index}`} variant="outlined" sx={{ p: 2 }}>
-            <Box display="flex" alignItems="center" gap={1.5}>
-              <UserAvatar name={nameFor(settlement.from_user_id)} avatarUrl={avatarFor(settlement.from_user_id)} />
+          <Card
+            key={`${settlement.from_user_id}-${settlement.to_user_id}-${index}`}
+            variant="outlined"
+            sx={{ p: 2 }}
+            data-testid={route ? 'settlement-card' : undefined}
+          >
+            {route ? (
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <UserAvatar name={nameFor(settlement.from_user_id)} avatarUrl={avatarFor(settlement.from_user_id)} />
 
-              <Box flexGrow={1} minWidth={0}>
-                <Typography variant="body2">
-                  <strong>{nameFor(settlement.from_user_id)}</strong> deve pagar{' '}
-                  <Typography component="span" variant="body2" fontWeight={700} color="error.main">
+                <Box flexGrow={1} minWidth={0}>
+                  <Box display="flex" flexWrap="wrap" alignItems="center" columnGap={0.75}>
+                    {/* O pagador e a seta não se separam ao quebrar a linha: a seta nunca começa uma linha. */}
+                    <Box display="inline-flex" alignItems="center" columnGap={0.75} minWidth={0}>
+                      <Typography
+                        variant="body2"
+                        fontWeight={700}
+                        data-testid="settlement-payer"
+                        sx={{ overflowWrap: 'anywhere' }}
+                      >
+                        {nameFor(settlement.from_user_id)}
+                      </Typography>
+                      <ArrowForwardIcon color="action" fontSize="small" sx={{ flexShrink: 0 }} />
+                    </Box>
+                    <Typography
+                      variant="body2"
+                      fontWeight={700}
+                      data-testid="settlement-payee"
+                      sx={{ overflowWrap: 'anywhere' }}
+                    >
+                      {nameFor(settlement.to_user_id)}
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" fontWeight={700} color="error.main" data-testid="settlement-amount">
                     R$ {formatMoney(settlement.amount)}
-                  </Typography>{' '}
-                  a <strong>{nameFor(settlement.to_user_id)}</strong>
-                </Typography>
+                  </Typography>
+                </Box>
+
+                <UserAvatar name={nameFor(settlement.to_user_id)} avatarUrl={avatarFor(settlement.to_user_id)} />
               </Box>
+            ) : (
+              <Box display="flex" alignItems="center" gap={1.5}>
+                <UserAvatar name={nameFor(settlement.from_user_id)} avatarUrl={avatarFor(settlement.from_user_id)} />
 
-              <ArrowForwardIcon color="action" fontSize="small" sx={{ flexShrink: 0 }} />
+                <Box flexGrow={1} minWidth={0}>
+                  <Typography variant="body2">
+                    <strong>{nameFor(settlement.from_user_id)}</strong> deve pagar{' '}
+                    <Typography component="span" variant="body2" fontWeight={700} color="error.main">
+                      R$ {formatMoney(settlement.amount)}
+                    </Typography>{' '}
+                    a <strong>{nameFor(settlement.to_user_id)}</strong>
+                  </Typography>
+                </Box>
 
-              <UserAvatar name={nameFor(settlement.to_user_id)} avatarUrl={avatarFor(settlement.to_user_id)} />
-            </Box>
+                <ArrowForwardIcon color="action" fontSize="small" sx={{ flexShrink: 0 }} />
+
+                <UserAvatar name={nameFor(settlement.to_user_id)} avatarUrl={avatarFor(settlement.to_user_id)} />
+              </Box>
+            )}
 
             {note && (
               <Typography
