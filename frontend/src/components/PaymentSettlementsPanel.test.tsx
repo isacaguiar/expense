@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import PaymentSettlementsPanel, { SettlementsTab } from './PaymentSettlementsPanel';
+import { settlementLines } from './settlementLines.testHelper';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 
 // Membros do specify §5.3. A logada é a Carla (3).
@@ -67,11 +68,8 @@ const Harness = ({ initialTab = 'toPay', ...props }: PanelProps & { initialTab?:
 
 const renderPanel = (props: PanelProps & { initialTab?: SettlementsTab } = {}) => render(<Harness {...props} />);
 
-// "Carla deve pagar R$ 60,00 a Ana", na ordem em que a aba ativa mostra.
-const shownSettlements = () =>
-  within(screen.getByRole('tabpanel'))
-    .getAllByText(/deve pagar/)
-    .map(el => (el.closest('p')?.textContent ?? '').replace(/\s+/g, ' ').trim());
+// "Carla → Ana R$ 60,00", na ordem em que a aba ativa mostra (a frase "deve pagar" saiu do arranjo "route").
+const shownSettlements = () => settlementLines(screen.getByRole('tabpanel'));
 
 const tabNamed = (name: RegExp) => screen.getByRole('tab', { name });
 
@@ -80,10 +78,10 @@ describe('PaymentSettlementsPanel - ordem por aba', () => {
     renderPanel();
 
     expect(shownSettlements()).toEqual([
-      'Carla deve pagar R$ 60,00 a Ana',
-      'Diego deve pagar R$ 90,00 a Ana',
-      'Diego deve pagar R$ 40,00 a Carla',
-      'Eva deve pagar R$ 70,00 a Bruno'
+      'Carla → Ana R$ 60,00',
+      'Diego → Ana R$ 90,00',
+      'Diego → Carla R$ 40,00',
+      'Eva → Bruno R$ 70,00'
     ]);
   });
 
@@ -94,10 +92,10 @@ describe('PaymentSettlementsPanel - ordem por aba', () => {
     await user.click(tabNamed(/Valores pagos/));
 
     expect(shownSettlements()).toEqual([
-      'Carla deve pagar R$ 25,00 a Bruno',
-      'Eva deve pagar R$ 30,00 a Ana',
-      'Eva deve pagar R$ 20,00 a Carla',
-      'Bruno deve pagar R$ 10,00 a Diego'
+      'Carla → Bruno R$ 25,00',
+      'Eva → Ana R$ 30,00',
+      'Eva → Carla R$ 20,00',
+      'Bruno → Diego R$ 10,00'
     ]);
   });
 
@@ -191,7 +189,7 @@ describe('PaymentSettlementsPanel - abas', () => {
 
     expect(tabNamed(/Valores pagos/)).toHaveAttribute('aria-selected', 'true');
     expect(shownSettlements()).toHaveLength(4);
-    expect(shownSettlements()[0]).toBe('Carla deve pagar R$ 25,00 a Bruno');
+    expect(shownSettlements()[0]).toBe('Carla → Bruno R$ 25,00');
   });
 });
 
@@ -207,7 +205,7 @@ describe('PaymentSettlementsPanel - o que é "pago"', () => {
     expect(tabNamed(/Valores pagos/)).toHaveTextContent('(1)');
     expect(tabNamed(/Valores a pagar/)).toHaveTextContent('(0)');
     await user.click(tabNamed(/Valores pagos/));
-    expect(shownSettlements()).toEqual(['Carla deve pagar R$ 60,00 a Ana']);
+    expect(shownSettlements()).toEqual(['Carla → Ana R$ 60,00']);
   });
 
   it('URL de comprovante sem confirmedAt: não é pago', () => {
@@ -215,7 +213,7 @@ describe('PaymentSettlementsPanel - o que é "pago"', () => {
 
     expect(tabNamed(/Valores a pagar/)).toHaveTextContent('(1)');
     expect(tabNamed(/Valores pagos/)).toHaveTextContent('(0)');
-    expect(shownSettlements()).toEqual(['Carla deve pagar R$ 60,00 a Ana']);
+    expect(shownSettlements()).toEqual(['Carla → Ana R$ 60,00']);
   });
 
   it('os dois campos: é pago; nenhum dos dois: não é', () => {

@@ -18,7 +18,7 @@ Escopo: só `frontend/` e documentação. Esta feature **não** nasce de um item
 |---|---|---|---|---|---|
 | TASK-610 | Tirar os selos "Paga por X" da linha própria em Participantes | frontend | plan.md §1 | nenhum | Concluída |
 | TASK-611 | Criar o arranjo `'route'` da linha de acerto em `PayableSettlementList`, com o helper de teste e as âncoras | frontend | plan.md §2 | nenhum | Concluída |
-| TASK-612 | Ligar o arranjo `'route'` no painel de abas de Pagamentos e migrar os testes que leem a frase | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-612 | Ligar o arranjo `'route'` no painel de abas de Pagamentos e migrar os testes que leem a frase | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-613 | Documentar as duas telas em `docs/sdd/01-specify.md` v1.5 | doc | plan.md §4 | nenhum | Pendente |
 
 ## Critérios de aceite
