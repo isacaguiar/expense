@@ -4,7 +4,7 @@
 
 Versão: 1.0 · Criado em: 20261112
 
-**Status: aprovada em 2026-11-12 ("aprovo") e em execução.** Specify v1.1 (aprovado em 2026-11-12, D1 a D4 e D6 dele, D5-A) e plan v1.1 (aprovado em 2026-11-12) já estão commitados na branch `feature/20261112-ajustes-de-texto-participantes-e-pagamentos`.
+**Status: aprovada em 2026-11-12 ("aprovo"); TASK-610 a 613 concluídas, resta o fechamento (suíte inteira do front, checklist pré-PR, validação local dele e PR).** Specify v1.1 (aprovado em 2026-11-12, D1 a D4 e D6 dele, D5-A) e plan v1.1 (aprovado em 2026-11-12) já estão commitados na branch `feature/20261112-ajustes-de-texto-participantes-e-pagamentos`.
 
 IDs a partir de **TASK-610**: o maior em uso era TASK-609 (feature `20261110-quem-paga-se-declara-e-credor-recusa`), conferido em 2026-11-12 em `docs/sdd/03-tasks.md`, em todos os `docs/feature/**/tasks.md` e em `git log --all`.
 
@@ -19,7 +19,7 @@ Escopo: só `frontend/` e documentação. Esta feature **não** nasce de um item
 | TASK-610 | Tirar os selos "Paga por X" da linha própria em Participantes | frontend | plan.md §1 | nenhum | Concluída |
 | TASK-611 | Criar o arranjo `'route'` da linha de acerto em `PayableSettlementList`, com o helper de teste e as âncoras | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-612 | Ligar o arranjo `'route'` no painel de abas de Pagamentos e migrar os testes que leem a frase | frontend | plan.md §3 | nenhum | Concluída |
-| TASK-613 | Documentar as duas telas em `docs/sdd/01-specify.md` v1.5 | doc | plan.md §4 | nenhum | Pendente |
+| TASK-613 | Documentar as duas telas em `docs/sdd/01-specify.md` v1.5 | doc | plan.md §4 | nenhum | Concluída |
 
 ## Critérios de aceite
 
