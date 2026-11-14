@@ -71,6 +71,19 @@ describe('RegisterPage', () => {
     localStorage.clear();
   });
 
+  it('identifica o cadastro na aba e oferece links para os documentos públicos', () => {
+    const previousTitle = document.title;
+    const { unmount } = renderPage();
+
+    expect(document.title).toBe('Criar conta | Shared Expense');
+    expect(screen.getByText(/Cadastro por e-mail, sem cartão/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Termos de uso' })).toHaveAttribute('href', '/termos.php');
+    expect(screen.getByRole('link', { name: 'Política de privacidade' })).toHaveAttribute('href', '/privacidade.php');
+
+    unmount();
+    expect(document.title).toBe(previousTitle);
+  });
+
   /** Leva a página até a etapa do código, com o pré-cadastro já aceito. */
   async function advanceToCodeStep(user: ReturnType<typeof userEvent.setup>) {
     await fillForm(user);

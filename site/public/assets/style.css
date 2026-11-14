@@ -95,7 +95,6 @@ html {
   .hero-copy > *:nth-child(2) { animation-delay: 0.06s; }
   .hero-copy > *:nth-child(3) { animation-delay: 0.12s; }
   .hero-copy > *:nth-child(4) { animation-delay: 0.18s; }
-  .hero-copy > *:nth-child(5) { animation-delay: 0.24s; }
 
   @keyframes hero-rise {
     from {
@@ -322,19 +321,19 @@ html {
   margin: 0 auto;
   padding: 0 1.5rem;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 3rem;
   align-items: start;
 }
 
 .hero h1 {
-  font-size: 2.6rem;
+  font-size: 2.4rem;
   line-height: 1.15;
   margin: 0 0 1.25rem;
 }
 
 .hero h1 .accent {
-  color: var(--green);
+  color: var(--green-dark);
   display: block;
 }
 
@@ -343,19 +342,6 @@ html {
   font-size: 1.05rem;
   max-width: 34rem;
   margin: 0 0 2rem;
-}
-
-.hero-highlights {
-  display: flex;
-  gap: 1.25rem;
-  margin-bottom: 2rem;
-  flex-wrap: wrap;
-}
-
-.highlight {
-  display: flex;
-  gap: 0.75rem;
-  max-width: 12rem;
 }
 
 .icon-box {
@@ -376,17 +362,6 @@ html {
   height: 18px;
 }
 
-.highlight h3 {
-  font-size: 0.92rem;
-  margin: 0 0 0.15rem;
-}
-
-.highlight p {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  margin: 0;
-}
-
 .hero-ctas {
   display: flex;
   gap: 0.85rem;
@@ -394,31 +369,87 @@ html {
   margin-bottom: 1.25rem;
 }
 
-.trust-line {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  font-size: 0.85rem;
+.hero-ctas .btn-primary {
+  background: var(--green-dark);
+}
+
+.hero-ctas .btn-primary:hover {
+  background: var(--navy);
+}
+
+.hero-plan {
+  margin: 0;
+  font-size: 0.9rem;
   color: var(--text-muted);
 }
 
-.trust-line svg {
-  width: 16px;
-  height: 16px;
-  color: var(--green);
+/* ---------- Exemplo de acerto ---------- */
+
+.settlement-example {
+  padding: clamp(1rem, 3vw, 2rem);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 20px 45px -25px rgba(11, 37, 69, 0.35);
+  scroll-margin-top: 7rem;
 }
 
-.trust-line .dot {
-  color: var(--border);
+.settlement-example h2 {
+  font-size: clamp(1.25rem, 3vw, 1.55rem);
+  line-height: 1.2;
+  margin: 0 0 0.4rem;
 }
 
-/* ---------- Hero preview ---------- */
-
-.hero-preview {
+.settlement-example p {
   margin: 0;
 }
 
-.hero-preview img {
+.settlement-example .example-label {
+  margin-bottom: 0.45rem;
+  color: var(--green-dark);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.example-expenses {
+  margin: 0.85rem 0;
+}
+
+.example-expenses div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.38rem 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.example-expenses dd {
+  margin: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.settlement-example .example-total {
+  margin-bottom: 0.85rem;
+}
+
+.example-result {
+  padding: 0.75rem 1rem;
+  border-radius: 0.65rem;
+  background: var(--green-soft);
+}
+
+.example-result p + p {
+  margin-top: 0.2rem;
+  font-size: 0.9rem;
+}
+
+.product-preview {
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.product-preview img {
   display: block;
   width: 100%;
   height: auto;
@@ -1027,6 +1058,8 @@ html {
 @media (max-width: 640px) {
   .site-header-inner {
     flex-wrap: wrap;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
   }
 
   .nav-toggle {
@@ -1063,6 +1096,11 @@ html {
     margin-left: auto;
   }
 
+  /* A home já tem um botão de cadastro na primeira dobra. */
+  .home-page .header-actions .btn {
+    display: none;
+  }
+
   /*
    * Só esconde a navegação depois que nav.js assumiu o controle (ele marca
    * data-nav no <html>). Sem o script, a lista fica empilhada e visível —
@@ -1077,8 +1115,41 @@ html {
     display: none;
   }
 
+  .home-page .site-header .logo-word {
+    font-size: 1rem;
+  }
+
+  .home-page .header-actions .link-action {
+    padding-inline: 0.35rem;
+  }
+
+  .hero {
+    padding: 1.5rem 0 2rem;
+  }
+
+  .hero-inner {
+    gap: 1.25rem;
+    padding-inline: 1rem;
+  }
+
   .hero h1 {
-    font-size: 2rem;
+    font-size: clamp(1.65rem, 7vw, 2rem);
+    margin-bottom: 0.75rem;
+  }
+
+  .hero-lede {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .hero-ctas {
+    gap: 0.55rem;
+    margin-bottom: 0.65rem;
+  }
+
+  .hero-ctas .btn {
+    padding-inline: 0.75rem;
+    font-size: 0.9rem;
   }
 
   .feature-grid {
@@ -1092,6 +1163,30 @@ html {
   .cta-banner-inner {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .cta-banner-heading {
+    flex-wrap: wrap;
+  }
+
+  .cta-banner-inner > * {
+    max-width: 100%;
+  }
+
+  .legal-footer-inner nav {
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+  }
+
+  .consent-banner-inner {
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+  }
+
+  .consent-banner-text {
+    min-width: 0;
+    flex-basis: 100%;
+    font-size: 0.875rem;
   }
 
   /* Os dois botões dividem a largura em vez de espremer no canto. */

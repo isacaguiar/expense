@@ -54,6 +54,15 @@ type PendingRegistration = {
 export default function RegisterPage() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const previousTitle = document.title;
+    document.title = 'Criar conta | Shared Expense';
+
+    return () => {
+      document.title = previousTitle;
+    };
+  }, []);
+
   const [values, setValues] = useState<RegisterFormValues>(EMPTY_FORM);
   const [errors, setErrors] = useState<RegisterFormErrors>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -233,7 +242,7 @@ export default function RegisterPage() {
       <Box sx={{ display: 'flex', flex: 1, position: 'relative' }}>
         <LoginBrandingPanel
           headline="Crie sua conta"
-          highlight="em menos de um minuto."
+          highlight="grátis."
           description="Cadastre-se para criar grupos, registrar despesas compartilhadas e acompanhar quem deve a quem, mês a mês."
         />
 
