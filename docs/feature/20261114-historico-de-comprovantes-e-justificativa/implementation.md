@@ -8,7 +8,14 @@ Versão: 1.0 · Criado em: 20261114
 
 ## 1. Desvios do fluxo padrão (se houver)
 
-<Deixe vazio/apague esta seção se a feature segue `04-implementation.md` sem exceção.>
+Decisões tomadas na execução, cada uma com o que custa se estiver errada:
+
+- **Parar após cada task.** A skill `superpowers:executing-plans` pede execução contínua, mas a regra dele (memória do projeto, `tasks.md` e a skill `promover-backlog`) é parar após cada task e perguntar se segue; vale a dele. Custo se errado: uma pergunta a mais por task.
+- **O registro é este arquivo**, e não o ledger `.superpowers/sdd/` da skill: o log do projeto mora aqui (`CLAUDE.md`, item 5). Custo se errado: nenhum.
+- **Commit por task direto na branch da feature, sem sub-branches** (`...-TASK-0xx` com merge `--no-ff` do ADR-003). As tasks são sequenciais, o PR é um só e as features anteriores fizeram igual. Custo se errado: o histórico não tem um merge por task; a divisão continua visível nos commits, que citam a task.
+- **Testes antigos editados de propósito** (plan, ajuste 9; specify RK1): só os que afirmam o comportamento que esta feature troca (arquivo apagado no reenvio e na exclusão, mensagem "excluído", "Recusar" sem diálogo e o texto "Excluir" no front). Cada edição é registrada na linha da task que a faz, com o teste e o motivo. Qualquer outro teste antigo que quebre é regressão e a task para.
+- **A exclusão física que sobra é só a da linha atual na retirada** (TASK-621), dentro do aval de hard delete que ele deu na D7-A da feature anterior (2026-11-10); o arquivo passa a ficar. Citar no corpo do PR. Custo se errado: a retirada cairia para "só marcar" e a linha atual teria de ganhar uma coluna de retirada.
+- **Banco de teste:** `mysql-expense-test` (3307) criado de novo em 2026-11-14 (não existia mais), com `backend/.env.testing` gerado por script que não imprime segredos; sem `CACHE_DRIVER` nem `MAIL_MAILER`. Apagar os dois no fim (`docker rm -f mysql-expense-test`, `.env.testing`).
 
 ## 2. Log de implementação
 
@@ -16,4 +23,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-616 | Concluída | 2026-11-14 | Claude (com o usuário) | **RED (executado):** `./vendor/bin/phpunit tests/Feature/SettlementProofEntryModelTest.php` antes do código → `Tests: 14, Assertions: 5, Errors: 9, Failures: 4` (tabela, coluna e classe `SettlementProofEntry` inexistentes; os testes de schema leem o `INFORMATION_SCHEMA`). **GREEN:** 2 migrations (`2026_11_14_000000_create_ex_settlement_proof_entries_table` e `2026_11_14_000001_add_refusal_reason_to_ex_settlement_confirmations_table`), model `SettlementProofEntry` (`UPDATED_AT = null`, `LogicException` em `updating` e `deleting`, `proofUrl()` assinada de 30 min do tipo `settlement_history`, sem `$appends`) e `refusal_reason` no `$fillable` de `SettlementConfirmation` → `OK (14 tests, 54 assertions)`. **Migrations:** `migrate`, `migrate:rollback --step=2` e `migrate` de novo, os três sem erro (`migrate:status` com as 2 como `Ran`). **Mutation check (4 mutantes, todos mortos):** sem a guarda de `updating` (falha `test_an_entry_cannot_be_updated`), sem a de `deleting` (`test_an_entry_cannot_be_deleted`), tipo `settlement` no lugar de `settlement_history` (`test_the_proof_url_is_a_signed_url_...`) e `UPDATED_AT` padrão (6 falhas: o `INSERT` tenta gravar `updated_at`, que não existe); arquivo restaurado idêntico (`diff` vazio). **Pint:** `--test` nos 5 arquivos tocados → `PASS 5 files`. **Suíte inteira** com banco zerado: `php artisan migrate:fresh --env=testing --force` e `./vendor/bin/phpunit` → `OK (1425 tests, 8014 assertions)`, 3 min 26 s. | Banco de teste recriado (`mysql-expense-test`, 3307; ver §1). R1 cobre `update`, `save` e `delete` pelo model; o apagamento em cascata do banco e o query builder em massa não passam pela guarda (dito no docblock; nenhum código da feature os usa). As colunas de data da tabela são todas nulas (nenhuma com `ON UPDATE`), a armadilha do item 147. Nenhum teste antigo editado. |
