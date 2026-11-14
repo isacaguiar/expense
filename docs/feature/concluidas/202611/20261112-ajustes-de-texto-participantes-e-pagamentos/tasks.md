@@ -4,7 +4,7 @@
 
 Versão: 1.0 · Criado em: 20261112
 
-**Status: aprovada em 2026-11-12 ("aprovo"); TASK-610 a 613 concluídas, resta o fechamento (suíte inteira do front, checklist pré-PR, validação local dele e PR).** Specify v1.1 (aprovado em 2026-11-12, D1 a D4 e D6 dele, D5-A) e plan v1.1 (aprovado em 2026-11-12) já estão commitados na branch `feature/20261112-ajustes-de-texto-participantes-e-pagamentos`.
+**Status: concluída. Aprovada em 2026-11-12 ("aprovo"); TASK-610 a 613 concluídas e entregues no PR #277, mergeado por ele em `dev` em 2026-11-14 (merge `2fe4bac4c9`, CI verde); pasta arquivada em 2026-11-13 (ADR-009).** Specify v1.1 (aprovado em 2026-11-12, D1 a D4 e D6 dele, D5-A) e plan v1.1 (aprovado em 2026-11-12) foram commitados na branch `feature/20261112-ajustes-de-texto-participantes-e-pagamentos`.
 
 IDs a partir de **TASK-610**: o maior em uso era TASK-609 (feature `20261110-quem-paga-se-declara-e-credor-recusa`), conferido em 2026-11-12 em `docs/sdd/03-tasks.md`, em todos os `docs/feature/**/tasks.md` e em `git log --all`.
 
