@@ -1,7 +1,7 @@
 # Em Participantes, o avatar da linha própria fica sozinho numa linha quando os textos secundários são longos
 
 ID: 151
-Origem: TASK-610 (medição de layout) da feature `docs/feature/20261112-ajustes-de-texto-participantes-e-pagamentos/`; `frontend/src/pages/GroupMembersForm.tsx` (o `flexWrap: 'wrap'` da linha do próprio usuário e os textos de `renderPaymentLinks`)
+Origem: TASK-610 (medição de layout) da feature `docs/feature/concluidas/202611/20261112-ajustes-de-texto-participantes-e-pagamentos/`; `frontend/src/pages/GroupMembersForm.tsx` (o `flexWrap: 'wrap'` da linha do próprio usuário e os textos de `renderPaymentLinks`)
 Criado em: 2026-11-13
 Prioridade: BAIXA
 Status: Aberto
