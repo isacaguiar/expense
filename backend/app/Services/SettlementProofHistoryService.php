@@ -23,10 +23,11 @@ use LogicException;
 class SettlementProofHistoryService
 {
     /**
-     * Teto de entradas por par e ciclo (D5): cada arquivo pode ter 5 MB e a produção é um host
-     * compartilhado. Vale para as ações de quem envia o comprovante que **gravam arquivo novo** (enviar e
-     * reenviar); retirar não grava arquivo e por isso não é barrado (plan, ajuste 1). O complemento **não**
-     * divide este teto: tem o dele, `MAX_COMPLEMENTS` (plan, ajuste 10).
+     * Teto de entradas **de quem envia o comprovante** por par e ciclo (D5, D13): cada arquivo pode ter 5 MB e
+     * a produção é um host compartilhado. Conta só as entradas `replaced` (reenvio) e `withdrawn` (retirada),
+     * as que saem da linha atual, e vale para as ações que **gravam arquivo novo** (enviar e reenviar); retirar
+     * não grava arquivo e por isso não é barrado, mas **conta**, o que fecha o laço "enviar, retirar, enviar"
+     * (plan, ajuste 1). O complemento **não** divide este teto: tem o dele, `MAX_COMPLEMENTS` (plan, ajuste 10).
      */
     public const MAX_ENTRIES = 10;
 
@@ -39,12 +40,16 @@ class SettlementProofHistoryService
     public const MAX_COMPLEMENTS = 10;
 
     /**
-     * O par já guardou o máximo de entradas neste ciclo? Conta pelo índice do par; entradas de outro par,
-     * de outro ciclo ou de outro grupo não entram.
+     * O orçamento **de quem envia** o comprovante (`MAX_ENTRIES`) já está gasto neste ciclo? Conta só as entradas
+     * `replaced` e `withdrawn` do par; os complementos **não** entram (D13: quem se declara pagador do devedor
+     * não pode trancar o devedor que corrige o próprio comprovante, achado A1) e têm o orçamento deles em
+     * `isComplementFull`. Entradas de outro par, de outro ciclo ou de outro grupo também não entram.
      */
     public function isFull(int $groupId, CarbonInterface|string $cycleStart, int $fromUserId, int $toUserId): bool
     {
-        return $this->pairEntries($groupId, $cycleStart, $fromUserId, $toUserId)->count() >= self::MAX_ENTRIES;
+        return $this->pairEntries($groupId, $cycleStart, $fromUserId, $toUserId)
+            ->whereIn('kind', [SettlementProofEntry::KIND_REPLACED, SettlementProofEntry::KIND_WITHDRAWN])
+            ->count() >= self::MAX_ENTRIES;
     }
 
     /**

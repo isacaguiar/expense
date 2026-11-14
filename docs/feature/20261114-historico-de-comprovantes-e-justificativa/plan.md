@@ -52,7 +52,7 @@ Casos que o specify implica mas que ninguém lembraria de testar, do mais prová
 9. **`confirmed_at` intacto** depois de aceitar, recusar e complementar. (§8)
 10. **Arquivo do histórico ausente no disco:** a entrada aparece sem link e o resto da resposta é normal. (§6)
 11. **Ciclo encerrado:** reenviar, retirar, recusar e aceitar continuam dando 422 e **não escrevem entrada**; só o complemento passa (D7-B). (§2 a §5)
-12. **Os dois orçamentos são independentes (A1):** quem paga pelo devedor faz 10 complementos, o credor recusa o comprovante do devedor e o devedor **reenvia (200)**; o 11º complemento segue dando 422. E o inverso: 10 substituições não barram o complemento. (§2, §5)
+12. **Os dois orçamentos são independentes (A1):** quem paga pelo devedor faz 10 complementos (sobre o comprovante `sent` do próprio devedor, o único que se complementa) e o devedor **reenvia o dele (200)**, até 10 vezes; o 11º complemento segue dando 422, e o 11º reenvio também. E o inverso: 10 substituições não barram o complemento. (§2, §5) *(Correção da TASK-639: a v1.2 dizia "o credor recusa o comprovante do devedor", passo que não existe, porque o credor só recusa o comprovante de terceiro, `awaiting_acceptance`, e o complemento só vale sobre o `sent`; os dois nunca coexistem na mesma linha. A intenção, os dois orçamentos independentes, não mudou.)*
 
 ---
 

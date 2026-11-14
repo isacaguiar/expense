@@ -294,6 +294,67 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
         $this->assertCount(count($before['files']) + 1, $after['files']);
     }
 
+    /**
+     * Os dois orçamentos de 10 (R8, D13, TASK-639), célula a célula: o que enche um não toca o outro. O devedor
+     * reenvia o próprio comprovante (ou faz o primeiro envio) e quem paga por ele complementa; cada linha diz
+     * com qual tipo de entrada o par já está cheio, qual ação roda e o status esperado.
+     *
+     * @return array<string, array{0: string, 1: string, 2: int}>
+     */
+    public static function budgetCells(): array
+    {
+        $complement = SettlementProofEntry::KIND_COMPLEMENT;
+        $replaced = SettlementProofEntry::KIND_REPLACED;
+        $withdrawn = SettlementProofEntry::KIND_WITHDRAWN;
+
+        return [
+            '10 complementos barram o 11º complemento' => [$complement, 'complement', 422],
+            '10 complementos não barram o reenvio do devedor' => [$complement, 'resend', 200],
+            '10 complementos não barram o primeiro envio' => [$complement, 'first_send', 200],
+            '10 substituições não barram o complemento' => [$replaced, 'complement', 201],
+            '10 substituições barram o reenvio do devedor' => [$replaced, 'resend', 422],
+            '10 substituições barram o primeiro envio' => [$replaced, 'first_send', 422],
+            '10 retiradas não barram o complemento' => [$withdrawn, 'complement', 201],
+            '10 retiradas barram o reenvio do devedor' => [$withdrawn, 'resend', 422],
+            '10 retiradas barram o primeiro envio' => [$withdrawn, 'first_send', 422],
+        ];
+    }
+
+    /** @dataProvider budgetCells */
+    public function test_the_two_budgets_by_action(string $filledWith, string $action, int $expected): void
+    {
+        $s = $this->scenario(ownProof: true);
+        if ($action === 'first_send') {
+            $s['proof']->delete();
+        }
+        $this->addEntries($s, 10, $filledWith);
+        $before = $this->world();
+
+        $response = $action === 'complement'
+            ? $this->act('complement', $s['responsible'], $s['group'], $this->pair($s))
+            : $this->confirmAs($s['debtor'], $s['group'], $s['creditor']);
+        $response->assertStatus($expected);
+
+        $after = $this->world();
+        if ($expected === 422) {
+            $this->assertSame($before, $after, 'nada foi escrito: nem arquivo, nem entrada, nem aviso, nem a linha atual');
+
+            return;
+        }
+
+        $newEntries = count($after['entries']) - count($before['entries']);
+        $expectedEntries = match ($action) {
+            'complement' => 1,
+            'resend' => 1,
+            'first_send' => 0,
+        };
+        $this->assertSame($expectedEntries, $newEntries, 'a ação deixou só o que lhe cabe no histórico');
+        if ($action !== 'first_send') {
+            $kind = $action === 'complement' ? SettlementProofEntry::KIND_COMPLEMENT : SettlementProofEntry::KIND_REPLACED;
+            $this->assertSame($kind, SettlementProofEntry::where('group_id', $s['group']->id)->orderByDesc('id')->first()->kind);
+        }
+    }
+
     public function test_complement_without_a_token_is_401_and_writes_nothing(): void
     {
         $s = $this->scenario(ownProof: true);

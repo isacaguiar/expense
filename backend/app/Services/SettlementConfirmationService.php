@@ -345,11 +345,12 @@ class SettlementConfirmationService
     }
 
     /**
-     * O histórico do par já está cheio neste ciclo (`SettlementProofHistoryService::MAX_ENTRIES`)? O teto vale
-     * para as ações de quem envia o comprovante que **gravam arquivo novo** (enviar e reenviar; retirar não
-     * grava e fica de fora), então vale também para o primeiro envio. O complemento tem o teto dele
-     * (`complementBlockedBy`, D13). O controller usa o veredito antes de gravar o arquivo e `submitProof`, de
-     * novo, com a linha travada.
+     * O orçamento **de quem envia** o comprovante já está gasto neste ciclo (`SettlementProofHistoryService::MAX_ENTRIES`,
+     * só as entradas `replaced` e `withdrawn`)? O teto vale para as ações que **gravam arquivo novo** (enviar e
+     * reenviar; retirar não grava e fica de fora, mas conta), então vale também para o primeiro envio. Os
+     * complementos **não** contam aqui: têm o orçamento deles (`complementBlockedBy`, D13), e é isso que impede
+     * quem paga pelo devedor de trancar o devedor (achado A1). O controller usa o veredito antes de gravar o
+     * arquivo e `submitProof`, de novo, com a linha travada.
      *
      * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
      */
