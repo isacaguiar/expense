@@ -107,6 +107,7 @@ const PaymentSettlementsPanel: React.FC<PaymentSettlementsPanelProps> = ({
           onRefuse={onRefuse}
           onDelete={onDelete}
           decisionBusy={decisionBusy}
+          rowLayout="route"
           emptyMessage={hasAny ? EMPTY_MESSAGE[tab] : NO_SETTLEMENTS_MESSAGE}
         />
       </Box>

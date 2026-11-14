@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import PaymentSettlementsPanel from './PaymentSettlementsPanel';
+import { settlementLines } from './settlementLines.testHelper';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 
 /**
@@ -50,7 +51,7 @@ function renderPanel(props: Partial<React.ComponentProps<typeof PaymentSettlemen
   );
 }
 
-const lines = () => screen.getAllByText(/deve pagar/).map(line => line.textContent);
+const lines = () => settlementLines();
 
 describe('PaymentSettlementsPanel: quem o usuário paga', () => {
   it('hands payForUserIds to the list: the badge and the buttons appear on the settlement of who the user pays for', () => {
@@ -65,9 +66,9 @@ describe('PaymentSettlementsPanel: quem o usuário paga', () => {
     renderPanel({ payForUserIds: [BRUNO] });
 
     expect(lines()).toEqual([
-      expect.stringContaining('Ana deve pagar'),
-      expect.stringContaining('Bruno deve pagar'),
-      expect.stringContaining('Diego deve pagar')
+      expect.stringContaining('Ana →'),
+      expect.stringContaining('Bruno →'),
+      expect.stringContaining('Diego →')
     ]);
   });
 
@@ -75,9 +76,9 @@ describe('PaymentSettlementsPanel: quem o usuário paga', () => {
     renderPanel();
 
     expect(lines()).toEqual([
-      expect.stringContaining('Ana deve pagar'),
-      expect.stringContaining('Diego deve pagar'),
-      expect.stringContaining('Bruno deve pagar')
+      expect.stringContaining('Ana →'),
+      expect.stringContaining('Diego →'),
+      expect.stringContaining('Bruno →')
     ]);
     expect(screen.queryByText(/Você paga por/)).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Enviar comprovante' })).toHaveLength(1);

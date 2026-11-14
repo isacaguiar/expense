@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { settlementLines } from '../components/settlementLines.testHelper';
 import type { MemberResponsible } from '../types/group';
 import Payments from './Payments';
 
@@ -174,7 +175,7 @@ describe('Payments: pagar por quem o usuário paga', () => {
     );
     renderPayments();
 
-    await screen.findByText(/deve pagar/);
+    await screen.findAllByTestId('settlement-card');
     expect(screen.queryByText(/Você paga por/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', SEND)).not.toBeInTheDocument();
   });
@@ -186,7 +187,7 @@ describe('Payments: pagar por quem o usuário paga', () => {
     );
     renderPayments();
 
-    await screen.findByText(/deve pagar/);
+    await screen.findAllByTestId('settlement-card');
     expect(screen.queryByText(/Você paga por/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', SEND)).not.toBeInTheDocument();
   });
@@ -200,12 +201,12 @@ describe('Payments: pagar por quem o usuário paga', () => {
     renderPayments();
 
     await screen.findByText('Você paga por João');
-    const lines = screen.getAllByText(/deve pagar/).map(line => line.textContent);
+    const lines = settlementLines();
 
     expect(lines).toEqual([
-      expect.stringContaining('Isac deve pagar'),
-      expect.stringContaining('João deve pagar'),
-      expect.stringContaining('Pedro deve pagar')
+      expect.stringContaining('Isac →'),
+      expect.stringContaining('João →'),
+      expect.stringContaining('Pedro →')
     ]);
   });
 
