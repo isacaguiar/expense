@@ -2,7 +2,9 @@
 
 > Feature: guardar o **histórico dos comprovantes do acerto** (substituídos, recusados e retirados, em vez de apagar o arquivo), deixar o credor informar o **motivo da recusa** e permitir um **complemento com justificativa** sobre o comprovante do devedor, sem mudar estado nem selo. Origem: backlog **150**, pedido dele em 2026-11-11 durante a TASK-605 da feature `docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/`; agrupa o item **147** (decidido por ele em 2026-11-14, ao promover).
 
-Versão: 1.1 · Criado em: 20261114
+Versão: 1.2 · Criado em: 20261114
+
+**v1.2 (2026-11-14): aprovado por ele** ("aprovado, siga com a TASK-638"), depois do achado **A1** da revisão de segurança da TASK-628 (o teto de 10 era somado: quem se declara pagador do devedor enchia o histórico com 10 complementos e o devedor recebia 422 ao corrigir o **próprio** comprovante) e da escolha dele pela **opção A**. O teto de R8 deixa de ser "10 no total" e passa a ser **dois orçamentos de 10** (R8, D5, nova D13, F3, RK3, nova RK9, CA-5). Nada mais muda. Nada foi implementado desta revisão; o código das TASK-616 a 628 fica como está até as TASK-638 e 639.
 
 **v1.1 (2026-11-14): aprovado por ele** ("aprovado, siga com as recomendadas"): **D2 a D11 valem como recomendadas**, incluindo as quatro de custo real (D6, D7, D8 e D11). A pergunta aberta sobre o texto da política de privacidade (§6, último item) **não foi respondida**: segue **fora de escopo**, como no rascunho. Nada foi implementado.
 
@@ -87,7 +89,7 @@ A política de privacidade (`site/src/legal/privacidade.php:72-76`, item 5) diz 
 | R5 | **Ciclo encerrado é imutável** (R9 da feature anterior): substituir, retirar, recusar e aceitar continuam dando 422. O complemento é a única proposta de exceção (D7). |
 | R6 | O comprovante **recusado** continua na linha atual (D4-B da feature anterior) até ser substituído ou retirado; só então vai ao histórico, junto do motivo. |
 | R7 | O histórico e o comprovante recusado são lidos só pelas **partes** (D8): credor, devedor e quem enviou a entrada. O arquivo sai por URL assinada de 30 minutos (ADR-005); quem não é parte recebe o mesmo 404 de "não existe". |
-| R8 | **Teto de 10 entradas por par e ciclo** (D5): substituir ou complementar além disso dá 422, **antes** de gravar o arquivo. |
+| R8 | **Dois orçamentos de 10 por par e ciclo** (D5, D13): **10 entradas `replaced` e `withdrawn`** (o orçamento de quem envia o comprovante do acerto: enviar, reenviar e retirar; a retirada conta, mas não é barrada) e **10 complementos** (o orçamento de quem paga pelo devedor). Estourar o orçamento da ação dá 422, **antes** de gravar o arquivo. **Um orçamento nunca gasta o outro**: quem se declara pagador do devedor não tranca o devedor. |
 | R9 | O complemento só existe sobre o comprovante em estado `sent` (o do próprio devedor), por quem paga por ele, com justificativa e foto obrigatórias (D3, D9, D10). |
 | R10 | Avisos só no sino, sempre **sem o autor** (R12 da feature anterior) e best effort (R13): o complemento avisa o credor e o devedor; a recusa segue avisando quem enviou e o devedor, **sem o motivo** no sino (D4). |
 | R11 | Nenhum `UPDATE` de `ex_settlement_confirmations` desta feature pode alterar `confirmed_at` por efeito colateral (item 147). |
@@ -100,14 +102,14 @@ A política de privacidade (`site/src/legal/privacidade.php:72-76`, item 5) diz 
 | Recusar | `POST /groups/{groupId}/settlements/refuse` ganha `reason` opcional (`string`, até 500). Sem ele, funciona como hoje. |
 | Retirar | A rota `DELETE .../settlements/confirmation` passa a mover a linha para o histórico e **manter o arquivo**; a mensagem muda para "Comprovante retirado.". |
 | Reenviar | `POST .../settlements/confirm` não muda de contrato; o comprovante substituído vai ao histórico (e o teto de R8 vale). |
-| Complementar | **Rota nova**, ex. `POST /groups/{groupId}/settlements/complement`, multipart com o par, `cycles_ago`, `comprovante` (imagem até 5 MB) e `justificativa` (obrigatória, até 500). |
+| Complementar | **Rota nova**, ex. `POST /groups/{groupId}/settlements/complement`, multipart com o par, `cycles_ago`, `comprovante` (imagem até 5 MB) e `justificativa` (obrigatória, até 500). Com 10 complementos no par e no ciclo dá 422 (R8, D13). |
 | `summary`, `close`, `reopen` | `settlements[]` ganha, **de forma aditiva**, o histórico (`proofHistory`) e, para o recusado, o motivo, o arquivo e a nota (só para as partes). `confirmedProofUrl`, `confirmedNote` e `confirmedAt` seguem nulos para o recusado, como hoje. |
 | Download | O `proofs.show` ganha um `type` novo para entrada do histórico, com a mesma URL assinada e a autorização de R7. |
 | Tipos de aviso | Um novo, `settlement_complement_added`; `settlement_refused` não muda de texto no sino (D4). |
 
 ### 3.4 Decisões
 
-**D1 e D12 são decisões dele; D2 a D11 eram recomendações e foram aprovadas por ele em 2026-11-14.** Em **negrito** na coluna "Por quê" ficam os custos reais.
+**D1, D12 e D13 são decisões dele; D2 a D11 eram recomendações e foram aprovadas por ele em 2026-11-14.** Em **negrito** na coluna "Por quê" ficam os custos reais.
 
 | # | Decisão | Opções | Recomendação | Por quê | Status |
 |---|---|---|---|---|---|
@@ -115,7 +117,7 @@ A política de privacidade (`site/src/legal/privacidade.php:72-76`, item 5) diz 
 | D2 | O que se guarda | A) histórico só dos comprovantes que saem de cena (substituídos e retirados); a linha do par segue sendo o comprovante atual<br>B) todos os comprovantes como lista, o atual é o último | **A** | Mantém `status()`, o escopo do selo e `withConfirmations` como estão (R3); B reescreve a leitura do estado | Aprovada por ele em 2026-11-14 |
 | D3 | Complemento sobre o comprovante do devedor | A) ninguém (como hoje)<br>B) informativo: justificativa obrigatória, entra no histórico, credor e devedor veem e são avisados, **não muda estado nem selo**<br>C) substitui e volta a "aguardando aceite" | **B** | C reabre o achado 1 da revisão de segurança (§2.3): qualquer membro se declararia pagador e tiraria da contagem um comprovante válido | Aprovada por ele em 2026-11-14 |
 | D4 | Motivo da recusa | A) o credor informa um motivo **opcional** (até 500), visível na tela para as partes; o sino segue sem o motivo<br>B) sem motivo | **A** | É a metade do histórico que falta: hoje quem pagou só vê "recusado" (§2.2 e §2.4). Fora do sino para o texto do aviso continuar curto | Aprovada por ele em 2026-11-14 |
-| D5 | Teto | N entradas por par e ciclo (substituídos, retirados e complementos somados) | **10** | Cada arquivo pode ter 5 MB (§2.8): 10 entradas são até 50 MB por par e ciclo, **num host compartilhado**. Impede encher o disco por quem se declara pagador | Aprovada por ele em 2026-11-14 |
+| D5 | Teto | N entradas por par e ciclo (v1.1: substituídos, retirados e complementos **somados**; **v1.2: dois orçamentos, ver D13**) | **10** | Cada arquivo pode ter 5 MB (§2.8): 10 entradas são até 50 MB por par e ciclo, **num host compartilhado**. Impede encher o disco por quem se declara pagador. **Revisada na v1.2:** o teto somado deixava o complemento de um terceiro gastar a vaga do devedor (A1) | Aprovada por ele em 2026-11-14; o formato "somado" foi substituído pela D13 |
 | D6 | O que o "Excluir" vira | A) **"Retirar"**: sai do acerto e vai ao histórico **com o arquivo**<br>B) "Retirar" guarda só o registro (quem, quando, valor, nota) e **apaga a imagem**<br>C) mantém a exclusão física de hoje | **A** | Combina com a Constitution §1.5 e preserva a prova. **Custo:** quem mandou foto errada que tenha dado pessoal **não consegue apagá-la sozinho**; vale o pedido por contato da política (§2.10). O aval de hard delete da D7-A deixa de ser necessário para o **arquivo**: a retirada só apaga a **linha atual**, depois de copiá-la ao histórico, o que cabe dentro do aval que ele já deu (só o próprio comprovante, enquanto não aceito e com o ciclo não encerrado). O diálogo (`PayableSettlementList.tsx:347`) passa a dizer que o arquivo fica no histórico. B é a saída se ele preferir não reter a imagem: perde-se a prova. C não cumpre o pedido | Aprovada por ele em 2026-11-14 |
 | D7 | Janela do complemento | A) a mesma das demais ações: ciclo fechado e **não encerrado**<br>B) também em **ciclo encerrado**, porque só acrescenta ao histórico e não muda estado nem selo | **B** | O comprovante do devedor (`sent`) já vale para o selo: em grupo pequeno, ou quando é o último par, **o ciclo sela na hora**, então com A o complemento nunca caberia no caso mais comum. **Custo:** é uma **exceção à R9** da feature anterior ("ciclo encerrado é imutável"); o dado selado (snapshot, acertos, selo) continua intacto, só se acrescenta uma entrada num histórico à parte | Aprovada por ele em 2026-11-14 (exceção à R9) |
 | D8 | Quem lê o histórico e o recusado | A) as partes: credor, devedor e quem enviou a entrada<br>B) todos os membros do grupo, como o comprovante atual (§2.7) | **A** | É a prova de uma disputa entre as partes, e o vínculo "quem paga por" não dá leitura (R12). **Custo:** o comprovante recusado, que hoje nem aparece, passa a ter uma regra de leitura diferente da do comprovante atual | Aprovada por ele em 2026-11-14 |
@@ -123,6 +125,7 @@ A política de privacidade (`site/src/legal/privacidade.php:72-76`, item 5) diz 
 | D10 | Quem pode complementar | A) quem paga pelo devedor (vínculo atual), só sobre o comprovante `sent` do devedor<br>B) também o devedor | **A** | O devedor já substitui o próprio comprovante, e cada substituição vai ao histórico (D2). Quem paga por ele é o único que hoje fica sem saída (§2.3). O credor nunca complementa | Aprovada por ele em 2026-11-14 |
 | D11 | Retenção dos arquivos do histórico | A) enquanto o grupo e a conta existirem, sem prazo e sem tarefa agendada<br>B) prazo fixo (ex.: 12 meses) com limpeza agendada | **A** | A política de privacidade (§2.10) já diz "enquanto sua conta estiver ativa"; B exige agendador e uma decisão jurídica de prazo. **Custo:** quando existir exclusão de conta no app (exigência da Google Play), o histórico precisa entrar nela; fica como risco (RK6) | Aprovada por ele em 2026-11-14 |
 | D12 | Agrupar o item 147 | A) sim: `accept` e `refuse` definem `confirmed_at` explicitamente e um teste afirma que não muda<br>B) deixar o 147 aberto | **A** | `refuse` passa a gravar o motivo e é um dos dois `UPDATE` do 147 (§2.9) | Decidida por ele em 2026-11-14 |
+| D13 | O teto compartilhado entre o devedor e quem paga por ele (achado **A1** da revisão de segurança da TASK-628) | A) dois orçamentos separados: 10 entradas `replaced` e `withdrawn` e 10 complementos<br>B) manter o teto somado e aceitar o risco<br>C) A mais *throttle* por usuário na rota e janela de aviso do complemento<br>D) complemento só com vínculo aceito pelo devedor | **A** | Com o teto somado, quem se declara pagador do devedor (o vínculo é auto-declarado, D1-A da feature anterior) enche o histórico com 10 complementos e o devedor recebe 422 ao corrigir o **próprio** comprovante naquele ciclo; não existe rota que apague entrada (R1). **Custo de A:** até **21 arquivos** por par e ciclo (até 11 de quem envia e 10 de complementos, cerca de 105 MB com 5 MB cada; a parte de terceiros segue em no máximo 50 MB, como antes). O aviso do complemento segue **sem janela anti-assédio** (até 10 avisos por par e ciclo, o teto próprio); **C não foi escolhida** e o ponto vai ao backlog 155. D reabre a D1-A da feature anterior e contradiz o caso da criança que não abre o app | Decidida por ele em 2026-11-14 (opção A) |
 
 ### 3.5 Falhas e consistência
 
@@ -130,7 +133,7 @@ A política de privacidade (`site/src/legal/privacidade.php:72-76`, item 5) diz 
 |---|---|---|
 | F1 | Substituir: o banco falha depois de gravar o arquivo novo | A entrada do histórico e a troca da linha vão na **mesma transação**; se falha, o arquivo novo é apagado (como hoje) e o anterior segue intacto e referenciado |
 | F2 | Retirar: falha no meio | Mesma transação (inserir no histórico e apagar a linha atual); nada é feito com o arquivo |
-| F3 | Teto de 10 atingido | 422 antes de gravar qualquer arquivo, em substituir e em complementar (R8) |
+| F3 | Teto atingido | 422 antes de gravar qualquer arquivo: em enviar e reenviar quando as entradas `replaced` e `withdrawn` chegam a 10, e em complementar quando os complementos chegam a 10 (R8, D13). Um orçamento cheio **não** barra a ação do outro |
 | F4 | Complemento sobre comprovante que não é `sent` (recusado, aguardando, aceito ou inexistente) | 422; quem enviou já pode substituir, e o aceito é definitivo (R4) |
 | F5 | Motivo longo demais | 422 (`max:500`); sem motivo é válido |
 | F6 | Corrida entre substituir, aceitar, retirar e complementar | A linha atual é travada (`lockForUpdate`) e relida, como hoje (F6 da feature anterior); o complemento lê a linha travada para conferir o estado `sent` e contar o teto |
@@ -159,12 +162,13 @@ Em Pagamentos, nas duas abas, sobre o `PayableSettlementList` (que já tem o arr
 |---|---|---|---|
 | RK1 | Mexer em `confirmSettlement`, no resumo e na retirada (rota financeira) | Regressão no selo ou na autorização | R3, matriz de autorização, mutation check, os testes de selagem e de aceitar e recusar **sem edição** (os poucos que afirmam o hard delete e a perda do arquivo são editados de propósito e declarados no `implementation.md`), revisão do `security-reviewer` |
 | RK2 | O histórico expõe arquivos financeiros | Vazar um comprovante de uma disputa a quem não é parte | R7 e D8-A, URL assinada de 30 minutos, 404 uniforme (F7), nova revisão do `security-reviewer` |
-| RK3 | Crescimento de disco | Estourar a cota do host compartilhado | D5 (teto de 10 por par e ciclo) e D11-A; o arquivo é no máximo 5 MB |
+| RK3 | Crescimento de disco | Estourar a cota do host compartilhado | D5 e D13 (dois orçamentos de 10 por par e ciclo: até 21 arquivos, os de terceiros em no máximo 50 MB) e D11-A; o arquivo é no máximo 5 MB |
 | RK4 | O complemento em ciclo encerrado (D7-B) fere a R9 | Alguém ler "imutável" literalmente | A exceção é declarada na D7 e no `01-specify.md`; o dado selado não muda, só se acrescenta ao histórico |
 | RK5 | O contrato de `summary` muda | O app Flutter, quando existir, depende dele | Só campos **aditivos**; nenhum consumidor móvel hoje |
 | RK6 | Foto com dado pessoal que não dá para apagar (D6-A) e a futura exclusão de conta | LGPD e exigência da Google Play | O pedido por contato segue valendo; o histórico entra na exclusão de conta quando ela existir (fica registrado como dependência, sem backlog novo até lá); decisão dele em D6 e D11 |
 | RK7 | O `ON UPDATE` de `confirmed_at` em produção (147) | A data de envio vira a da decisão | R11, atribuição explícita e um teste que afirma; a conferência do `explicit_defaults_for_timestamp` em produção **não** é feita por esta feature (host compartilhado) |
 | RK8 | O histórico cresce sem leitura | Entradas que ninguém vê | O credor e o devedor são avisados do complemento; a seção "Histórico" mostra a contagem |
+| RK9 | Quem se declara pagador do devedor o tranca (A1) | O devedor não consegue corrigir o próprio comprovante no ciclo | D13-A: o complemento só gasta o orçamento dele; teste que enche os complementos e reenvia como devedor; o `security-reviewer` relê o delta |
 
 ---
 
@@ -175,7 +179,7 @@ Em Pagamentos, nas duas abas, sobre o `PayableSettlementList` (que já tem o arr
 - CA-2: recusar aceita um motivo opcional (até 500); o motivo, o arquivo e a nota do recusado só saem para as partes.
 - CA-3: retirar move a linha para o histórico e mantém o arquivo; o acerto volta a "a pagar"; o aceito dá 422.
 - CA-4: o complemento só vale sobre `sent`, por quem paga pelo devedor, com foto e justificativa; **não muda** `status()`, `countsForSettlement` nem o selo; avisa o credor e o devedor, nunca o autor.
-- CA-5: o teto de 10 dá 422 antes de gravar o arquivo, em substituir e em complementar.
+- CA-5: enviar e reenviar dão 422 antes de gravar o arquivo com 10 entradas `replaced` e `withdrawn`; complementar dá 422 antes de gravar o arquivo com 10 complementos; **os dois orçamentos são independentes** (10 complementos não barram o reenvio do devedor, e 10 substituições não barram o complemento).
 - CA-6: ciclo encerrado dá 422 em substituir, retirar, recusar e aceitar; o complemento segue a D7 aprovada.
 - CA-7: o histórico e o recusado só são lidos pelas partes; o arquivo sai por URL assinada; quem não é parte recebe 404 uniforme.
 - CA-8: `accept` e `refuse` mantêm `confirmed_at` (teste que afirma), e `deleteIfUnreferenced` passa a tratar o histórico como referência (um arquivo só do histórico não é apagado).
