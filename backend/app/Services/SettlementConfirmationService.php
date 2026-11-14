@@ -76,7 +76,7 @@ class SettlementConfirmationService
                 'Este comprovante foi recusado: quem enviou precisa reenviar.'
             );
 
-            $confirmation->update(['accepted_at' => Carbon::now()]);
+            $this->recordDecision($confirmation, ['accepted_at' => Carbon::now()]);
 
             return $confirmation;
         });
@@ -106,7 +106,7 @@ class SettlementConfirmationService
                 'Este comprovante já foi recusado.'
             );
 
-            $confirmation->update(['refused_at' => Carbon::now()]);
+            $this->recordDecision($confirmation, ['refused_at' => Carbon::now()]);
 
             return $confirmation;
         });
@@ -221,6 +221,31 @@ class SettlementConfirmationService
             self::BLOCKED_DEBTOR_PROOF => 'O devedor já enviou o comprovante deste acerto.',
             default => 'Este comprovante já foi aceito.',
         };
+    }
+
+    /**
+     * Grava a decisão do credor (`accepted_at` ou `refused_at`) na linha travada **sem reescrever
+     * `confirmed_at`**, a data de **envio** do comprovante (item 147 do backlog, feature
+     * 20261114-historico-de-comprovantes-e-justificativa, plan §8).
+     *
+     * `confirmed_at` é a primeira coluna `timestamp NOT NULL` da tabela: num MySQL com
+     * `explicit_defaults_for_timestamp` desligado ela ganha `ON UPDATE CURRENT_TIMESTAMP`, e um `UPDATE` que
+     * não a liste a reescreve. Pôr `'confirmed_at' => $confirmation->confirmed_at` num `$confirmation->update()`
+     * **não** resolve: o Eloquent só grava atributo sujo, então o mesmo valor não entra no `SET`. Por isso o
+     * `UPDATE` sai pelo query builder com `confirmed_at = confirmed_at`, a forma que o MySQL documenta para
+     * impedir a atualização automática, e vale com a opção ligada ou desligada.
+     *
+     * Depois, o model da memória recebe os valores novos (e fica sem atributo pendente), para quem chama
+     * seguir lendo `accepted_at` e `refused_at` dele.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function recordDecision(SettlementConfirmation $confirmation, array $attributes): void
+    {
+        SettlementConfirmation::whereKey($confirmation->getKey())
+            ->update($attributes + ['confirmed_at' => DB::raw('`confirmed_at`')]);
+
+        $confirmation->forceFill($attributes)->syncOriginal();
     }
 
     /**

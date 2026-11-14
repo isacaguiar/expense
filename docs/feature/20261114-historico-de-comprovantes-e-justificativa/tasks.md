@@ -20,7 +20,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **150**, agrup
 |---|---|---|---|---|---|
 | TASK-616 | Criar a tabela `ex_settlement_proof_entries`, a coluna `refusal_reason` e o model `SettlementProofEntry` | backend | plan.md §1 | antes do deploy/migration em produção | Concluída |
 | TASK-617 | Criar o `SettlementProofHistoryService` com o teto, `isFull` e `archive` | backend | plan.md §2 | nenhum | Concluída |
-| TASK-618 | Fazer `accept` e `refuse` listarem `confirmed_at` no `UPDATE`, sem reescrevê-lo (item 147) | backend | plan.md §8 | antes do merge | Pendente |
+| TASK-618 | Fazer `accept` e `refuse` listarem `confirmed_at` no `UPDATE`, sem reescrevê-lo (item 147) | backend | plan.md §8 | antes do merge | Concluída |
 | TASK-619 | Fazer o reenvio guardar o comprovante anterior no histórico e respeitar o teto | backend | plan.md §2 | antes do merge | Pendente |
 | TASK-620 | Receber o motivo opcional da recusa e gravá-lo em `refusal_reason` | backend | plan.md §3 | antes do merge | Pendente |
 | TASK-621 | Trocar a exclusão por retirada: arquivar a linha e manter o arquivo | backend | plan.md §4 | antes do merge (hard delete aprovado) | Pendente |
