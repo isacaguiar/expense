@@ -59,19 +59,25 @@ class SettlementDecisionController extends Controller
 
     /**
      * `POST /groups/{groupId}/settlements/refuse`: o mesmo corpo, a mesma ordem de respostas e as mesmas
-     * regras de `accept`, mas grava `refused_at`. **Não apaga a linha nem o arquivo** (D4-B). Quem enviou e o
+     * regras de `accept`, mais o `reason` opcional (até 500; sem ele a recusa é a de sempre), mas grava
+     * `refused_at` (e o motivo). **Não apaga a linha nem o arquivo** (D4-B). Quem enviou e o
      * devedor são avisados, menos quem fez a ação.
      */
     public function refuse(Request $request, $groupId)
     {
-        [$group, $data] = $this->creditorsPair($request, $groupId, 'Só o credor deste acerto pode recusar o comprovante.');
+        [$group, $data] = $this->creditorsPair($request, $groupId, 'Só o credor deste acerto pode recusar o comprovante.', [
+            // Motivo opcional (feature 20261114-historico-de-comprovantes-e-justificativa, D4-A): o trim e o "" → null
+            // vêm dos middlewares globais. Fica na linha atual e **não** vai para o sino.
+            'reason' => 'nullable|string|max:500',
+        ]);
 
         try {
             $confirmation = app(SettlementConfirmationService::class)->refuse(
                 $group,
                 (int) $data['from_user_id'],
                 (int) $data['to_user_id'],
-                (int) ($data['cycles_ago'] ?? 0)
+                (int) ($data['cycles_ago'] ?? 0),
+                $data['reason'] ?? null
             );
         } catch (SettlementDecisionRefused $e) {
             return response()->json(['error' => $e->getMessage()], 422);
@@ -137,12 +143,12 @@ class SettlementDecisionController extends Controller
      *
      * @return array{0: Group, 1: array{from_user_id: int, to_user_id: int, cycles_ago?: int|null}}
      */
-    private function creditorsPair(Request $request, $groupId, string $forbiddenMessage): array
+    private function creditorsPair(Request $request, $groupId, string $forbiddenMessage, array $extraRules = []): array
     {
         $group = $this->findGroup($groupId);
         $this->authorizeGroupMembership($group);
 
-        $data = $this->validatedPair($request);
+        $data = $this->validatedPair($request, $extraRules);
         abort_unless((int) $data['to_user_id'] === (int) auth()->id(), 403, $forbiddenMessage);
 
         return [$group, $data];
@@ -164,12 +170,12 @@ class SettlementDecisionController extends Controller
      *
      * @return array{from_user_id: int, to_user_id: int, cycles_ago?: int|null}
      */
-    private function validatedPair(Request $request): array
+    private function validatedPair(Request $request, array $extraRules = []): array
     {
         return $request->validate([
             'from_user_id' => 'required|integer|exists:ex_users,id',
             'to_user_id' => 'required|integer|exists:ex_users,id',
             'cycles_ago' => 'nullable|integer|min:0',
-        ]);
+        ] + $extraRules);
     }
 }

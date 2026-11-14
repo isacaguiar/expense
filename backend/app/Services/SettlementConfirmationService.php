@@ -96,15 +96,19 @@ class SettlementConfirmationService
     /**
      * O credor `$creditorId` recusa o comprovante que um responsável enviou do acerto de `$fromUserId`.
      * Só de `awaiting_acceptance`; grava `refused_at` com a linha travada e relida. **Não apaga a linha nem
-     * o arquivo** (D4-B): o acerto volta a pendente na API e quem enviou reenvia (ou exclui, TASK-600).
+     * o arquivo** (D4-B): o acerto volta a pendente na API e quem enviou reenvia (ou retira).
+     *
+     * `$reason` é o motivo opcional (feature 20261114-historico-de-comprovantes-e-justificativa, D4-A): fica em
+     * `refusal_reason`, na linha atual, até o comprovante sair de cena e ir ao histórico (R6). Só é gravado se
+     * a recusa vale: com a linha já recusada ou aceita, nada muda.
      *
      * @throws SettlementDecisionRefused
      */
-    public function refuse(Group $group, int $fromUserId, int $creditorId, int $cyclesAgo): SettlementConfirmation
+    public function refuse(Group $group, int $fromUserId, int $creditorId, int $cyclesAgo, ?string $reason = null): SettlementConfirmation
     {
         $cycle = $this->decidableCycle($group, $cyclesAgo);
 
-        return DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId) {
+        return DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId, $reason) {
             $confirmation = $this->lockedAwaitingConfirmation(
                 $group,
                 $cycle['start'],
@@ -113,7 +117,7 @@ class SettlementConfirmationService
                 'Este comprovante já foi recusado.'
             );
 
-            $this->recordDecision($confirmation, ['refused_at' => Carbon::now()]);
+            $this->recordDecision($confirmation, ['refused_at' => Carbon::now(), 'refusal_reason' => $reason]);
 
             return $confirmation;
         });
