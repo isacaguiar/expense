@@ -189,7 +189,7 @@ class SettlementConfirmationOnBehalfTest extends TestCase
         $this->assertNull($row->confirmed_by, 'quem se confirma não precisa de vínculo nem deixa `confirmed_by`');
     }
 
-    public function test_resend_by_the_debtor_after_the_responsible_resets_confirmed_by_and_leaves_one_file(): void
+    public function test_resend_by_the_debtor_after_the_responsible_resets_confirmed_by_and_keeps_both_files(): void
     {
         [$group, $creditor, $debtor, $responsible] = $this->scenario();
         $this->confirm($responsible, $group, $creditor, $debtor->id)->assertOk();
@@ -202,8 +202,9 @@ class SettlementConfirmationOnBehalfTest extends TestCase
         $row = $row->fresh();
         $this->assertNull($row->confirmed_by, 'o último a enviar vence: agora foi o devedor');
         $this->assertNotSame($firstPath, $row->proof_path);
-        Storage::disk('local')->assertMissing($firstPath);
-        $this->assertCount(1, $this->proofFiles($group), 'sobra um arquivo só');
+        // Feature 20261114-historico-de-comprovantes-e-justificativa (R2): o substituído vai ao histórico e o arquivo fica.
+        Storage::disk('local')->assertExists($firstPath);
+        $this->assertCount(2, $this->proofFiles($group), 'o atual e o do histórico');
         $this->assertSame(1, SettlementConfirmation::where('group_id', $group->id)->count());
     }
 
@@ -259,7 +260,8 @@ class SettlementConfirmationOnBehalfTest extends TestCase
 
         $this->assertSame(1, SettlementConfirmation::where('group_id', $group->id)->count());
         $this->assertSame($second->id, (int) SettlementConfirmation::where('group_id', $group->id)->firstOrFail()->confirmed_by, 'o último vence');
-        $this->assertCount(1, $this->proofFiles($group));
+        // Feature 20261114-historico-de-comprovantes-e-justificativa (R2): o do primeiro responsável fica no histórico.
+        $this->assertCount(2, $this->proofFiles($group));
     }
 
     public function test_confirmation_keeps_confirmed_by_after_the_link_is_removed(): void

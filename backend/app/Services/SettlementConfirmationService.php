@@ -6,6 +6,7 @@ use App\Exceptions\SettlementDecisionRefused;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\SettlementConfirmation;
+use App\Models\SettlementProofEntry;
 use App\Support\BillingCycle;
 use App\Support\ProofStorage;
 use Carbon\Carbon;
@@ -23,7 +24,13 @@ class SettlementConfirmationService
 
     public const BLOCKED_DEBTOR_PROOF = 'debtor_proof';
 
-    public function __construct(private CycleSealingService $sealing) {}
+    /** O histórico do par já tem o máximo de entradas no ciclo (D5): nenhum arquivo novo cabe. */
+    public const BLOCKED_HISTORY_FULL = 'history_full';
+
+    public function __construct(
+        private CycleSealingService $sealing,
+        private SettlementProofHistoryService $history
+    ) {}
 
     /**
      * O ciclo `cyclesAgo` ciclos atrás, se ainda dá para decidir sobre os comprovantes dele: precisa estar
@@ -171,32 +178,61 @@ class SettlementConfirmationService
      * **Só o devedor substitui o comprovante dele** (revisão de segurança, TASK-605): quem envia por outra
      * pessoa (`confirmed_by` preenchido) não sobrescreve um comprovante "enviado", o do próprio devedor, que
      * já vale para o selo; senão qualquer membro que se declarasse responsável o trocaria e apagaria o
-     * arquivo dele. Com `confirmation` nulo, `blockedBy` diz o motivo (`resendBlockedBy`).
+     * arquivo dele. Com `confirmation` nulo, `blockedBy` diz o motivo (`resendBlockedBy` e, depois dele, o
+     * teto do histórico, `historyBlockedBy`).
+     *
+     * **O comprovante que sai de cena vai ao histórico e o arquivo dele fica** (feature
+     * 20261114-historico-de-comprovantes-e-justificativa, plan §2, R1 e R2): com a linha atual travada,
+     * `archive($current, 'replaced')` grava a entrada **antes** da troca, na mesma transação (F1: se a troca
+     * falhar, a entrada desfaz junto). Por isso o retorno **não traz mais o caminho anterior**: nada apaga o
+     * arquivo substituído. O primeiro envio do par (sem linha atual) não cria entrada.
      *
      * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
      * @param  array<string, mixed>  $values
-     * @return array{confirmation: SettlementConfirmation|null, previousPath: string|null, wasRefused: bool, blockedBy: string|null}
+     * @return array{confirmation: SettlementConfirmation|null, wasRefused: bool, blockedBy: string|null}
      */
     public function submitProof(array $key, array $values, bool $hadRow): array
     {
         return DB::transaction(function () use ($key, $values, $hadRow) {
             $current = $hadRow ? SettlementConfirmation::where($key)->lockForUpdate()->first() : null;
 
-            $blockedBy = self::resendBlockedBy($current, $values['confirmed_by'] ?? null);
+            $blockedBy = self::resendBlockedBy($current, $values['confirmed_by'] ?? null) ?? self::historyBlockedBy($key);
             if ($blockedBy !== null) {
-                return ['confirmation' => null, 'previousPath' => null, 'wasRefused' => false, 'blockedBy' => $blockedBy];
+                return ['confirmation' => null, 'wasRefused' => false, 'blockedBy' => $blockedBy];
             }
 
-            $previousPath = $current?->proof_path;
             $wasRefused = $current?->status() === SettlementConfirmation::STATUS_REFUSED;
+
+            if ($current !== null) {
+                $this->history->archive($current, SettlementProofEntry::KIND_REPLACED);
+            }
 
             $confirmation = SettlementConfirmation::updateOrCreate($key, $values + [
                 'accepted_at' => null,
                 'refused_at' => null,
+                'refusal_reason' => null,
             ]);
 
-            return ['confirmation' => $confirmation, 'previousPath' => $previousPath, 'wasRefused' => $wasRefused, 'blockedBy' => null];
+            return ['confirmation' => $confirmation, 'wasRefused' => $wasRefused, 'blockedBy' => null];
         });
+    }
+
+    /**
+     * O histórico do par já está cheio neste ciclo (`SettlementProofHistoryService::MAX_ENTRIES`)? O teto vale
+     * para **toda ação que grava arquivo novo** (enviar, reenviar e complementar; retirar não grava e fica de
+     * fora), então vale também para o primeiro envio. O controller usa o veredito antes de gravar o arquivo e
+     * `submitProof`, de novo, com a linha travada.
+     *
+     * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
+     */
+    public static function historyBlockedBy(array $key): ?string
+    {
+        return app(SettlementProofHistoryService::class)->isFull(
+            (int) $key['group_id'],
+            (string) $key['cycle_start'],
+            (int) $key['from_user_id'],
+            (int) $key['to_user_id']
+        ) ? self::BLOCKED_HISTORY_FULL : null;
     }
 
     /**
@@ -219,6 +255,7 @@ class SettlementConfirmationService
     {
         return match ($blockedBy) {
             self::BLOCKED_DEBTOR_PROOF => 'O devedor já enviou o comprovante deste acerto.',
+            self::BLOCKED_HISTORY_FULL => 'O limite de comprovantes guardados deste acerto foi atingido.',
             default => 'Este comprovante já foi aceito.',
         };
     }

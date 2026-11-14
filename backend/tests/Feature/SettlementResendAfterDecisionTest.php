@@ -171,8 +171,9 @@ class SettlementResendAfterDecisionTest extends TestCase
         $this->assertSame(SettlementConfirmation::STATUS_AWAITING_ACCEPTANCE, $row->status());
         $this->assertSame($responsible->id, (int) $row->confirmed_by);
         $this->assertNotSame($oldPath, $row->proof_path);
-        Storage::disk('local')->assertMissing($oldPath);
-        $this->assertSame([$row->proof_path], $this->proofFiles($group));
+        // Feature 20261114-historico-de-comprovantes-e-justificativa (R2): o recusado vai ao histórico e o arquivo fica.
+        Storage::disk('local')->assertExists($oldPath);
+        $this->assertEqualsCanonicalizing([$oldPath, $row->proof_path], $this->proofFiles($group));
         $this->assertSame(1, SettlementConfirmation::where('group_id', $group->id)->count());
 
         $notices = Notification::where('type', 'settlement_confirmed')->get();

@@ -207,7 +207,8 @@ class SettlementConfirmationControllerTest extends TestCase
 
         $this->assertNotSame($firstPath, $secondPath);
         Storage::disk('local')->assertExists($secondPath);
-        Storage::disk('local')->assertMissing($firstPath);
+        // Feature 20261114-historico-de-comprovantes-e-justificativa (R2): o arquivo substituído vai ao histórico e fica.
+        Storage::disk('local')->assertExists($firstPath);
     }
 
     public function test_can_confirm_in_a_manually_closed_cycle(): void
