@@ -8,6 +8,7 @@ use App\Models\SettlementProofEntry;
 use App\Models\User;
 use App\Services\CycleSealingService;
 use App\Services\CycleSummaryService;
+use App\Services\SettlementProofHistoryService;
 use App\Support\ProofStorage;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -270,6 +271,31 @@ class SettlementProofVisibilityTest extends TestCase
         );
 
         $this->assertSame([], $this->settlementSeenBy($w['creditor'], $w['group'], $w['debtor'])['proofHistory']);
+    }
+
+    // --- defesa em profundidade (revisão de segurança da TASK-628) ----------
+
+    /**
+     * O filtro R7 não pode morar só em PHP: se ele regredir, a consulta não pode ter trazido do banco as
+     * entradas de quem o leitor não é parte. A condição (`from_user_id`, `to_user_id` ou `sent_by` = leitor)
+     * vai também para o SQL, e o filtro em PHP fica como segunda camada.
+     */
+    public function test_the_history_query_already_filters_by_the_viewer_in_sql(): void
+    {
+        $w = $this->world();
+
+        DB::flushQueryLog();
+        DB::enableQueryLog();
+        $entries = app(SettlementProofHistoryService::class)->forViewer($w['group']->id, '2026-08-01', $w['third']->id);
+        $selects = collect(DB::getQueryLog())->filter(fn ($q) => str_contains($q['query'], 'ex_settlement_proof_entries'));
+
+        $this->assertSame([], $entries, 'quem não é parte não lê nada');
+        $this->assertCount(1, $selects, 'uma consulta só para o ciclo');
+        $sql = $selects->first()['query'];
+        foreach (['from_user_id', 'to_user_id', 'sent_by'] as $column) {
+            $this->assertMatchesRegularExpression("/`{$column}` = \\?/", $sql, "o SQL já filtra por {$column}");
+        }
+        $this->assertContains($w['third']->id, $selects->first()['bindings'], 'com o id do leitor como binding');
     }
 
     // --- os três pontos que respondem ao usuário ----------------------------

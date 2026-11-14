@@ -217,6 +217,22 @@ class SettlementProofEntryModelTest extends TestCase
         $this->assertNull($entry->proofUrl());
     }
 
+    /**
+     * Revisão de segurança da TASK-628 (achado BAIXO): `present()` monta o array à mão e nada serializa o model
+     * hoje, mas se um `response()->json($entry)` ou um `toArray()` entrar um dia, o caminho interno do arquivo
+     * (`proof_path`) não pode ir junto. O atributo continua legível no código.
+     */
+    public function test_the_internal_file_path_is_never_serialized_with_the_model(): void
+    {
+        [$group, $debtor, $creditor, $sender] = $this->scenario();
+        $entry = $this->entry($group, $debtor, $creditor, $sender);
+
+        $this->assertArrayNotHasKey('proof_path', $entry->toArray());
+        $this->assertStringNotContainsString('proof_path', $entry->toJson());
+        $this->assertStringNotContainsString("comprovantes/{$group->id}/", $entry->toJson());
+        $this->assertStringStartsWith("comprovantes/{$group->id}/", $entry->proof_path, 'o código segue lendo o atributo');
+    }
+
     public function test_the_relations_resolve(): void
     {
         [$group, $debtor, $creditor, $sender] = $this->scenario();

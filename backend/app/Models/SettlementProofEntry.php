@@ -51,6 +51,13 @@ class SettlementProofEntry extends Model
         'refused_at',
     ];
 
+    /**
+     * O caminho interno do arquivo nunca sai na serialização do model (revisão de segurança da TASK-628): quem
+     * apresenta a entrada (`SettlementProofHistoryService::present`) monta o array à mão, e o arquivo só se
+     * alcança pela URL assinada. O atributo segue legível no código.
+     */
+    protected $hidden = ['proof_path'];
+
     protected $casts = [
         'cycle_start' => 'date',
         'amount' => 'float',

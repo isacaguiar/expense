@@ -49,6 +49,10 @@ class SettlementProofHistoryService
      * uma entrada lê só as que enviou; os demais (outro responsável, terceiro, criador do grupo) não leem
      * nenhuma. Uma consulta só para o ciclo, com o remetente carregado junto (sem N+1).
      *
+     * **A regra vale duas vezes** (revisão de segurança da TASK-628, defesa em profundidade): no SQL, que já
+     * não traz do banco as entradas de quem o leitor não é parte, e em PHP, como segunda camada. Uma
+     * regressão em uma das duas não vaza o histórico do grupo inteiro.
+     *
      * @return array<string, list<SettlementProofEntry>>
      */
     public function forViewer(int $groupId, CarbonInterface|string $cycleStart, int $viewerId): array
@@ -58,6 +62,11 @@ class SettlementProofHistoryService
         return SettlementProofEntry::with('sender:id,name')
             ->where('group_id', $groupId)
             ->where('cycle_start', $cycle)
+            ->where(function ($query) use ($viewerId) {
+                $query->where('from_user_id', $viewerId)
+                    ->orWhere('to_user_id', $viewerId)
+                    ->orWhere('sent_by', $viewerId);
+            })
             ->orderByDesc('id')
             ->get()
             ->filter(fn (SettlementProofEntry $entry) => in_array($viewerId, [
