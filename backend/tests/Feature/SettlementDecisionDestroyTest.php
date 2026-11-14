@@ -57,7 +57,9 @@ class SettlementDecisionDestroyTest extends TestCase
 
     // --- o caminho feliz ---------------------------------------------------
 
-    public function test_the_sender_deletes_a_refused_proof_and_the_file(): void
+    // Feature 20261114-historico-de-comprovantes-e-justificativa (D6-A): "excluir" virou "retirar". A linha atual
+    // ainda sai, mas o arquivo **fica** (vai ao histórico) e a mensagem é "Comprovante retirado.".
+    public function test_the_sender_withdraws_a_refused_proof_and_the_file_stays(): void
     {
         Storage::fake(ProofStorage::DISK);
         [$group, $creditor, $debtor, $responsible, $proof] = $this->thirdPartyScenario(paid: true);
@@ -66,13 +68,13 @@ class SettlementDecisionDestroyTest extends TestCase
 
         $this->destroyProof($responsible, $group, $this->pairBody($debtor, $creditor))
             ->assertOk()
-            ->assertJson(['message' => 'Comprovante excluído.']);
+            ->assertJson(['message' => 'Comprovante retirado.']);
 
-        $this->assertNull(SettlementConfirmation::find($proof->id), 'a linha foi excluída');
-        Storage::disk(ProofStorage::DISK)->assertMissing($proof->proof_path);
+        $this->assertNull(SettlementConfirmation::find($proof->id), 'a linha foi retirada');
+        Storage::disk(ProofStorage::DISK)->assertExists($proof->proof_path);
     }
 
-    public function test_the_debtor_deletes_an_awaiting_proof(): void
+    public function test_the_debtor_withdraws_an_awaiting_proof_and_the_file_stays(): void
     {
         Storage::fake(ProofStorage::DISK);
         [$group, $creditor, $debtor, , $proof] = $this->thirdPartyScenario(paid: true);
@@ -81,7 +83,7 @@ class SettlementDecisionDestroyTest extends TestCase
         $this->destroyProof($debtor, $group, $this->pairBody($debtor, $creditor))->assertOk();
 
         $this->assertNull(SettlementConfirmation::find($proof->id));
-        Storage::disk(ProofStorage::DISK)->assertMissing($proof->proof_path);
+        Storage::disk(ProofStorage::DISK)->assertExists($proof->proof_path);
     }
 
     public function test_a_shared_file_is_kept(): void
@@ -198,13 +200,13 @@ class SettlementDecisionDestroyTest extends TestCase
         $proof->update(['accepted_at' => $this->proofSentAt()]);
         $this->destroyProof($responsible, $group, $this->pairBody($debtor, $creditor))
             ->assertStatus(422)
-            ->assertJson(['error' => 'Este comprovante já foi aceito e não pode ser excluído.']);
+            ->assertJson(['error' => 'Este comprovante já foi aceito e não pode ser retirado.']);
         $this->assertNotNull(SettlementConfirmation::find($proof->id));
 
         $proof->update(['accepted_at' => null, 'confirmed_by' => null]);
         $this->destroyProof($debtor, $group, $this->pairBody($debtor, $creditor))
             ->assertStatus(422)
-            ->assertJson(['error' => 'Só o comprovante enviado por quem paga por outra pessoa pode ser excluído.']);
+            ->assertJson(['error' => 'Só o comprovante enviado por quem paga por outra pessoa pode ser retirado.']);
         $this->assertNotNull(SettlementConfirmation::find($proof->id), 'o comprovante do próprio devedor não ganha exclusão nova');
     }
 

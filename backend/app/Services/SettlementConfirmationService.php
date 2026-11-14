@@ -8,7 +8,6 @@ use App\Models\GroupCycleSnapshot;
 use App\Models\SettlementConfirmation;
 use App\Models\SettlementProofEntry;
 use App\Support\BillingCycle;
-use App\Support\ProofStorage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -124,15 +123,17 @@ class SettlementConfirmationService
     }
 
     /**
-     * Quem enviou o comprovante, ou o devedor, o **exclui** enquanto o credor não o aceitou (D7-A). É a
-     * **única exclusão física** desta feature, com o aval de hard delete dele em 2026-11-10 (specify §2.8 e
-     * §3.4), limitada ao comprovante que passa pelo aceite (o de responsável) e, por `decidableCycle`, ao
-     * ciclo que ainda não está encerrado. Vale em `awaiting_acceptance` e em `refused`; o aceito é definitivo.
+     * Quem enviou o comprovante, ou o devedor, o **retira** do acerto enquanto o credor não o aceitou (D7-A da
+     * feature anterior e D6-A da 20261114-historico-de-comprovantes-e-justificativa). Limitado ao comprovante
+     * que passa pelo aceite (o de responsável) e, por `decidableCycle`, ao ciclo que ainda não está encerrado.
+     * Vale em `awaiting_acceptance` e em `refused`; o aceito é definitivo (R4).
      *
-     * A linha sai primeiro, com ela travada e relida, e o arquivo depois da transação: só se nenhuma outra
-     * linha de acerto nem parcela o usa (`ProofStorage::deleteIfUnreferenced` olha o banco, então precisa
-     * rodar **depois** de a linha sumir). Não exige o vínculo "quem paga por quem": quem saiu da lista ainda
-     * exclui o próprio comprovante. O credor, o criador do grupo e os demais membros recebem 403.
+     * Com a linha travada e relida, **na mesma transação**: `archive($linha, withdrawn)` grava a entrada do
+     * histórico e a **linha atual** é apagada (a única exclusão física que sobra, dentro do aval de hard delete
+     * dele de 2026-11-10); se um dos dois falha, os dois desfazem (F2). **O arquivo fica** (R2): nada o apaga,
+     * ele é o do histórico. O teto de 10 entradas **não** vale aqui: retirar não grava arquivo novo. Não exige
+     * o vínculo "quem paga por quem": quem saiu da lista ainda retira o próprio comprovante. O credor, o criador
+     * do grupo e os demais membros recebem 403.
      *
      * @throws SettlementDecisionRefused
      */
@@ -140,30 +141,26 @@ class SettlementConfirmationService
     {
         $cycle = $this->decidableCycle($group, $cyclesAgo);
 
-        $path = DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId, $callerId) {
+        DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId, $callerId) {
             $confirmation = $this->lockedConfirmation($group, $cycle['start'], $fromUserId, $creditorId);
 
             abort_unless(
                 $callerId === (int) $confirmation->from_user_id || $callerId === (int) $confirmation->confirmed_by,
                 403,
-                'Só quem enviou o comprovante ou o devedor pode excluí-lo.'
+                'Só quem enviou o comprovante ou o devedor pode retirá-lo.'
             );
 
             if (! $confirmation->isThirdParty()) {
-                throw new SettlementDecisionRefused('Só o comprovante enviado por quem paga por outra pessoa pode ser excluído.');
+                throw new SettlementDecisionRefused('Só o comprovante enviado por quem paga por outra pessoa pode ser retirado.');
             }
 
             if ($confirmation->status() === SettlementConfirmation::STATUS_ACCEPTED) {
-                throw new SettlementDecisionRefused('Este comprovante já foi aceito e não pode ser excluído.');
+                throw new SettlementDecisionRefused('Este comprovante já foi aceito e não pode ser retirado.');
             }
 
-            $path = $confirmation->proof_path;
+            $this->history->archive($confirmation, SettlementProofEntry::KIND_WITHDRAWN);
             $confirmation->delete();
-
-            return $path;
         });
-
-        ProofStorage::deleteIfUnreferenced($path);
     }
 
     /**

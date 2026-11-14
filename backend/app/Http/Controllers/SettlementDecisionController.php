@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 
 /**
  * A decisão do credor sobre o comprovante que um responsável enviou do acerto de outra pessoa (feature
- * 20261110-quem-paga-se-declara-e-credor-recusa, plan §4): aceitar, recusar e excluir. A regra mora em
+ * 20261110-quem-paga-se-declara-e-credor-recusa, plan §4): aceitar, recusar e retirar (a "exclusão" virou retirada na 20261114-historico-de-comprovantes-e-justificativa). A regra mora em
  * `SettlementConfirmationService`; aqui ficam a autorização, o corpo e os avisos.
  */
 class SettlementDecisionController extends Controller
@@ -110,8 +110,10 @@ class SettlementDecisionController extends Controller
 
     /**
      * `DELETE /groups/{groupId}/settlements/confirmation?from_user_id=&to_user_id=&cycles_ago=`: quem
-     * enviou o comprovante, ou o devedor, o exclui (D7-A, o único `DELETE` físico da feature, com o aval
-     * de hard delete dele). Ordem: 404 para grupo inexistente, excluído ou de quem não é membro; 422 de
+     * enviou o comprovante, ou o devedor, o **retira** do acerto (feature
+     * 20261114-historico-de-comprovantes-e-justificativa, D6-A): a linha atual sai (a única exclusão física
+     * que sobra, dentro do aval de hard delete da D7-A da feature anterior) e vai, com o **arquivo**, ao
+     * histórico (`withdrawn`); o arquivo não é apagado. Ordem: 404 para grupo inexistente, excluído ou de quem não é membro; 422 de
      * validação; depois, no service, 422 de ciclo, 404 sem comprovante, **403** para quem não é quem enviou
      * nem o devedor, e 422 para o comprovante que não passa pelo aceite ou já foi aceito. Ninguém é avisado.
      */
@@ -134,7 +136,7 @@ class SettlementDecisionController extends Controller
             return response()->json(['error' => $e->getMessage()], 422);
         }
 
-        return response()->json(['message' => 'Comprovante excluído.']);
+        return response()->json(['message' => 'Comprovante retirado.']);
     }
 
     /**

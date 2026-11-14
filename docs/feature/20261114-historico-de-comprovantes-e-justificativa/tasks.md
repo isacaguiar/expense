@@ -23,7 +23,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **150**, agrup
 | TASK-618 | Fazer `accept` e `refuse` listarem `confirmed_at` no `UPDATE`, sem reescrevê-lo (item 147) | backend | plan.md §8 | antes do merge | Concluída |
 | TASK-619 | Fazer o reenvio guardar o comprovante anterior no histórico e respeitar o teto | backend | plan.md §2 | antes do merge | Concluída |
 | TASK-620 | Receber o motivo opcional da recusa e gravá-lo em `refusal_reason` | backend | plan.md §3 | antes do merge | Concluída |
-| TASK-621 | Trocar a exclusão por retirada: arquivar a linha e manter o arquivo | backend | plan.md §4 | antes do merge (hard delete aprovado) | Pendente |
+| TASK-621 | Trocar a exclusão por retirada: arquivar a linha e manter o arquivo | backend | plan.md §4 | antes do merge (hard delete aprovado) | Concluída |
 | TASK-622 | Fazer `ProofStorage::deleteIfUnreferenced` tratar o histórico como referência | backend | plan.md §7 | nenhum | Pendente |
 | TASK-623 | Servir o arquivo do histórico pelo tipo `settlement_history` do download assinado | backend | plan.md §6 | antes do merge | Pendente |
 | TASK-624 | Expor `refusedProof` e `proofHistory` em `withConfirmations` só para as partes | backend | plan.md §6 | antes do merge | Pendente |
