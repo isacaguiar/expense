@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Exceptions\SettlementDecisionRefused;
 use App\Models\Group;
 use App\Models\SettlementConfirmation;
+use App\Services\MemberResponsibleService;
 use App\Services\SettlementConfirmationService;
 use App\Support\Notifier;
+use App\Support\ProofStorage;
 use Illuminate\Http\Request;
 
 /**
@@ -137,6 +139,69 @@ class SettlementDecisionController extends Controller
         }
 
         return response()->json(['message' => 'Comprovante retirado.']);
+    }
+
+    /**
+     * `POST /groups/{groupId}/settlements/complement` (feature 20261114-historico-de-comprovantes-e-
+     * justificativa, plan §5): quem paga pelo devedor adiciona uma justificativa com foto sobre o comprovante
+     * que o **próprio devedor** enviou. A entrada vai para o histórico; a linha atual, o estado do comprovante
+     * e o selo **não mudam** (R3), e vale também com o ciclo encerrado (D7-B, a exceção à R9).
+     *
+     * Corpo multipart: `from_user_id` (o devedor), `to_user_id` (o credor), `cycles_ago` opcional,
+     * `comprovante` (imagem até 5 MB) e `justificativa` (obrigatória, até 500). Ordem das respostas: 404 para
+     * grupo inexistente, excluído ou de quem não é membro; 422 de validação; **403** se quem chama não paga pelo
+     * devedor (ou é o próprio devedor ou o credor: o devedor já substitui o dele e o credor nunca complementa),
+     * antes de qualquer arquivo, linha ou consulta de ciclo; 422 de ciclo não fechado, de estado do comprovante e
+     * do teto, 404 sem comprovante, **todos antes de gravar o arquivo**; só então o arquivo e a entrada.
+     */
+    public function complement(Request $request, $groupId)
+    {
+        $group = $this->findGroup($groupId);
+        $this->authorizeGroupMembership($group);
+
+        $data = $this->validatedPair($request, [
+            'comprovante' => 'required|image|max:5120',
+            // Obrigatória; o trim e "" → null vêm dos middlewares globais, então só espaços também falha.
+            'justificativa' => 'required|string|max:500',
+        ]);
+
+        $callerId = (int) auth()->id();
+        $debtorId = (int) $data['from_user_id'];
+        $creditorId = (int) $data['to_user_id'];
+
+        abort_unless(
+            $callerId !== $debtorId
+                && $callerId !== $creditorId
+                && app(MemberResponsibleService::class)->canPayFor((int) $group->id, $callerId, $debtorId),
+            403,
+            'Só quem paga pelo devedor pode adicionar a justificativa.'
+        );
+
+        $service = app(SettlementConfirmationService::class);
+
+        try {
+            $cycle = $service->complementTarget($group, (int) ($data['cycles_ago'] ?? 0), $debtorId, $creditorId);
+        } catch (SettlementDecisionRefused $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
+
+        $path = ProofStorage::store($request->file('comprovante'), (int) $group->id);
+
+        try {
+            $service->addComplement($group, $cycle, $debtorId, $creditorId, $callerId, $path, (string) $data['justificativa']);
+        } catch (SettlementDecisionRefused $e) {
+            // A corrida (outro pedido mudou o estado ou encheu o histórico entre a checagem e a trava).
+            ProofStorage::delete($path);
+
+            return response()->json(['error' => $e->getMessage()], 422);
+        } catch (\Throwable $e) {
+            // O banco não apontou para o arquivo novo: não deixa órfão.
+            ProofStorage::delete($path);
+
+            throw $e;
+        }
+
+        return response()->json(['message' => 'Justificativa e comprovante enviados.'], 201);
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\SettlementConfirmation;
 use App\Models\SettlementProofEntry;
 use App\Support\ProofStorage;
+use Carbon\Carbon;
 use Carbon\CarbonInterface;
 use InvalidArgumentException;
 use LogicException;
@@ -92,6 +93,32 @@ class SettlementProofHistoryService
             'archivedAt' => $entry->created_at?->toIso8601String(),
             'proofUrl' => ProofStorage::exists($entry->proof_path) ? $entry->proofUrl() : null,
         ];
+    }
+
+    /**
+     * Grava o **complemento** de quem paga pelo devedor sobre o comprovante `$row` (o do próprio devedor):
+     * uma entrada `complement` com o arquivo novo (`$path`, já gravado por quem chama), a justificativa em
+     * `note`, o valor do acerto e o autor em `sent_by`. **Não toca na linha atual** (R3 e R11): o estado do
+     * comprovante, `countsForSettlement` e o selo seguem como estão. Não abre transação nem confere o teto ou o
+     * estado: quem chama (`SettlementConfirmationService::addComplement`) já fez, com a linha travada.
+     */
+    public function addComplement(SettlementConfirmation $row, int $authorId, string $path, string $justification): SettlementProofEntry
+    {
+        return SettlementProofEntry::create([
+            'group_id' => $row->group_id,
+            'cycle_start' => $row->cycle_start,
+            'from_user_id' => $row->from_user_id,
+            'to_user_id' => $row->to_user_id,
+            'kind' => SettlementProofEntry::KIND_COMPLEMENT,
+            'sent_by' => $authorId,
+            'status_at_exit' => null,
+            'amount' => $row->amount,
+            'proof_path' => $path,
+            'note' => $justification,
+            'refusal_reason' => null,
+            'sent_at' => Carbon::now(),
+            'refused_at' => null,
+        ]);
     }
 
     /**

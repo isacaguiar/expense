@@ -28,7 +28,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **150**, agrup
 | TASK-623 | Servir o arquivo do histórico pelo tipo `settlement_history` do download assinado | backend | plan.md §6 | antes do merge | Concluída |
 | TASK-624 | Expor `refusedProof` e `proofHistory` em `withConfirmations` só para as partes | backend | plan.md §6 | antes do merge | Concluída |
 | TASK-625 | Extrair `closedCycle` de `decidableCycle`, sem mudar comportamento | backend | plan.md §5 | nenhum | Concluída |
-| TASK-626 | Criar `POST /groups/{id}/settlements/complement` (complemento com justificativa e foto) | backend | plan.md §5 | antes do merge | Pendente |
+| TASK-626 | Criar `POST /groups/{id}/settlements/complement` (complemento com justificativa e foto) | backend | plan.md §5 | antes do merge | Concluída |
 | TASK-627 | Avisar o credor e o devedor do complemento (`settlement_complement_added`) | backend | plan.md §5 | nenhum | Pendente |
 | TASK-628 | Escrever a matriz de autorização, o mutation check e rodar a revisão do `security-reviewer` | backend | plan.md §10 | antes do merge | Pendente |
 | TASK-629 | Acrescentar os tipos do histórico e o texto do sino do aviso novo | frontend | plan.md §9, §11 | nenhum | Pendente |

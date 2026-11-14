@@ -250,6 +250,77 @@ class SettlementConfirmationService
     }
 
     /**
+     * Antes de gravar o arquivo do **complemento** (feature 20261114-historico-de-comprovantes-e-justificativa,
+     * plan §5, D3-B, D7-B, D9 e D10): confere, **sem travar a linha**, que o ciclo está fechado (o ciclo
+     * **encerrado** também vale, a exceção à R9), que o par tem comprovante (404 se não) e que ele é o do próprio
+     * devedor, em estado `sent` (422 se está aguardando aceite, recusado ou aceito), e que o histórico ainda tem
+     * lugar (422 no teto). Quem chama a usa antes de `ProofStorage::store`; `addComplement` repete tudo sob a trava.
+     *
+     * @return array{start: Carbon, end: Carbon, status: string}
+     *
+     * @throws SettlementDecisionRefused
+     */
+    public function complementTarget(Group $group, int $cyclesAgo, int $debtorId, int $creditorId): array
+    {
+        $cycle = $this->closedCycle($group, $cyclesAgo);
+
+        $confirmation = SettlementConfirmation::where('group_id', $group->id)
+            ->where('cycle_start', $cycle['start']->toDateString())
+            ->where('from_user_id', $debtorId)
+            ->where('to_user_id', $creditorId)
+            ->first();
+
+        abort_if($confirmation === null, 404);
+
+        $this->assertComplementable($confirmation);
+
+        return $cycle;
+    }
+
+    /**
+     * Grava o complemento de `$authorId` sobre o comprovante do par, com a linha atual **travada e relida**: as
+     * mesmas conferências de `complementTarget` valem de novo (F6) e, passando, a entrada nasce por
+     * `SettlementProofHistoryService::addComplement`. **Nenhum `UPDATE` na linha atual.** O arquivo (`$path`) já
+     * foi gravado por quem chama, que o apaga se isto lançar.
+     *
+     * @param  array{start: Carbon, end: Carbon, status: string}  $cycle  o que `complementTarget` devolveu
+     *
+     * @throws SettlementDecisionRefused
+     */
+    public function addComplement(Group $group, array $cycle, int $debtorId, int $creditorId, int $authorId, string $path, string $justification): SettlementProofEntry
+    {
+        return DB::transaction(function () use ($group, $cycle, $debtorId, $creditorId, $authorId, $path, $justification) {
+            $confirmation = $this->lockedConfirmation($group, $cycle['start'], $debtorId, $creditorId);
+
+            $this->assertComplementable($confirmation);
+
+            return $this->history->addComplement($confirmation, $authorId, $path, $justification);
+        });
+    }
+
+    /**
+     * O complemento só vale sobre o comprovante **do próprio devedor** em estado `sent` (R9: o de responsável
+     * aguardando aceite, o recusado e o aceito não recebem complemento) e com lugar no histórico (R8).
+     *
+     * @throws SettlementDecisionRefused
+     */
+    private function assertComplementable(SettlementConfirmation $confirmation): void
+    {
+        if ($confirmation->status() !== SettlementConfirmation::STATUS_SENT) {
+            throw new SettlementDecisionRefused('Só dá para complementar o comprovante que o próprio devedor enviou.');
+        }
+
+        if (self::historyBlockedBy([
+            'group_id' => $confirmation->group_id,
+            'cycle_start' => $confirmation->cycle_start->toDateString(),
+            'from_user_id' => $confirmation->from_user_id,
+            'to_user_id' => $confirmation->to_user_id,
+        ]) !== null) {
+            throw new SettlementDecisionRefused(self::blockedMessage(self::BLOCKED_HISTORY_FULL));
+        }
+    }
+
+    /**
      * O histórico do par já está cheio neste ciclo (`SettlementProofHistoryService::MAX_ENTRIES`)? O teto vale
      * para **toda ação que grava arquivo novo** (enviar, reenviar e complementar; retirar não grava e fica de
      * fora), então vale também para o primeiro envio. O controller usa o veredito antes de gravar o arquivo e
