@@ -143,7 +143,10 @@ describe('GroupMembersForm: quem paga por quem', () => {
       expect(within(rowOf('bruno@example.com')).queryByText(/Quem paga por você/)).not.toBeInTheDocument();
     });
 
-    it('shows one "Paga por {dependente}" badge per dependent on the row of who pays for someone', async () => {
+    // Feature 20261112-ajustes-de-texto-participantes-e-pagamentos (TASK-610): na linha própria os selos
+    // "Paga por {dependente}" saíram, porque o texto "Você paga por: …" já diz a mesma coisa. Os selos das
+    // linhas dos outros membros estão em `GroupMembersForm.badges.test.tsx` e `.paysFor.test.tsx`.
+    it('does not repeat the "Paga por {dependente}" badges on the own row, where "Você paga por" already says it', async () => {
       mockApi({
         members: fixed(person(1, 'Ana', []), person(2, 'Bruno', [ANA_PAYER]), person(3, 'Carla', [ANA_PAYER]))
       });
@@ -152,8 +155,8 @@ describe('GroupMembersForm: quem paga por quem', () => {
       await screen.findByText('bruno@example.com');
 
       const ana = within(rowOf('ana@example.com'));
-      expect(ana.getByText('Paga por Bruno')).toBeInTheDocument();
-      expect(ana.getByText('Paga por Carla')).toBeInTheDocument();
+      expect(ana.getByText('Você paga por: Bruno, Carla')).toBeInTheDocument();
+      expect(ana.queryByText(/^Paga por/)).not.toBeInTheDocument();
       expect(within(rowOf('bruno@example.com')).queryByText(/^Paga por/)).not.toBeInTheDocument();
       expect(within(rowOf('carla@example.com')).queryByText(/^Paga por/)).not.toBeInTheDocument();
     });

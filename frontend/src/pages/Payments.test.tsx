@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { settlementLines } from '../components/settlementLines.testHelper';
 import Payments from './Payments';
 
 vi.mock('axios');
@@ -1462,9 +1463,9 @@ describe('Payments - filtros da lista de despesas', () => {
   it('não filtra os acertos, os saldos nem as ações: "Valores a pagar" mostra o mesmo com filtro ativo', async () => {
     const user = userEvent.setup();
     await renderScreen();
-    const acertos = () => screen.getAllByText(/deve pagar/).map(el => el.textContent);
+    const acertos = () => settlementLines();
     const semFiltro = acertos();
-    expect(semFiltro).toEqual(['João deve pagar R$ 60,00 a Isac', 'Maria deve pagar R$ 40,00 a Isac']);
+    expect(semFiltro).toEqual(['João → Isac R$ 60,00', 'Maria → Isac R$ 40,00']);
 
     await pick(user, 'Credor', 'João');
     await user.click(group('Status').getByRole('button', { name: 'Pendentes' }));
@@ -1563,10 +1564,7 @@ describe('Payments - abas de valores a pagar e pagos', () => {
     );
 
   const tabNamed = (name: RegExp) => screen.getByRole('tab', { name });
-  const shownSettlements = () =>
-    screen
-      .queryAllByText(/deve pagar/)
-      .map(el => (el.closest('p')?.textContent ?? '').replace(/\s+/g, ' ').trim());
+  const shownSettlements = () => settlementLines();
 
   // Um resumo por `cycles_ago`; o que não estiver no mapa devolve o ciclo corrente.
   const mockCycles = (byCyclesAgo: Record<number, SummaryOverrides>, expensesList: SummaryExpenseFixture[] = []) => {
@@ -1611,7 +1609,7 @@ describe('Payments - abas de valores a pagar e pagos', () => {
     expect(tabNamed(/Valores a pagar/)).toHaveAttribute('aria-selected', 'true');
     expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (2)');
     expect(tabNamed(/Valores pagos/)).toHaveTextContent('Valores pagos (1)');
-    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria', 'João deve pagar R$ 20,00 a Maria']);
+    expect(shownSettlements()).toEqual(['Isac → Maria R$ 50,00', 'João → Maria R$ 20,00']);
   });
 
   it('"Valores pagos" mostra o acerto confirmado, marcado como recebido pelo logado', async () => {
@@ -1621,7 +1619,7 @@ describe('Payments - abas de valores a pagar e pagos', () => {
 
     await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
 
-    expect(shownSettlements()).toEqual(['João deve pagar R$ 30,00 a Isac']);
+    expect(shownSettlements()).toEqual(['João → Isac R$ 30,00']);
     expect(screen.getByText('Pagou a você')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Comprovante enviado' })).toHaveAttribute('href', PROOF_URL);
   });
@@ -1637,10 +1635,10 @@ describe('Payments - abas de valores a pagar e pagos', () => {
     renderScreen();
 
     await screen.findByText('Mercado');
-    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria']);
+    expect(shownSettlements()).toEqual(['Isac → Maria R$ 50,00']);
 
     await user.click(tabNamed(/Valores pagos/));
-    expect(shownSettlements()).toEqual(['João deve pagar R$ 30,00 a Isac']);
+    expect(shownSettlements()).toEqual(['João → Isac R$ 30,00']);
   });
 
   it('um acerto confirmado sem URL de comprovante também é "pago"', async () => {
@@ -1652,7 +1650,7 @@ describe('Payments - abas de valores a pagar e pagos', () => {
 
     await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
 
-    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']);
+    expect(shownSettlements()).toEqual(['Isac → João R$ 25,00']);
     expect(screen.getByText('Comprovante enviado')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Comprovante enviado' })).not.toBeInTheDocument();
   });
@@ -1672,7 +1670,7 @@ describe('Payments - abas de valores a pagar e pagos', () => {
     await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
     await user.click(screen.getByRole('button', { name: 'Ciclo anterior' }));
 
-    await waitFor(() => expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']));
+    await waitFor(() => expect(shownSettlements()).toEqual(['Isac → João R$ 25,00']));
     expect(tabNamed(/Valores pagos/)).toHaveAttribute('aria-selected', 'true');
     expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (1)');
   });
@@ -1694,7 +1692,7 @@ describe('Payments - abas de valores a pagar e pagos', () => {
 
     await waitFor(() => expect(reloads).toBeGreaterThan(before));
     await waitFor(() => expect(tabNamed(/Valores pagos/)).toHaveAttribute('aria-selected', 'true'));
-    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']);
+    expect(shownSettlements()).toEqual(['Isac → João R$ 25,00']);
   });
 
   it('o acerto muda de "Valores a pagar" para "Valores pagos" depois do comprovante enviado', async () => {
@@ -1726,7 +1724,7 @@ describe('Payments - abas de valores a pagar e pagos', () => {
     expect(screen.getByText('Nenhum valor a pagar neste ciclo.')).toBeInTheDocument();
 
     await user.click(tabNamed(/Valores pagos/));
-    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria']);
+    expect(shownSettlements()).toEqual(['Isac → Maria R$ 50,00']);
     expect(screen.getByRole('button', { name: 'Reenviar comprovante' })).toBeInTheDocument();
   });
 
@@ -1763,7 +1761,7 @@ describe('Payments - abas de valores a pagar e pagos', () => {
 
     await user.click(await screen.findByRole('tab', { name: /Valores pagos/ }));
     await user.click(screen.getByRole('button', { name: 'Ciclo anterior' }));
-    await waitFor(() => expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']));
+    await waitFor(() => expect(shownSettlements()).toEqual(['Isac → João R$ 25,00']));
 
     await sendProof(user, 'Reenviar comprovante');
 
@@ -1803,12 +1801,12 @@ describe('Payments - abas de valores a pagar e pagos', () => {
     await screen.findByRole('tab', { name: /Valores a pagar/ });
     expect(tabNamed(/Valores a pagar/)).toHaveTextContent('(1)');
     expect(tabNamed(/Valores pagos/)).toHaveTextContent('(1)');
-    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria']);
+    expect(shownSettlements()).toEqual(['Isac → Maria R$ 50,00']);
     expect(screen.getByText('Ciclo encerrado.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Pagar com Pix' })).not.toBeInTheDocument();
 
     await user.click(tabNamed(/Valores pagos/));
-    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 25,00 a João']);
+    expect(shownSettlements()).toEqual(['Isac → João R$ 25,00']);
     expect(screen.queryByRole('button', { name: 'Reenviar comprovante' })).not.toBeInTheDocument();
   });
 
@@ -1859,6 +1857,6 @@ describe('Payments - abas de valores a pagar e pagos', () => {
 
     expect(tabNamed(/Valores a pagar/)).toHaveTextContent('Valores a pagar (2)');
     expect(tabNamed(/Valores pagos/)).toHaveTextContent('Valores pagos (1)');
-    expect(shownSettlements()).toEqual(['Isac deve pagar R$ 50,00 a Maria', 'João deve pagar R$ 20,00 a Maria']);
+    expect(shownSettlements()).toEqual(['Isac → Maria R$ 50,00', 'João → Maria R$ 20,00']);
   });
 });
