@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\GroupMemberResponsible;
+use App\Models\Notification;
 use App\Models\SettlementConfirmation;
 use App\Models\SettlementProofEntry;
 use App\Models\User;
@@ -12,6 +13,7 @@ use App\Services\CycleSealingService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use RuntimeException;
@@ -26,7 +28,7 @@ use Tests\TestCase;
  * plan §5, TASK-626, D3-B, D7-B, D9-A e D10-A): quem paga pelo devedor adiciona uma justificativa com foto
  * sobre o comprovante que o **próprio devedor** enviou. A entrada vai para o histórico; a linha atual, o
  * estado, `countsForSettlement` e o selo **não mudam** (R3), e vale também com o ciclo encerrado (a exceção
- * à R9). Os avisos são da TASK-627.
+ * à R9). Os avisos (TASK-627, plan §5 e R10/R12) estão na seção "os avisos", no fim.
  */
 class SettlementComplementTest extends TestCase
 {
@@ -416,5 +418,122 @@ class SettlementComplementTest extends TestCase
         SettlementProofEntry::flushEventListeners();
         $this->assertSame(0, $this->entries($w['group'])->count());
         $this->assertSame([$w['proof']->proof_path], $this->files($w['group']), 'o arquivo novo foi apagado e o atual segue');
+    }
+
+    // --- os avisos (TASK-627) ---------------------------------------------
+
+    /** @return \Illuminate\Database\Eloquent\Builder<Notification> */
+    private function notices()
+    {
+        return Notification::where('type', 'settlement_complement_added');
+    }
+
+    public function test_it_notifies_the_creditor_and_the_debtor_and_nobody_else(): void
+    {
+        $w = $this->world();
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertCreated();
+
+        foreach ([$w['creditor'], $w['debtor']] as $recipient) {
+            $notice = $this->notices()->where('user_id', $recipient->id)->first();
+            $this->assertNotNull($notice, 'avisa '.$recipient->name);
+            $this->assertSame($w['group']->id, (int) $notice->group_id);
+            $this->assertSame($w['responsible']->name, $notice->data['actorName'], 'quem adicionou');
+            $this->assertSame($w['debtor']->name, $notice->data['debtorName'], 'de quem é o acerto');
+            $this->assertSame('100.00', $notice->data['amount']);
+            $this->assertSame('agosto/2026', $notice->data['cycleLabel']);
+            $this->assertSame($w['group']->id, $notice->data['groupId']);
+            $this->assertSame('Casa', $notice->data['groupName']);
+        }
+        $this->assertSame(2, $this->notices()->count(), 'só o credor e o devedor');
+        $this->assertSame(
+            0,
+            $this->notices()->whereIn('user_id', [$w['responsible']->id, $w['creator']->id])->count(),
+            'nem o autor, nem o criador do grupo'
+        );
+    }
+
+    public function test_the_notice_carries_no_justification_and_no_other_data(): void
+    {
+        $w = $this->world();
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'], ['justificativa' => 'TEXTO-SO-DO-HISTORICO'])->assertCreated();
+
+        foreach ($this->notices()->get() as $notice) {
+            $this->assertEqualsCanonicalizing(
+                ['actorName', 'debtorName', 'groupId', 'groupName', 'amount', 'cycleLabel'],
+                array_keys($notice->data)
+            );
+            $this->assertStringNotContainsString('TEXTO-SO-DO-HISTORICO', json_encode($notice->data));
+        }
+        $this->assertSame(2, $this->notices()->count());
+    }
+
+    public function test_the_notice_names_the_cycle_of_the_proof_and_not_the_current_month(): void
+    {
+        $w = $this->world();
+        Carbon::setTestNow('2026-09-20');
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'], ['cycles_ago' => '1'])->assertCreated();
+
+        $this->assertSame(2, $this->notices()->count());
+        foreach ($this->notices()->get() as $notice) {
+            $this->assertSame('agosto/2026', $notice->data['cycleLabel'], 'o ciclo do comprovante, com o "hoje" em setembro');
+        }
+    }
+
+    public function test_a_second_complement_notifies_again(): void
+    {
+        $w = $this->world();
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertCreated();
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'], ['justificativa' => 'segunda justificativa'])->assertCreated();
+
+        $this->assertSame(4, $this->notices()->count(), 'cada complemento é um fato novo: dois avisos por vez');
+    }
+
+    public function test_a_notifier_failure_is_logged_and_the_complement_still_succeeds(): void
+    {
+        Log::spy();
+        $w = $this->world();
+        Notification::creating(function () {
+            throw new RuntimeException('falha simulada ao gravar a notificação');
+        });
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])
+            ->assertCreated()
+            ->assertExactJson(['message' => 'Justificativa e comprovante enviados.']);
+
+        Notification::flushEventListeners();
+        $this->assertSame(1, $this->entries($w['group'])->count(), 'a entrada ficou gravada');
+        $this->assertSame(0, $this->notices()->count());
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn ($message, $context = []) => ($context['type'] ?? null) === 'settlement_complement_added')
+            ->once();
+    }
+
+    public function test_no_notice_goes_out_when_the_complement_is_refused(): void
+    {
+        $w = $this->world();
+        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 10);
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertStatus(422);
+        $this->complement($w['debtor'], $w['group'], $w['debtor'], $w['creditor'])->assertForbidden();
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'], ['justificativa' => ''])->assertStatus(422);
+
+        $this->assertSame(0, $this->notices()->count());
+    }
+
+    public function test_no_notice_goes_out_when_the_entry_is_not_saved(): void
+    {
+        $w = $this->world();
+        SettlementProofEntry::creating(function () {
+            throw new RuntimeException('falha simulada ao gravar a entrada');
+        });
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertStatus(500);
+
+        SettlementProofEntry::flushEventListeners();
+        $this->assertSame(0, $this->notices()->count(), 'ninguém é avisado de um complemento que não existiu');
     }
 }

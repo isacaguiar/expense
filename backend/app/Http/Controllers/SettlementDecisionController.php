@@ -152,7 +152,8 @@ class SettlementDecisionController extends Controller
      * grupo inexistente, excluído ou de quem não é membro; 422 de validação; **403** se quem chama não paga pelo
      * devedor (ou é o próprio devedor ou o credor: o devedor já substitui o dele e o credor nunca complementa),
      * antes de qualquer arquivo, linha ou consulta de ciclo; 422 de ciclo não fechado, de estado do comprovante e
-     * do teto, 404 sem comprovante, **todos antes de gravar o arquivo**; só então o arquivo e a entrada.
+     * do teto, 404 sem comprovante, **todos antes de gravar o arquivo**; só então o arquivo e a entrada. Depois
+     * da entrada gravada, o credor e o devedor são avisados (`settlement_complement_added`, sem a justificativa).
      */
     public function complement(Request $request, $groupId)
     {
@@ -188,7 +189,7 @@ class SettlementDecisionController extends Controller
         $path = ProofStorage::store($request->file('comprovante'), (int) $group->id);
 
         try {
-            $service->addComplement($group, $cycle, $debtorId, $creditorId, $callerId, $path, (string) $data['justificativa']);
+            $entry = $service->addComplement($group, $cycle, $debtorId, $creditorId, $callerId, $path, (string) $data['justificativa']);
         } catch (SettlementDecisionRefused $e) {
             // A corrida (outro pedido mudou o estado ou encheu o histórico entre a checagem e a trava).
             ProofStorage::delete($path);
@@ -200,6 +201,24 @@ class SettlementDecisionController extends Controller
 
             throw $e;
         }
+
+        // O credor e o devedor sabem do complemento; quem o adicionou, não (R12). O 403 já impede que quem
+        // chama seja um dos dois, mas a exclusão fica explícita para o aviso não depender dessa ordem. O
+        // `Notifier` é best effort: uma falha dele vira log e o complemento, já gravado, segue 201.
+        $recipients = collect([$creditorId, $debtorId])
+            ->reject(fn ($id) => $id === $callerId)
+            ->unique()
+            ->values()
+            ->all();
+
+        Notifier::settlementComplementAdded(
+            $group,
+            $recipients,
+            auth()->user()->name,
+            $entry->fromUser?->name,
+            $entry->amount,
+            $entry->cycle_start
+        );
 
         return response()->json(['message' => 'Justificativa e comprovante enviados.'], 201);
     }
