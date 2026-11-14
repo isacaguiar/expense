@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Quota;
 use App\Models\SettlementConfirmation;
+use App\Models\SettlementProofEntry;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -82,7 +83,10 @@ class ProofStorage
      * cadastro aponta várias quotas para o mesmo arquivo (feature
      * 20261027-pagamento-no-cadastro-despesa, R18): apagar pelo caminho, como
      * `delete` faz, deixaria as outras quotas sem o comprovante. Olha também o
-     * comprovante de acerto do devedor, para nunca apagar arquivo de outro fluxo.
+     * comprovante de acerto do devedor e o histórico dos comprovantes do acerto (um
+     * arquivo que só uma entrada de `ex_settlement_proof_entries` referencia não é
+     * órfão, R2; feature 20261114-historico-de-comprovantes-e-justificativa), para
+     * nunca apagar arquivo de outro fluxo.
      *
      * Chamar DEPOIS de o banco deixar de apontar para o arquivo, senão a própria
      * linha que está sendo atualizada ainda o referencia.
@@ -94,7 +98,8 @@ class ProofStorage
         }
 
         if (Quota::where('payment_proof_path', $path)->exists()
-            || SettlementConfirmation::where('proof_path', $path)->exists()) {
+            || SettlementConfirmation::where('proof_path', $path)->exists()
+            || SettlementProofEntry::where('proof_path', $path)->exists()) {
             return;
         }
 
