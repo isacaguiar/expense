@@ -31,10 +31,10 @@ export default function LoginPageFooter() {
         <Typography variant="caption" color="text.secondary">
           © 2026 Shared Expense. Todos os direitos reservados.
         </Typography>
-        <Link href="#" variant="caption" color="text.secondary" underline="hover">
+        <Link href="/termos.php" target="_blank" rel="noopener" variant="caption" color="text.secondary" underline="hover">
           Termos de uso
         </Link>
-        <Link href="#" variant="caption" color="text.secondary" underline="hover">
+        <Link href="/privacidade.php" target="_blank" rel="noopener" variant="caption" color="text.secondary" underline="hover">
           Política de privacidade
         </Link>
       </Box>

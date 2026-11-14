@@ -83,7 +83,7 @@ export default function RegisterFormCard({
         Crie sua conta
       </Typography>
       <Typography sx={{ fontSize: '0.85rem', color: 'text.secondary', mt: 0.5 }} textAlign="center">
-        Leva menos de um minuto. Confirmamos seu e-mail por um código.
+        Cadastro por e-mail, sem cartão. Você receberá um código de confirmação.
       </Typography>
 
       <Box component="form" onSubmit={onSubmit} noValidate sx={{ mt: 3, width: '100%' }}>

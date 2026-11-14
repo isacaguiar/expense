@@ -5,8 +5,10 @@ declare(strict_types=1);
 require __DIR__ . '/../src/helpers.php';
 $config = require __DIR__ . '/../src/config.php';
 
-$pageTitle = $config['brand_name'] . ' — ' . $config['tagline'];
+$pageTitle = 'Dividir despesas em grupo | ' . $config['brand_name'];
+$pageDescription = 'Divida despesas de viagens, da casa ou da república. Escolha quem participa de cada gasto, veja quem deve a quem e acerte as contas via Pix.';
 $pagePath = '/';
+$bodyClass = 'home-page';
 
 $featureCards = [
     // O texto anterior ("Grupos ilimitados") contradizia
@@ -14,16 +16,16 @@ $featureCards = [
     // não ser escrito solto aqui.
     ['icon' => 'users', 'title' => sprintf('Até %d grupos, de graça', $config['free_groups_limit']), 'text' => 'Crie um grupo para cada contexto — a casa, a viagem, a turma — e participe de quantos você for convidado.'],
     ['icon' => 'layers', 'title' => 'Despesas fixas e variáveis', 'text' => 'Cadastre contas mensais ou despesas eventuais em poucos segundos.'],
-    ['icon' => 'calculator', 'title' => 'Divisão automática', 'text' => 'O sistema divide os valores igualmente entre os membros e calcula tudo para você.'],
+    ['icon' => 'calculator', 'title' => 'Divisão automática', 'text' => 'Escolha quem participa de cada despesa. O valor é dividido igualmente entre essas pessoas.'],
     ['icon' => 'dollar', 'title' => 'Saldos e pagamentos', 'text' => 'Veja quem pagou, quem deve e quem precisa receber de forma clara.'],
     ['icon' => 'bar-chart', 'title' => 'Relatórios inteligentes', 'text' => 'Acompanhe o histórico e tenha relatórios simples e completos.'],
-    ['icon' => 'shield', 'title' => 'Seguro e privado', 'text' => 'Seus dados são protegidos com segurança de ponta e privacidade garantida.'],
+    ['icon' => 'smartphone', 'title' => 'Acerto via Pix', 'text' => 'Use o QR Code ou Pix Copia e Cola. A transferência acontece direto entre os participantes.'],
 ];
 
 $steps = [
     ['number' => 1, 'title' => 'Crie seu grupo', 'text' => 'Cadastre um grupo e convide as pessoas que vão compartilhar as despesas.', 'illustration' => 'user-plus'],
-    ['number' => 2, 'title' => 'Adicione despesas', 'text' => 'Informe as despesas fixas ou variáveis e quem foi o responsável pelo pagamento.', 'illustration' => 'file-plus'],
-    ['number' => 3, 'title' => 'Divisão e acompanhamento', 'text' => 'O sistema divide igualmente os valores e mostra quem deve, quem recebe e o saldo de cada um.', 'illustration' => 'smartphone'],
+    ['number' => 2, 'title' => 'Adicione despesas', 'text' => 'Registre quem pagou e escolha quem participa da divisão de cada gasto.', 'illustration' => 'file-plus'],
+    ['number' => 3, 'title' => 'Acerte as contas', 'text' => 'Veja quem deve, quanto e para quem. Se quiser, faça a transferência via Pix pelo seu banco.', 'illustration' => 'smartphone'],
 ];
 
 require __DIR__ . '/../src/templates/header.php';
@@ -33,62 +35,42 @@ require __DIR__ . '/../src/templates/nav.php';
   <section class="hero">
     <div class="hero-inner">
       <div class="hero-copy">
-        <h1>Despesas compartilhadas,<span class="accent">contas em dia.</span></h1>
-        <p class="hero-lede"><?= e($config['description']) ?></p>
-
-        <div class="hero-highlights" id="recursos">
-          <div class="highlight">
-            <span class="icon-box"><?= icon('users') ?></span>
-            <div>
-              <h3>Grupos</h3>
-              <p>Crie grupos e convide amigos ou familiares.</p>
-            </div>
-          </div>
-          <div class="highlight">
-            <span class="icon-box"><?= icon('list') ?></span>
-            <div>
-              <h3>Despesas</h3>
-              <p>Cadastre despesas fixas ou variáveis facilmente.</p>
-            </div>
-          </div>
-          <div class="highlight">
-            <span class="icon-box"><?= icon('pie-chart') ?></span>
-            <div>
-              <h3>Divisão igualitária</h3>
-              <p>Divida os valores de forma automática.</p>
-            </div>
-          </div>
-        </div>
+        <h1>Divida despesas em grupo <span class="accent">e saiba quem deve a quem</span></h1>
+        <p class="hero-lede">Registre quem pagou cada conta, escolha quem entra na divisão e veja quanto cada pessoa precisa pagar ou receber. Para viagens, contas da casa e repúblicas.</p>
 
         <div class="hero-ctas">
           <a class="btn btn-primary" href="<?= e($config['app_signup_url']) ?>">
-            Começar agora é grátis <?= icon('arrow-right') ?>
+            Criar conta grátis <?= icon('arrow-right') ?>
           </a>
-          <a class="btn btn-outline" href="#como-funciona">
-            <?= icon('play') ?> Ver como funciona
-          </a>
+          <a class="btn btn-outline" href="#exemplo">Ver um exemplo</a>
         </div>
 
-        <p class="trust-line">
-          <?= icon('shield') ?> Seguro e confiável <span class="dot">&bull;</span> Seus dados protegidos
+        <p class="hero-plan">
+          Crie até <?= (int) $config['free_groups_limit'] ?> grupos grátis, sem cartão.<br />
+          Participe de quantos grupos for convidado.
         </p>
       </div>
 
-      <figure class="hero-preview">
-        <img
-          src="assets/app-home.png"
-          width="1349"
-          height="592"
-          loading="lazy"
-          decoding="async"
-          alt="Tela inicial do Shared Expense: resumo do grupo com total de despesas, valores pagos e a pagar, a lista de despesas do ciclo e os saldos por pessoa."
-        />
-      </figure>
+      <section class="settlement-example" id="exemplo" aria-labelledby="example-title" tabindex="-1">
+        <p class="example-label">Exemplo de divisão</p>
+        <h2 id="example-title">Fim de semana com amigos</h2>
+        <p>Três pessoas dividiram os gastos da viagem igualmente.</p>
+        <dl class="example-expenses">
+          <div><dt>Ana pagou a hospedagem</dt><dd>R$ 600</dd></div>
+          <div><dt>Bruno pagou as compras</dt><dd>R$ 300</dd></div>
+          <div><dt>Carla não adiantou nada</dt><dd>R$ 0</dd></div>
+        </dl>
+        <p class="example-total"><strong>R$ 900</strong> no total · <strong>R$ 300</strong> por pessoa</p>
+        <div class="example-result">
+          <p><strong>Carla transfere R$ 300 para Ana.</strong></p>
+          <p>Bruno já pagou a parte dele. O acerto pode ser feito via Pix.</p>
+        </div>
+      </section>
     </div>
   </section>
 
   <section class="section" id="beneficios">
-    <div class="container">
+    <div class="container" id="recursos">
       <h2 class="section-title">Tudo o que você precisa para <span class="accent">organizar as despesas</span></h2>
       <div class="feature-grid">
         <?php foreach ($featureCards as $card) : ?>
@@ -121,6 +103,22 @@ require __DIR__ . '/../src/templates/nav.php';
     </div>
   </section>
 
+  <section class="section" aria-labelledby="preview-title">
+    <div class="container">
+      <h2 class="section-title" id="preview-title">Veja como o grupo <span class="accent">acompanha as despesas</span></h2>
+      <figure class="product-preview">
+        <img
+          src="<?= e(asset('app-home.png')) ?>"
+          width="1349"
+          height="592"
+          loading="lazy"
+          decoding="async"
+          alt="Painel do Shared Expense com totais do ciclo, lista de despesas e saldos por pessoa."
+        />
+      </figure>
+    </div>
+  </section>
+
   <section class="cta-banner">
     <div class="container cta-banner-inner">
       <div class="cta-banner-heading">
@@ -136,12 +134,10 @@ require __DIR__ . '/../src/templates/nav.php';
         </a>
         <a class="btn btn-on-dark" href="/precos.php">Ver os planos</a>
       </div>
-      <?php /* "Sem cartão" e "Cancelamento fácil" pressupunham um plano pago que não
-               existe. Os selos abaixo afirmam só o que a página de Preços sustenta. */ ?>
       <div class="cta-banner-badges">
         <span><?= icon('check-circle') ?> Grátis para usar</span>
         <span><?= icon('check-circle') ?> Sem dados de pagamento</span>
-        <span><?= icon('check-circle') ?> Cadastro em 2 minutos</span>
+        <span><?= icon('check-circle') ?> Cadastro por e-mail</span>
       </div>
     </div>
   </section>
