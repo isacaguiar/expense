@@ -130,7 +130,7 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
         };
     }
 
-    private function addEntries(array $s, int $count): void
+    private function addEntries(array $s, int $count, string $kind = SettlementProofEntry::KIND_REPLACED): void
     {
         for ($i = 0; $i < $count; $i++) {
             SettlementProofEntry::create([
@@ -138,7 +138,7 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
                 'cycle_start' => '2026-08-01',
                 'from_user_id' => $s['debtor']->id,
                 'to_user_id' => $s['creditor']->id,
-                'kind' => SettlementProofEntry::KIND_REPLACED,
+                'kind' => $kind,
                 'sent_by' => $s['debtor']->id,
                 'status_at_exit' => 'sent',
                 'amount' => 100,
@@ -186,7 +186,8 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
                 $s['group']->update(['deleted' => true]);
                 break;
             case 'full':
-                $this->addEntries($s, 10);
+                // O orçamento dos complementos (D13, TASK-638): só os complementos o enchem.
+                $this->addEntries($s, 10, SettlementProofEntry::KIND_COMPLEMENT);
                 break;
         }
 
@@ -266,7 +267,7 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
             'comprovante aceito' => ['accepted', 422],
             'par sem comprovante' => ['missing', 404],
             'ciclo sem comprovante (cycles_ago=1)' => ['other_cycle', 404],
-            'teto de 10 entradas (R8)' => ['full', 422],
+            'teto de 10 complementos (R8, D13)' => ['full', 422],
             'grupo excluído' => ['deleted_group', 404],
         ];
     }

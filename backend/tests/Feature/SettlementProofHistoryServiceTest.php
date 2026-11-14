@@ -137,6 +137,61 @@ class SettlementProofHistoryServiceTest extends TestCase
         $this->assertTrue($this->history->isFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id));
     }
 
+    // --- o orçamento próprio dos complementos (TASK-638, D13) ----------------
+
+    private function isComplementFull(): bool
+    {
+        return $this->history->isComplementFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id);
+    }
+
+    public function test_the_complement_limit_is_ten_per_pair_and_cycle(): void
+    {
+        $this->assertSame(10, SettlementProofHistoryService::MAX_COMPLEMENTS);
+    }
+
+    public function test_the_complement_budget_is_not_full_with_nine_and_is_full_with_ten(): void
+    {
+        $complement = ['kind' => SettlementProofEntry::KIND_COMPLEMENT, 'status_at_exit' => null];
+
+        $this->assertFalse($this->isComplementFull(), 'sem entradas');
+
+        $this->addEntries(9, $complement);
+        $this->assertFalse($this->isComplementFull(), 'com 9 ainda cabe um');
+
+        $this->addEntries(1, $complement);
+        $this->assertTrue($this->isComplementFull(), 'com 10 encheu');
+    }
+
+    public function test_only_complements_count_for_the_complement_budget(): void
+    {
+        $this->addEntries(10, ['kind' => SettlementProofEntry::KIND_REPLACED]);
+        $this->addEntries(3, ['kind' => SettlementProofEntry::KIND_WITHDRAWN]);
+
+        $this->assertFalse($this->isComplementFull(), 'o orçamento de quem envia cheio não gasta o dos complementos');
+    }
+
+    public function test_complements_of_other_pairs_cycles_and_groups_do_not_count_for_the_complement_budget(): void
+    {
+        $other = User::factory()->create();
+        $otherGroup = Group::create(['name' => 'Outro grupo']);
+        $complement = ['kind' => SettlementProofEntry::KIND_COMPLEMENT, 'status_at_exit' => null];
+
+        $this->addEntries(10, $complement + ['cycle_start' => '2026-07-01']);
+        $this->addEntries(10, $complement + ['from_user_id' => $this->responsible->id]);
+        $this->addEntries(10, $complement + ['to_user_id' => $other->id]);
+        $this->addEntries(10, $complement + ['group_id' => $otherGroup->id]);
+
+        $this->assertFalse($this->isComplementFull());
+    }
+
+    public function test_the_complement_budget_accepts_a_carbon_or_a_date_string(): void
+    {
+        $this->addEntries(10, ['kind' => SettlementProofEntry::KIND_COMPLEMENT, 'status_at_exit' => null]);
+
+        $this->assertTrue($this->history->isComplementFull($this->group->id, Carbon::parse(self::CYCLE), $this->debtor->id, $this->creditor->id));
+        $this->assertTrue($this->history->isComplementFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id));
+    }
+
     // --- arquivar ----------------------------------------------------------
 
     /** @return array<string, array{0: array<string, mixed>, 1: string, 2: string, 3: string}> */

@@ -7,6 +7,7 @@ use App\Models\SettlementProofEntry;
 use App\Support\ProofStorage;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
+use Illuminate\Database\Eloquent\Builder;
 use InvalidArgumentException;
 use LogicException;
 
@@ -23,10 +24,19 @@ class SettlementProofHistoryService
 {
     /**
      * Teto de entradas por par e ciclo (D5): cada arquivo pode ter 5 MB e a produção é um host
-     * compartilhado. Vale para toda ação que **grava arquivo novo** (enviar, reenviar e complementar);
-     * retirar não grava arquivo e por isso não é barrado (plan, ajuste 1).
+     * compartilhado. Vale para as ações de quem envia o comprovante que **gravam arquivo novo** (enviar e
+     * reenviar); retirar não grava arquivo e por isso não é barrado (plan, ajuste 1). O complemento **não**
+     * divide este teto: tem o dele, `MAX_COMPLEMENTS` (plan, ajuste 10).
      */
     public const MAX_ENTRIES = 10;
+
+    /**
+     * Teto de **complementos** por par e ciclo (D13, achado A1 da revisão de segurança da TASK-628): o
+     * complemento tem orçamento próprio e não divide o de `MAX_ENTRIES` com quem envia o comprovante. Quem se
+     * declara pagador do devedor só gasta este, então não tranca o devedor que precisa corrigir o próprio
+     * comprovante.
+     */
+    public const MAX_COMPLEMENTS = 10;
 
     /**
      * O par já guardou o máximo de entradas neste ciclo? Conta pelo índice do par; entradas de outro par,
@@ -34,13 +44,33 @@ class SettlementProofHistoryService
      */
     public function isFull(int $groupId, CarbonInterface|string $cycleStart, int $fromUserId, int $toUserId): bool
     {
+        return $this->pairEntries($groupId, $cycleStart, $fromUserId, $toUserId)->count() >= self::MAX_ENTRIES;
+    }
+
+    /**
+     * O par já tem o máximo de **complementos** neste ciclo (`MAX_COMPLEMENTS`)? Conta só as entradas
+     * `complement`, do par e do ciclo; as de `replaced` e `withdrawn` não entram (D13).
+     */
+    public function isComplementFull(int $groupId, CarbonInterface|string $cycleStart, int $fromUserId, int $toUserId): bool
+    {
+        return $this->pairEntries($groupId, $cycleStart, $fromUserId, $toUserId)
+            ->where('kind', SettlementProofEntry::KIND_COMPLEMENT)
+            ->count() >= self::MAX_COMPLEMENTS;
+    }
+
+    /**
+     * As entradas do par neste ciclo, pelo índice `settlement_proof_entries_pair_index`.
+     *
+     * @return Builder<SettlementProofEntry>
+     */
+    private function pairEntries(int $groupId, CarbonInterface|string $cycleStart, int $fromUserId, int $toUserId): Builder
+    {
         $cycle = $cycleStart instanceof CarbonInterface ? $cycleStart->toDateString() : $cycleStart;
 
         return SettlementProofEntry::where('group_id', $groupId)
             ->where('cycle_start', $cycle)
             ->where('from_user_id', $fromUserId)
-            ->where('to_user_id', $toUserId)
-            ->count() >= self::MAX_ENTRIES;
+            ->where('to_user_id', $toUserId);
     }
 
     /**

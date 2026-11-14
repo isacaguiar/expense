@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Exceptions\SettlementDecisionRefused;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\GroupMemberResponsible;
@@ -10,6 +11,7 @@ use App\Models\SettlementConfirmation;
 use App\Models\SettlementProofEntry;
 use App\Models\User;
 use App\Services\CycleSealingService;
+use App\Services\SettlementConfirmationService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
@@ -38,7 +40,8 @@ class SettlementComplementTest extends TestCase
     use DatabaseTransactions;
     use FailsToWriteProofs;
 
-    private const LIMIT_MESSAGE = 'O limite de comprovantes guardados deste acerto foi atingido.';
+    // O orçamento próprio dos complementos (D13, TASK-638): a mensagem não é a do teto de quem envia.
+    private const LIMIT_MESSAGE = 'O limite de justificativas e comprovantes adicionados a este acerto foi atingido.';
 
     protected function tearDown(): void
     {
@@ -89,7 +92,7 @@ class SettlementComplementTest extends TestCase
         return Storage::disk('local')->allFiles("comprovantes/{$group->id}");
     }
 
-    private function addEntries(Group $group, User $debtor, User $creditor, int $count): void
+    private function addEntries(Group $group, User $debtor, User $creditor, int $count, string $kind = SettlementProofEntry::KIND_REPLACED): void
     {
         for ($i = 0; $i < $count; $i++) {
             SettlementProofEntry::create([
@@ -97,7 +100,7 @@ class SettlementComplementTest extends TestCase
                 'cycle_start' => '2026-08-01',
                 'from_user_id' => $debtor->id,
                 'to_user_id' => $creditor->id,
-                'kind' => SettlementProofEntry::KIND_REPLACED,
+                'kind' => $kind,
                 'sent_by' => $debtor->id,
                 'status_at_exit' => 'sent',
                 'amount' => 100,
@@ -379,29 +382,93 @@ class SettlementComplementTest extends TestCase
 
     // --- o teto ------------------------------------------------------------
 
-    public function test_with_ten_entries_it_is_refused_before_the_file_is_written(): void
+    // Editados na TASK-638 (D13, plan ajuste 10): antes enchiam o histórico com `replaced` e esperavam 422; o
+    // complemento agora tem orçamento próprio e só os próprios complementos o enchem.
+    public function test_with_ten_complements_it_is_refused_before_the_file_is_written(): void
     {
         $w = $this->world();
-        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 10);
+        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 10, SettlementProofEntry::KIND_COMPLEMENT);
         // Gravar o arquivo antes de checar o teto daria 500 em vez de 422.
         $this->failProofWrites();
         Storage::disk('local')->put($w['proof']->proof_path, 'comprovante anterior');
+        $before = $w['proof']->fresh()->getAttributes();
 
         $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])
             ->assertStatus(422)
             ->assertJson(['error' => self::LIMIT_MESSAGE]);
 
         $this->assertSame(10, $this->entries($w['group'])->count());
+        $this->assertSame([$w['proof']->proof_path], $this->files($w['group']), 'o disco não ganhou arquivo');
+        $this->assertSame($before, $w['proof']->fresh()->getAttributes(), 'a linha atual segue igual');
+        $this->assertSame(0, Notification::where('type', 'settlement_complement_added')->count(), 'nenhum aviso');
     }
 
-    public function test_nine_entries_still_leave_room_for_one_complement(): void
+    public function test_nine_complements_still_leave_room_for_one_more(): void
     {
         $w = $this->world();
-        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 9);
+        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 9, SettlementProofEntry::KIND_COMPLEMENT);
 
         $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertCreated();
 
-        $this->assertSame(10, $this->entries($w['group'])->count());
+        $this->assertSame(10, $this->entries($w['group'])->where('kind', SettlementProofEntry::KIND_COMPLEMENT)->count());
+    }
+
+    public function test_ten_replaced_and_withdrawn_entries_do_not_block_a_complement(): void
+    {
+        $w = $this->world();
+        // O orçamento de quem envia cheio (replaced + withdrawn) não gasta o dos complementos (D13).
+        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 7, SettlementProofEntry::KIND_REPLACED);
+        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 4, SettlementProofEntry::KIND_WITHDRAWN);
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertCreated();
+
+        $complement = $this->entries($w['group'])->where('kind', SettlementProofEntry::KIND_COMPLEMENT)->sole();
+        $this->assertSame($w['responsible']->id, (int) $complement->sent_by);
+        $this->assertSame(12, $this->entries($w['group'])->count());
+    }
+
+    public function test_the_service_checks_the_complement_budget_again_under_the_row_lock(): void
+    {
+        $w = $this->world();
+        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 10, SettlementProofEntry::KIND_COMPLEMENT);
+        $before = $w['proof']->fresh()->getAttributes();
+        $cycle = ['start' => Carbon::parse('2026-08-01'), 'end' => Carbon::parse('2026-08-31'), 'status' => 'closed'];
+
+        // A checagem do controller já passou (outro pedido encheu o orçamento depois dela): é a do service que vale.
+        try {
+            app(SettlementConfirmationService::class)->addComplement(
+                $w['group'], $cycle, $w['debtor']->id, $w['creditor']->id, $w['responsible']->id,
+                "comprovantes/{$w['group']->id}/novo.jpg", 'outra justificativa'
+            );
+            $this->fail('o service devia recusar o 11º complemento');
+        } catch (SettlementDecisionRefused $e) {
+            $this->assertSame(self::LIMIT_MESSAGE, $e->getMessage());
+        }
+
+        $this->assertSame(10, $this->entries($w['group'])->count(), 'nada foi gravado');
+        $this->assertSame($before, $w['proof']->fresh()->getAttributes(), 'a linha atual segue igual');
+    }
+
+    public function test_the_blocked_reason_and_message_of_the_complement_budget_are_its_own(): void
+    {
+        $w = $this->world();
+        $key = [
+            'group_id' => $w['group']->id,
+            'cycle_start' => '2026-08-01',
+            'from_user_id' => $w['debtor']->id,
+            'to_user_id' => $w['creditor']->id,
+        ];
+
+        $this->assertNull(SettlementConfirmationService::complementBlockedBy($key));
+
+        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 10, SettlementProofEntry::KIND_COMPLEMENT);
+
+        $this->assertSame(SettlementConfirmationService::BLOCKED_COMPLEMENT_FULL, SettlementConfirmationService::complementBlockedBy($key));
+        $this->assertSame(self::LIMIT_MESSAGE, SettlementConfirmationService::blockedMessage(SettlementConfirmationService::BLOCKED_COMPLEMENT_FULL));
+        $this->assertNotSame(
+            SettlementConfirmationService::blockedMessage(SettlementConfirmationService::BLOCKED_HISTORY_FULL),
+            SettlementConfirmationService::blockedMessage(SettlementConfirmationService::BLOCKED_COMPLEMENT_FULL)
+        );
     }
 
     // --- atomicidade ------------------------------------------------------
@@ -515,7 +582,8 @@ class SettlementComplementTest extends TestCase
     public function test_no_notice_goes_out_when_the_complement_is_refused(): void
     {
         $w = $this->world();
-        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 10);
+        // Editado na TASK-638 (D13): o 422 vem do orçamento dos complementos, não mais do teto de quem envia.
+        $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 10, SettlementProofEntry::KIND_COMPLEMENT);
 
         $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertStatus(422);
         $this->complement($w['debtor'], $w['group'], $w['debtor'], $w['creditor'])->assertForbidden();

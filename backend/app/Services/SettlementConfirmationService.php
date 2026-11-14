@@ -26,6 +26,9 @@ class SettlementConfirmationService
     /** O histórico do par já tem o máximo de entradas no ciclo (D5): nenhum arquivo novo cabe. */
     public const BLOCKED_HISTORY_FULL = 'history_full';
 
+    /** O par já tem o máximo de complementos no ciclo (D13): o orçamento deles é próprio, não o de quem envia. */
+    public const BLOCKED_COMPLEMENT_FULL = 'complement_full';
+
     public function __construct(
         private CycleSealingService $sealing,
         private SettlementProofHistoryService $history
@@ -253,8 +256,9 @@ class SettlementConfirmationService
      * Antes de gravar o arquivo do **complemento** (feature 20261114-historico-de-comprovantes-e-justificativa,
      * plan §5, D3-B, D7-B, D9 e D10): confere, **sem travar a linha**, que o ciclo está fechado (o ciclo
      * **encerrado** também vale, a exceção à R9), que o par tem comprovante (404 se não) e que ele é o do próprio
-     * devedor, em estado `sent` (422 se está aguardando aceite, recusado ou aceito), e que o histórico ainda tem
-     * lugar (422 no teto). Quem chama a usa antes de `ProofStorage::store`; `addComplement` repete tudo sob a trava.
+     * devedor, em estado `sent` (422 se está aguardando aceite, recusado ou aceito), e que o **orçamento de
+     * complementos** do par ainda tem lugar (422 com 10 complementos; D13, o teto de quem envia não entra).
+     * Quem chama a usa antes de `ProofStorage::store`; `addComplement` repete tudo sob a trava.
      *
      * @return array{start: Carbon, end: Carbon, status: string}
      *
@@ -300,7 +304,8 @@ class SettlementConfirmationService
 
     /**
      * O complemento só vale sobre o comprovante **do próprio devedor** em estado `sent` (R9: o de responsável
-     * aguardando aceite, o recusado e o aceito não recebem complemento) e com lugar no histórico (R8).
+     * aguardando aceite, o recusado e o aceito não recebem complemento) e com lugar no **orçamento próprio dos
+     * complementos** (R8, D13).
      *
      * @throws SettlementDecisionRefused
      */
@@ -310,21 +315,41 @@ class SettlementConfirmationService
             throw new SettlementDecisionRefused('Só dá para complementar o comprovante que o próprio devedor enviou.');
         }
 
-        if (self::historyBlockedBy([
+        $blockedBy = self::complementBlockedBy([
             'group_id' => $confirmation->group_id,
             'cycle_start' => $confirmation->cycle_start->toDateString(),
             'from_user_id' => $confirmation->from_user_id,
             'to_user_id' => $confirmation->to_user_id,
-        ]) !== null) {
-            throw new SettlementDecisionRefused(self::blockedMessage(self::BLOCKED_HISTORY_FULL));
+        ]);
+
+        if ($blockedBy !== null) {
+            throw new SettlementDecisionRefused(self::blockedMessage($blockedBy));
         }
     }
 
     /**
+     * O par já tem o máximo de complementos neste ciclo (`SettlementProofHistoryService::MAX_COMPLEMENTS`)?
+     * É o orçamento **próprio** do complemento (D13): não conta as entradas de quem envia o comprovante
+     * (`historyBlockedBy`), e as dele não contam aqui. Mesmo formato de `$key` de `historyBlockedBy`.
+     *
+     * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
+     */
+    public static function complementBlockedBy(array $key): ?string
+    {
+        return app(SettlementProofHistoryService::class)->isComplementFull(
+            (int) $key['group_id'],
+            (string) $key['cycle_start'],
+            (int) $key['from_user_id'],
+            (int) $key['to_user_id']
+        ) ? self::BLOCKED_COMPLEMENT_FULL : null;
+    }
+
+    /**
      * O histórico do par já está cheio neste ciclo (`SettlementProofHistoryService::MAX_ENTRIES`)? O teto vale
-     * para **toda ação que grava arquivo novo** (enviar, reenviar e complementar; retirar não grava e fica de
-     * fora), então vale também para o primeiro envio. O controller usa o veredito antes de gravar o arquivo e
-     * `submitProof`, de novo, com a linha travada.
+     * para as ações de quem envia o comprovante que **gravam arquivo novo** (enviar e reenviar; retirar não
+     * grava e fica de fora), então vale também para o primeiro envio. O complemento tem o teto dele
+     * (`complementBlockedBy`, D13). O controller usa o veredito antes de gravar o arquivo e `submitProof`, de
+     * novo, com a linha travada.
      *
      * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
      */
@@ -359,6 +384,7 @@ class SettlementConfirmationService
         return match ($blockedBy) {
             self::BLOCKED_DEBTOR_PROOF => 'O devedor já enviou o comprovante deste acerto.',
             self::BLOCKED_HISTORY_FULL => 'O limite de comprovantes guardados deste acerto foi atingido.',
+            self::BLOCKED_COMPLEMENT_FULL => 'O limite de justificativas e comprovantes adicionados a este acerto foi atingido.',
             default => 'Este comprovante já foi aceito.',
         };
     }
