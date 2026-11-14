@@ -42,6 +42,41 @@ class SettlementConfirmationService
      */
     public function decidableCycle(Group $group, int $cyclesAgo): array
     {
+        [$cycle, $snapshot] = $this->closedCycleAndSnapshot($group, $cyclesAgo);
+
+        if ($snapshot && $snapshot->isSealed()) {
+            throw new SettlementDecisionRefused('Esta competência já foi encerrada.');
+        }
+
+        return $cycle;
+    }
+
+    /**
+     * O ciclo `cyclesAgo` ciclos atrás, se ele está **fechado** (por data ou por fechamento manual ainda
+     * vigente), **sem olhar o selo**: o ciclo encerrado também é fechado. É o que o complemento com justificativa
+     * usa (feature 20261114-historico-de-comprovantes-e-justificativa, plan §5, D7-B: a exceção à R9, porque o
+     * complemento só acrescenta ao histórico e não muda estado nem selo). `decidableCycle` parte daqui e
+     * acrescenta a checagem do selo, com as mesmas duas mensagens de antes.
+     *
+     * @return array{start: Carbon, end: Carbon, status: string}
+     *
+     * @throws SettlementDecisionRefused
+     */
+    public function closedCycle(Group $group, int $cyclesAgo): array
+    {
+        return $this->closedCycleAndSnapshot($group, $cyclesAgo)[0];
+    }
+
+    /**
+     * O ciclo fechado e o snapshot dele (se houver), numa leitura só, para `decidableCycle` conferir o selo
+     * sem uma segunda consulta.
+     *
+     * @return array{0: array{start: Carbon, end: Carbon, status: string}, 1: GroupCycleSnapshot|null}
+     *
+     * @throws SettlementDecisionRefused
+     */
+    private function closedCycleAndSnapshot(Group $group, int $cyclesAgo): array
+    {
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $cyclesAgo);
 
         $snapshot = GroupCycleSnapshot::where('group_id', $group->id)
@@ -55,11 +90,7 @@ class SettlementConfirmationService
             throw new SettlementDecisionRefused('O acerto só pode ser confirmado depois que a competência é fechada.');
         }
 
-        if ($snapshot && $snapshot->isSealed()) {
-            throw new SettlementDecisionRefused('Esta competência já foi encerrada.');
-        }
-
-        return $cycle;
+        return [$cycle, $snapshot];
     }
 
     /**
