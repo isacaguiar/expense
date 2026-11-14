@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\SettlementConfirmation;
 use App\Models\SettlementProofEntry;
+use App\Support\ProofStorage;
 use Carbon\CarbonInterface;
 use InvalidArgumentException;
 use LogicException;
@@ -39,6 +40,58 @@ class SettlementProofHistoryService
             ->where('from_user_id', $fromUserId)
             ->where('to_user_id', $toUserId)
             ->count() >= self::MAX_ENTRIES;
+    }
+
+    /**
+     * As entradas do histórico do ciclo que `$viewerId` pode ler (D8-A, R7), por par: chave `"{devedor}-{credor}"`,
+     * da entrada mais nova para a mais antiga. O credor e o devedor do par leem **todas** as dele; quem enviou
+     * uma entrada lê só as que enviou; os demais (outro responsável, terceiro, criador do grupo) não leem
+     * nenhuma. Uma consulta só para o ciclo, com o remetente carregado junto (sem N+1).
+     *
+     * @return array<string, list<SettlementProofEntry>>
+     */
+    public function forViewer(int $groupId, CarbonInterface|string $cycleStart, int $viewerId): array
+    {
+        $cycle = $cycleStart instanceof CarbonInterface ? $cycleStart->toDateString() : $cycleStart;
+
+        return SettlementProofEntry::with('sender:id,name')
+            ->where('group_id', $groupId)
+            ->where('cycle_start', $cycle)
+            ->orderByDesc('id')
+            ->get()
+            ->filter(fn (SettlementProofEntry $entry) => in_array($viewerId, [
+                (int) $entry->from_user_id,
+                (int) $entry->to_user_id,
+                (int) $entry->sent_by,
+            ], true))
+            ->groupBy(fn (SettlementProofEntry $entry) => "{$entry->from_user_id}-{$entry->to_user_id}")
+            ->map(fn ($entries) => $entries->values()->all())
+            ->all();
+    }
+
+    /**
+     * A entrada como o resumo a devolve (plan §6). `proofUrl` é a URL assinada de 30 minutos, **nula quando o
+     * arquivo não está mais no disco** (F9) e nunca emitida por este método a quem não é parte: quem chama só
+     * apresenta o que `forViewer` devolveu. `sentBy` é quem enviou o comprovante da entrada (nulo se a conta
+     * foi apagada), só `id` e `name`.
+     *
+     * @return array{id: int, kind: string, status: string|null, sentBy: array{id: int, name: string}|null, amount: float, note: string|null, refusalReason: string|null, sentAt: string|null, refusedAt: string|null, archivedAt: string|null, proofUrl: string|null}
+     */
+    public function present(SettlementProofEntry $entry): array
+    {
+        return [
+            'id' => $entry->id,
+            'kind' => $entry->kind,
+            'status' => $entry->status_at_exit,
+            'sentBy' => $entry->sender ? ['id' => $entry->sender->id, 'name' => $entry->sender->name] : null,
+            'amount' => $entry->amount,
+            'note' => $entry->note,
+            'refusalReason' => $entry->refusal_reason,
+            'sentAt' => $entry->sent_at?->toIso8601String(),
+            'refusedAt' => $entry->refused_at?->toIso8601String(),
+            'archivedAt' => $entry->created_at?->toIso8601String(),
+            'proofUrl' => ProofStorage::exists($entry->proof_path) ? $entry->proofUrl() : null,
+        ];
     }
 
     /**

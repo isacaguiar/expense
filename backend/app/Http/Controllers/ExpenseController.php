@@ -1022,7 +1022,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $this->withCanUndoPurchase($group, $summary['expenses']),
             'balances' => $summary['balances'],
-            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements']),
+            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements'], auth()->id()),
         ]);
     }
 
@@ -1211,7 +1211,7 @@ class ExpenseController extends Controller
             'totals' => $snapshot->totals,
             'expenses' => $snapshot->expenses,
             'balances' => $snapshot->balances,
-            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $snapshot->settlements),
+            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $snapshot->settlements, auth()->id()),
         ]);
     }
 
@@ -1254,7 +1254,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
-            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements']),
+            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements'], auth()->id()),
         ]);
     }
 

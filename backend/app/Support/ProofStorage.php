@@ -66,6 +66,20 @@ class ProofStorage
     }
 
     /**
+     * O arquivo existe no disco certo? Falso para path vazio. Usado só para decidir se o resumo oferece o link
+     * de um comprovante do histórico (feature 20261114-historico-de-comprovantes-e-justificativa, F9): sem o
+     * arquivo, a entrada aparece sem link em vez de um link que daria 404.
+     */
+    public static function exists(?string $path): bool
+    {
+        if (! $path) {
+            return false;
+        }
+
+        return Storage::disk(self::resolveDisk($path))->exists($path);
+    }
+
+    /**
      * Remove o arquivo do disco correto. Silencioso se o path é vazio ou o
      * arquivo já não existe.
      */

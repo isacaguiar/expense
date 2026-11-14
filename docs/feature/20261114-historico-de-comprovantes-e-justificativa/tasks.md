@@ -26,7 +26,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **150**, agrup
 | TASK-621 | Trocar a exclusão por retirada: arquivar a linha e manter o arquivo | backend | plan.md §4 | antes do merge (hard delete aprovado) | Concluída |
 | TASK-622 | Fazer `ProofStorage::deleteIfUnreferenced` tratar o histórico como referência | backend | plan.md §7 | nenhum | Concluída |
 | TASK-623 | Servir o arquivo do histórico pelo tipo `settlement_history` do download assinado | backend | plan.md §6 | antes do merge | Concluída |
-| TASK-624 | Expor `refusedProof` e `proofHistory` em `withConfirmations` só para as partes | backend | plan.md §6 | antes do merge | Pendente |
+| TASK-624 | Expor `refusedProof` e `proofHistory` em `withConfirmations` só para as partes | backend | plan.md §6 | antes do merge | Concluída |
 | TASK-625 | Extrair `closedCycle` de `decidableCycle`, sem mudar comportamento | backend | plan.md §5 | nenhum | Pendente |
 | TASK-626 | Criar `POST /groups/{id}/settlements/complement` (complemento com justificativa e foto) | backend | plan.md §5 | antes do merge | Pendente |
 | TASK-627 | Avisar o credor e o devedor do complemento (`settlement_complement_added`) | backend | plan.md §5 | nenhum | Pendente |
