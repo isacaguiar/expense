@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Link,
   Stack,
   Typography
 } from '@mui/material';
@@ -340,6 +341,29 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                 </Typography>
               )}
             </Box>
+
+            {refused && settlement.refusedProof && (settlement.refusedProof.reason || settlement.refusedProof.proofUrl) && (
+              // O motivo e o comprovante recusado só chegam às partes do acerto (o servidor não os manda aos
+              // outros). O motivo é texto puro (nunca HTML nem link) e quebra em qualquer ponto.
+              <Box mt={1} data-testid="refused-proof">
+                {settlement.refusedProof.reason && (
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ overflowWrap: 'anywhere' }}>
+                    {`Motivo: ${settlement.refusedProof.reason}`}
+                  </Typography>
+                )}
+                {settlement.refusedProof.proofUrl && (
+                  <Link
+                    href={settlement.refusedProof.proofUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="caption"
+                    underline="hover"
+                  >
+                    Ver comprovante recusado
+                  </Link>
+                )}
+              </Box>
+            )}
           </Card>
         );
       })}
