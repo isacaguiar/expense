@@ -39,7 +39,7 @@ import { useExpenseFilters } from '../hooks/useExpenseFilters';
 const DECISION_NOTICE: Record<SettlementDecisionAction, string> = {
   accept: 'Comprovante aceito.',
   refuse: 'Comprovante recusado.',
-  destroy: 'Comprovante excluído.'
+  destroy: 'Comprovante retirado.'
 };
 
 const formatMoney = (value: number): string =>

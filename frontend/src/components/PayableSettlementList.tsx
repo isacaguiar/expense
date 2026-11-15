@@ -95,7 +95,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   rowLayout = 'sentence'
 }) => {
   const route = rowLayout === 'route';
-  // O comprovante que a pessoa está prestes a excluir: a exclusão é definitiva e pede confirmação.
+  // O comprovante que a pessoa está prestes a retirar: sai do acerto (o arquivo fica no histórico) e pede confirmação.
   const [deleting, setDeleting] = useState<SummarySettlement | null>(null);
   // O comprovante que o credor está prestes a recusar: "Recusar" só abre o diálogo do motivo.
   const [refusing, setRefusing] = useState<SummarySettlement | null>(null);
@@ -309,7 +309,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
 
               {canDelete && (
                 <Button size="small" color="error" disabled={decisionBusy} onClick={() => setDeleting(settlement)}>
-                  Excluir
+                  Retirar comprovante
                 </Button>
               )}
 
@@ -355,10 +355,10 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
       />
 
       <Dialog open={deleting !== null} onClose={() => setDeleting(null)}>
-        <DialogTitle>Excluir comprovante?</DialogTitle>
+        <DialogTitle>Retirar comprovante?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {`O comprovante enviado por ${deleting?.confirmedBy?.name ?? 'quem enviou'} será excluído de vez e não poderá ser recuperado. Quem deve poderá enviar outro.`}
+            {`O comprovante enviado por ${deleting?.confirmedBy?.name ?? 'quem enviou'} sai do acerto e fica guardado no histórico. Quem deve poderá enviar outro.`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -370,7 +370,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
               setDeleting(null);
             }}
           >
-            Excluir
+            Retirar
           </Button>
         </DialogActions>
       </Dialog>

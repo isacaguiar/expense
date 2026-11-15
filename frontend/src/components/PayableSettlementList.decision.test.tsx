@@ -71,10 +71,10 @@ function renderList(state: State, viewer: Viewer, props: Partial<React.Component
 
 const button = (name: string) => screen.queryByRole('button', { name });
 const DECISION = ['Aceitar', 'Recusar'];
-const ALL_ACTIONS = ['Aceitar', 'Recusar', 'Excluir', 'Pagar com Pix', 'Enviar comprovante', 'Reenviar comprovante'];
+const ALL_ACTIONS = ['Aceitar', 'Recusar', 'Retirar comprovante', 'Pagar com Pix', 'Enviar comprovante', 'Reenviar comprovante'];
 
 describe('PayableSettlementList: o comprovante aguardando o aceite', () => {
-  it('the creditor sees "Aguardando seu aceite", who sent it, the proof link and Aceitar and Recusar, but not Excluir', () => {
+  it('the creditor sees "Aguardando seu aceite", who sent it, the proof link and Aceitar and Recusar, but not Retirar comprovante', () => {
     renderList('awaiting', 'creditor');
 
     expect(screen.getByText('Aguardando seu aceite')).toBeInTheDocument();
@@ -82,7 +82,7 @@ describe('PayableSettlementList: o comprovante aguardando o aceite', () => {
     expect(screen.getByRole('link', { name: 'Comprovante enviado' })).toHaveAttribute('href', 'http://x/p.jpg');
     expect(button('Aceitar')).toBeInTheDocument();
     expect(button('Recusar')).toBeInTheDocument();
-    expect(button('Excluir')).not.toBeInTheDocument();
+    expect(button('Retirar comprovante')).not.toBeInTheDocument();
     expect(screen.getByText('Deve pagar a você')).toBeInTheDocument();
     expect(screen.queryByText('Pagou a você')).not.toBeInTheDocument();
   });
@@ -99,10 +99,10 @@ describe('PayableSettlementList: o comprovante aguardando o aceite', () => {
     ['sender', true],
     ['otherPayer', false],
     ['third', false]
-  ] as const)('%s: Excluir is %s (only the debtor and who sent it can delete)', (viewer, canDelete) => {
+  ] as const)('%s: Retirar comprovante is %s (only the debtor and who sent it can withdraw)', (viewer, canDelete) => {
     renderList('awaiting', viewer);
 
-    expect(Boolean(button('Excluir'))).toBe(canDelete);
+    expect(Boolean(button('Retirar comprovante'))).toBe(canDelete);
   });
 
   it('whoever can act on it still resends, as before', () => {
@@ -122,12 +122,12 @@ describe('PayableSettlementList: o comprovante recusado', () => {
     for (const name of ALL_ACTIONS) expect(button(name)).not.toBeInTheDocument();
   });
 
-  it.each(['debtor', 'sender'] as const)('%s sees "Recusado por Carlos", Enviar comprovante and Excluir', viewer => {
+  it.each(['debtor', 'sender'] as const)('%s sees "Recusado por Carlos", Enviar comprovante and Retirar comprovante', viewer => {
     renderList('refused', viewer);
 
     expect(screen.getByText('Recusado por Carlos')).toBeInTheDocument();
     expect(button('Enviar comprovante')).toBeInTheDocument();
-    expect(button('Excluir')).toBeInTheDocument();
+    expect(button('Retirar comprovante')).toBeInTheDocument();
     expect(button('Reenviar comprovante')).not.toBeInTheDocument();
     for (const name of DECISION) expect(button(name)).not.toBeInTheDocument();
   });
@@ -143,7 +143,7 @@ describe('PayableSettlementList: o comprovante recusado', () => {
     renderList('refused', 'otherPayer');
 
     expect(button('Enviar comprovante')).toBeInTheDocument();
-    expect(button('Excluir')).not.toBeInTheDocument();
+    expect(button('Retirar comprovante')).not.toBeInTheDocument();
   });
 });
 
@@ -160,7 +160,7 @@ describe('PayableSettlementList: o que não muda', () => {
   it('the debtor own proof (sent) looks as before: resend, no delete, no status chip', () => {
     renderList('sent', 'debtor');
     expect(button('Reenviar comprovante')).toBeInTheDocument();
-    expect(button('Excluir')).not.toBeInTheDocument();
+    expect(button('Retirar comprovante')).not.toBeInTheDocument();
     expect(screen.queryByText(/Aguardando|Aceito pelo|Recusado por/)).not.toBeInTheDocument();
   });
 
@@ -168,7 +168,7 @@ describe('PayableSettlementList: o que não muda', () => {
     renderList('none', 'debtor');
 
     expect(button('Enviar comprovante')).toBeInTheDocument();
-    expect(button('Excluir')).not.toBeInTheDocument();
+    expect(button('Retirar comprovante')).not.toBeInTheDocument();
     expect(screen.queryByText(/Aguardando|Aceito pelo|Recusado por/)).not.toBeInTheDocument();
   });
 
@@ -178,7 +178,7 @@ describe('PayableSettlementList: o que não muda', () => {
     expect(settlement.confirmationStatus).toBeUndefined();
     expect(screen.getByText('Pagou a você')).toBeInTheDocument();
     expect(screen.queryByText(/Aguardando|Aceito pelo|Recusado por/)).not.toBeInTheDocument();
-    for (const name of [...DECISION, 'Excluir']) expect(button(name)).not.toBeInTheDocument();
+    for (const name of [...DECISION, 'Retirar comprovante']) expect(button(name)).not.toBeInTheDocument();
   });
 });
 
@@ -216,20 +216,21 @@ describe('PayableSettlementList: ações e janela', () => {
     expect(onRefuse).toHaveBeenCalledWith(settlement, undefined);
   });
 
-  it('Excluir asks for confirmation first: cancelling sends nothing, confirming calls onDelete once', async () => {
+  it('Retirar comprovante asks for confirmation first: cancelling sends nothing, confirming calls onDelete once', async () => {
     const user = userEvent.setup();
     const { settlement, onDelete } = renderList('awaiting', 'debtor');
 
-    await user.click(button('Excluir')!);
-    const dialog = await screen.findByRole('dialog', { name: 'Excluir comprovante?' });
-    expect(within(dialog).getByText(/enviado por Maria será excluído de vez e não poderá ser recuperado/)).toBeInTheDocument();
+    await user.click(button('Retirar comprovante')!);
+    const dialog = await screen.findByRole('dialog', { name: 'Retirar comprovante?' });
+    expect(screen.queryByText(/Excluir|excluído/)).not.toBeInTheDocument();
+    expect(within(dialog).getByText(/enviado por Maria sai do acerto e fica guardado no histórico. Quem deve poderá enviar outro/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
     expect(onDelete).not.toHaveBeenCalled();
-    // O diálogo sai com uma transição: enquanto ela dura, o "Excluir" visível é o dele, não o do card.
+    // O diálogo sai com uma transição: enquanto ela dura, o "Retirar" visível é o dele, não o do card.
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 
-    await user.click(button('Excluir')!);
-    await user.click(within(await screen.findByRole('dialog', { name: 'Excluir comprovante?' })).getByRole('button', { name: 'Excluir' }));
+    await user.click(button('Retirar comprovante')!);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Retirar comprovante?' })).getByRole('button', { name: 'Retirar' }));
 
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith(settlement);
@@ -245,14 +246,14 @@ describe('PayableSettlementList: ações e janela', () => {
   it('the debtor cannot delete when the cycle is sealed', () => {
     renderList('awaiting', 'debtor', { canConfirm: false });
 
-    expect(button('Excluir')).not.toBeInTheDocument();
+    expect(button('Retirar comprovante')).not.toBeInTheDocument();
   });
 
   it('without the handlers (Painel) the creditor sees the state and no decision button', () => {
     renderList('awaiting', 'creditor', { onAccept: undefined, onRefuse: undefined, onDelete: undefined });
 
     expect(screen.getByText('Aguardando seu aceite')).toBeInTheDocument();
-    for (const name of [...DECISION, 'Excluir']) expect(button(name)).not.toBeInTheDocument();
+    for (const name of [...DECISION, 'Retirar comprovante']) expect(button(name)).not.toBeInTheDocument();
   });
 
   it('disables the decision buttons while a request is in flight', () => {
@@ -262,9 +263,9 @@ describe('PayableSettlementList: ações e janela', () => {
     expect(button('Recusar')).toBeDisabled();
   });
 
-  it('disables Excluir while a request is in flight', () => {
+  it('disables Retirar comprovante while a request is in flight', () => {
     renderList('refused', 'debtor', { decisionBusy: true });
 
-    expect(button('Excluir')).toBeDisabled();
+    expect(button('Retirar comprovante')).toBeDisabled();
   });
 });

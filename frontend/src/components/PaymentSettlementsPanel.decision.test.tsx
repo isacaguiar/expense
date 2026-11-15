@@ -92,8 +92,8 @@ describe('PaymentSettlementsPanel: aceitar, recusar e excluir', () => {
     const user = userEvent.setup();
     const { onDelete } = renderPanel('paid', { currentUserId: 10 });
 
-    await user.click(screen.getByRole('button', { name: 'Excluir' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Excluir comprovante?' });
+    await user.click(screen.getByRole('button', { name: 'Retirar comprovante' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Retirar comprovante?' });
     await user.click(dialog.querySelectorAll('button')[1]);
 
     expect(onDelete).toHaveBeenCalledWith(awaiting);

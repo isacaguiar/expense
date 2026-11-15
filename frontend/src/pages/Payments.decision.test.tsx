@@ -171,25 +171,25 @@ describe('Payments: aceitar, recusar e excluir o comprovante', () => {
     await openPaidTab(user);
     const loadsBefore = summaryLoads();
 
-    await user.click(await screen.findByRole('button', { name: 'Excluir' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Excluir comprovante?' });
+    await user.click(await screen.findByRole('button', { name: 'Retirar comprovante' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Retirar comprovante?' });
     expect(axios.delete).not.toHaveBeenCalled();
-    await user.click(within(dialog).getByRole('button', { name: 'Excluir' }));
+    await user.click(within(dialog).getByRole('button', { name: 'Retirar' }));
 
-    expect(await screen.findByText('Comprovante excluído.')).toBeInTheDocument();
+    expect(await screen.findByText('Comprovante retirado.')).toBeInTheDocument();
     const [url, config] = vi.mocked(axios.delete).mock.calls[0];
     expect(url).toMatch(/\/api\/groups\/1\/settlements\/confirmation$/);
     expect(config).toMatchObject({ params: { from_user_id: JOAO, to_user_id: MARIA, cycles_ago: 0 } });
     await waitFor(() => expect(summaryLoads()).toBeGreaterThan(loadsBefore));
   });
 
-  it('a refused settlement shows up under "Valores a pagar" with Enviar comprovante and Excluir', async () => {
+  it('a refused settlement shows up under "Valores a pagar" with Enviar comprovante and Retirar comprovante', async () => {
     mockApi(ME, [settlementIn('refused', JOAO, MARIA)]);
     renderPayments();
 
     expect(await screen.findByText('Recusado por Maria')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Enviar comprovante' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Excluir' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retirar comprovante' })).toBeInTheDocument();
   });
 
   it('shows the server message when the decision fails and enables the buttons again', async () => {
