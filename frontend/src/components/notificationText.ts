@@ -33,6 +33,9 @@ export function notificationText(type: string, data: NotificationData): string {
       return `${str(data.actorName)} agora paga por você no grupo "${str(data.groupName)}"`;
     case 'settlement_refused':
       return `${str(data.actorName)} recusou o comprovante de ${str(data.debtorName)} de ${brl(data.amount)}`;
+    case 'settlement_complement_added':
+      // A justificativa nunca vai no aviso (o backend não a manda): o texto só diz quem adicionou e de qual acerto.
+      return `${str(data.actorName)} adicionou uma justificativa e um comprovante ao acerto de ${str(data.debtorName)} de ${brl(data.amount)}`;
     case 'settlement_accepted':
       return `${str(data.actorName)} aceitou o comprovante de ${brl(data.amount)}`;
     case 'cycle_settled':
