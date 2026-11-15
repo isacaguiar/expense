@@ -183,7 +183,9 @@ describe('PayableSettlementList: o que não muda', () => {
 });
 
 describe('PayableSettlementList: ações e janela', () => {
-  it('Aceitar and Recusar call the handlers with the settlement', async () => {
+  // Editado na TASK-630 (feature 20261114-historico-de-comprovantes-e-justificativa): "Recusar" não chama mais o
+  // handler direto; abre o diálogo do motivo, e é o botão "Recusar" do diálogo que o chama, com o motivo.
+  it('Aceitar calls the handler; Recusar only opens the reason dialog and the dialog calls onRefuse with the reason', async () => {
     const user = userEvent.setup();
     const { settlement, onAccept, onRefuse } = renderList('awaiting', 'creditor');
 
@@ -191,7 +193,27 @@ describe('PayableSettlementList: ações e janela', () => {
     await user.click(button('Recusar')!);
 
     expect(onAccept).toHaveBeenCalledWith(settlement);
-    expect(onRefuse).toHaveBeenCalledWith(settlement);
+    expect(onRefuse).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('dialog', { name: 'Recusar comprovante?' });
+    await user.type(within(dialog).getByLabelText('Motivo (opcional)'), 'foto cortada');
+    await user.click(within(dialog).getByRole('button', { name: 'Recusar' }));
+
+    expect(onRefuse).toHaveBeenCalledTimes(1);
+    expect(onRefuse).toHaveBeenCalledWith(settlement, 'foto cortada');
+  });
+
+  it('cancelling the reason dialog refuses nothing, and an empty reason goes as undefined', async () => {
+    const user = userEvent.setup();
+    const { settlement, onRefuse } = renderList('awaiting', 'creditor');
+
+    await user.click(button('Recusar')!);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Recusar comprovante?' })).getByRole('button', { name: 'Cancelar' }));
+    expect(onRefuse).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(button('Recusar')!);
+    await user.click(within(await screen.findByRole('dialog', { name: 'Recusar comprovante?' })).getByRole('button', { name: 'Recusar' }));
+    expect(onRefuse).toHaveBeenCalledWith(settlement, undefined);
   });
 
   it('Excluir asks for confirmation first: cancelling sends nothing, confirming calls onDelete once', async () => {

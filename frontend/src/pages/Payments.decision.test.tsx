@@ -154,6 +154,9 @@ describe('Payments: aceitar, recusar e excluir o comprovante', () => {
     const loadsBefore = summaryLoads();
 
     await user.click(await screen.findByRole('button', { name: 'Recusar' }));
+    // Editado na TASK-630: "Recusar" abre o diálogo do motivo (nada é enviado antes de confirmar nele).
+    expect(axios.post).not.toHaveBeenCalled();
+    await user.click(within(await screen.findByRole('dialog', { name: 'Recusar comprovante?' })).getByRole('button', { name: 'Recusar' }));
 
     expect(await screen.findByText('Comprovante recusado.')).toBeInTheDocument();
     expect(vi.mocked(axios.post).mock.calls[0][0]).toMatch(/\/api\/groups\/1\/settlements\/refuse$/);

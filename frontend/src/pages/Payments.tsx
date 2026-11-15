@@ -412,7 +412,7 @@ const Payments: React.FC = () => {
                 onSendProof={openConfirmSettlementDialog}
                 payForUserIds={payForUserIds}
                 onAccept={settlement => decision.accept(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
-                onRefuse={settlement => decision.refuse(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
+                onRefuse={(settlement, reason) => decision.refuse(settlement.from_user_id, settlement.to_user_id, cyclesAgo, reason)}
                 onDelete={settlement => decision.destroy(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
                 decisionBusy={decision.busy}
               />

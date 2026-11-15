@@ -24,7 +24,7 @@ type PaymentSettlementsPanelProps = {
   // Aceitar, recusar e excluir o comprovante (feature 20261110-quem-paga-se-declara-e-credor-recusa):
   // repassados à lista, que decide quem os vê.
   onAccept?: (settlement: SummarySettlement) => void;
-  onRefuse?: (settlement: SummarySettlement) => void;
+  onRefuse?: (settlement: SummarySettlement, reason?: string) => void;
   onDelete?: (settlement: SummarySettlement) => void;
   decisionBusy?: boolean;
 };

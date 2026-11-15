@@ -18,6 +18,7 @@ import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CallReceivedOutlinedIcon from '@mui/icons-material/CallReceivedOutlined';
 import UserAvatar from './UserAvatar';
+import RefuseReasonDialog from './RefuseReasonDialog';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 import { isSettlementConfirmed } from '../utils/cycleOrdering';
 
@@ -44,7 +45,8 @@ type PayableSettlementListProps = {
   // 20261110-quem-paga-se-declara-e-credor-recusa, plan §11). Opcionais: sem eles (o Painel) a lista só
   // mostra o estado, sem botões de decisão.
   onAccept?: (settlement: SummarySettlement) => void;
-  onRefuse?: (settlement: SummarySettlement) => void;
+  // O motivo é opcional e vem do `RefuseReasonDialog`, que a lista abre ao clicar em "Recusar".
+  onRefuse?: (settlement: SummarySettlement, reason?: string) => void;
   onDelete?: (settlement: SummarySettlement) => void;
   // Uma decisão em andamento: desabilita os botões dela.
   decisionBusy?: boolean;
@@ -95,6 +97,8 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   const route = rowLayout === 'route';
   // O comprovante que a pessoa está prestes a excluir: a exclusão é definitiva e pede confirmação.
   const [deleting, setDeleting] = useState<SummarySettlement | null>(null);
+  // O comprovante que o credor está prestes a recusar: "Recusar" só abre o diálogo do motivo.
+  const [refusing, setRefusing] = useState<SummarySettlement | null>(null);
 
   const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
   const nameFor = (userId: number): string => nameById.get(userId) ?? 'Desconhecido';
@@ -296,7 +300,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                     variant="outlined"
                     color="error"
                     disabled={decisionBusy}
-                    onClick={() => onRefuse?.(settlement)}
+                    onClick={() => setRefusing(settlement)}
                   >
                     Recusar
                   </Button>
@@ -339,6 +343,16 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
           </Card>
         );
       })}
+
+      <RefuseReasonDialog
+        open={refusing !== null}
+        busy={decisionBusy}
+        onCancel={() => setRefusing(null)}
+        onConfirm={reason => {
+          if (refusing) onRefuse?.(refusing, reason);
+          setRefusing(null);
+        }}
+      />
 
       <Dialog open={deleting !== null} onClose={() => setDeleting(null)}>
         <DialogTitle>Excluir comprovante?</DialogTitle>
