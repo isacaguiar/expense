@@ -23,44 +23,38 @@ use LogicException;
 class SettlementProofHistoryService
 {
     /**
-     * Teto de entradas **de quem envia o comprovante** por par e ciclo (D5, D13): cada arquivo pode ter 5 MB e
-     * a produção é um host compartilhado. Conta só as entradas `replaced` (reenvio) e `withdrawn` (retirada),
-     * as que saem da linha atual, e vale para as ações que **gravam arquivo novo** (enviar e reenviar); retirar
-     * não grava arquivo e por isso não é barrado, mas **conta**, o que fecha o laço "enviar, retirar, enviar"
-     * (plan, ajuste 1). O complemento **não** divide este teto: tem o dele, `MAX_COMPLEMENTS` (plan, ajuste 10).
+     * Teto de entradas **de cada lado** do par por ciclo (D5, D14): cada arquivo pode ter 5 MB e a produção é
+     * um host compartilhado. Há dois orçamentos: o do **devedor** e o de **quem paga por ele** (os pagadores
+     * declarados, somados). Uma entrada é do devedor só se **ele agiu e o arquivo era dele** (`acted_by` e
+     * `sent_by` são o devedor); em qualquer outro caso é do lado dos pagadores, incluindo a retirada que o
+     * devedor faz do arquivo de um pagador (o arquivo é do pagador) e a conta apagada (campo nulo). O orçamento
+     * dos pagadores soma `replaced`, `withdrawn` e `complement`; o do devedor, só `replaced` e `withdrawn`. O
+     * teto vale para as ações que **gravam arquivo novo** (enviar, reenviar e complementar); retirar não grava
+     * e por isso não é barrado, mas **conta**, o que fecha o laço "enviar, retirar, enviar" (plan, ajuste 1),
+     * inclusive com dois cúmplices (um pagador que envia e o devedor que retira, achado do revisor da TASK-640).
+     * Nenhum pagador declarado gasta a vaga do devedor (achados A1 e A5).
      */
     public const MAX_ENTRIES = 10;
 
     /**
-     * Teto de **complementos** por par e ciclo (D13, achado A1 da revisão de segurança da TASK-628): o
-     * complemento tem orçamento próprio e não divide o de `MAX_ENTRIES` com quem envia o comprovante. Quem se
-     * declara pagador do devedor só gasta este, então não tranca o devedor que precisa corrigir o próprio
-     * comprovante.
+     * O orçamento de quem age (`$actorId`) já está gasto neste ciclo? Se quem age é o devedor
+     * (`$fromUserId`), conta as entradas que são **dele** (ele agiu e o arquivo era dele); se é qualquer outra
+     * pessoa (um pagador declarado), conta todas as demais. Os dois lados nunca se misturam. Entradas de outro
+     * par, de outro ciclo ou de outro grupo não entram.
      */
-    public const MAX_COMPLEMENTS = 10;
-
-    /**
-     * O orçamento **de quem envia** o comprovante (`MAX_ENTRIES`) já está gasto neste ciclo? Conta só as entradas
-     * `replaced` e `withdrawn` do par; os complementos **não** entram (D13: quem se declara pagador do devedor
-     * não pode trancar o devedor que corrige o próprio comprovante, achado A1) e têm o orçamento deles em
-     * `isComplementFull`. Entradas de outro par, de outro ciclo ou de outro grupo também não entram.
-     */
-    public function isFull(int $groupId, CarbonInterface|string $cycleStart, int $fromUserId, int $toUserId): bool
+    public function isFull(int $groupId, CarbonInterface|string $cycleStart, int $fromUserId, int $toUserId, int $actorId): bool
     {
-        return $this->pairEntries($groupId, $cycleStart, $fromUserId, $toUserId)
-            ->whereIn('kind', [SettlementProofEntry::KIND_REPLACED, SettlementProofEntry::KIND_WITHDRAWN])
-            ->count() >= self::MAX_ENTRIES;
-    }
+        $entries = $this->pairEntries($groupId, $cycleStart, $fromUserId, $toUserId);
 
-    /**
-     * O par já tem o máximo de **complementos** neste ciclo (`MAX_COMPLEMENTS`)? Conta só as entradas
-     * `complement`, do par e do ciclo; as de `replaced` e `withdrawn` não entram (D13).
-     */
-    public function isComplementFull(int $groupId, CarbonInterface|string $cycleStart, int $fromUserId, int $toUserId): bool
-    {
-        return $this->pairEntries($groupId, $cycleStart, $fromUserId, $toUserId)
-            ->where('kind', SettlementProofEntry::KIND_COMPLEMENT)
-            ->count() >= self::MAX_COMPLEMENTS;
+        if ($actorId === $fromUserId) {
+            $entries->where('acted_by', $fromUserId)->where('sent_by', $fromUserId);
+        } else {
+            $entries->where(fn (Builder $other) => $other
+                ->whereNull('acted_by')->orWhere('acted_by', '<>', $fromUserId)
+                ->orWhereNull('sent_by')->orWhere('sent_by', '<>', $fromUserId));
+        }
+
+        return $entries->count() >= self::MAX_ENTRIES;
     }
 
     /**
@@ -155,6 +149,7 @@ class SettlementProofHistoryService
             'to_user_id' => $row->to_user_id,
             'kind' => SettlementProofEntry::KIND_COMPLEMENT,
             'sent_by' => $authorId,
+            'acted_by' => $authorId,
             'status_at_exit' => null,
             'amount' => $row->amount,
             'proof_path' => $path,
@@ -178,7 +173,7 @@ class SettlementProofHistoryService
      * @throws LogicException se o comprovante está aceito
      * @throws InvalidArgumentException se `$kind` não é `replaced` nem `withdrawn`
      */
-    public function archive(SettlementConfirmation $row, string $kind): SettlementProofEntry
+    public function archive(SettlementConfirmation $row, string $kind, int $actorId): SettlementProofEntry
     {
         if (! in_array($kind, [SettlementProofEntry::KIND_REPLACED, SettlementProofEntry::KIND_WITHDRAWN], true)) {
             throw new InvalidArgumentException("O tipo \"{$kind}\" não é de um comprovante que sai de cena.");
@@ -197,6 +192,7 @@ class SettlementProofHistoryService
             'to_user_id' => $row->to_user_id,
             'kind' => $kind,
             'sent_by' => $row->confirmed_by ?? $row->from_user_id,
+            'acted_by' => $actorId,
             'status_at_exit' => $status,
             'amount' => $row->amount,
             'proof_path' => $row->proof_path,

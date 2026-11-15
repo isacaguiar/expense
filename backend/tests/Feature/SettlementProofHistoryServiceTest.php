@@ -83,6 +83,7 @@ class SettlementProofHistoryServiceTest extends TestCase
                 'to_user_id' => $this->creditor->id,
                 'kind' => SettlementProofEntry::KIND_REPLACED,
                 'sent_by' => $this->debtor->id,
+                'acted_by' => $this->debtor->id,
                 'status_at_exit' => 'sent',
                 'amount' => 10,
                 'proof_path' => "comprovantes/{$this->group->id}/e{$i}.jpg",
@@ -92,7 +93,7 @@ class SettlementProofHistoryServiceTest extends TestCase
 
     private function isFull(): bool
     {
-        return $this->history->isFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id);
+        return $this->history->isFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id, $this->debtor->id);
     }
 
     // --- o teto ------------------------------------------------------------
@@ -133,63 +134,8 @@ class SettlementProofHistoryServiceTest extends TestCase
     {
         $this->addEntries(10);
 
-        $this->assertTrue($this->history->isFull($this->group->id, Carbon::parse(self::CYCLE), $this->debtor->id, $this->creditor->id));
-        $this->assertTrue($this->history->isFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id));
-    }
-
-    // --- o orçamento próprio dos complementos (TASK-638, D13) ----------------
-
-    private function isComplementFull(): bool
-    {
-        return $this->history->isComplementFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id);
-    }
-
-    public function test_the_complement_limit_is_ten_per_pair_and_cycle(): void
-    {
-        $this->assertSame(10, SettlementProofHistoryService::MAX_COMPLEMENTS);
-    }
-
-    public function test_the_complement_budget_is_not_full_with_nine_and_is_full_with_ten(): void
-    {
-        $complement = ['kind' => SettlementProofEntry::KIND_COMPLEMENT, 'status_at_exit' => null];
-
-        $this->assertFalse($this->isComplementFull(), 'sem entradas');
-
-        $this->addEntries(9, $complement);
-        $this->assertFalse($this->isComplementFull(), 'com 9 ainda cabe um');
-
-        $this->addEntries(1, $complement);
-        $this->assertTrue($this->isComplementFull(), 'com 10 encheu');
-    }
-
-    public function test_only_complements_count_for_the_complement_budget(): void
-    {
-        $this->addEntries(10, ['kind' => SettlementProofEntry::KIND_REPLACED]);
-        $this->addEntries(3, ['kind' => SettlementProofEntry::KIND_WITHDRAWN]);
-
-        $this->assertFalse($this->isComplementFull(), 'o orçamento de quem envia cheio não gasta o dos complementos');
-    }
-
-    public function test_complements_of_other_pairs_cycles_and_groups_do_not_count_for_the_complement_budget(): void
-    {
-        $other = User::factory()->create();
-        $otherGroup = Group::create(['name' => 'Outro grupo']);
-        $complement = ['kind' => SettlementProofEntry::KIND_COMPLEMENT, 'status_at_exit' => null];
-
-        $this->addEntries(10, $complement + ['cycle_start' => '2026-07-01']);
-        $this->addEntries(10, $complement + ['from_user_id' => $this->responsible->id]);
-        $this->addEntries(10, $complement + ['to_user_id' => $other->id]);
-        $this->addEntries(10, $complement + ['group_id' => $otherGroup->id]);
-
-        $this->assertFalse($this->isComplementFull());
-    }
-
-    public function test_the_complement_budget_accepts_a_carbon_or_a_date_string(): void
-    {
-        $this->addEntries(10, ['kind' => SettlementProofEntry::KIND_COMPLEMENT, 'status_at_exit' => null]);
-
-        $this->assertTrue($this->history->isComplementFull($this->group->id, Carbon::parse(self::CYCLE), $this->debtor->id, $this->creditor->id));
-        $this->assertTrue($this->history->isComplementFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id));
+        $this->assertTrue($this->history->isFull($this->group->id, Carbon::parse(self::CYCLE), $this->debtor->id, $this->creditor->id, $this->debtor->id));
+        $this->assertTrue($this->history->isFull($this->group->id, self::CYCLE, $this->debtor->id, $this->creditor->id, $this->debtor->id));
     }
 
     // --- arquivar ----------------------------------------------------------
@@ -225,7 +171,7 @@ class SettlementProofHistoryServiceTest extends TestCase
         };
         $row = $this->liveRow($attributes);
 
-        $entry = $this->history->archive($row, $kind);
+        $entry = $this->history->archive($row, $kind, $this->debtor->id);
 
         $entry = $entry->fresh();
         $this->assertSame($kind, $entry->kind);
@@ -249,7 +195,7 @@ class SettlementProofHistoryServiceTest extends TestCase
         $row = $this->liveRow(['confirmed_by' => $this->responsible->id, 'accepted_at' => '2026-08-21 09:00:00']);
 
         try {
-            $this->history->archive($row, SettlementProofEntry::KIND_REPLACED);
+            $this->history->archive($row, SettlementProofEntry::KIND_REPLACED, $this->debtor->id);
             $this->fail('R4: o comprovante aceito é definitivo e não vai ao histórico');
         } catch (LogicException) {
             // esperado
@@ -264,7 +210,7 @@ class SettlementProofHistoryServiceTest extends TestCase
 
         foreach (['complement', 'qualquer'] as $kind) {
             try {
-                $this->history->archive($row, $kind);
+                $this->history->archive($row, $kind, $this->debtor->id);
                 $this->fail("o tipo {$kind} não é de um comprovante que sai de cena");
             } catch (InvalidArgumentException) {
                 // esperado
@@ -281,7 +227,7 @@ class SettlementProofHistoryServiceTest extends TestCase
         Storage::disk('local')->put($row->proof_path, 'conteudo do comprovante');
         $before = $row->fresh()->getAttributes();
 
-        $this->history->archive($row, SettlementProofEntry::KIND_WITHDRAWN);
+        $this->history->archive($row, SettlementProofEntry::KIND_WITHDRAWN, $this->debtor->id);
 
         $this->assertSame($before, $row->fresh()->getAttributes(), 'a linha atual segue igual (R3)');
         Storage::disk('local')->assertExists($row->proof_path);

@@ -181,7 +181,7 @@ class SettlementDecisionController extends Controller
         $service = app(SettlementConfirmationService::class);
 
         try {
-            $cycle = $service->complementTarget($group, (int) ($data['cycles_ago'] ?? 0), $debtorId, $creditorId);
+            $cycle = $service->complementTarget($group, (int) ($data['cycles_ago'] ?? 0), $debtorId, $creditorId, $callerId);
         } catch (SettlementDecisionRefused $e) {
             return response()->json(['error' => $e->getMessage()], 422);
         }

@@ -34,6 +34,8 @@ class SettlementResendKeepsHistoryTest extends TestCase
 
     private const LIMIT_MESSAGE = 'O limite de comprovantes guardados deste acerto foi atingido.';
 
+    private const PAYER_LIMIT_MESSAGE = 'O limite de comprovantes e justificativas de quem paga por esta pessoa foi atingido.';
+
     protected function tearDown(): void
     {
         SettlementConfirmation::flushEventListeners();
@@ -54,7 +56,7 @@ class SettlementResendKeepsHistoryTest extends TestCase
         return SettlementProofEntry::where('group_id', $group->id)->orderBy('id')->get();
     }
 
-    private function addEntries(Group $group, User $debtor, User $creditor, int $count): void
+    private function addEntries(Group $group, User $debtor, User $creditor, int $count, ?int $actedBy = null): void
     {
         for ($i = 0; $i < $count; $i++) {
             SettlementProofEntry::create([
@@ -64,6 +66,7 @@ class SettlementResendKeepsHistoryTest extends TestCase
                 'to_user_id' => $creditor->id,
                 'kind' => SettlementProofEntry::KIND_REPLACED,
                 'sent_by' => $debtor->id,
+                'acted_by' => $actedBy ?? $debtor->id,
                 'status_at_exit' => 'sent',
                 'amount' => 100,
                 'proof_path' => "comprovantes/{$group->id}/velho{$i}.jpg",
@@ -243,14 +246,14 @@ class SettlementResendKeepsHistoryTest extends TestCase
     public function test_with_ten_entries_a_resend_is_refused_before_the_file_is_written(): void
     {
         [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
-        $this->addEntries($group, $debtor, $creditor, 10);
+        $this->addEntries($group, $debtor, $creditor, 10, $responsible->id);
         // Se o controller tentasse gravar o arquivo antes de checar o teto, daria 500 em vez de 422.
         $this->failProofWrites();
         Storage::disk('local')->put($proof->proof_path, 'comprovante anterior');
 
         $this->confirmAs($responsible, $group, $creditor, $debtor->id)
             ->assertStatus(422)
-            ->assertJson(['error' => self::LIMIT_MESSAGE]);
+            ->assertJson(['error' => self::PAYER_LIMIT_MESSAGE]);
 
         $this->assertSame(10, $this->entries($group)->count());
         $this->assertSame([$proof->proof_path], $this->files($group));
@@ -274,18 +277,18 @@ class SettlementResendKeepsHistoryTest extends TestCase
     public function test_nine_entries_still_leave_room_for_one_more_resend(): void
     {
         [$group, $creditor, $debtor, $responsible] = $this->linkedScenario();
-        $this->addEntries($group, $debtor, $creditor, 9);
+        $this->addEntries($group, $debtor, $creditor, 9, $responsible->id);
 
         $this->confirmAs($responsible, $group, $creditor, $debtor->id)->assertOk();
 
         $this->assertSame(10, $this->entries($group)->count());
-        $this->assertTrue(app(SettlementProofHistoryService::class)->isFull($group->id, '2026-08-01', $debtor->id, $creditor->id));
+        $this->assertTrue(app(SettlementProofHistoryService::class)->isFull($group->id, '2026-08-01', $debtor->id, $creditor->id, $responsible->id));
     }
 
     public function test_the_service_checks_the_limit_again_under_the_row_lock(): void
     {
         [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
-        $this->addEntries($group, $debtor, $creditor, 10);
+        $this->addEntries($group, $debtor, $creditor, 10, $responsible->id);
         $before = $proof->fresh()->getAttributes();
         $key = [
             'group_id' => $group->id,
@@ -305,7 +308,7 @@ class SettlementResendKeepsHistoryTest extends TestCase
         ], true);
 
         $this->assertNull($result['confirmation']);
-        $this->assertSame(SettlementConfirmationService::BLOCKED_HISTORY_FULL, $result['blockedBy']);
+        $this->assertSame(SettlementConfirmationService::BLOCKED_PAYER_FULL, $result['blockedBy']);
         $this->assertSame(10, $this->entries($group)->count(), 'nada foi arquivado');
         $this->assertSame($before, $proof->fresh()->getAttributes(), 'a linha atual segue igual');
     }
@@ -314,7 +317,7 @@ class SettlementResendKeepsHistoryTest extends TestCase
     {
         [$group, $creditor, $debtor, $responsible, $proof] = $this->linkedScenario();
         $proof->delete();
-        $this->addEntries($group, $debtor, $creditor, 10);
+        $this->addEntries($group, $debtor, $creditor, 10, $responsible->id);
         $key = [
             'group_id' => $group->id,
             'cycle_start' => '2026-08-01',
@@ -333,7 +336,7 @@ class SettlementResendKeepsHistoryTest extends TestCase
         ], false);
 
         $this->assertNull($result['confirmation']);
-        $this->assertSame(SettlementConfirmationService::BLOCKED_HISTORY_FULL, $result['blockedBy']);
+        $this->assertSame(SettlementConfirmationService::BLOCKED_PAYER_FULL, $result['blockedBy']);
         $this->assertSame(0, SettlementConfirmation::where('group_id', $group->id)->count());
     }
 

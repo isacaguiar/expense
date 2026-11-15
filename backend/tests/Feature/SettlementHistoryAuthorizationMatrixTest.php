@@ -130,8 +130,11 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
         };
     }
 
-    private function addEntries(array $s, int $count, string $kind = SettlementProofEntry::KIND_REPLACED): void
+    private function addEntries(array $s, int $count, string $kind = SettlementProofEntry::KIND_REPLACED, ?int $actedBy = null): void
     {
+        // `acted_by` (D14): quem agiu. O padrão é o devedor.
+        $actedBy ??= $s['debtor']->id;
+
         for ($i = 0; $i < $count; $i++) {
             SettlementProofEntry::create([
                 'group_id' => $s['group']->id,
@@ -140,6 +143,7 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
                 'to_user_id' => $s['creditor']->id,
                 'kind' => $kind,
                 'sent_by' => $s['debtor']->id,
+                'acted_by' => $actedBy,
                 'status_at_exit' => 'sent',
                 'amount' => 100,
                 'proof_path' => "comprovantes/{$s['group']->id}/velho{$i}.jpg",
@@ -186,8 +190,8 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
                 $s['group']->update(['deleted' => true]);
                 break;
             case 'full':
-                // O orçamento dos complementos (D13, TASK-638): só os complementos o enchem.
-                $this->addEntries($s, 10, SettlementProofEntry::KIND_COMPLEMENT);
+                // O orçamento de quem paga pelo devedor (D14): 10 complementos do responsável o enchem.
+                $this->addEntries($s, 10, SettlementProofEntry::KIND_COMPLEMENT, $s['responsible']->id);
                 break;
         }
 
@@ -267,7 +271,7 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
             'comprovante aceito' => ['accepted', 422],
             'par sem comprovante' => ['missing', 404],
             'ciclo sem comprovante (cycles_ago=1)' => ['other_cycle', 404],
-            'teto de 10 complementos (R8, D13)' => ['full', 422],
+            'teto de 10 entradas de quem paga pelo devedor (R8, D14)' => ['full', 422],
             'grupo excluído' => ['deleted_group', 404],
         ];
     }
@@ -295,11 +299,12 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
     }
 
     /**
-     * Os dois orçamentos de 10 (R8, D13, TASK-639), célula a célula: o que enche um não toca o outro. O devedor
-     * reenvia o próprio comprovante (ou faz o primeiro envio) e quem paga por ele complementa; cada linha diz
-     * com qual tipo de entrada o par já está cheio, qual ação roda e o status esperado.
+     * Os dois orçamentos de 10, por quem age (R8, D14, TASK-639 e 640), célula a célula: o que enche um lado não
+     * toca o outro. O devedor reenvia o próprio comprovante (ou faz o primeiro envio) e quem paga por ele
+     * complementa; cada linha diz com que tipo de entrada, de que lado (`debtor` ou `payer`) o par já está
+     * cheio, qual ação roda e o status esperado.
      *
-     * @return array<string, array{0: string, 1: string, 2: int}>
+     * @return array<string, array{0: string, 1: string, 2: string, 3: int}>
      */
     public static function budgetCells(): array
     {
@@ -308,26 +313,29 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
         $withdrawn = SettlementProofEntry::KIND_WITHDRAWN;
 
         return [
-            '10 complementos barram o 11º complemento' => [$complement, 'complement', 422],
-            '10 complementos não barram o reenvio do devedor' => [$complement, 'resend', 200],
-            '10 complementos não barram o primeiro envio' => [$complement, 'first_send', 200],
-            '10 substituições não barram o complemento' => [$replaced, 'complement', 201],
-            '10 substituições barram o reenvio do devedor' => [$replaced, 'resend', 422],
-            '10 substituições barram o primeiro envio' => [$replaced, 'first_send', 422],
-            '10 retiradas não barram o complemento' => [$withdrawn, 'complement', 201],
-            '10 retiradas barram o reenvio do devedor' => [$withdrawn, 'resend', 422],
-            '10 retiradas barram o primeiro envio' => [$withdrawn, 'first_send', 422],
+            '10 complementos de quem paga barram o 11º complemento' => [$complement, 'payer', 'complement', 422],
+            '10 complementos de quem paga não barram o reenvio do devedor' => [$complement, 'payer', 'resend', 200],
+            '10 complementos de quem paga não barram o primeiro envio do devedor' => [$complement, 'payer', 'first_send', 200],
+            '10 substituições de quem paga barram o complemento' => [$replaced, 'payer', 'complement', 422],
+            '10 substituições de quem paga não barram o reenvio do devedor' => [$replaced, 'payer', 'resend', 200],
+            '10 retiradas de quem paga barram o complemento' => [$withdrawn, 'payer', 'complement', 422],
+            '10 retiradas de quem paga não barram o primeiro envio do devedor' => [$withdrawn, 'payer', 'first_send', 200],
+            '10 substituições do devedor não barram o complemento' => [$replaced, 'debtor', 'complement', 201],
+            '10 substituições do devedor barram o reenvio dele' => [$replaced, 'debtor', 'resend', 422],
+            '10 substituições do devedor barram o primeiro envio dele' => [$replaced, 'debtor', 'first_send', 422],
+            '10 retiradas do devedor não barram o complemento' => [$withdrawn, 'debtor', 'complement', 201],
+            '10 retiradas do devedor barram o reenvio dele' => [$withdrawn, 'debtor', 'resend', 422],
         ];
     }
 
     /** @dataProvider budgetCells */
-    public function test_the_two_budgets_by_action(string $filledWith, string $action, int $expected): void
+    public function test_the_two_budgets_by_action(string $filledWith, string $side, string $action, int $expected): void
     {
         $s = $this->scenario(ownProof: true);
         if ($action === 'first_send') {
             $s['proof']->delete();
         }
-        $this->addEntries($s, 10, $filledWith);
+        $this->addEntries($s, 10, $filledWith, $side === 'payer' ? $s['responsible']->id : $s['debtor']->id);
         $before = $this->world();
 
         $response = $action === 'complement'
@@ -343,15 +351,11 @@ class SettlementHistoryAuthorizationMatrixTest extends TestCase
         }
 
         $newEntries = count($after['entries']) - count($before['entries']);
-        $expectedEntries = match ($action) {
-            'complement' => 1,
-            'resend' => 1,
-            'first_send' => 0,
-        };
-        $this->assertSame($expectedEntries, $newEntries, 'a ação deixou só o que lhe cabe no histórico');
+        $this->assertSame($action === 'first_send' ? 0 : 1, $newEntries, 'a ação deixou só o que lhe cabe no histórico');
         if ($action !== 'first_send') {
-            $kind = $action === 'complement' ? SettlementProofEntry::KIND_COMPLEMENT : SettlementProofEntry::KIND_REPLACED;
-            $this->assertSame($kind, SettlementProofEntry::where('group_id', $s['group']->id)->orderByDesc('id')->first()->kind);
+            $newest = SettlementProofEntry::where('group_id', $s['group']->id)->orderByDesc('id')->first();
+            $this->assertSame($action === 'complement' ? SettlementProofEntry::KIND_COMPLEMENT : SettlementProofEntry::KIND_REPLACED, $newest->kind);
+            $this->assertSame($action === 'complement' ? $s['responsible']->id : $s['debtor']->id, (int) $newest->acted_by, 'quem agiu fica registrado');
         }
     }
 

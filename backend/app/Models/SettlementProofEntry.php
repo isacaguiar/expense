@@ -42,6 +42,7 @@ class SettlementProofEntry extends Model
         'to_user_id',
         'kind',
         'sent_by',
+        'acted_by',
         'status_at_exit',
         'amount',
         'proof_path',
@@ -56,7 +57,7 @@ class SettlementProofEntry extends Model
      * apresenta a entrada (`SettlementProofHistoryService::present`) monta o array à mão, e o arquivo só se
      * alcança pela URL assinada. O atributo segue legível no código.
      */
-    protected $hidden = ['proof_path'];
+    protected $hidden = ['proof_path', 'sent_by', 'acted_by'];
 
     protected $casts = [
         'cycle_start' => 'date',

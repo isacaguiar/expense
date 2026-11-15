@@ -41,7 +41,7 @@ class SettlementComplementTest extends TestCase
     use FailsToWriteProofs;
 
     // O orçamento próprio dos complementos (D13, TASK-638): a mensagem não é a do teto de quem envia.
-    private const LIMIT_MESSAGE = 'O limite de justificativas e comprovantes adicionados a este acerto foi atingido.';
+    private const LIMIT_MESSAGE = 'O limite de comprovantes e justificativas de quem paga por esta pessoa foi atingido.';
 
     protected function tearDown(): void
     {
@@ -92,8 +92,12 @@ class SettlementComplementTest extends TestCase
         return Storage::disk('local')->allFiles("comprovantes/{$group->id}");
     }
 
-    private function addEntries(Group $group, User $debtor, User $creditor, int $count, string $kind = SettlementProofEntry::KIND_REPLACED): void
+    private function addEntries(Group $group, User $debtor, User $creditor, int $count, string $kind = SettlementProofEntry::KIND_REPLACED, ?int $actedBy = null): void
     {
+        // `acted_by` (D14): quem agiu. O padrão é o devedor, salvo no complemento, que é sempre de terceiro (nulo
+        // conta no lado dos pagadores).
+        $actedBy ??= $kind === SettlementProofEntry::KIND_COMPLEMENT ? null : $debtor->id;
+
         for ($i = 0; $i < $count; $i++) {
             SettlementProofEntry::create([
                 'group_id' => $group->id,
@@ -102,6 +106,7 @@ class SettlementComplementTest extends TestCase
                 'to_user_id' => $creditor->id,
                 'kind' => $kind,
                 'sent_by' => $debtor->id,
+                'acted_by' => $actedBy,
                 'status_at_exit' => 'sent',
                 'amount' => 100,
                 'proof_path' => "comprovantes/{$group->id}/velho{$i}.jpg",
@@ -382,8 +387,8 @@ class SettlementComplementTest extends TestCase
 
     // --- o teto ------------------------------------------------------------
 
-    // Editados na TASK-638 (D13, plan ajuste 10): antes enchiam o histórico com `replaced` e esperavam 422; o
-    // complemento agora tem orçamento próprio e só os próprios complementos o enchem.
+    // Editados na TASK-638 (D13) e de novo na TASK-640 (D14, plan ajuste 11): o complemento gasta o orçamento de
+    // quem paga pelo devedor (10 entradas dos pagadores); as entradas do devedor não o gastam.
     public function test_with_ten_complements_it_is_refused_before_the_file_is_written(): void
     {
         $w = $this->world();
@@ -416,7 +421,7 @@ class SettlementComplementTest extends TestCase
     public function test_ten_replaced_and_withdrawn_entries_do_not_block_a_complement(): void
     {
         $w = $this->world();
-        // O orçamento de quem envia cheio (replaced + withdrawn) não gasta o dos complementos (D13).
+        // As entradas do devedor (replaced + withdrawn, `acted_by` = o devedor) não gastam o orçamento dos pagadores (D14).
         $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 7, SettlementProofEntry::KIND_REPLACED);
         $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 4, SettlementProofEntry::KIND_WITHDRAWN);
 
@@ -449,7 +454,7 @@ class SettlementComplementTest extends TestCase
         $this->assertSame($before, $w['proof']->fresh()->getAttributes(), 'a linha atual segue igual');
     }
 
-    public function test_the_blocked_reason_and_message_of_the_complement_budget_are_its_own(): void
+    public function test_the_blocked_reason_and_message_of_the_payers_budget_are_its_own(): void
     {
         $w = $this->world();
         $key = [
@@ -459,15 +464,16 @@ class SettlementComplementTest extends TestCase
             'to_user_id' => $w['creditor']->id,
         ];
 
-        $this->assertNull(SettlementConfirmationService::complementBlockedBy($key));
+        $this->assertNull(SettlementConfirmationService::historyBlockedBy($key, $w['responsible']->id));
 
         $this->addEntries($w['group'], $w['debtor'], $w['creditor'], 10, SettlementProofEntry::KIND_COMPLEMENT);
 
-        $this->assertSame(SettlementConfirmationService::BLOCKED_COMPLEMENT_FULL, SettlementConfirmationService::complementBlockedBy($key));
-        $this->assertSame(self::LIMIT_MESSAGE, SettlementConfirmationService::blockedMessage(SettlementConfirmationService::BLOCKED_COMPLEMENT_FULL));
+        $this->assertSame(SettlementConfirmationService::BLOCKED_PAYER_FULL, SettlementConfirmationService::historyBlockedBy($key, $w['responsible']->id));
+        $this->assertNull(SettlementConfirmationService::historyBlockedBy($key, $w['debtor']->id), 'o devedor segue com a vaga dele');
+        $this->assertSame(self::LIMIT_MESSAGE, SettlementConfirmationService::blockedMessage(SettlementConfirmationService::BLOCKED_PAYER_FULL));
         $this->assertNotSame(
             SettlementConfirmationService::blockedMessage(SettlementConfirmationService::BLOCKED_HISTORY_FULL),
-            SettlementConfirmationService::blockedMessage(SettlementConfirmationService::BLOCKED_COMPLEMENT_FULL)
+            SettlementConfirmationService::blockedMessage(SettlementConfirmationService::BLOCKED_PAYER_FULL)
         );
     }
 

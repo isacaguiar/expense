@@ -23,11 +23,11 @@ class SettlementConfirmationService
 
     public const BLOCKED_DEBTOR_PROOF = 'debtor_proof';
 
-    /** O histórico do par já tem o máximo de entradas no ciclo (D5): nenhum arquivo novo cabe. */
+    /** O devedor já gastou o orçamento dele no par e no ciclo (D5, D14): nenhum arquivo novo cabe. */
     public const BLOCKED_HISTORY_FULL = 'history_full';
 
-    /** O par já tem o máximo de complementos no ciclo (D13): o orçamento deles é próprio, não o de quem envia. */
-    public const BLOCKED_COMPLEMENT_FULL = 'complement_full';
+    /** Quem paga pelo devedor (todos os pagadores declarados, somados) já gastou o orçamento deles (D14). */
+    public const BLOCKED_PAYER_FULL = 'payer_full';
 
     public function __construct(
         private CycleSealingService $sealing,
@@ -192,7 +192,7 @@ class SettlementConfirmationService
                 throw new SettlementDecisionRefused('Este comprovante já foi aceito e não pode ser retirado.');
             }
 
-            $this->history->archive($confirmation, SettlementProofEntry::KIND_WITHDRAWN);
+            $this->history->archive($confirmation, SettlementProofEntry::KIND_WITHDRAWN, $callerId);
             $confirmation->delete();
         });
     }
@@ -231,7 +231,10 @@ class SettlementConfirmationService
         return DB::transaction(function () use ($key, $values, $hadRow) {
             $current = $hadRow ? SettlementConfirmation::where($key)->lockForUpdate()->first() : null;
 
-            $blockedBy = self::resendBlockedBy($current, $values['confirmed_by'] ?? null) ?? self::historyBlockedBy($key);
+            // Quem age é quem envia o comprovante novo: `confirmed_by`, ou o próprio devedor quando nulo (D14).
+            $actorId = (int) ($values['confirmed_by'] ?? $key['from_user_id']);
+
+            $blockedBy = self::resendBlockedBy($current, $values['confirmed_by'] ?? null) ?? self::historyBlockedBy($key, $actorId);
             if ($blockedBy !== null) {
                 return ['confirmation' => null, 'wasRefused' => false, 'blockedBy' => $blockedBy];
             }
@@ -239,7 +242,7 @@ class SettlementConfirmationService
             $wasRefused = $current?->status() === SettlementConfirmation::STATUS_REFUSED;
 
             if ($current !== null) {
-                $this->history->archive($current, SettlementProofEntry::KIND_REPLACED);
+                $this->history->archive($current, SettlementProofEntry::KIND_REPLACED, $actorId);
             }
 
             $confirmation = SettlementConfirmation::updateOrCreate($key, $values + [
@@ -256,15 +259,15 @@ class SettlementConfirmationService
      * Antes de gravar o arquivo do **complemento** (feature 20261114-historico-de-comprovantes-e-justificativa,
      * plan §5, D3-B, D7-B, D9 e D10): confere, **sem travar a linha**, que o ciclo está fechado (o ciclo
      * **encerrado** também vale, a exceção à R9), que o par tem comprovante (404 se não) e que ele é o do próprio
-     * devedor, em estado `sent` (422 se está aguardando aceite, recusado ou aceito), e que o **orçamento de
-     * complementos** do par ainda tem lugar (422 com 10 complementos; D13, o teto de quem envia não entra).
+     * devedor, em estado `sent` (422 se está aguardando aceite, recusado ou aceito), e que o **orçamento de quem
+     * paga pelo devedor** (`$authorId`, D14) ainda tem lugar (422 com 10 entradas dos pagadores no par e no ciclo).
      * Quem chama a usa antes de `ProofStorage::store`; `addComplement` repete tudo sob a trava.
      *
      * @return array{start: Carbon, end: Carbon, status: string}
      *
      * @throws SettlementDecisionRefused
      */
-    public function complementTarget(Group $group, int $cyclesAgo, int $debtorId, int $creditorId): array
+    public function complementTarget(Group $group, int $cyclesAgo, int $debtorId, int $creditorId, int $authorId): array
     {
         $cycle = $this->closedCycle($group, $cyclesAgo);
 
@@ -276,7 +279,7 @@ class SettlementConfirmationService
 
         abort_if($confirmation === null, 404);
 
-        $this->assertComplementable($confirmation);
+        $this->assertComplementable($confirmation, $authorId);
 
         return $cycle;
     }
@@ -296,7 +299,7 @@ class SettlementConfirmationService
         return DB::transaction(function () use ($group, $cycle, $debtorId, $creditorId, $authorId, $path, $justification) {
             $confirmation = $this->lockedConfirmation($group, $cycle['start'], $debtorId, $creditorId);
 
-            $this->assertComplementable($confirmation);
+            $this->assertComplementable($confirmation, $authorId);
 
             return $this->history->addComplement($confirmation, $authorId, $path, $justification);
         });
@@ -304,23 +307,23 @@ class SettlementConfirmationService
 
     /**
      * O complemento só vale sobre o comprovante **do próprio devedor** em estado `sent` (R9: o de responsável
-     * aguardando aceite, o recusado e o aceito não recebem complemento) e com lugar no **orçamento próprio dos
-     * complementos** (R8, D13).
+     * aguardando aceite, o recusado e o aceito não recebem complemento) e com lugar no **orçamento de quem
+     * paga pelo devedor** (R8, D14).
      *
      * @throws SettlementDecisionRefused
      */
-    private function assertComplementable(SettlementConfirmation $confirmation): void
+    private function assertComplementable(SettlementConfirmation $confirmation, int $authorId): void
     {
         if ($confirmation->status() !== SettlementConfirmation::STATUS_SENT) {
             throw new SettlementDecisionRefused('Só dá para complementar o comprovante que o próprio devedor enviou.');
         }
 
-        $blockedBy = self::complementBlockedBy([
+        $blockedBy = self::historyBlockedBy([
             'group_id' => $confirmation->group_id,
             'cycle_start' => $confirmation->cycle_start->toDateString(),
             'from_user_id' => $confirmation->from_user_id,
             'to_user_id' => $confirmation->to_user_id,
-        ]);
+        ], $authorId);
 
         if ($blockedBy !== null) {
             throw new SettlementDecisionRefused(self::blockedMessage($blockedBy));
@@ -328,40 +331,30 @@ class SettlementConfirmationService
     }
 
     /**
-     * O par já tem o máximo de complementos neste ciclo (`SettlementProofHistoryService::MAX_COMPLEMENTS`)?
-     * É o orçamento **próprio** do complemento (D13): não conta as entradas de quem envia o comprovante
-     * (`historyBlockedBy`), e as dele não contam aqui. Mesmo formato de `$key` de `historyBlockedBy`.
+     * O orçamento de quem age (`$actorId`) já está gasto neste par e ciclo (`SettlementProofHistoryService::MAX_ENTRIES`,
+     * D14)? Se quem age é o devedor, conta as entradas dele (`BLOCKED_HISTORY_FULL`); se é um pagador declarado,
+     * conta as de todos os pagadores, complementos incluídos (`BLOCKED_PAYER_FULL`). O teto vale para as ações
+     * que **gravam arquivo novo** (enviar, reenviar e complementar; retirar não grava e fica de fora, mas
+     * conta). Um pagador nunca gasta a vaga do devedor (achados A1 e A5). O controller usa o veredito antes de
+     * gravar o arquivo e `submitProof` e `addComplement`, de novo, com a linha travada.
      *
      * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
      */
-    public static function complementBlockedBy(array $key): ?string
+    public static function historyBlockedBy(array $key, int $actorId): ?string
     {
-        return app(SettlementProofHistoryService::class)->isComplementFull(
+        $full = app(SettlementProofHistoryService::class)->isFull(
             (int) $key['group_id'],
             (string) $key['cycle_start'],
             (int) $key['from_user_id'],
-            (int) $key['to_user_id']
-        ) ? self::BLOCKED_COMPLEMENT_FULL : null;
-    }
+            (int) $key['to_user_id'],
+            $actorId
+        );
 
-    /**
-     * O orçamento **de quem envia** o comprovante já está gasto neste ciclo (`SettlementProofHistoryService::MAX_ENTRIES`,
-     * só as entradas `replaced` e `withdrawn`)? O teto vale para as ações que **gravam arquivo novo** (enviar e
-     * reenviar; retirar não grava e fica de fora, mas conta), então vale também para o primeiro envio. Os
-     * complementos **não** contam aqui: têm o orçamento deles (`complementBlockedBy`, D13), e é isso que impede
-     * quem paga pelo devedor de trancar o devedor (achado A1). O controller usa o veredito antes de gravar o
-     * arquivo e `submitProof`, de novo, com a linha travada.
-     *
-     * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
-     */
-    public static function historyBlockedBy(array $key): ?string
-    {
-        return app(SettlementProofHistoryService::class)->isFull(
-            (int) $key['group_id'],
-            (string) $key['cycle_start'],
-            (int) $key['from_user_id'],
-            (int) $key['to_user_id']
-        ) ? self::BLOCKED_HISTORY_FULL : null;
+        if (! $full) {
+            return null;
+        }
+
+        return $actorId === (int) $key['from_user_id'] ? self::BLOCKED_HISTORY_FULL : self::BLOCKED_PAYER_FULL;
     }
 
     /**
@@ -385,7 +378,7 @@ class SettlementConfirmationService
         return match ($blockedBy) {
             self::BLOCKED_DEBTOR_PROOF => 'O devedor já enviou o comprovante deste acerto.',
             self::BLOCKED_HISTORY_FULL => 'O limite de comprovantes guardados deste acerto foi atingido.',
-            self::BLOCKED_COMPLEMENT_FULL => 'O limite de justificativas e comprovantes adicionados a este acerto foi atingido.',
+            self::BLOCKED_PAYER_FULL => 'O limite de comprovantes e justificativas de quem paga por esta pessoa foi atingido.',
             default => 'Este comprovante já foi aceito.',
         };
     }

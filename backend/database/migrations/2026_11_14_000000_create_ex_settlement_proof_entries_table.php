@@ -45,6 +45,11 @@ return new class extends Migration
             $table->unsignedBigInteger('sent_by')->nullable();
             $table->foreign('sent_by')->references('id')->on('ex_users')->nullOnDelete();
 
+            // Quem **agiu** para criar a entrada (o autor do reenvio, quem retirou, o autor do complemento):
+            // é por ele que o teto é dividido (D14). Não é `sent_by`, que é quem enviou o comprovante que saiu.
+            $table->unsignedBigInteger('acted_by')->nullable();
+            $table->foreign('acted_by')->references('id')->on('ex_users')->nullOnDelete();
+
             // O estado em que o comprovante estava ao sair de cena; nulo no complemento.
             $table->string('status_at_exit', 20)->nullable();
 

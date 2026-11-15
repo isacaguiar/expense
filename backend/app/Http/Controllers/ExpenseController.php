@@ -1821,7 +1821,7 @@ class ExpenseController extends Controller
         $sentBy = $paidOnBehalf ? auth()->id() : null;
 
         $blockedBy = SettlementConfirmationService::resendBlockedBy($existing, $sentBy)
-            ?? SettlementConfirmationService::historyBlockedBy($key);
+            ?? SettlementConfirmationService::historyBlockedBy($key, (int) auth()->id());
         if ($blockedBy !== null) {
             return response()->json(['error' => SettlementConfirmationService::blockedMessage($blockedBy)], 422);
         }
