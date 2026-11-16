@@ -20,7 +20,7 @@ Para verificar: `SHOW CREATE TABLE ex_settlement_confirmations` e `SELECT @@expl
 ## Resolução
 
 Concluído em: 2026-11-16
-Feature: docs/feature/20261114-historico-de-comprovantes-e-justificativa/   (vai para `docs/feature/concluidas/202611/` quando o PR mergear em `dev`, ADR-009)
+Feature: docs/feature/concluidas/202611/20261114-historico-de-comprovantes-e-justificativa/
 Tasks: TASK-616 a TASK-640
 PRs: https://github.com/isacaguiar/expense/pull/284
 

@@ -1,7 +1,7 @@
 # O upload de comprovante aceita SVG e nomeia o arquivo pela extensão do cliente
 
 ID: 154
-Origem: docs/feature/20261114-historico-de-comprovantes-e-justificativa/ (TASK-628, revisão do `security-reviewer`, achado B1: **pré-existente**, só repetido pela rota nova de complemento); não bloqueia o PR
+Origem: docs/feature/concluidas/202611/20261114-historico-de-comprovantes-e-justificativa/ (TASK-628, revisão do `security-reviewer`, achado B1: **pré-existente**, só repetido pela rota nova de complemento); não bloqueia o PR
 Criado em: 2026-11-14
 Prioridade: BAIXA
 Status: Aberto
