@@ -1,7 +1,7 @@
 # Os comprovantes legados do disco `public` podem ser servidos direto pelo servidor web, sem URL assinada e sem os cabeçalhos do item 154
 
 ID: 157
-Origem: docs/feature/20261116-endurecer-upload-de-comprovante/ (TASK-645, revisão do `security-reviewer`, achado médio fora do delta; **não confirmado em produção**)
+Origem: docs/feature/concluidas/202611/20261116-endurecer-upload-de-comprovante/ (TASK-645, revisão do `security-reviewer`, achado médio fora do delta; **não confirmado em produção**)
 Criado em: 2026-11-16
 Prioridade: MEDIA
 Status: Aberto

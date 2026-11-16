@@ -1,7 +1,7 @@
 # A foto de perfil repete o padrão do comprovante antes do item 154: aceita SVG, usa a extensão do cliente e é servida sem cabeçalhos
 
 ID: 156
-Origem: docs/feature/20261116-endurecer-upload-de-comprovante/ (TASK-645, revisão do `security-reviewer`, achado médio fora do delta; decisão D5-A do specify: o avatar ficou de fora)
+Origem: docs/feature/concluidas/202611/20261116-endurecer-upload-de-comprovante/ (TASK-645, revisão do `security-reviewer`, achado médio fora do delta; decisão D5-A do specify: o avatar ficou de fora)
 Criado em: 2026-11-16
 Prioridade: MEDIA
 Status: Aberto
