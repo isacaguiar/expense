@@ -415,6 +415,32 @@ describe('usePaymentActions', () => {
       expect(result.current.payingExpenseId).toBeNull();
     });
 
+    it('shows the refusal of a photo format, which Laravel sends in `errors` and not in `error` (TASK-644)', async () => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const formatError = {
+        response: {
+          status: 422,
+          data: {
+            message: 'The given data was invalid.',
+            errors: { comprovante: ['O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.'] }
+          }
+        }
+      };
+      vi.mocked(axios.post).mockRejectedValueOnce(formatError);
+      const { result } = renderHook(() => usePaymentActions(1, summaryWith('closed'), 0, () => {}));
+
+      act(() => result.current.handleEditProof(42, { note: 'x' }));
+      await waitFor(() =>
+        expect(result.current.payError).toBe('O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.')
+      );
+
+      vi.mocked(axios.post).mockRejectedValueOnce(formatError);
+      act(() => result.current.handlePay(42, { proof: new File(['x'], 'p.png', { type: 'image/png' }), note: '' }));
+      await waitFor(() =>
+        expect(result.current.payError).toBe('O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.')
+      );
+    });
+
     it('falls back to the default message when the API gives no error text', async () => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
       vi.mocked(axios.post).mockRejectedValueOnce(new Error('Network Error'));

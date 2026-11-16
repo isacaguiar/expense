@@ -1111,4 +1111,24 @@ class ExpenseControllerPayTest extends TestCase
         $this->assertNull($quota->paid_at);
         $this->assertCount(0, Storage::disk('local')->allFiles());
     }
+
+    public function test_pay_with_a_photo_whose_client_extension_is_huge_still_succeeds_and_stores_it_by_content(): void
+    {
+        // TASK-642 (feature 20261116-endurecer-upload-de-comprovante, B4 do item 097): antes, a extensão de 210
+        // caracteres vinha do cliente, estourava `payment_proof_path` (255) e dava 500 com arquivo órfão.
+        Storage::fake('local');
+        [$creditor, , $expense] = $this->unpaidCashExpense();
+        $png = tempnam(sys_get_temp_dir(), 'png');
+        file_put_contents($png, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+        $upload = new UploadedFile($png, 'a.'.str_repeat('x', 210), 'image/png', null, true);
+
+        $this->withToken($this->tokenFor($creditor))
+            ->post("/api/expenses/{$expense->id}/pay", ['comprovante' => $upload], ['Accept' => 'application/json'])
+            ->assertOk();
+
+        $quota = Quota::where('expense_id', $expense->id)->firstOrFail();
+        $this->assertTrue((bool) $quota->paid);
+        $this->assertMatchesRegularExpression('#^comprovantes/\d+/[0-9a-f-]{36}\.png$#', $quota->payment_proof_path);
+        $this->assertCount(1, Storage::disk('local')->allFiles());
+    }
 }
