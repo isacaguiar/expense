@@ -4,7 +4,7 @@ ID: 156
 Origem: docs/feature/concluidas/202611/20261116-endurecer-upload-de-comprovante/ (TASK-645, revisão do `security-reviewer`, achado médio fora do delta; decisão D5-A do specify: o avatar ficou de fora)
 Criado em: 2026-11-16
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-647 (feature 20261116-endurecer-upload-de-foto-de-perfil)
 
 ## Descrição
 O item 154 (feature `20261116-endurecer-upload-de-comprovante`) fechou o upload e o download do **comprovante**. A foto de perfil usa o mesmo padrão de antes e ficou como estava:
