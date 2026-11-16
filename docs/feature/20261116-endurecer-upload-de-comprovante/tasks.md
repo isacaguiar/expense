@@ -11,7 +11,7 @@ Versão: 1.0 · Criado em: 20261116
 | TASK-643 | Trocar `image` por uma regra única sem SVG nos cinco pontos de upload | backend | plan.md §3 | antes do merge (muda contrato, D2) | Concluída |
 | TASK-644 | Conferir o 422 de formato no front e ajustar o `accept` se for barato | frontend | plan.md §4 | nenhum | Concluída |
 | TASK-645 | Rodar `security-reviewer` no delta e a suíte cheia do backend | backend | plan.md §6 | nenhum | Concluída |
-| TASK-646 | Reduzir o item 097 a B5 e B6, abrir o item da foto de perfil, abrir o item do disco `public` legado (achado do `security-reviewer` da TASK-645) e atualizar o `01-specify.md` | doc | plan.md §5 | nenhum | Pendente |
+| TASK-646 | Reduzir o item 097 a B5 e B6, abrir o item da foto de perfil, abrir o item do disco `public` legado (achado do `security-reviewer` da TASK-645) e atualizar o `01-specify.md` | doc | plan.md §5 | nenhum | Concluída |
 
 Ordem: 641, 642, 643, 644, 645, 646. A 643 só depois da 641 e da 642.
 
