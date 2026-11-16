@@ -3,7 +3,7 @@
 ID: 157
 Origem: docs/feature/concluidas/202611/20261116-endurecer-upload-de-comprovante/ (TASK-645, revisão do `security-reviewer`, achado médio fora do delta; **não confirmado em produção**)
 Criado em: 2026-11-16
-Prioridade: MEDIA
+Prioridade: BAIXA
 Status: Aberto
 
 ## Descrição
@@ -13,6 +13,11 @@ Status: Aberto
 - Esse caminho é anônimo: não passa pelo `ProofDownloadController`, não exige a URL assinada de 30 minutos (ADR-005) e **não recebe** o `nosniff` nem o CSP `sandbox` do item 154. Um SVG legado com `<script>` abriria com script na origem da API para quem soubesse o nome.
 - O nome do arquivo é um uuid ou hash: inadivinhável, mas não protegido. A exploração exige conhecer o nome (um link assinado vencido, um log, um histórico do navegador).
 - O deploy exclui `/storage/app` e `/storage/logs` (`.github/workflows/deploy-backend.yml:97`), mas o symlink `public/storage` em produção depende de ter sido criado à mão no cPanel. **Não sei se existe.**
+
+## Conferência em produção (2026-11-16, feita por ele)
+Ele olhou o servidor (`/home1/isacag00/novemax/expense/api/`) e **o diretório `public/storage` não existe**: `storage:link` nunca foi rodado em produção (a listagem de `api/storage/` mostra `app`, `framework` e `logs`). Sem o link, `/storage/comprovantes/<arquivo>` não resolve para `storage/app/public`, então o Apache **não serve** os comprovantes legados direto e eles só saem pelo `ProofDownloadController` (URL assinada e cabeçalhos do item 154). O risco descrito abaixo **não existe hoje**; a prioridade cai para BAIXA e o item fica aberto só como lembrete: se alguém rodar `php artisan storage:link` (ou criar o link no cPanel) esse caminho passa a existir.
+
+Resta, se ele quiser fechar de vez: confirmar que `api/storage/app/public/` não tem `.svg`, `.html` ou `.htm` legados (o link ausente já torna isso inofensivo).
 
 ## Conferência (gate humano, de fora)
 1. Em produção, pedir `https://<api>/storage/comprovantes/<nome-de-um-comprovante-legado>` e ver se responde 200 (o nome vem do banco: `payment_proof_path` sem o layout `comprovantes/<id>/`, ou `proof_path` de `ex_settlement_confirmations`). 200 = exposto; 404 ou 403 = o link não existe e o item cai para BAIXA.
