@@ -40,8 +40,10 @@ class ProofStorage
      */
     public static function store(UploadedFile $file, int $groupId): string
     {
-        $extension = $file->getClientOriginalExtension()
-            ?: ($file->guessExtension() ?: 'dat');
+        // A extensão sai do CONTEÚDO (`guessExtension()`), nunca do nome que o cliente mandou (feature
+        // 20261116-endurecer-upload-de-comprovante, TASK-642, D4-A): o cliente podia gravar `uuid.svg` ou uma
+        // extensão de 200+ caracteres que estourava a coluna `string(255)`.
+        $extension = $file->guessExtension() ?: 'dat';
 
         $name = Str::uuid()->toString().'.'.$extension;
 
