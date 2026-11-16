@@ -10,7 +10,7 @@ Versão: 1.0 · Criado em: 20261116
 | TASK-648 | Derivar a extensão da foto de perfil pelo conteúdo em `AvatarStorage::store` | backend | plan.md §2 | nenhum | Concluída |
 | TASK-649 | Trocar `image` por `AvatarStorage::UPLOAD_RULE` sem SVG em `uploadPhoto` | backend | plan.md §3 | antes do merge (muda contrato, D2) | Concluída |
 | TASK-650 | Mostrar no Perfil o motivo que o servidor deu ao recusar a foto | frontend | plan.md §4 | nenhum | Concluída |
-| TASK-651 | Rodar `security-reviewer` no delta e a suíte cheia do backend | backend | plan.md §6 | nenhum | Pendente |
+| TASK-651 | Rodar `security-reviewer` no delta e a suíte cheia do backend | backend | plan.md §6 | nenhum | Concluída |
 | TASK-652 | Atualizar o `01-specify.md` com a regra da foto de perfil | doc | plan.md §5 | nenhum | Pendente |
 
 Ordem: 647, 648, 649, 650, 651, 652. A 649 só depois da 647 e da 648.
