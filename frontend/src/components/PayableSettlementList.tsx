@@ -20,6 +20,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CallReceivedOutlinedIcon from '@mui/icons-material/CallReceivedOutlined';
 import UserAvatar from './UserAvatar';
 import RefuseReasonDialog from './RefuseReasonDialog';
+import SettlementProofHistory from './SettlementProofHistory';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 import { isSettlementConfirmed } from '../utils/cycleOrdering';
 
@@ -363,6 +364,11 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                   </Link>
                 )}
               </Box>
+            )}
+
+            {/* O histórico só chega às partes do acerto e a quem enviou cada entrada (o servidor decide). */}
+            {settlement.proofHistory && settlement.proofHistory.length > 0 && (
+              <SettlementProofHistory entries={settlement.proofHistory} />
             )}
           </Card>
         );
