@@ -118,4 +118,75 @@ class UserPhotoHardeningTest extends TestCase
 
         $this->assertStringEndsWith('.jpg', $user->fresh()->photo_path);
     }
+
+    // --- Formato sem SVG, mensagem em português (TASK-649, D1-A e D2-A) ---
+
+    private const GIF = 'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+    private const WEBP = 'UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+
+    private const MESSAGE = 'A foto deve ser uma imagem JPG, PNG, GIF ou WEBP.';
+
+    private function bytes(string $name, string $content, string $mime): UploadedFile
+    {
+        $tmp = tempnam(sys_get_temp_dir(), 'up');
+        file_put_contents($tmp, $content);
+
+        return new UploadedFile($tmp, $name, $mime, null, true);
+    }
+
+    public function test_an_svg_with_a_script_is_refused_with_a_portuguese_message_and_nothing_is_stored(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+
+        $response = $this->upload($user, $this->bytes('foto.svg', self::SVG, 'image/svg+xml'));
+
+        $response->assertStatus(422);
+        $this->assertSame(self::MESSAGE, $response->json('errors.foto.0'));
+        $this->assertCount(0, Storage::disk('local')->allFiles());
+        $this->assertNull($user->fresh()->photo_path);
+    }
+
+    public function test_an_svg_renamed_to_png_is_refused_too(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+
+        $response = $this->upload($user, $this->bytes('foto.png', self::SVG, 'image/png'));
+
+        $response->assertStatus(422);
+        $this->assertSame(self::MESSAGE, $response->json('errors.foto.0'));
+        $this->assertCount(0, Storage::disk('local')->allFiles());
+    }
+
+    public function test_a_refused_svg_does_not_replace_the_photo_the_user_already_has(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $this->upload($user, UploadedFile::fake()->image('boa.jpg'))->assertOk();
+        $before = $user->fresh()->photo_path;
+
+        $this->upload($user, $this->bytes('x.svg', self::SVG, 'image/svg+xml'))->assertStatus(422);
+
+        $this->assertSame($before, $user->fresh()->photo_path);
+        Storage::disk('local')->assertExists($before);
+    }
+
+    public function test_the_photo_formats_accepted_today_are_still_accepted(): void
+    {
+        foreach ([
+            'png' => $this->bytes('a.png', base64_decode(self::PNG), 'image/png'),
+            'gif' => $this->bytes('a.gif', base64_decode(self::GIF), 'image/gif'),
+            'webp' => $this->bytes('a.webp', base64_decode(self::WEBP), 'image/webp'),
+            'jpg' => UploadedFile::fake()->image('a.jpg'),
+        ] as $ext => $file) {
+            Storage::fake('local');
+            $user = User::factory()->create();
+
+            $this->upload($user, $file)->assertOk();
+
+            $this->assertStringEndsWith('.'.$ext, $user->fresh()->photo_path, $ext);
+        }
+    }
 }
