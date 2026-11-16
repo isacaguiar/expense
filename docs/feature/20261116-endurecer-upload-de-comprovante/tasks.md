@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20261116
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-641 | Acrescentar `nosniff` e CSP `sandbox` ao download de comprovante | backend | plan.md §1 | nenhum | Pendente |
+| TASK-641 | Acrescentar `nosniff` e CSP `sandbox` ao download de comprovante | backend | plan.md §1 | nenhum | Concluída |
 | TASK-642 | Derivar a extensão do arquivo pelo conteúdo em `ProofStorage::store` | backend | plan.md §2 | nenhum | Pendente |
 | TASK-643 | Trocar `image` por uma regra única sem SVG nos cinco pontos de upload | backend | plan.md §3 | antes do merge (muda contrato, D2) | Pendente |
 | TASK-644 | Conferir o 422 de formato no front e ajustar o `accept` se for barato | frontend | plan.md §4 | nenhum | Pendente |
