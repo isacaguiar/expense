@@ -9,6 +9,7 @@ use App\Models\Quota;
 use App\Models\SettlementConfirmation;
 use App\Models\User;
 use App\Support\BillingCycle;
+use App\Support\ProofStorage;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -358,8 +359,15 @@ class CycleSummaryService
      * produzem o array (`compute` ao vivo, snapshot manual,
      * snapshot fechado por data) já rodou — não precisa decorar dentro de
      * cada um separadamente.
+     *
+     * `$viewerId` (feature 20261114-historico-de-comprovantes-e-justificativa, plan §6, D8-A e R7) é quem lê o
+     * resumo. **Sem ele o retorno é o de sempre**, sem as chaves novas (o relatório de fechamento, `view` e
+     * `viewAt` não mudam). Com ele, cada acerto ganha, de forma aditiva: `refusedProof` (`{proofUrl, note,
+     * reason}` do comprovante recusado, ou nulo) e `proofHistory` (as entradas do histórico, da mais nova para
+     * a mais antiga). **Só as partes leem**: o credor e o devedor do par e quem enviou o comprovante (ou a
+     * entrada); para os demais, `refusedProof` é nulo, `proofHistory` é `[]` e nenhuma URL sai.
      */
-    public function withConfirmations($groupId, Carbon $start, array $settlements): array
+    public function withConfirmations($groupId, Carbon $start, array $settlements, ?int $viewerId = null): array
     {
         // `confirmedByUser` vem junto, numa consulta só para todos os acertos (sem uma por acerto).
         $confirmations = SettlementConfirmation::with('confirmedByUser:id,name')
@@ -368,8 +376,12 @@ class CycleSummaryService
             ->get()
             ->keyBy(fn ($c) => "{$c->from_user_id}-{$c->to_user_id}");
 
+        // Uma consulta só para as entradas do ciclo que `$viewerId` lê, agrupadas por par.
+        $history = app(SettlementProofHistoryService::class);
+        $entries = $viewerId !== null ? $history->forViewer((int) $groupId, $start, $viewerId) : [];
+
         return collect($settlements)
-            ->map(function (array $settlement) use ($confirmations) {
+            ->map(function (array $settlement) use ($confirmations, $history, $entries, $viewerId) {
                 $confirmation = $confirmations->get("{$settlement['from_user_id']}-{$settlement['to_user_id']}");
 
                 // Estado do comprovante (feature 20261110-quem-paga-se-declara-e-credor-recusa, plan §3):
@@ -392,6 +404,28 @@ class CycleSummaryService
                 $settlement['confirmedBy'] = $sender !== null && (int) $confirmation->confirmed_by !== (int) $confirmation->from_user_id
                     ? ['id' => $sender->id, 'name' => $sender->name]
                     : null;
+
+                if ($viewerId !== null) {
+                    // O recusado fica na linha atual com o arquivo e o motivo (R6): só as partes o leem.
+                    $isParty = in_array($viewerId, [
+                        (int) $settlement['from_user_id'],
+                        (int) $settlement['to_user_id'],
+                        (int) $confirmation?->confirmed_by,
+                    ], true);
+
+                    $settlement['refusedProof'] = $refused && $isParty
+                        ? [
+                            'proofUrl' => ProofStorage::exists($confirmation->proof_path) ? $confirmation->proof_url : null,
+                            'note' => $confirmation->note,
+                            'reason' => $confirmation->refusal_reason,
+                        ]
+                        : null;
+
+                    $settlement['proofHistory'] = array_map(
+                        fn ($entry) => $history->present($entry),
+                        $entries["{$settlement['from_user_id']}-{$settlement['to_user_id']}"] ?? []
+                    );
+                }
 
                 return $settlement;
             })

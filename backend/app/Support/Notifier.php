@@ -382,6 +382,36 @@ class Notifier
     }
 
     /**
+     * Quem paga pelo devedor adicionou uma justificativa com foto ao comprovante que o próprio devedor
+     * enviou (`SettlementDecisionController@complement`) → avisa o credor e o devedor. `$authorName` é
+     * quem adicionou (`actorName`) e `$debtorName`, o devedor (`debtorName`), de quem é o acerto. Quem
+     * chama monta `$recipientIds` sem o autor da ação (feature
+     * 20261114-historico-de-comprovantes-e-justificativa, R10 e R12). **A justificativa não vai no
+     * `data`**: ela só aparece no histórico, para quem é parte (D8).
+     *
+     * @param  array<int, int>  $recipientIds
+     */
+    public static function settlementComplementAdded(
+        Group $group,
+        array $recipientIds,
+        ?string $authorName,
+        ?string $debtorName,
+        float|string $amount,
+        mixed $cycleStart
+    ): void {
+        self::guard('settlement_complement_added', function () use ($group, $recipientIds, $authorName, $debtorName, $amount, $cycleStart) {
+            self::fanOut($recipientIds, 'settlement_complement_added', $group->id, [
+                'actorName' => $authorName,
+                'debtorName' => $debtorName,
+                'groupId' => $group->id,
+                'groupName' => $group->name,
+                'amount' => self::amount($amount),
+                'cycleLabel' => self::cycleLabel($cycleStart),
+            ]);
+        });
+    }
+
+    /**
      * Grava uma linha por destinatário.
      *
      * @param  iterable<int>  $userIds

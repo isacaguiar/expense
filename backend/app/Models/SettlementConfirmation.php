@@ -46,6 +46,7 @@ class SettlementConfirmation extends Model
         'confirmed_at',
         'accepted_at',
         'refused_at',
+        'refusal_reason',
     ];
 
     protected $appends = ['proof_url'];

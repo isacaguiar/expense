@@ -9,6 +9,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Link,
   Stack,
   Typography
 } from '@mui/material';
@@ -18,6 +19,8 @@ import UploadFileOutlinedIcon from '@mui/icons-material/UploadFileOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import CallReceivedOutlinedIcon from '@mui/icons-material/CallReceivedOutlined';
 import UserAvatar from './UserAvatar';
+import RefuseReasonDialog from './RefuseReasonDialog';
+import SettlementProofHistory from './SettlementProofHistory';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 import { isSettlementConfirmed } from '../utils/cycleOrdering';
 
@@ -44,8 +47,12 @@ type PayableSettlementListProps = {
   // 20261110-quem-paga-se-declara-e-credor-recusa, plan §11). Opcionais: sem eles (o Painel) a lista só
   // mostra o estado, sem botões de decisão.
   onAccept?: (settlement: SummarySettlement) => void;
-  onRefuse?: (settlement: SummarySettlement) => void;
+  // O motivo é opcional e vem do `RefuseReasonDialog`, que a lista abre ao clicar em "Recusar".
+  onRefuse?: (settlement: SummarySettlement, reason?: string) => void;
   onDelete?: (settlement: SummarySettlement) => void;
+  // "Adicionar justificativa e comprovante" (feature 20261114-historico-de-comprovantes-e-justificativa): só de quem
+  // paga pelo devedor, sobre o comprovante `sent` do próprio devedor; quem chama abre o diálogo.
+  onComplement?: (settlement: SummarySettlement) => void;
   // Uma decisão em andamento: desabilita os botões dela.
   decisionBusy?: boolean;
   // Arranjo do topo de cada acerto (feature 20261112-ajustes-de-texto-participantes-e-pagamentos). `'sentence'`
@@ -89,12 +96,15 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   onAccept,
   onRefuse,
   onDelete,
+  onComplement,
   decisionBusy = false,
   rowLayout = 'sentence'
 }) => {
   const route = rowLayout === 'route';
-  // O comprovante que a pessoa está prestes a excluir: a exclusão é definitiva e pede confirmação.
+  // O comprovante que a pessoa está prestes a retirar: sai do acerto (o arquivo fica no histórico) e pede confirmação.
   const [deleting, setDeleting] = useState<SummarySettlement | null>(null);
+  // O comprovante que o credor está prestes a recusar: "Recusar" só abre o diálogo do motivo.
+  const [refusing, setRefusing] = useState<SummarySettlement | null>(null);
 
   const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
   const nameFor = (userId: number): string => nameById.get(userId) ?? 'Desconhecido';
@@ -137,6 +147,9 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
         // As ações só valem com o ciclo fechado e não encerrado (`canConfirm`), a janela do backend.
         const canDecide = isReceiver && awaiting && canConfirm && onAccept !== undefined && onRefuse !== undefined;
         const canDelete = (isDebtor || isSender) && (awaiting || refused) && canConfirm && onDelete !== undefined;
+        // A justificativa só vale sobre o comprovante do **próprio devedor** em estado `sent` (R9) e é de quem paga
+        // por ele; vale também com o ciclo encerrado (D7-B), então não depende de `canConfirm`.
+        const canComplement = canPayFor && confirmed && status === 'sent' && !settlement.confirmedBy && onComplement !== undefined;
         // O aceito é definitivo: nem Pix nem reenvio.
         const canResend = canAct && canConfirm && !accepted;
 
@@ -296,7 +309,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                     variant="outlined"
                     color="error"
                     disabled={decisionBusy}
-                    onClick={() => onRefuse?.(settlement)}
+                    onClick={() => setRefusing(settlement)}
                   >
                     Recusar
                   </Button>
@@ -305,7 +318,13 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
 
               {canDelete && (
                 <Button size="small" color="error" disabled={decisionBusy} onClick={() => setDeleting(settlement)}>
-                  Excluir
+                  Retirar comprovante
+                </Button>
+              )}
+
+              {canComplement && (
+                <Button size="small" variant="outlined" onClick={() => onComplement?.(settlement)}>
+                  Adicionar justificativa e comprovante
                 </Button>
               )}
 
@@ -336,15 +355,53 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                 </Typography>
               )}
             </Box>
+
+            {refused && settlement.refusedProof && (settlement.refusedProof.reason || settlement.refusedProof.proofUrl) && (
+              // O motivo e o comprovante recusado só chegam às partes do acerto (o servidor não os manda aos
+              // outros). O motivo é texto puro (nunca HTML nem link) e quebra em qualquer ponto.
+              <Box mt={1} data-testid="refused-proof">
+                {settlement.refusedProof.reason && (
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ overflowWrap: 'anywhere' }}>
+                    {`Motivo: ${settlement.refusedProof.reason}`}
+                  </Typography>
+                )}
+                {settlement.refusedProof.proofUrl && (
+                  <Link
+                    href={settlement.refusedProof.proofUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    variant="caption"
+                    underline="hover"
+                  >
+                    Ver comprovante recusado
+                  </Link>
+                )}
+              </Box>
+            )}
+
+            {/* O histórico só chega às partes do acerto e a quem enviou cada entrada (o servidor decide). */}
+            {settlement.proofHistory && settlement.proofHistory.length > 0 && (
+              <SettlementProofHistory entries={settlement.proofHistory} />
+            )}
           </Card>
         );
       })}
 
+      <RefuseReasonDialog
+        open={refusing !== null}
+        busy={decisionBusy}
+        onCancel={() => setRefusing(null)}
+        onConfirm={reason => {
+          if (refusing) onRefuse?.(refusing, reason);
+          setRefusing(null);
+        }}
+      />
+
       <Dialog open={deleting !== null} onClose={() => setDeleting(null)}>
-        <DialogTitle>Excluir comprovante?</DialogTitle>
+        <DialogTitle>Retirar comprovante?</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            {`O comprovante enviado por ${deleting?.confirmedBy?.name ?? 'quem enviou'} será excluído de vez e não poderá ser recuperado. Quem deve poderá enviar outro.`}
+            {`O comprovante enviado por ${deleting?.confirmedBy?.name ?? 'quem enviou'} sai do acerto e fica guardado no histórico. Quem deve poderá enviar outro.`}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
@@ -356,7 +413,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
               setDeleting(null);
             }}
           >
-            Excluir
+            Retirar
           </Button>
         </DialogActions>
       </Dialog>

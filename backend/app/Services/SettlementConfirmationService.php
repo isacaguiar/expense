@@ -6,8 +6,8 @@ use App\Exceptions\SettlementDecisionRefused;
 use App\Models\Group;
 use App\Models\GroupCycleSnapshot;
 use App\Models\SettlementConfirmation;
+use App\Models\SettlementProofEntry;
 use App\Support\BillingCycle;
-use App\Support\ProofStorage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -23,7 +23,16 @@ class SettlementConfirmationService
 
     public const BLOCKED_DEBTOR_PROOF = 'debtor_proof';
 
-    public function __construct(private CycleSealingService $sealing) {}
+    /** O devedor já gastou o orçamento dele no par e no ciclo (D5, D14): nenhum arquivo novo cabe. */
+    public const BLOCKED_HISTORY_FULL = 'history_full';
+
+    /** Quem paga pelo devedor (todos os pagadores declarados, somados) já gastou o orçamento deles (D14). */
+    public const BLOCKED_PAYER_FULL = 'payer_full';
+
+    public function __construct(
+        private CycleSealingService $sealing,
+        private SettlementProofHistoryService $history
+    ) {}
 
     /**
      * O ciclo `cyclesAgo` ciclos atrás, se ainda dá para decidir sobre os comprovantes dele: precisa estar
@@ -35,6 +44,41 @@ class SettlementConfirmationService
      * @throws SettlementDecisionRefused
      */
     public function decidableCycle(Group $group, int $cyclesAgo): array
+    {
+        [$cycle, $snapshot] = $this->closedCycleAndSnapshot($group, $cyclesAgo);
+
+        if ($snapshot && $snapshot->isSealed()) {
+            throw new SettlementDecisionRefused('Esta competência já foi encerrada.');
+        }
+
+        return $cycle;
+    }
+
+    /**
+     * O ciclo `cyclesAgo` ciclos atrás, se ele está **fechado** (por data ou por fechamento manual ainda
+     * vigente), **sem olhar o selo**: o ciclo encerrado também é fechado. É o que o complemento com justificativa
+     * usa (feature 20261114-historico-de-comprovantes-e-justificativa, plan §5, D7-B: a exceção à R9, porque o
+     * complemento só acrescenta ao histórico e não muda estado nem selo). `decidableCycle` parte daqui e
+     * acrescenta a checagem do selo, com as mesmas duas mensagens de antes.
+     *
+     * @return array{start: Carbon, end: Carbon, status: string}
+     *
+     * @throws SettlementDecisionRefused
+     */
+    public function closedCycle(Group $group, int $cyclesAgo): array
+    {
+        return $this->closedCycleAndSnapshot($group, $cyclesAgo)[0];
+    }
+
+    /**
+     * O ciclo fechado e o snapshot dele (se houver), numa leitura só, para `decidableCycle` conferir o selo
+     * sem uma segunda consulta.
+     *
+     * @return array{0: array{start: Carbon, end: Carbon, status: string}, 1: GroupCycleSnapshot|null}
+     *
+     * @throws SettlementDecisionRefused
+     */
+    private function closedCycleAndSnapshot(Group $group, int $cyclesAgo): array
     {
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $cyclesAgo);
 
@@ -49,11 +93,7 @@ class SettlementConfirmationService
             throw new SettlementDecisionRefused('O acerto só pode ser confirmado depois que a competência é fechada.');
         }
 
-        if ($snapshot && $snapshot->isSealed()) {
-            throw new SettlementDecisionRefused('Esta competência já foi encerrada.');
-        }
-
-        return $cycle;
+        return [$cycle, $snapshot];
     }
 
     /**
@@ -76,7 +116,7 @@ class SettlementConfirmationService
                 'Este comprovante foi recusado: quem enviou precisa reenviar.'
             );
 
-            $confirmation->update(['accepted_at' => Carbon::now()]);
+            $this->recordDecision($confirmation, ['accepted_at' => Carbon::now()]);
 
             return $confirmation;
         });
@@ -89,15 +129,19 @@ class SettlementConfirmationService
     /**
      * O credor `$creditorId` recusa o comprovante que um responsável enviou do acerto de `$fromUserId`.
      * Só de `awaiting_acceptance`; grava `refused_at` com a linha travada e relida. **Não apaga a linha nem
-     * o arquivo** (D4-B): o acerto volta a pendente na API e quem enviou reenvia (ou exclui, TASK-600).
+     * o arquivo** (D4-B): o acerto volta a pendente na API e quem enviou reenvia (ou retira).
+     *
+     * `$reason` é o motivo opcional (feature 20261114-historico-de-comprovantes-e-justificativa, D4-A): fica em
+     * `refusal_reason`, na linha atual, até o comprovante sair de cena e ir ao histórico (R6). Só é gravado se
+     * a recusa vale: com a linha já recusada ou aceita, nada muda.
      *
      * @throws SettlementDecisionRefused
      */
-    public function refuse(Group $group, int $fromUserId, int $creditorId, int $cyclesAgo): SettlementConfirmation
+    public function refuse(Group $group, int $fromUserId, int $creditorId, int $cyclesAgo, ?string $reason = null): SettlementConfirmation
     {
         $cycle = $this->decidableCycle($group, $cyclesAgo);
 
-        return DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId) {
+        return DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId, $reason) {
             $confirmation = $this->lockedAwaitingConfirmation(
                 $group,
                 $cycle['start'],
@@ -106,22 +150,24 @@ class SettlementConfirmationService
                 'Este comprovante já foi recusado.'
             );
 
-            $confirmation->update(['refused_at' => Carbon::now()]);
+            $this->recordDecision($confirmation, ['refused_at' => Carbon::now(), 'refusal_reason' => $reason]);
 
             return $confirmation;
         });
     }
 
     /**
-     * Quem enviou o comprovante, ou o devedor, o **exclui** enquanto o credor não o aceitou (D7-A). É a
-     * **única exclusão física** desta feature, com o aval de hard delete dele em 2026-11-10 (specify §2.8 e
-     * §3.4), limitada ao comprovante que passa pelo aceite (o de responsável) e, por `decidableCycle`, ao
-     * ciclo que ainda não está encerrado. Vale em `awaiting_acceptance` e em `refused`; o aceito é definitivo.
+     * Quem enviou o comprovante, ou o devedor, o **retira** do acerto enquanto o credor não o aceitou (D7-A da
+     * feature anterior e D6-A da 20261114-historico-de-comprovantes-e-justificativa). Limitado ao comprovante
+     * que passa pelo aceite (o de responsável) e, por `decidableCycle`, ao ciclo que ainda não está encerrado.
+     * Vale em `awaiting_acceptance` e em `refused`; o aceito é definitivo (R4).
      *
-     * A linha sai primeiro, com ela travada e relida, e o arquivo depois da transação: só se nenhuma outra
-     * linha de acerto nem parcela o usa (`ProofStorage::deleteIfUnreferenced` olha o banco, então precisa
-     * rodar **depois** de a linha sumir). Não exige o vínculo "quem paga por quem": quem saiu da lista ainda
-     * exclui o próprio comprovante. O credor, o criador do grupo e os demais membros recebem 403.
+     * Com a linha travada e relida, **na mesma transação**: `archive($linha, withdrawn)` grava a entrada do
+     * histórico e a **linha atual** é apagada (a única exclusão física que sobra, dentro do aval de hard delete
+     * dele de 2026-11-10); se um dos dois falha, os dois desfazem (F2). **O arquivo fica** (R2): nada o apaga,
+     * ele é o do histórico. O teto de 10 entradas **não** vale aqui: retirar não grava arquivo novo. Não exige
+     * o vínculo "quem paga por quem": quem saiu da lista ainda retira o próprio comprovante. O credor, o criador
+     * do grupo e os demais membros recebem 403.
      *
      * @throws SettlementDecisionRefused
      */
@@ -129,30 +175,26 @@ class SettlementConfirmationService
     {
         $cycle = $this->decidableCycle($group, $cyclesAgo);
 
-        $path = DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId, $callerId) {
+        DB::transaction(function () use ($group, $cycle, $fromUserId, $creditorId, $callerId) {
             $confirmation = $this->lockedConfirmation($group, $cycle['start'], $fromUserId, $creditorId);
 
             abort_unless(
                 $callerId === (int) $confirmation->from_user_id || $callerId === (int) $confirmation->confirmed_by,
                 403,
-                'Só quem enviou o comprovante ou o devedor pode excluí-lo.'
+                'Só quem enviou o comprovante ou o devedor pode retirá-lo.'
             );
 
             if (! $confirmation->isThirdParty()) {
-                throw new SettlementDecisionRefused('Só o comprovante enviado por quem paga por outra pessoa pode ser excluído.');
+                throw new SettlementDecisionRefused('Só o comprovante enviado por quem paga por outra pessoa pode ser retirado.');
             }
 
             if ($confirmation->status() === SettlementConfirmation::STATUS_ACCEPTED) {
-                throw new SettlementDecisionRefused('Este comprovante já foi aceito e não pode ser excluído.');
+                throw new SettlementDecisionRefused('Este comprovante já foi aceito e não pode ser retirado.');
             }
 
-            $path = $confirmation->proof_path;
+            $this->history->archive($confirmation, SettlementProofEntry::KIND_WITHDRAWN, $callerId);
             $confirmation->delete();
-
-            return $path;
         });
-
-        ProofStorage::deleteIfUnreferenced($path);
     }
 
     /**
@@ -171,32 +213,148 @@ class SettlementConfirmationService
      * **Só o devedor substitui o comprovante dele** (revisão de segurança, TASK-605): quem envia por outra
      * pessoa (`confirmed_by` preenchido) não sobrescreve um comprovante "enviado", o do próprio devedor, que
      * já vale para o selo; senão qualquer membro que se declarasse responsável o trocaria e apagaria o
-     * arquivo dele. Com `confirmation` nulo, `blockedBy` diz o motivo (`resendBlockedBy`).
+     * arquivo dele. Com `confirmation` nulo, `blockedBy` diz o motivo (`resendBlockedBy` e, depois dele, o
+     * teto do histórico, `historyBlockedBy`).
+     *
+     * **O comprovante que sai de cena vai ao histórico e o arquivo dele fica** (feature
+     * 20261114-historico-de-comprovantes-e-justificativa, plan §2, R1 e R2): com a linha atual travada,
+     * `archive($current, 'replaced')` grava a entrada **antes** da troca, na mesma transação (F1: se a troca
+     * falhar, a entrada desfaz junto). Por isso o retorno **não traz mais o caminho anterior**: nada apaga o
+     * arquivo substituído. O primeiro envio do par (sem linha atual) não cria entrada.
      *
      * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
      * @param  array<string, mixed>  $values
-     * @return array{confirmation: SettlementConfirmation|null, previousPath: string|null, wasRefused: bool, blockedBy: string|null}
+     * @return array{confirmation: SettlementConfirmation|null, wasRefused: bool, blockedBy: string|null}
      */
     public function submitProof(array $key, array $values, bool $hadRow): array
     {
         return DB::transaction(function () use ($key, $values, $hadRow) {
             $current = $hadRow ? SettlementConfirmation::where($key)->lockForUpdate()->first() : null;
 
-            $blockedBy = self::resendBlockedBy($current, $values['confirmed_by'] ?? null);
+            // Quem age é quem envia o comprovante novo: `confirmed_by`, ou o próprio devedor quando nulo (D14).
+            $actorId = (int) ($values['confirmed_by'] ?? $key['from_user_id']);
+
+            $blockedBy = self::resendBlockedBy($current, $values['confirmed_by'] ?? null) ?? self::historyBlockedBy($key, $actorId);
             if ($blockedBy !== null) {
-                return ['confirmation' => null, 'previousPath' => null, 'wasRefused' => false, 'blockedBy' => $blockedBy];
+                return ['confirmation' => null, 'wasRefused' => false, 'blockedBy' => $blockedBy];
             }
 
-            $previousPath = $current?->proof_path;
             $wasRefused = $current?->status() === SettlementConfirmation::STATUS_REFUSED;
+
+            if ($current !== null) {
+                $this->history->archive($current, SettlementProofEntry::KIND_REPLACED, $actorId);
+            }
 
             $confirmation = SettlementConfirmation::updateOrCreate($key, $values + [
                 'accepted_at' => null,
                 'refused_at' => null,
+                'refusal_reason' => null,
             ]);
 
-            return ['confirmation' => $confirmation, 'previousPath' => $previousPath, 'wasRefused' => $wasRefused, 'blockedBy' => null];
+            return ['confirmation' => $confirmation, 'wasRefused' => $wasRefused, 'blockedBy' => null];
         });
+    }
+
+    /**
+     * Antes de gravar o arquivo do **complemento** (feature 20261114-historico-de-comprovantes-e-justificativa,
+     * plan §5, D3-B, D7-B, D9 e D10): confere, **sem travar a linha**, que o ciclo está fechado (o ciclo
+     * **encerrado** também vale, a exceção à R9), que o par tem comprovante (404 se não) e que ele é o do próprio
+     * devedor, em estado `sent` (422 se está aguardando aceite, recusado ou aceito), e que o **orçamento de quem
+     * paga pelo devedor** (`$authorId`, D14) ainda tem lugar (422 com 10 entradas dos pagadores no par e no ciclo).
+     * Quem chama a usa antes de `ProofStorage::store`; `addComplement` repete tudo sob a trava.
+     *
+     * @return array{start: Carbon, end: Carbon, status: string}
+     *
+     * @throws SettlementDecisionRefused
+     */
+    public function complementTarget(Group $group, int $cyclesAgo, int $debtorId, int $creditorId, int $authorId): array
+    {
+        $cycle = $this->closedCycle($group, $cyclesAgo);
+
+        $confirmation = SettlementConfirmation::where('group_id', $group->id)
+            ->where('cycle_start', $cycle['start']->toDateString())
+            ->where('from_user_id', $debtorId)
+            ->where('to_user_id', $creditorId)
+            ->first();
+
+        abort_if($confirmation === null, 404);
+
+        $this->assertComplementable($confirmation, $authorId);
+
+        return $cycle;
+    }
+
+    /**
+     * Grava o complemento de `$authorId` sobre o comprovante do par, com a linha atual **travada e relida**: as
+     * mesmas conferências de `complementTarget` valem de novo (F6) e, passando, a entrada nasce por
+     * `SettlementProofHistoryService::addComplement`. **Nenhum `UPDATE` na linha atual.** O arquivo (`$path`) já
+     * foi gravado por quem chama, que o apaga se isto lançar.
+     *
+     * @param  array{start: Carbon, end: Carbon, status: string}  $cycle  o que `complementTarget` devolveu
+     *
+     * @throws SettlementDecisionRefused
+     */
+    public function addComplement(Group $group, array $cycle, int $debtorId, int $creditorId, int $authorId, string $path, string $justification): SettlementProofEntry
+    {
+        return DB::transaction(function () use ($group, $cycle, $debtorId, $creditorId, $authorId, $path, $justification) {
+            $confirmation = $this->lockedConfirmation($group, $cycle['start'], $debtorId, $creditorId);
+
+            $this->assertComplementable($confirmation, $authorId);
+
+            return $this->history->addComplement($confirmation, $authorId, $path, $justification);
+        });
+    }
+
+    /**
+     * O complemento só vale sobre o comprovante **do próprio devedor** em estado `sent` (R9: o de responsável
+     * aguardando aceite, o recusado e o aceito não recebem complemento) e com lugar no **orçamento de quem
+     * paga pelo devedor** (R8, D14).
+     *
+     * @throws SettlementDecisionRefused
+     */
+    private function assertComplementable(SettlementConfirmation $confirmation, int $authorId): void
+    {
+        if ($confirmation->status() !== SettlementConfirmation::STATUS_SENT) {
+            throw new SettlementDecisionRefused('Só dá para complementar o comprovante que o próprio devedor enviou.');
+        }
+
+        $blockedBy = self::historyBlockedBy([
+            'group_id' => $confirmation->group_id,
+            'cycle_start' => $confirmation->cycle_start->toDateString(),
+            'from_user_id' => $confirmation->from_user_id,
+            'to_user_id' => $confirmation->to_user_id,
+        ], $authorId);
+
+        if ($blockedBy !== null) {
+            throw new SettlementDecisionRefused(self::blockedMessage($blockedBy));
+        }
+    }
+
+    /**
+     * O orçamento de quem age (`$actorId`) já está gasto neste par e ciclo (`SettlementProofHistoryService::MAX_ENTRIES`,
+     * D14)? Se quem age é o devedor, conta as entradas dele (`BLOCKED_HISTORY_FULL`); se é um pagador declarado,
+     * conta as de todos os pagadores, complementos incluídos (`BLOCKED_PAYER_FULL`). O teto vale para as ações
+     * que **gravam arquivo novo** (enviar, reenviar e complementar; retirar não grava e fica de fora, mas
+     * conta). Um pagador nunca gasta a vaga do devedor (achados A1 e A5). O controller usa o veredito antes de
+     * gravar o arquivo e `submitProof` e `addComplement`, de novo, com a linha travada.
+     *
+     * @param  array<string, mixed>  $key  `group_id`, `cycle_start`, `from_user_id` e `to_user_id`
+     */
+    public static function historyBlockedBy(array $key, int $actorId): ?string
+    {
+        $full = app(SettlementProofHistoryService::class)->isFull(
+            (int) $key['group_id'],
+            (string) $key['cycle_start'],
+            (int) $key['from_user_id'],
+            (int) $key['to_user_id'],
+            $actorId
+        );
+
+        if (! $full) {
+            return null;
+        }
+
+        return $actorId === (int) $key['from_user_id'] ? self::BLOCKED_HISTORY_FULL : self::BLOCKED_PAYER_FULL;
     }
 
     /**
@@ -219,8 +377,35 @@ class SettlementConfirmationService
     {
         return match ($blockedBy) {
             self::BLOCKED_DEBTOR_PROOF => 'O devedor já enviou o comprovante deste acerto.',
+            self::BLOCKED_HISTORY_FULL => 'O limite de comprovantes guardados deste acerto foi atingido.',
+            self::BLOCKED_PAYER_FULL => 'O limite de comprovantes e justificativas de quem paga por esta pessoa foi atingido.',
             default => 'Este comprovante já foi aceito.',
         };
+    }
+
+    /**
+     * Grava a decisão do credor (`accepted_at` ou `refused_at`) na linha travada **sem reescrever
+     * `confirmed_at`**, a data de **envio** do comprovante (item 147 do backlog, feature
+     * 20261114-historico-de-comprovantes-e-justificativa, plan §8).
+     *
+     * `confirmed_at` é a primeira coluna `timestamp NOT NULL` da tabela: num MySQL com
+     * `explicit_defaults_for_timestamp` desligado ela ganha `ON UPDATE CURRENT_TIMESTAMP`, e um `UPDATE` que
+     * não a liste a reescreve. Pôr `'confirmed_at' => $confirmation->confirmed_at` num `$confirmation->update()`
+     * **não** resolve: o Eloquent só grava atributo sujo, então o mesmo valor não entra no `SET`. Por isso o
+     * `UPDATE` sai pelo query builder com `confirmed_at = confirmed_at`, a forma que o MySQL documenta para
+     * impedir a atualização automática, e vale com a opção ligada ou desligada.
+     *
+     * Depois, o model da memória recebe os valores novos (e fica sem atributo pendente), para quem chama
+     * seguir lendo `accepted_at` e `refused_at` dele.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function recordDecision(SettlementConfirmation $confirmation, array $attributes): void
+    {
+        SettlementConfirmation::whereKey($confirmation->getKey())
+            ->update($attributes + ['confirmed_at' => DB::raw('`confirmed_at`')]);
+
+        $confirmation->forceFill($attributes)->syncOriginal();
     }
 
     /**

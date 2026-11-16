@@ -25,6 +25,8 @@ import { useGroupCycle, cycleStatusChip, SummaryExpense, SummarySettlement } fro
 import { usePaymentActions } from '../hooks/usePaymentActions';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
 import { useSettlementDecision, type SettlementDecisionAction } from '../hooks/useSettlementDecision';
+import { useSettlementComplement } from '../hooks/useSettlementComplement';
+import SettlementComplementDialog from '../components/SettlementComplementDialog';
 import PaymentSettlementsPanel, { SettlementsTab } from '../components/PaymentSettlementsPanel';
 import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
 import PixPaymentDialog from '../components/PixPaymentDialog';
@@ -39,7 +41,7 @@ import { useExpenseFilters } from '../hooks/useExpenseFilters';
 const DECISION_NOTICE: Record<SettlementDecisionAction, string> = {
   accept: 'Comprovante aceito.',
   refuse: 'Comprovante recusado.',
-  destroy: 'Comprovante excluído.'
+  destroy: 'Comprovante retirado.'
 };
 
 const formatMoney = (value: number): string =>
@@ -233,6 +235,16 @@ const Payments: React.FC = () => {
   );
   const decision = useSettlementDecision(groupId, handleDecisionSuccess);
 
+  // Justificativa com foto de quem paga pelo devedor (feature 20261114-historico-de-comprovantes-e-justificativa,
+  // plan §12): o diálogo fica aberto até o sucesso; a falha mostra a mensagem do servidor dentro dele.
+  const [complementing, setComplementing] = useState<SummarySettlement | null>(null);
+  const handleComplementSuccess = useCallback(() => {
+    setComplementing(null);
+    setDecisionNotice('Justificativa e comprovante enviados.');
+    reload();
+  }, [reload]);
+  const complement = useSettlementComplement(groupId, handleComplementSuccess);
+
   const expenses = summary?.expenses ?? [];
 
   // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Substitui o
@@ -412,8 +424,12 @@ const Payments: React.FC = () => {
                 onSendProof={openConfirmSettlementDialog}
                 payForUserIds={payForUserIds}
                 onAccept={settlement => decision.accept(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
-                onRefuse={settlement => decision.refuse(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
+                onRefuse={(settlement, reason) => decision.refuse(settlement.from_user_id, settlement.to_user_id, cyclesAgo, reason)}
                 onDelete={settlement => decision.destroy(settlement.from_user_id, settlement.to_user_id, cyclesAgo)}
+                onComplement={settlement => {
+                  complement.clearError();
+                  setComplementing(settlement);
+                }}
                 decisionBusy={decision.busy}
               />
             </Grid>
@@ -533,6 +549,17 @@ const Payments: React.FC = () => {
           {decisionNotice}
         </Alert>
       </Snackbar>
+
+      <SettlementComplementDialog
+        open={complementing !== null}
+        debtorName={summary?.balances.find(balance => balance.user_id === complementing?.from_user_id)?.name ?? 'quem deve'}
+        busy={complement.busy}
+        error={complement.error}
+        onCancel={() => setComplementing(null)}
+        onSubmit={(proof, justification) => {
+          if (complementing) complement.complement(complementing.from_user_id, complementing.to_user_id, cyclesAgo, proof, justification);
+        }}
+      />
 
       <Snackbar
         open={decision.error !== null}

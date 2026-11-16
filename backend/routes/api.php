@@ -90,6 +90,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/groups/{groupId}/settlements/refuse', [SettlementDecisionController::class, 'refuse']);
     // Único DELETE físico da feature: o próprio comprovante, com o aval de hard delete (D7-A).
     Route::delete('/groups/{groupId}/settlements/confirmation', [SettlementDecisionController::class, 'destroy']);
+    // Complemento com justificativa e foto de quem paga pelo devedor (feature 20261114-historico-de-comprovantes-e-justificativa).
+    Route::post('/groups/{groupId}/settlements/complement', [SettlementDecisionController::class, 'complement']);
 
     Route::get('/groups/{groupId}/expenses', [ExpenseController::class, 'indexByGroup']);
     Route::get('/groups/{groupId}/expenses/monthly', [ExpenseController::class, 'getMonthlyExpenses']);
