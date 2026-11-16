@@ -4,7 +4,7 @@ ID: 154
 Origem: docs/feature/concluidas/202611/20261114-historico-de-comprovantes-e-justificativa/ (TASK-628, revisão do `security-reviewer`, achado B1: **pré-existente**, só repetido pela rota nova de complemento); não bloqueia o PR
 Criado em: 2026-11-14
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-641 (feature 20261116-endurecer-upload-de-comprovante)
 
 ## Descrição
 Todo upload de comprovante (`pay`, `store` com pagamento, `updatePaymentProof`, `confirmSettlement` e, agora, `settlements/complement`) valida com `image|max:5120` e grava por `ProofStorage::store`:
