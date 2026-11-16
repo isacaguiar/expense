@@ -23,8 +23,10 @@ class AvatarStorage
      */
     public static function store(UploadedFile $file, int $userId): string
     {
-        $extension = $file->getClientOriginalExtension()
-            ?: ($file->guessExtension() ?: 'dat');
+        // A extensão sai do CONTEÚDO (`guessExtension()`), nunca do nome que o cliente mandou (feature
+        // 20261116-endurecer-upload-de-foto-de-perfil, TASK-648, D3-A): o cliente podia gravar `uuid.svg`,
+        // `uuid.html` ou uma extensão de 200+ caracteres que estourava `ex_users.photo_path`.
+        $extension = $file->guessExtension() ?: 'dat';
 
         $name = Str::uuid()->toString().'.'.$extension;
 

@@ -81,4 +81,41 @@ class UserPhotoHardeningTest extends TestCase
 
         $this->get("/api/user/{$user->id}/photo")->assertStatus(403);
     }
+
+    // --- Extensão pelo conteúdo (TASK-648, D3-A) ---
+
+    public function test_a_huge_client_extension_is_ignored_and_the_file_is_named_by_its_content(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+
+        $this->upload($user, $this->realPng('a.'.str_repeat('x', 210)))->assertOk();
+
+        $path = $user->fresh()->photo_path;
+        $this->assertMatchesRegularExpression("#^avatares/{$user->id}/[0-9a-f-]{36}\.png$#", $path);
+        $this->assertLessThan(255, strlen($path));
+        Storage::disk('local')->assertExists($path);
+    }
+
+    public function test_an_executable_looking_client_extension_is_not_trusted(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+
+        $this->upload($user, $this->realPng('foto.exe'))->assertOk();
+
+        $path = $user->fresh()->photo_path;
+        $this->assertStringEndsWith('.png', $path);
+        $this->assertStringNotContainsString('exe', $path);
+    }
+
+    public function test_a_regular_jpeg_keeps_a_jpg_extension(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+
+        $this->upload($user, UploadedFile::fake()->image('a.jpg'))->assertOk();
+
+        $this->assertStringEndsWith('.jpg', $user->fresh()->photo_path);
+    }
 }

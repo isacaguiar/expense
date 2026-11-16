@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20261116
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-647 | Acrescentar `nosniff` e CSP `sandbox` à foto servida por `UserPhotoController` | backend | plan.md §1 | nenhum | Concluída |
-| TASK-648 | Derivar a extensão da foto de perfil pelo conteúdo em `AvatarStorage::store` | backend | plan.md §2 | nenhum | Pendente |
+| TASK-648 | Derivar a extensão da foto de perfil pelo conteúdo em `AvatarStorage::store` | backend | plan.md §2 | nenhum | Concluída |
 | TASK-649 | Trocar `image` por `AvatarStorage::UPLOAD_RULE` sem SVG em `uploadPhoto` | backend | plan.md §3 | antes do merge (muda contrato, D2) | Pendente |
 | TASK-650 | Mostrar no Perfil o motivo que o servidor deu ao recusar a foto | frontend | plan.md §4 | nenhum | Pendente |
 | TASK-651 | Rodar `security-reviewer` no delta e a suíte cheia do backend | backend | plan.md §6 | nenhum | Pendente |
