@@ -45,3 +45,13 @@ O histórico é a única forma de o credor e o pagador discutirem uma recusa com
 
 ## Pré-requisitos
 A feature `20261110-quem-paga-se-declara-e-credor-recusa` mergeada em `dev`. Nova revisão do `security-reviewer` (a leitura do histórico expõe arquivos financeiros) e gate humano da Constitution para a mudança de modelo de dados.
+
+
+## Resolução
+
+Concluído em: 2026-11-16
+Feature: docs/feature/20261114-historico-de-comprovantes-e-justificativa/   (vai para `docs/feature/concluidas/202611/` quando o PR mergear em `dev`, ADR-009)
+Tasks: TASK-616 a TASK-640
+PRs: https://github.com/isacaguiar/expense/pull/284
+
+Nota: o histórico, o motivo da recusa, a retirada ("Excluir" virou "Retirar comprovante") e o complemento com justificativa foram entregues; o teto de arquivos virou dois orçamentos por quem age (D14), e os achados de segurança A1 e A5 foram corrigidos antes do merge. Pontos que sobram estão nos itens 154 e 155 do backlog.
