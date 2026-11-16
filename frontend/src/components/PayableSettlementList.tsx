@@ -50,6 +50,9 @@ type PayableSettlementListProps = {
   // O motivo é opcional e vem do `RefuseReasonDialog`, que a lista abre ao clicar em "Recusar".
   onRefuse?: (settlement: SummarySettlement, reason?: string) => void;
   onDelete?: (settlement: SummarySettlement) => void;
+  // "Adicionar justificativa e comprovante" (feature 20261114-historico-de-comprovantes-e-justificativa): só de quem
+  // paga pelo devedor, sobre o comprovante `sent` do próprio devedor; quem chama abre o diálogo.
+  onComplement?: (settlement: SummarySettlement) => void;
   // Uma decisão em andamento: desabilita os botões dela.
   decisionBusy?: boolean;
   // Arranjo do topo de cada acerto (feature 20261112-ajustes-de-texto-participantes-e-pagamentos). `'sentence'`
@@ -93,6 +96,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   onAccept,
   onRefuse,
   onDelete,
+  onComplement,
   decisionBusy = false,
   rowLayout = 'sentence'
 }) => {
@@ -143,6 +147,9 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
         // As ações só valem com o ciclo fechado e não encerrado (`canConfirm`), a janela do backend.
         const canDecide = isReceiver && awaiting && canConfirm && onAccept !== undefined && onRefuse !== undefined;
         const canDelete = (isDebtor || isSender) && (awaiting || refused) && canConfirm && onDelete !== undefined;
+        // A justificativa só vale sobre o comprovante do **próprio devedor** em estado `sent` (R9) e é de quem paga
+        // por ele; vale também com o ciclo encerrado (D7-B), então não depende de `canConfirm`.
+        const canComplement = canPayFor && confirmed && status === 'sent' && !settlement.confirmedBy && onComplement !== undefined;
         // O aceito é definitivo: nem Pix nem reenvio.
         const canResend = canAct && canConfirm && !accepted;
 
@@ -312,6 +319,12 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
               {canDelete && (
                 <Button size="small" color="error" disabled={decisionBusy} onClick={() => setDeleting(settlement)}>
                   Retirar comprovante
+                </Button>
+              )}
+
+              {canComplement && (
+                <Button size="small" variant="outlined" onClick={() => onComplement?.(settlement)}>
+                  Adicionar justificativa e comprovante
                 </Button>
               )}
 

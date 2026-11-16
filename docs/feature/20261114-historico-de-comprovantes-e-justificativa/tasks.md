@@ -41,7 +41,7 @@ Escopo: `backend/`, `frontend/` e documentação. Origem: backlog **150**, agrup
 | TASK-632 | Mostrar o motivo e o link do comprovante recusado às partes | frontend | plan.md §12 | nenhum | Concluída |
 | TASK-633 | Criar a seção recolhível "Histórico (n)" do acerto | frontend | plan.md §12 | nenhum | Concluída |
 | TASK-634 | Criar o hook `useSettlementComplement` e o diálogo `SettlementComplementDialog` | frontend | plan.md §11, §12 | nenhum | Concluída |
-| TASK-635 | Ligar o complemento na lista de acertos, no painel de abas e em Pagamentos | frontend | plan.md §12 | antes do merge | Pendente |
+| TASK-635 | Ligar o complemento na lista de acertos, no painel de abas e em Pagamentos | frontend | plan.md §12 | antes do merge | Concluída |
 | TASK-636 | Medir e ajustar o layout de Pagamentos nas cinco larguras, com nomes e textos longos | frontend | plan.md §12 | nenhum | Pendente |
 | TASK-637 | Documentar o histórico, o motivo, a retirada e o complemento em `docs/sdd/01-specify.md` | doc | plan.md §14 | nenhum | Pendente |
 | TASK-638 | Dar ao complemento um orçamento próprio de 10 e a mensagem de limite dele (D13) | backend | plan.md §5, ajuste 10 | antes do merge | Concluída |

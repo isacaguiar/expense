@@ -26,6 +26,7 @@ type PaymentSettlementsPanelProps = {
   onAccept?: (settlement: SummarySettlement) => void;
   onRefuse?: (settlement: SummarySettlement, reason?: string) => void;
   onDelete?: (settlement: SummarySettlement) => void;
+  onComplement?: (settlement: SummarySettlement) => void;
   decisionBusy?: boolean;
 };
 
@@ -62,6 +63,7 @@ const PaymentSettlementsPanel: React.FC<PaymentSettlementsPanelProps> = ({
   onAccept,
   onRefuse,
   onDelete,
+  onComplement,
   decisionBusy
 }) => {
   const { toPay, paid } = useMemo(() => splitSettlementsByConfirmation(settlements), [settlements]);
@@ -106,6 +108,7 @@ const PaymentSettlementsPanel: React.FC<PaymentSettlementsPanelProps> = ({
           onAccept={onAccept}
           onRefuse={onRefuse}
           onDelete={onDelete}
+          onComplement={onComplement}
           decisionBusy={decisionBusy}
           rowLayout="route"
           emptyMessage={hasAny ? EMPTY_MESSAGE[tab] : NO_SETTLEMENTS_MESSAGE}
