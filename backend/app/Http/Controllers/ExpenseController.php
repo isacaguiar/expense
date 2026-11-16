@@ -561,10 +561,10 @@ class ExpenseController extends Controller
             // independentes; `descricao_pagamento` NÃO é a `description` da despesa. Trim
             // e "" → null vêm dos middlewares globais (`Http/Kernel.php`), que já tratam
             // NBSP, U+200B e U+FEFF.
-            'comprovante' => 'nullable|image|max:5120',
+            'comprovante' => 'nullable|'.ProofStorage::UPLOAD_RULE,
             'descricao_pagamento' => 'nullable|string|max:500',
             'client_request_id' => 'nullable|uuid',
-        ]);
+        ], ProofStorage::UPLOAD_MESSAGES);
 
         // Idempotência (feature 20261027-pagamento-no-cadastro-despesa, D7): o cliente manda uma
         // chave por formulário. Reenvio idêntico devolve a despesa que já existe, antes de qualquer
@@ -1426,12 +1426,12 @@ class ExpenseController extends Controller
         }
 
         $data = $request->validate([
-            'comprovante' => 'nullable|image|max:5120',
+            'comprovante' => 'nullable|'.ProofStorage::UPLOAD_RULE,
             // Trim e "" → null vêm dos middlewares globais (TrimStrings e
             // ConvertEmptyStringsToNull, `Http/Kernel.php`); `max` conta caracteres.
             'descricao' => 'nullable|string|max:500',
             'cycles_ago' => 'nullable|integer|min:0',
-        ]);
+        ], ProofStorage::UPLOAD_MESSAGES);
 
         $group = $expense->group;
         $cycle = BillingCycle::cycleFor($group->closing_day, Carbon::now(), $data['cycles_ago'] ?? 0);
@@ -1624,13 +1624,13 @@ class ExpenseController extends Controller
         }
 
         $data = $request->validate([
-            'comprovante' => 'nullable|image|max:5120',
+            'comprovante' => 'nullable|'.ProofStorage::UPLOAD_RULE,
             // Multipart envia '1'; JSON envia true. A string "true" não passa em `boolean`.
             'remover_comprovante' => 'nullable|boolean',
             // Trim e "" → null vêm dos middlewares globais (`Http/Kernel.php`).
             'descricao' => 'nullable|string|max:500',
             'cycles_ago' => 'nullable|integer|min:0',
-        ]);
+        ], ProofStorage::UPLOAD_MESSAGES);
 
         $remove = $request->boolean('remover_comprovante');
 
@@ -1761,11 +1761,11 @@ class ExpenseController extends Controller
         $data = $request->validate([
             'to_user_id' => 'required|integer|exists:ex_users,id',
             'from_user_id' => 'nullable|integer|exists:ex_users,id',
-            'comprovante' => 'required|image|max:5120',
+            'comprovante' => 'required|'.ProofStorage::UPLOAD_RULE,
             // Opcional; trim e "" → null vêm dos middlewares globais.
             'descricao' => 'nullable|string|max:500',
             'cycles_ago' => 'nullable|integer|min:0',
-        ]);
+        ], ProofStorage::UPLOAD_MESSAGES);
 
         // Quem paga por outra pessoa (feature 20261109-responsavel-do-devedor, R6): sem `from_user_id`,
         // ou igual ao de quem chama, o devedor é quem chama. Por outro devedor, exige o vínculo (este

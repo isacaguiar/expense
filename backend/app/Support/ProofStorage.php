@@ -24,6 +24,19 @@ class ProofStorage
     /** Disco privado onde todo comprovante novo é gravado. */
     public const DISK = 'local';
 
+    /**
+     * Regra de validação do campo `comprovante` em TODO ponto que grava comprovante (feature
+     * 20261116-endurecer-upload-de-comprovante, TASK-643, D2-A). `mimes` olha o conteúdo e deixa de fora o SVG,
+     * que a regra `image` do Laravel aceita e que, servido pela API, executaria script. Vem depois de
+     * `nullable|` ou `required|`.
+     */
+    public const UPLOAD_RULE = 'mimes:jpg,jpeg,png,gif,webp|max:5120';
+
+    /** Mensagem em português da recusa de formato (a regra `mimes` não tem tradução no projeto). */
+    public const UPLOAD_MESSAGES = [
+        'comprovante.mimes' => 'O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.',
+    ];
+
     /** Disco onde vivem os comprovantes anteriores a esta convenção. */
     private const LEGACY_DISK = 'public';
 

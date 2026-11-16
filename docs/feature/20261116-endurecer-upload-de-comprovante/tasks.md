@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20261116
 |---|---|---|---|---|---|
 | TASK-641 | Acrescentar `nosniff` e CSP `sandbox` ao download de comprovante | backend | plan.md §1 | nenhum | Concluída |
 | TASK-642 | Derivar a extensão do arquivo pelo conteúdo em `ProofStorage::store` | backend | plan.md §2 | nenhum | Concluída |
-| TASK-643 | Trocar `image` por uma regra única sem SVG nos cinco pontos de upload | backend | plan.md §3 | antes do merge (muda contrato, D2) | Pendente |
+| TASK-643 | Trocar `image` por uma regra única sem SVG nos cinco pontos de upload | backend | plan.md §3 | antes do merge (muda contrato, D2) | Concluída |
 | TASK-644 | Conferir o 422 de formato no front e ajustar o `accept` se for barato | frontend | plan.md §4 | nenhum | Pendente |
 | TASK-645 | Rodar `security-reviewer` no delta e a suíte cheia do backend | backend | plan.md §6 | nenhum | Pendente |
 | TASK-646 | Reduzir o item 097 a B5 e B6, abrir o item da foto de perfil e atualizar o `01-specify.md` | doc | plan.md §5 | nenhum | Pendente |
