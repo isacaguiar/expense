@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import axios from 'axios';
+import { apiErrorMessage } from '../utils/expenseRequest';
 import { API_BASE_URL } from '../config';
 
 type UseSettlementComplementResult = {
@@ -50,8 +51,7 @@ export function useSettlementComplement(
         .then(() => onSuccess())
         .catch(err => {
           console.error('Erro ao enviar a justificativa do acerto:', err);
-          const server = err?.response?.data?.error;
-          setError(typeof server === 'string' && server !== '' ? server : GENERIC_ERROR);
+          setError(apiErrorMessage(err, GENERIC_ERROR));
         })
         .finally(() => {
           inFlight.current = false;

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import axios from 'axios';
+import { apiErrorMessage } from '../utils/expenseRequest';
 import { API_BASE_URL } from '../config';
 import type { Summary, SummaryExpense } from './useGroupCycle';
 
@@ -142,7 +143,7 @@ export function usePaymentActions(
         })
         .catch(err => {
           console.error('Erro ao marcar despesa como paga:', err);
-          setPayError(err.response?.data?.error ?? 'Falha ao marcar despesa como paga.');
+          setPayError(apiErrorMessage(err, 'Falha ao marcar despesa como paga.'));
         })
         .finally(() => setPayingExpenseId(null));
     },
@@ -204,7 +205,7 @@ export function usePaymentActions(
         })
         .catch(err => {
           console.error('Erro ao atualizar o comprovante da despesa:', err);
-          setPayError(err.response?.data?.error ?? 'Falha ao atualizar o comprovante.');
+          setPayError(apiErrorMessage(err, 'Falha ao atualizar o comprovante.'));
         })
         .finally(() => setPayingExpenseId(null));
     },

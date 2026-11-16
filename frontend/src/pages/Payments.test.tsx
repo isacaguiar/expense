@@ -488,6 +488,48 @@ describe('Payments', () => {
     expect(await screen.findByText('Comprovante enviado.')).toBeInTheDocument();
   });
 
+  it('shows the server refusal of a photo format when the debtor proof is rejected with a Laravel 422 (TASK-644)', async () => {
+    const user = userEvent.setup();
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+
+    mockGetResponses(
+      [],
+      {
+        balances: [
+          { user_id: CURRENT_USER_ID, name: 'Isac', balance: -50 },
+          { user_id: 999, name: 'Maria', balance: 50 },
+        ],
+        settlements: [{ from_user_id: CURRENT_USER_ID, to_user_id: 999, amount: 50 }],
+        cycle: { status: 'closed' },
+      },
+      [{ id: 999, name: 'Maria', email: 'maria@example.com', pix: 'maria@pix.com' }]
+    );
+    vi.mocked(axios.post).mockRejectedValue({
+      response: {
+        status: 422,
+        data: {
+          message: 'The given data was invalid.',
+          errors: { comprovante: ['O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.'] },
+        },
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    await user.click(await screen.findByRole('button', { name: 'Enviar comprovante' }));
+    const confirmButton = await screen.findByRole('button', { name: 'Confirmar' });
+    const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(fileInput, new File(['foto'], 'pix.png', { type: 'image/png' }));
+    await user.click(confirmButton);
+
+    expect(await screen.findByText('O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.')).toBeInTheDocument();
+    expect(screen.queryByText('Falha ao enviar o comprovante.')).not.toBeInTheDocument();
+  });
+
   describe('popup do devedor (acerto) com descrição', () => {
     const debtorSetup = () => {
       mockGetResponses(

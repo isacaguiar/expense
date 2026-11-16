@@ -40,6 +40,51 @@ class ProofStorageTest extends TestCase
         Storage::disk('public')->assertMissing($path);
     }
 
+    /** PNG 1x1 verdadeiro: o tipo detectado pelo conteúdo é `png` seja qual for o nome que o cliente manda. */
+    private function realPng(string $clientName): UploadedFile
+    {
+        $file = tempnam(sys_get_temp_dir(), 'png');
+        file_put_contents($file, base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='));
+
+        return new UploadedFile($file, $clientName, 'image/png', null, true);
+    }
+
+    // --- Extensão pelo conteúdo (feature 20261116-endurecer-upload-de-comprovante, TASK-642, D4-A) ---
+
+    public function test_store_ignores_a_huge_client_extension_and_names_the_file_by_its_content(): void
+    {
+        Storage::fake('local');
+
+        $path = ProofStorage::store($this->realPng('a.'.str_repeat('x', 210)), 42);
+
+        $this->assertMatchesRegularExpression('#^comprovantes/42/[0-9a-f-]{36}\.png$#', $path);
+        $this->assertLessThan(255, strlen($path));
+        Storage::disk('local')->assertExists($path);
+    }
+
+    public function test_store_does_not_trust_an_executable_looking_client_extension(): void
+    {
+        Storage::fake('local');
+
+        $path = ProofStorage::store($this->realPng('foto.exe'), 42);
+
+        $this->assertStringEndsWith('.png', $path);
+        $this->assertStringNotContainsString('exe', $path);
+    }
+
+    public function test_store_never_uses_the_client_extension_even_for_content_of_an_unknown_type(): void
+    {
+        Storage::fake('local');
+        $file = tempnam(sys_get_temp_dir(), 'bin');
+        file_put_contents($file, random_bytes(64));
+
+        $path = ProofStorage::store(new UploadedFile($file, 'x.zzz', 'application/octet-stream', null, true), 42);
+
+        // Conteúdo binário genérico: o PHP devolve `bin` (ou, sem palpite, a reserva `dat`); nunca `zzz`.
+        $this->assertMatchesRegularExpression('#\.(bin|dat)$#', $path);
+        $this->assertStringNotContainsString('zzz', $path);
+    }
+
     public function test_resolve_disk_distingue_layout_novo_de_legado(): void
     {
         $this->assertSame('local', ProofStorage::resolveDisk('comprovantes/42/abc.jpg'));

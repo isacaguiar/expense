@@ -4,7 +4,7 @@ ID: 154
 Origem: docs/feature/concluidas/202611/20261114-historico-de-comprovantes-e-justificativa/ (TASK-628, revisão do `security-reviewer`, achado B1: **pré-existente**, só repetido pela rota nova de complemento); não bloqueia o PR
 Criado em: 2026-11-14
 Prioridade: BAIXA
-Status: Aberto
+Status: Concluído (TASK-641 a TASK-646)
 
 ## Descrição
 Todo upload de comprovante (`pay`, `store` com pagamento, `updatePaymentProof`, `confirmSettlement` e, agora, `settlements/complement`) valida com `image|max:5120` e grava por `ProofStorage::store`:
@@ -19,3 +19,12 @@ Sugestão (task própria, mexe nos cinco pontos de upload): trocar `image` por `
 
 ## Por que importa
 É o único caminho para conteúdo ativo servido pela API. Hoje cai num domínio separado do app, mas basta uma mudança de hospedagem para virar XSS de verdade, e o conserto é pequeno e centralizado em `ProofStorage` e no controller de download.
+
+## Resolução
+
+Concluído em: 2026-11-16
+Feature: docs/feature/concluidas/202611/20261116-endurecer-upload-de-comprovante/
+Tasks: TASK-641 a TASK-646
+PRs: https://github.com/isacaguiar/expense/pull/287
+
+Nota: os cinco pontos de upload de comprovante passaram a usar `ProofStorage::UPLOAD_RULE` (`mimes:jpg,jpeg,png,gif,webp|max:5120`): SVG dá 422. A extensão do arquivo sai de `guessExtension()`, e o download assinado manda `nosniff` e `Content-Security-Policy: default-src 'none'; sandbox`, o que também protege os SVG já gravados. Ficaram de fora, em itens próprios: a foto de perfil (156) e os comprovantes legados do disco `public` (157, a conferir em produção). O item 097 foi reduzido a B5 e B6.

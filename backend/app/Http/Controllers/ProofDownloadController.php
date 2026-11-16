@@ -28,7 +28,16 @@ class ProofDownloadController extends Controller
 
         abort_unless(Storage::disk($disk)->exists($path), 404);
 
-        return Storage::disk($disk)->response($path);
+        $response = Storage::disk($disk)->response($path);
+
+        // Feature 20261116-endurecer-upload-de-comprovante (TASK-641, D3-A): o arquivo é conteúdo de usuário
+        // servido na origem da API. `nosniff` impede o navegador de reinterpretar o tipo e o CSP com `sandbox`
+        // (sem `allow-scripts`) neutraliza script e acesso à origem, inclusive num SVG gravado antes da feature.
+        // Só aqui (R4): não é cabeçalho global. `inline` continua, para "Ver comprovante" abrir na aba.
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Content-Security-Policy', "default-src 'none'; sandbox");
+
+        return $response;
     }
 
     /**

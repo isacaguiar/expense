@@ -161,10 +161,10 @@ class SettlementDecisionController extends Controller
         $this->authorizeGroupMembership($group);
 
         $data = $this->validatedPair($request, [
-            'comprovante' => 'required|image|max:5120',
+            'comprovante' => 'required|'.ProofStorage::UPLOAD_RULE,
             // Obrigatória; o trim e "" → null vêm dos middlewares globais, então só espaços também falha.
             'justificativa' => 'required|string|max:500',
-        ]);
+        ], ProofStorage::UPLOAD_MESSAGES);
 
         $callerId = (int) auth()->id();
         $debtorId = (int) $data['from_user_id'];
@@ -256,12 +256,12 @@ class SettlementDecisionController extends Controller
      *
      * @return array{from_user_id: int, to_user_id: int, cycles_ago?: int|null}
      */
-    private function validatedPair(Request $request, array $extraRules = []): array
+    private function validatedPair(Request $request, array $extraRules = [], array $messages = []): array
     {
         return $request->validate([
             'from_user_id' => 'required|integer|exists:ex_users,id',
             'to_user_id' => 'required|integer|exists:ex_users,id',
             'cycles_ago' => 'nullable|integer|min:0',
-        ] + $extraRules);
+        ] + $extraRules, $messages);
     }
 }

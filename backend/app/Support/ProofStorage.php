@@ -24,6 +24,19 @@ class ProofStorage
     /** Disco privado onde todo comprovante novo é gravado. */
     public const DISK = 'local';
 
+    /**
+     * Regra de validação do campo `comprovante` em TODO ponto que grava comprovante (feature
+     * 20261116-endurecer-upload-de-comprovante, TASK-643, D2-A). `mimes` olha o conteúdo e deixa de fora o SVG,
+     * que a regra `image` do Laravel aceita e que, servido pela API, executaria script. Vem depois de
+     * `nullable|` ou `required|`.
+     */
+    public const UPLOAD_RULE = 'mimes:jpg,jpeg,png,gif,webp|max:5120';
+
+    /** Mensagem em português da recusa de formato (a regra `mimes` não tem tradução no projeto). */
+    public const UPLOAD_MESSAGES = [
+        'comprovante.mimes' => 'O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.',
+    ];
+
     /** Disco onde vivem os comprovantes anteriores a esta convenção. */
     private const LEGACY_DISK = 'public';
 
@@ -40,8 +53,10 @@ class ProofStorage
      */
     public static function store(UploadedFile $file, int $groupId): string
     {
-        $extension = $file->getClientOriginalExtension()
-            ?: ($file->guessExtension() ?: 'dat');
+        // A extensão sai do CONTEÚDO (`guessExtension()`), nunca do nome que o cliente mandou (feature
+        // 20261116-endurecer-upload-de-comprovante, TASK-642, D4-A): o cliente podia gravar `uuid.svg` ou uma
+        // extensão de 200+ caracteres que estourava a coluna `string(255)`.
+        $extension = $file->guessExtension() ?: 'dat';
 
         $name = Str::uuid()->toString().'.'.$extension;
 
