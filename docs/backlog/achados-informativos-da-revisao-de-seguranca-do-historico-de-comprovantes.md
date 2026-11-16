@@ -1,7 +1,7 @@
 # Achados informativos da revisão de segurança da feature "histórico de comprovantes e justificativa"
 
 ID: 155
-Origem: docs/feature/20261114-historico-de-comprovantes-e-justificativa/ (TASK-628, revisão do `security-reviewer`, achados INFO); nenhum bloqueia o PR
+Origem: docs/feature/concluidas/202611/20261114-historico-de-comprovantes-e-justificativa/ (TASK-628, revisão do `security-reviewer`, achados INFO); nenhum bloqueia o PR
 Criado em: 2026-11-14
 Prioridade: BAIXA
 Status: Aberto
