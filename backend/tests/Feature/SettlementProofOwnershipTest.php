@@ -148,8 +148,9 @@ class SettlementProofOwnershipTest extends TestCase
         $row = $proof->fresh();
         $this->assertNull($row->confirmed_by);
         $this->assertNotSame($oldPath, $row->proof_path);
-        Storage::disk('local')->assertMissing($oldPath);
-        $this->assertSame([$row->proof_path], $this->proofFiles($group));
+        // Feature 20261114-historico-de-comprovantes-e-justificativa (R2): o substituído vai ao histórico e o arquivo fica.
+        Storage::disk('local')->assertExists($oldPath);
+        $this->assertEqualsCanonicalizing([$oldPath, $row->proof_path], $this->proofFiles($group));
     }
 
     public function test_a_responsible_still_replaces_a_proof_that_awaits_acceptance(): void
@@ -162,7 +163,8 @@ class SettlementProofOwnershipTest extends TestCase
         $row = $proof->fresh();
         $this->assertSame($responsible->id, (int) $row->confirmed_by);
         $this->assertNotSame($oldPath, $row->proof_path);
-        $this->assertSame([$row->proof_path], $this->proofFiles($group));
+        // Feature 20261114-historico-de-comprovantes-e-justificativa (R2): o arquivo anterior fica no histórico.
+        $this->assertEqualsCanonicalizing([$oldPath, $row->proof_path], $this->proofFiles($group));
     }
 
     public function test_a_responsible_still_sends_when_the_proof_was_refused_or_does_not_exist(): void

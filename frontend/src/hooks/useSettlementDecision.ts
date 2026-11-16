@@ -9,7 +9,7 @@ type UseSettlementDecisionResult = {
   error: string | null;
   clearError: () => void;
   accept: (fromUserId: number, toUserId: number, cyclesAgo: number) => void;
-  refuse: (fromUserId: number, toUserId: number, cyclesAgo: number) => void;
+  refuse: (fromUserId: number, toUserId: number, cyclesAgo: number, reason?: string) => void;
   destroy: (fromUserId: number, toUserId: number, cyclesAgo: number) => void;
 };
 
@@ -88,10 +88,16 @@ export function useSettlementDecision(
     [groupId, run]
   );
 
+  // O motivo é opcional (feature 20261114-historico-de-comprovantes-e-justificativa, D4-A): só vai no corpo quando
+  // há texto; o resto do corpo não muda.
   const refuse = useCallback(
-    (fromUserId: number, toUserId: number, cyclesAgo: number) =>
+    (fromUserId: number, toUserId: number, cyclesAgo: number, reason?: string) =>
       run('refuse', headers =>
-        axios.post(`${API_BASE_URL}/api/groups/${groupId}/settlements/refuse`, pair(fromUserId, toUserId, cyclesAgo), { headers })
+        axios.post(
+          `${API_BASE_URL}/api/groups/${groupId}/settlements/refuse`,
+          { ...pair(fromUserId, toUserId, cyclesAgo), ...(reason && reason.trim() !== '' ? { reason: reason.trim() } : {}) },
+          { headers }
+        )
       ),
     [groupId, run]
   );

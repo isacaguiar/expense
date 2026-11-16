@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
@@ -74,9 +74,11 @@ describe('PaymentSettlementsPanel: aceitar, recusar e excluir', () => {
     expect(screen.getByText('Aguardando seu aceite')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Aceitar' }));
     await user.click(screen.getByRole('button', { name: 'Recusar' }));
+    // Editado na TASK-630: "Recusar" abre o diálogo do motivo; o handler só roda ao confirmar nele.
+    await user.click(within(await screen.findByRole('dialog', { name: 'Recusar comprovante?' })).getByRole('button', { name: 'Recusar' }));
 
     expect(onAccept).toHaveBeenCalledWith(awaiting);
-    expect(onRefuse).toHaveBeenCalledWith(awaiting);
+    expect(onRefuse).toHaveBeenCalledWith(awaiting, undefined);
   });
 
   it('passes the busy state to the list', () => {
@@ -90,8 +92,8 @@ describe('PaymentSettlementsPanel: aceitar, recusar e excluir', () => {
     const user = userEvent.setup();
     const { onDelete } = renderPanel('paid', { currentUserId: 10 });
 
-    await user.click(screen.getByRole('button', { name: 'Excluir' }));
-    const dialog = await screen.findByRole('dialog', { name: 'Excluir comprovante?' });
+    await user.click(screen.getByRole('button', { name: 'Retirar comprovante' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Retirar comprovante?' });
     await user.click(dialog.querySelectorAll('button')[1]);
 
     expect(onDelete).toHaveBeenCalledWith(awaiting);

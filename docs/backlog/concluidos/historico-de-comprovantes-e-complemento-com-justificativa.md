@@ -4,7 +4,7 @@ ID: 150
 Origem: pedido dele em 2026-11-11, durante a TASK-605 da feature `docs/feature/concluidas/202611/20261110-quem-paga-se-declara-e-credor-recusa/`, em resposta ao limite que o achado 1 do `security-reviewer` impôs (só o devedor substitui o comprovante dele); `backend/app/Services/SettlementConfirmationService.php` (`submitProof`, `destroy`), `backend/app/Http/Controllers/ExpenseController.php` (`confirmSettlement`, `:1853`), `backend/app/Services/CycleSummaryService.php` (`withConfirmations`)
 Criado em: 2026-11-11
 Prioridade: MÉDIA
-Status: Aberto
+Status: Promovido para TASK-616
 
 ## Descrição
 **O pedido dele:** quem paga por outra pessoa não consegue trocar a foto errada que o devedor mandou; deveria haver um campo de justificativa em que fosse possível **adicionar** novos comprovantes, mantendo assim o histórico para os cenários de recusa.
@@ -45,3 +45,13 @@ O histórico é a única forma de o credor e o pagador discutirem uma recusa com
 
 ## Pré-requisitos
 A feature `20261110-quem-paga-se-declara-e-credor-recusa` mergeada em `dev`. Nova revisão do `security-reviewer` (a leitura do histórico expõe arquivos financeiros) e gate humano da Constitution para a mudança de modelo de dados.
+
+
+## Resolução
+
+Concluído em: 2026-11-16
+Feature: docs/feature/concluidas/202611/20261114-historico-de-comprovantes-e-justificativa/
+Tasks: TASK-616 a TASK-640
+PRs: https://github.com/isacaguiar/expense/pull/284
+
+Nota: o histórico, o motivo da recusa, a retirada ("Excluir" virou "Retirar comprovante") e o complemento com justificativa foram entregues; o teto de arquivos virou dois orçamentos por quem age (D14), e os achados de segurança A1 e A5 foram corrigidos antes do merge. Pontos que sobram estão nos itens 154 e 155 do backlog.

@@ -1022,7 +1022,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $this->withCanUndoPurchase($group, $summary['expenses']),
             'balances' => $summary['balances'],
-            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements']),
+            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements'], auth()->id()),
         ]);
     }
 
@@ -1211,7 +1211,7 @@ class ExpenseController extends Controller
             'totals' => $snapshot->totals,
             'expenses' => $snapshot->expenses,
             'balances' => $snapshot->balances,
-            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $snapshot->settlements),
+            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $snapshot->settlements, auth()->id()),
         ]);
     }
 
@@ -1254,7 +1254,7 @@ class ExpenseController extends Controller
             'totals' => $summary['totals'],
             'expenses' => $summary['expenses'],
             'balances' => $summary['balances'],
-            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements']),
+            'settlements' => $this->cycles()->withConfirmations($groupId, $start, $summary['settlements'], auth()->id()),
         ]);
     }
 
@@ -1747,6 +1747,11 @@ class ExpenseController extends Controller
      * travada, na gravação). Reenviar limpa `accepted_at` e `refused_at`, e o credor é avisado do reenvio
      * de um comprovante que ele recusou. O devedor que reenvia por cima do de um responsável o assume
      * (`confirmed_by` nulo).
+     *
+     * Feature 20261114-historico-de-comprovantes-e-justificativa: o comprovante substituído vai ao histórico
+     * **com o arquivo** (nada o apaga, R2), e o teto de 10 entradas por par e ciclo barra o envio, o reenvio
+     * e o primeiro envio **antes de gravar o arquivo** (422 "O limite de comprovantes guardados deste acerto
+     * foi atingido.").
      */
     public function confirmSettlement(Request $request, $groupId)
     {
@@ -1815,7 +1820,8 @@ class ExpenseController extends Controller
         $paidOnBehalf = $debtorId !== auth()->id();
         $sentBy = $paidOnBehalf ? auth()->id() : null;
 
-        $blockedBy = SettlementConfirmationService::resendBlockedBy($existing, $sentBy);
+        $blockedBy = SettlementConfirmationService::resendBlockedBy($existing, $sentBy)
+            ?? SettlementConfirmationService::historyBlockedBy($key, (int) auth()->id());
         if ($blockedBy !== null) {
             return response()->json(['error' => SettlementConfirmationService::blockedMessage($blockedBy)], 422);
         }
@@ -1825,7 +1831,7 @@ class ExpenseController extends Controller
         try {
             // A gravação relê a linha com lock: se o credor aceitou entre a checagem acima e agora, ela
             // não grava (F6). Reenviar limpa `accepted_at` e `refused_at`.
-            ['confirmation' => $confirmation, 'previousPath' => $previousProofPath, 'wasRefused' => $wasRefused, 'blockedBy' => $blockedBy]
+            ['confirmation' => $confirmation, 'wasRefused' => $wasRefused, 'blockedBy' => $blockedBy]
                 = $this->settlementConfirmations()->submitProof($key, [
                     'cycle_end' => $cycle['end']->toDateString(),
                     'amount' => $settlement['amount'],
@@ -1847,10 +1853,6 @@ class ExpenseController extends Controller
             ProofStorage::delete($path);
 
             return response()->json(['error' => SettlementConfirmationService::blockedMessage((string) $blockedBy)], 422);
-        }
-
-        if ($previousProofPath && $previousProofPath !== $path) {
-            ProofStorage::delete($previousProofPath);
         }
 
         $this->sealCycleIfSettled($group, $groupId, $cycle['start'], $cycle['end']);

@@ -242,7 +242,8 @@ class SettlementDecisionAuthorizationMatrixTest extends TestCase
 
         if ($expected === 200) {
             $this->assertNull($s['proof']->fresh(), 'a linha saiu (D7-A, o único DELETE físico)');
-            Storage::disk(ProofStorage::DISK)->assertMissing($s['proof']->proof_path);
+            // Feature 20261114-historico-de-comprovantes-e-justificativa (D6-A): retirar mantém o arquivo, que vai ao histórico.
+            Storage::disk(ProofStorage::DISK)->assertExists($s['proof']->proof_path);
 
             return;
         }

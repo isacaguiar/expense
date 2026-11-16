@@ -83,6 +83,32 @@ export type SummaryBalance = {
 // aceite do credor; `refused` volta o par a "a pagar". O cliente só exibe, não recalcula.
 export type ConfirmationStatus = 'sent' | 'awaiting_acceptance' | 'accepted' | 'refused';
 
+// Uma entrada do histórico de comprovantes do acerto (feature 20261114-historico-de-comprovantes-e-justificativa,
+// plan §6): `replaced` (substituído por um reenvio), `withdrawn` (retirado) ou `complement` (justificativa com
+// foto de quem paga pelo devedor). `status` é o estado em que o comprovante estava ao sair de cena (nulo no
+// complemento); `proofUrl` é a URL assinada e vem nula quando o arquivo não está mais no disco. O servidor só
+// manda isto às partes do acerto e a quem enviou a entrada; o cliente só exibe.
+export type SettlementProofEntry = {
+  id: number;
+  kind: 'replaced' | 'withdrawn' | 'complement';
+  status: 'sent' | 'awaiting_acceptance' | 'refused' | null;
+  sentBy: { id: number; name: string } | null;
+  amount: number;
+  note: string | null;
+  refusalReason: string | null;
+  sentAt: string | null;
+  refusedAt: string | null;
+  archivedAt: string | null;
+  proofUrl: string | null;
+};
+
+// O comprovante que o credor recusou, visível só às partes (o resumo esconde o recusado de todos os outros).
+export type RefusedProof = {
+  proofUrl: string | null;
+  note: string | null;
+  reason: string | null;
+};
+
 export type SummarySettlement = {
   from_user_id: number;
   to_user_id: number;
@@ -100,6 +126,10 @@ export type SummarySettlement = {
   confirmationStatus?: ConfirmationStatus | null;
   // Quando o credor recusou; só vem preenchido no estado `refused`.
   refusedAt?: string | null;
+  // O comprovante recusado e o histórico do acerto, só para as partes (credor e devedor) e para quem enviou
+  // cada entrada. Opcionais: fixtures e respostas antigas não os trazem.
+  refusedProof?: RefusedProof | null;
+  proofHistory?: SettlementProofEntry[];
 };
 
 export type Summary = {
