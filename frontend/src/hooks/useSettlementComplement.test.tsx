@@ -82,6 +82,18 @@ describe('useSettlementComplement', () => {
     expect(result.current.busy).toBe(false);
   });
 
+  it('shows the validation message of a refused photo format, which comes in `errors` and not in `error` (TASK-644)', async () => {
+    const message = 'O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.';
+    vi.mocked(axios.post).mockRejectedValue({
+      response: { status: 422, data: { message: 'The given data was invalid.', errors: { comprovante: [message] } } }
+    });
+    const { result } = renderHook(() => useSettlementComplement('7', vi.fn()));
+
+    act(() => result.current.complement(3, 4, 0, photo(), 'x'));
+
+    await waitFor(() => expect(result.current.error).toBe(message));
+  });
+
   it('shows the generic text when the server sends none, and clearError clears it', async () => {
     vi.mocked(axios.post).mockRejectedValue(new Error('rede'));
     const { result } = renderHook(() => useSettlementComplement('7', vi.fn()));

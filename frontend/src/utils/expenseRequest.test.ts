@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildExpenseBody,
+  apiErrorMessage,
   describeSaveError,
   EXPENSE_SAVE_TIMEOUT_MS,
   PROOF_MAX_BYTES,
@@ -112,6 +113,17 @@ describe('proofFileProblem', () => {
     expect(proofFileProblem(file('image/png', PROOF_MAX_BYTES))).toBeNull();
   });
 
+  it('accepts exactly the formats the server accepts (jpg, jpeg, png, gif, webp)', () => {
+    for (const type of ['image/jpeg', 'image/png', 'image/gif', 'image/webp']) {
+      expect(proofFileProblem(file(type, 10))).toBeNull();
+    }
+  });
+
+  it('warns about an SVG, which the server refuses because it can carry a script (TASK-644)', () => {
+    expect(proofFileProblem(file('image/svg+xml', 10))).toBe('Escolha uma imagem JPG, PNG, GIF ou WEBP como comprovante.');
+    expect(proofFileProblem(file('image/heic', 10))).toBe('Escolha uma imagem JPG, PNG, GIF ou WEBP como comprovante.');
+  });
+
   it('warns about a photo over 5 MB', () => {
     expect(proofFileProblem(file('image/jpeg', PROOF_MAX_BYTES + 1))).toBe(
       'A foto passa de 5 MB. Escolha uma menor ou reduza a qualidade.'
@@ -120,14 +132,14 @@ describe('proofFileProblem', () => {
 
   it('warns about a file that is not an image', () => {
     expect(proofFileProblem(file('application/pdf', 10))).toBe(
-      'Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.'
+      'Escolha uma imagem JPG, PNG, GIF ou WEBP como comprovante.'
     );
-    expect(proofFileProblem(file('', 10))).toBe('Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.');
+    expect(proofFileProblem(file('', 10))).toBe('Escolha uma imagem JPG, PNG, GIF ou WEBP como comprovante.');
   });
 
   it('reports the type problem first when a file is both too big and not an image', () => {
     expect(proofFileProblem(file('video/mp4', PROOF_MAX_BYTES * 3))).toBe(
-      'Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.'
+      'Escolha uma imagem JPG, PNG, GIF ou WEBP como comprovante.'
     );
   });
 });
@@ -204,5 +216,35 @@ describe('describeSaveError', () => {
 describe('EXPENSE_SAVE_TIMEOUT_MS', () => {
   it('gives a 5 MB photo on a mobile network room to arrive', () => {
     expect(EXPENSE_SAVE_TIMEOUT_MS).toBe(60000);
+  });
+});
+
+describe('apiErrorMessage', () => {
+  const failure = (status: number, data: unknown) => ({ response: { status, data } });
+  const FALLBACK = 'Falha ao enviar o comprovante.';
+
+  it('prefers the reason the API gave in `error`', () => {
+    expect(apiErrorMessage(failure(422, { error: 'Esta competência já foi encerrada.' }), FALLBACK)).toBe(
+      'Esta competência já foi encerrada.'
+    );
+  });
+
+  it('shows the first Laravel validation message when the API sends only `errors` (the format refusal of TASK-643)', () => {
+    expect(
+      apiErrorMessage(
+        failure(422, {
+          message: 'The given data was invalid.',
+          errors: { comprovante: ['O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.'] }
+        }),
+        FALLBACK
+      )
+    ).toBe('O comprovante deve ser uma imagem JPG, PNG, GIF ou WEBP.');
+  });
+
+  it('falls back when there is no readable reason', () => {
+    expect(apiErrorMessage(failure(500, {}), FALLBACK)).toBe(FALLBACK);
+    expect(apiErrorMessage(failure(500, 'não é json'), FALLBACK)).toBe(FALLBACK);
+    expect(apiErrorMessage(new Error('rede'), FALLBACK)).toBe(FALLBACK);
+    expect(apiErrorMessage(undefined, FALLBACK)).toBe(FALLBACK);
   });
 });

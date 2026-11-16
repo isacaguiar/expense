@@ -459,7 +459,7 @@ describe('ExpenseForm', () => {
 
       pickFile(new File(['x'], 'boleto.pdf', { type: 'application/pdf' }));
 
-      expect(await screen.findByText('Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.')).toBeInTheDocument();
+      expect(await screen.findByText('Escolha uma imagem JPG, PNG, GIF ou WEBP como comprovante.')).toBeInTheDocument();
       expect(screen.queryByText('A foto passa de 5 MB. Escolha uma menor ou reduza a qualidade.')).not.toBeInTheDocument();
 
       pickFile(photo());

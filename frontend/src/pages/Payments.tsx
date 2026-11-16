@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { apiErrorMessage } from '../utils/expenseRequest';
 import {
   Box,
   Button,
@@ -217,7 +218,7 @@ const Payments: React.FC = () => {
       })
       .catch(err => {
         console.error('Erro ao confirmar pagamento do settlement:', err);
-        setSettlementConfirmError(err.response?.data?.error ?? 'Falha ao enviar o comprovante.');
+        setSettlementConfirmError(apiErrorMessage(err, 'Falha ao enviar o comprovante.'));
       })
       .finally(() => setConfirmingSettlement(false));
   };

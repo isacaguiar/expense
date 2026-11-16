@@ -22,6 +22,26 @@ type SaveErrorLike = {
 };
 
 /**
+ * Texto de erro de uma chamada da API: o `error` que o servidor mandou, senão a primeira mensagem de
+ * validação do Laravel (`errors`, que é onde chega a recusa do formato do comprovante, 422), senão
+ * `fallback`. Sem isso a recusa cairia no texto genérico e a pessoa não saberia o motivo.
+ */
+export function apiErrorMessage(err: unknown, fallback: string): string {
+  const { response } = (err ?? {}) as SaveErrorLike;
+  const data =
+    response && typeof response.data === 'object' && response.data !== null ? (response.data as Record<string, unknown>) : null;
+
+  if (typeof data?.error === 'string' && data.error !== '') {
+    return data.error;
+  }
+
+  const validation = data?.errors as Record<string, unknown> | undefined;
+  const firstMessage = validation ? Object.values(validation).flat().find(item => typeof item === 'string') : undefined;
+
+  return typeof firstMessage === 'string' ? firstMessage : fallback;
+}
+
+/**
  * Texto do alerta quando o cadastro falha. O motivo que a API deu vale sempre (as regras de
  * domínio são do servidor); o cliente só acrescenta o que a API não pode dizer: 413 (o corpo
  * é da página do servidor web), e a falta de resposta (timeout, rede, 502 a 504), em que a
@@ -62,6 +82,13 @@ export function describeSaveError(err: unknown): string {
   return typeof firstMessage === 'string' ? firstMessage : 'Falha ao salvar despesa.';
 }
 
+/**
+ * Formatos que o servidor aceita no comprovante (`ProofStorage::UPLOAD_RULE`, feature
+ * 20261116-endurecer-upload-de-comprovante): sem SVG, que pode carregar script. É só um aviso de UX;
+ * o servidor segue sendo a autoridade.
+ */
+export const PROOF_ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+
 /** Tamanho máximo da foto do comprovante; o servidor valida o mesmo valor (`max:5120`, em KB). */
 export const PROOF_MAX_BYTES = 5 * 1024 * 1024;
 
@@ -71,8 +98,8 @@ export const PROOF_MAX_BYTES = 5 * 1024 * 1024;
  * para receber um 422.
  */
 export function proofFileProblem(file: File): string | null {
-  if (!file.type.startsWith('image/')) {
-    return 'Escolha uma imagem (JPG, PNG ou semelhante) como comprovante.';
+  if (!PROOF_ACCEPTED_TYPES.includes(file.type)) {
+    return 'Escolha uma imagem JPG, PNG, GIF ou WEBP como comprovante.';
   }
 
   if (file.size > PROOF_MAX_BYTES) {
