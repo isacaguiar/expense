@@ -22,6 +22,15 @@ class UserPhotoController extends Controller
         abort_if(blank($user->photo_path), 404);
         abort_unless(Storage::disk('local')->exists($user->photo_path), 404);
 
-        return Storage::disk('local')->response($user->photo_path);
+        $response = Storage::disk('local')->response($user->photo_path);
+
+        // Feature 20261116-endurecer-upload-de-foto-de-perfil (TASK-647, D4-A): a foto é conteúdo de usuário
+        // servido na origem da API. `nosniff` impede reinterpretar o tipo e o CSP com `sandbox` (sem
+        // `allow-scripts`) neutraliza script num SVG aberto direto, inclusive gravado antes da feature. O CSP
+        // só vale para o documento aberto direto: um `<img src>` continua carregando. Só nesta rota (R4).
+        $response->headers->set('X-Content-Type-Options', 'nosniff');
+        $response->headers->set('Content-Security-Policy', "default-src 'none'; sandbox");
+
+        return $response;
     }
 }

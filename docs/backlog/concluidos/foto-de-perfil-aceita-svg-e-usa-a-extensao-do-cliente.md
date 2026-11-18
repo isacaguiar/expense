@@ -4,7 +4,7 @@ ID: 156
 Origem: docs/feature/concluidas/202611/20261116-endurecer-upload-de-comprovante/ (TASK-645, revisão do `security-reviewer`, achado médio fora do delta; decisão D5-A do specify: o avatar ficou de fora)
 Criado em: 2026-11-16
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-647 (feature 20261116-endurecer-upload-de-foto-de-perfil)
 
 ## Descrição
 O item 154 (feature `20261116-endurecer-upload-de-comprovante`) fechou o upload e o download do **comprovante**. A foto de perfil usa o mesmo padrão de antes e ficou como estava:
@@ -21,3 +21,12 @@ Sugestão (task própria, espelha o que o item 154 fez): usar `ProofStorage::UPL
 É o único upload de usuário que ainda aceita SVG e escolhe a extensão pelo cliente. O conserto é pequeno, já tem receita pronta no item 154, e fecha a classe de problema em vez de deixar um caminho irmão aberto.
 
 Tipo sugerido: backend (e uma conferência de mensagem no front)
+
+## Resolução
+
+Concluído em: 2026-11-17
+Feature: docs/feature/20261116-endurecer-upload-de-foto-de-perfil/ (vai para `concluidas/202611/` quando o PR mergear em `dev`, ADR-009)
+Tasks: TASK-647 a TASK-652
+PRs: https://github.com/isacaguiar/expense/pull/290
+
+Nota: `uploadPhoto` passou a usar `AvatarStorage::UPLOAD_RULE` (`mimes:jpg,jpeg,png,gif,webp|max:5120`): SVG dá 422 com mensagem em português, sem gravar arquivo nem trocar a foto atual. A extensão sai de `guessExtension()` e a rota assinada `user.photo` manda `nosniff` e `Content-Security-Policy: default-src 'none'; sandbox`, o que também contém SVG já gravado. O Perfil mostra o motivo que o servidor deu. Validado por ele localmente em 2026-11-17 (SVG recusado, foto normal aparece com o CSP).
