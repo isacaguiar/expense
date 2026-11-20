@@ -25,7 +25,7 @@ Tipo sugerido: backend (e uma conferência de mensagem no front)
 ## Resolução
 
 Concluído em: 2026-11-17
-Feature: docs/feature/20261116-endurecer-upload-de-foto-de-perfil/ (vai para `concluidas/202611/` quando o PR mergear em `dev`, ADR-009)
+Feature: docs/feature/concluidas/202611/20261116-endurecer-upload-de-foto-de-perfil/
 Tasks: TASK-647 a TASK-652
 PRs: https://github.com/isacaguiar/expense/pull/290
 
