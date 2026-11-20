@@ -27,6 +27,7 @@ import { buildInstallmentQuotas } from '../utils/installments';
 import UserAvatar from '../components/UserAvatar';
 import type { ExpenseType } from '../types/expense';
 import type { GroupMember } from '../types/group';
+import useProofViewer from '../hooks/useProofViewer';
 
 type ExpenseQuota = {
   number: number;
@@ -153,6 +154,8 @@ const typeLabel = (expense: ExpenseDetail): string => {
 const ExpenseView: React.FC = () => {
   const { id: groupId, expenseId } = useParams<{ id: string; expenseId: string }>();
   const navigate = useNavigate();
+  // O comprovante abre num diálogo em vez de outra aba (feature 20261120-ver-comprovante-em-modal, TASK-659).
+  const { proofLinkProps, proofViewer } = useProofViewer();
 
   const [expense, setExpense] = useState<ExpenseDetail | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
@@ -558,7 +561,7 @@ const ExpenseView: React.FC = () => {
 
           {proofUrl && (
             <Typography sx={{ mb: paymentNote ? 0.5 : 3 }}>
-              <MuiLink href={proofUrl} target="_blank" rel="noreferrer">
+              <MuiLink {...proofLinkProps(proofUrl)}>
                 Ver comprovante
               </MuiLink>
             </Typography>
@@ -598,7 +601,12 @@ const ExpenseView: React.FC = () => {
     );
   }
 
-  return <DespesasThemeScope>{content}</DespesasThemeScope>;
+  return (
+    <DespesasThemeScope>
+      {content}
+      {proofViewer}
+    </DespesasThemeScope>
+  );
 };
 
 export default ExpenseView;

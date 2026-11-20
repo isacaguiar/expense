@@ -12,7 +12,7 @@ Versão: 1.0 · Criado em: 20261120
 | TASK-656 | Abrir o comprovante em modal em `ReceivableList` | frontend | plan.md §3 e §4 | nenhum | Concluída |
 | TASK-657 | Abrir o comprovante em modal em `SettlementProofHistory` | frontend | plan.md §3 e §4 | nenhum | Concluída |
 | TASK-658 | Abrir o comprovante em modal em `ExpenseManager` (ação da lista e detalhe) | frontend | plan.md §3 | nenhum | Concluída |
-| TASK-659 | Abrir o comprovante em modal em `ExpenseView` | frontend | plan.md §3 | nenhum | Pendente |
+| TASK-659 | Abrir o comprovante em modal em `ExpenseView` | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-660 | Abrir o comprovante em modal em `Payments` | frontend | plan.md §3 | nenhum | Pendente |
 | TASK-661 | Medir o modal em 5 larguras e com URL vencida na stack de validação | frontend | plan.md §5 | nenhum | Pendente |
 | TASK-662 | Documentar o padrão no `05-context-frontend.md` e no `01-specify.md` | doc | plan.md §6 | nenhum | Pendente |
