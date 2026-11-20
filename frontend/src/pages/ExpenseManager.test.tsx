@@ -185,6 +185,44 @@ describe('ExpenseManager - listagem em cards', () => {
     );
   });
 
+  it('opens the proof in a viewer dialog from the row button and from the detail link, with no new tab (TASK-658)', async () => {
+    const user = userEvent.setup();
+    const url = '/api/groups/1/proofs/quota/9?signature=stub';
+
+    mockGetResponses([
+      { id: 9, description: 'Aluguel', value: 1200, date: '2026-08-01', payerName: 'Isac', isFixed: true, paid: true, paymentProofUrl: url },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <ExpenseManager />
+      </MemoryRouter>
+    );
+
+    await screen.findByText('Aluguel');
+
+    // Botão da linha: sem `target`, clique abre o visualizador com a URL e o foco volta ao botão.
+    const rowButton = screen.getByRole('link', { name: 'Ver comprovante' });
+    expect(rowButton).not.toHaveAttribute('target');
+    await user.click(rowButton);
+    expect(screen.getByRole('img', { name: 'Comprovante de pagamento' })).toHaveAttribute('src', url);
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    await waitFor(() => expect(screen.queryByRole('img', { name: 'Comprovante de pagamento' })).not.toBeInTheDocument());
+    expect(rowButton).toHaveFocus();
+
+    // Link do detalhe: abre o visualizador por cima do detalhe, que continua aberto por baixo.
+    const aluguelRow = screen.getByRole('link', { name: 'Aluguel' }).closest('tr') as HTMLElement;
+    await user.click(within(aluguelRow).getByRole('button', { name: 'Ver detalhes' }));
+    const detail = await screen.findByRole('dialog');
+    const detailLink = within(detail).getByRole('link', { name: 'Ver comprovante' });
+    expect(detailLink).not.toHaveAttribute('target');
+    await user.click(detailLink);
+    expect(screen.getByRole('img', { name: 'Comprovante de pagamento' })).toHaveAttribute('src', url);
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    await waitFor(() => expect(screen.queryByRole('img', { name: 'Comprovante de pagamento' })).not.toBeInTheDocument());
+    expect(screen.getByText('Detalhes da despesa')).toBeInTheDocument();
+  });
+
   describe('descrição do pagamento no modal de detalhes', () => {
     const renderManager = () =>
       render(
