@@ -1,14 +1,14 @@
-# Implementation — <Nome da Feature>
+# Implementation — Ver o comprovante em um modal
 
 > Como as tasks de `tasks.md` viram código. O fluxo (branch, checklist pré-PR, gates) é o de `docs/sdd/04-implementation.md` — só documente aqui um desvio específico desta feature, se houver.
 
-Versão: 1.0 · Criado em: <AAAAMMDD>
+Versão: 1.0 · Criado em: 20261120
 
 ---
 
-## 1. Desvios do fluxo padrão (se houver)
+## 1. Desvios do fluxo padrão
 
-<Deixe vazio/apague esta seção se a feature segue `04-implementation.md` sem exceção.>
+Nenhum. Feature só de frontend, sem migration nem mudança de contrato.
 
 ## 2. Log de implementação
 
@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-653 | Concluída | 2026-11-20 | Claude | RED: `npx vitest run src/components/ProofViewerDialog.test.tsx` sem o componente (falha de import). GREEN: 8 testes passam. `npx tsc --noEmit` limpo. Mutantes mortos: sem o ramo de erro (2 falham), sem o `key` da URL (1 falha), sem o `target="_blank"` do "Abrir em nova aba" (1 falha). | Imagem com `opacity` 0 até o `onLoad` (continua acessível ao leitor de tela e aos testes); `ref` cobre imagem já em cache. Tela cheia abaixo de `sm` vem do `useMediaQuery`, medida só na TASK-661. |

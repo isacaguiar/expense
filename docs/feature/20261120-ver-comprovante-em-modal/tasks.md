@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20261120
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-653 | Criar o componente `ProofViewerDialog` | frontend | plan.md §1 | nenhum | Pendente |
+| TASK-653 | Criar o componente `ProofViewerDialog` | frontend | plan.md §1 | nenhum | Concluída |
 | TASK-654 | Criar o gancho `useProofViewer` com o gatilho de link progressivo | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-655 | Abrir o comprovante em modal em `PayableSettlementList` (chip e "recusado") | frontend | plan.md §3 e §4 | nenhum | Pendente |
 | TASK-656 | Abrir o comprovante em modal em `ReceivableList` | frontend | plan.md §3 e §4 | nenhum | Pendente |
