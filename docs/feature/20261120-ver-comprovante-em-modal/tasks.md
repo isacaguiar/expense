@@ -14,7 +14,7 @@ Versão: 1.0 · Criado em: 20261120
 | TASK-658 | Abrir o comprovante em modal em `ExpenseManager` (ação da lista e detalhe) | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-659 | Abrir o comprovante em modal em `ExpenseView` | frontend | plan.md §3 | nenhum | Concluída |
 | TASK-660 | Abrir o comprovante em modal em `Payments` | frontend | plan.md §3 | nenhum | Concluída |
-| TASK-661 | Medir o modal em 5 larguras e com URL vencida na stack de validação | frontend | plan.md §5 | nenhum | Pendente |
+| TASK-661 | Medir o modal em 5 larguras e com URL vencida na stack de validação | frontend | plan.md §5 | nenhum | Concluída |
 | TASK-662 | Documentar o padrão no `05-context-frontend.md` e no `01-specify.md` | doc | plan.md §6 | nenhum | Pendente |
 
 Ordem: 653, 654, depois 655 a 660 (independentes entre si, nessa ordem de uso), 661 e 662. A 654 só depois da 653; as telas só depois da 654.
