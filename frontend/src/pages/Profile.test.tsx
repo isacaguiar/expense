@@ -261,6 +261,30 @@ describe('Profile', () => {
     expect(await screen.findByText('Não foi possível enviar a foto. Tente novamente.')).toBeInTheDocument();
   });
 
+  it('shows the reason the server gave when it refuses the photo format, which comes in errors.foto (TASK-650)', async () => {
+    vi.mocked(axios.post).mockRejectedValue({
+      response: {
+        status: 422,
+        data: { errors: { foto: ['A foto deve ser uma imagem JPG, PNG, GIF ou WEBP.'] } }
+      }
+    });
+    const user = userEvent.setup();
+
+    const { container } = render(
+      <MemoryRouter>
+        <Profile />
+      </MemoryRouter>
+    );
+
+    await screen.findByDisplayValue('Ana Silva');
+
+    const input = container.querySelector('input[type="file"]') as HTMLInputElement;
+    await user.upload(input, new File(['x'], 'foto.svg', { type: 'image/svg+xml' }));
+
+    expect(await screen.findByText('A foto deve ser uma imagem JPG, PNG, GIF ou WEBP.')).toBeInTheDocument();
+    expect(screen.queryByText('Não foi possível enviar a foto. Tente novamente.')).not.toBeInTheDocument();
+  });
+
   it('does not offer "Remover foto" when there is no avatar', async () => {
     render(
       <MemoryRouter>

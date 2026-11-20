@@ -19,6 +19,7 @@ import {
 import { API_BASE_URL } from '../config';
 import { getInitials } from '../layouts/group/getInitials';
 import { openConsentBanner } from '../analytics/consent';
+import { apiErrorMessage } from '../utils/expenseRequest';
 
 const formatWhatsapp = (value: string): string => {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -131,8 +132,13 @@ const Profile: React.FC = () => {
       });
       setAvatarUrl(res.data.avatar_url ?? null);
       setPhotoFeedback({ severity: 'success', text: 'Foto atualizada com sucesso.' });
-    } catch {
-      setPhotoFeedback({ severity: 'error', text: 'Não foi possível enviar a foto. Tente novamente.' });
+    } catch (err) {
+      // O servidor recusa formato fora de JPG, PNG, GIF e WEBP com 422 `{errors: {foto: [...]}}`: mostra o motivo
+      // dele em vez do texto genérico (feature 20261116-endurecer-upload-de-foto-de-perfil, TASK-650, D5-A).
+      setPhotoFeedback({
+        severity: 'error',
+        text: apiErrorMessage(err, 'Não foi possível enviar a foto. Tente novamente.')
+      });
     } finally {
       setPhotoUploading(false);
     }

@@ -77,8 +77,8 @@ class UserController extends Controller
     public function uploadPhoto(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'foto' => 'required|image|max:5120',
-        ]);
+            'foto' => 'required|'.AvatarStorage::UPLOAD_RULE,
+        ], AvatarStorage::UPLOAD_MESSAGES);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);

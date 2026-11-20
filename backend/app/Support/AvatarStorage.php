@@ -18,13 +18,28 @@ class AvatarStorage
     public const DISK = 'local';
 
     /**
+     * Regra de validação do campo `foto` no upload (feature 20261116-endurecer-upload-de-foto-de-perfil,
+     * TASK-649, D1-A e D2-A). `mimes` olha o conteúdo e deixa de fora o SVG, que a regra `image` do Laravel
+     * aceita e que, servido pela API, executaria script. Vem depois de `required|`. Própria do avatar, separada
+     * da do comprovante (`ProofStorage::UPLOAD_RULE`).
+     */
+    public const UPLOAD_RULE = 'mimes:jpg,jpeg,png,gif,webp|max:5120';
+
+    /** Mensagem em português da recusa de formato (o projeto não tem `lang/`; a `mimes` padrão sairia em inglês). */
+    public const UPLOAD_MESSAGES = [
+        'foto.mimes' => 'A foto deve ser uma imagem JPG, PNG, GIF ou WEBP.',
+    ];
+
+    /**
      * Grava o arquivo em `avatares/<userId>/<uuid>.<ext>` no disco privado e
      * devolve o path relativo (para persistir em `ex_users.photo_path`).
      */
     public static function store(UploadedFile $file, int $userId): string
     {
-        $extension = $file->getClientOriginalExtension()
-            ?: ($file->guessExtension() ?: 'dat');
+        // A extensão sai do CONTEÚDO (`guessExtension()`), nunca do nome que o cliente mandou (feature
+        // 20261116-endurecer-upload-de-foto-de-perfil, TASK-648, D3-A): o cliente podia gravar `uuid.svg`,
+        // `uuid.html` ou uma extensão de 200+ caracteres que estourava `ex_users.photo_path`.
+        $extension = $file->guessExtension() ?: 'dat';
 
         $name = Str::uuid()->toString().'.'.$extension;
 
