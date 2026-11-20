@@ -23,6 +23,7 @@ import RefuseReasonDialog from './RefuseReasonDialog';
 import SettlementProofHistory from './SettlementProofHistory';
 import type { SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
 import { isSettlementConfirmed } from '../utils/cycleOrdering';
+import useProofViewer from '../hooks/useProofViewer';
 
 const NO_ONE: readonly number[] = [];
 
@@ -101,6 +102,8 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
   rowLayout = 'sentence'
 }) => {
   const route = rowLayout === 'route';
+  // O comprovante abre num diálogo em vez de outra aba (feature 20261120-ver-comprovante-em-modal, TASK-655).
+  const { proofLinkProps, proofViewer } = useProofViewer();
   // O comprovante que a pessoa está prestes a retirar: sai do acerto (o arquivo fica no histórico) e pede confirmação.
   const [deleting, setDeleting] = useState<SummarySettlement | null>(null);
   // O comprovante que o credor está prestes a recusar: "Recusar" só abre o diálogo do motivo.
@@ -271,9 +274,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                     size="small"
                     variant="outlined"
                     component="a"
-                    href={settlement.confirmedProofUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                    {...proofLinkProps(settlement.confirmedProofUrl)}
                     clickable
                   />
                 ) : (
@@ -367,9 +368,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
                 )}
                 {settlement.refusedProof.proofUrl && (
                   <Link
-                    href={settlement.refusedProof.proofUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                    {...proofLinkProps(settlement.refusedProof.proofUrl)}
                     variant="caption"
                     underline="hover"
                   >
@@ -417,6 +416,7 @@ const PayableSettlementList: React.FC<PayableSettlementListProps> = ({
           </Button>
         </DialogActions>
       </Dialog>
+      {proofViewer}
     </Stack>
   );
 };
