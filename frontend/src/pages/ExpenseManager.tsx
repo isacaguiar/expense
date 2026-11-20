@@ -58,6 +58,7 @@ import { useExpenseFilters } from '../hooks/useExpenseFilters';
 import { formatShortDate } from '../utils/dates';
 import { expenseRowKey, sortExpensesByOccurrence } from '../utils/cycleOrdering';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
+import useProofViewer from '../hooks/useProofViewer';
 
 // exp.date vem como 'YYYY-MM-DD'; new Date(string) interpreta como meia-noite UTC,
 // que em fusos negativos (ex.: America/Sao_Paulo) cai no dia anterior ao converter
@@ -93,6 +94,8 @@ const detailTypeLabel = (exp: SummaryExpense): string => {
 const ExpenseManager: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  // O comprovante abre num diálogo em vez de outra aba (feature 20261120-ver-comprovante-em-modal, TASK-658).
+  const { proofLinkProps, proofViewer } = useProofViewer();
 
   const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
   const expenses = summary?.expenses ?? [];
@@ -406,9 +409,7 @@ const ExpenseManager: React.FC = () => {
             aria-label="Ver comprovante"
             size="small"
             component="a"
-            href={exp.paymentProofUrl}
-            target="_blank"
-            rel="noreferrer"
+            {...proofLinkProps(exp.paymentProofUrl)}
           >
             <ImageOutlinedIcon fontSize="small" />
           </IconButton>
@@ -798,7 +799,7 @@ const ExpenseManager: React.FC = () => {
               </Box>
 
               {detailExpense.paid && detailExpense.paymentProofUrl && (
-                <MuiLink href={detailExpense.paymentProofUrl} target="_blank" rel="noreferrer" variant="body2">
+                <MuiLink {...proofLinkProps(detailExpense.paymentProofUrl)} variant="body2">
                   Ver comprovante
                 </MuiLink>
               )}
@@ -1007,6 +1008,7 @@ const ExpenseManager: React.FC = () => {
           {payError}
         </Alert>
       </Snackbar>
+      {proofViewer}
     </DespesasThemeScope>
   );
 };

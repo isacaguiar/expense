@@ -1,4 +1,5 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import ReceivableList from './ReceivableList';
 import type { OverviewReceivable } from '../types/overview';
@@ -27,9 +28,31 @@ describe('ReceivableList', () => {
 
     const proof = within(row).getByRole('link', { name: /Comprovante enviado/ });
     expect(proof).toHaveAttribute('href', 'https://example.test/comprovantes/1.jpg');
-    expect(proof).toHaveAttribute('target', '_blank');
-    expect(proof).toHaveAttribute('rel', 'noreferrer');
+    // Abre num diálogo (TASK-656): sem `target`; o `href` segue para ctrl+clique e botão do meio.
+    expect(proof).not.toHaveAttribute('target');
     expect(within(row).queryByText('Aguardando pagamento')).not.toBeInTheDocument();
+  });
+
+  it('opens the proof in a dialog on click, with no ctrl+click opening and the focus coming back (TASK-656)', async () => {
+    const user = userEvent.setup();
+    render(<ReceivableList receivables={[confirmed]} />);
+    const proof = screen.getByRole('link', { name: /Comprovante enviado/ });
+
+    await user.keyboard('{Control>}');
+    await user.click(proof);
+    await user.keyboard('{/Control}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(proof);
+    expect(screen.getByRole('dialog', { name: 'Comprovante' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Comprovante de pagamento' })).toHaveAttribute(
+      'src',
+      'https://example.test/comprovantes/1.jpg'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(proof).toHaveFocus();
   });
 
   it('shows "Aguardando pagamento" while there is no proof', () => {

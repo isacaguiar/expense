@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { SettlementProofEntry, SummaryBalance, SummarySettlement } from '../hooks/useGroupCycle';
@@ -97,8 +97,26 @@ describe('SettlementProofHistory', () => {
     const links = screen.getAllByRole('link', { name: 'Ver comprovante' });
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute('href', 'https://x/a.jpg');
-    expect(links[0]).toHaveAttribute('target', '_blank');
-    expect(links[0]).toHaveAttribute('rel', 'noreferrer');
+    // Abre num diálogo (TASK-657): sem `target`; o `href` segue para ctrl+clique e botão do meio.
+    expect(links[0]).not.toHaveAttribute('target');
+  });
+
+  it('opens the proof in a dialog on click (not on ctrl+click) and gives the focus back (TASK-657)', async () => {
+    const { user } = await open([entry({ id: 1, proofUrl: 'https://x/a.jpg' })]);
+    const link = screen.getByRole('link', { name: 'Ver comprovante' });
+
+    await user.keyboard('{Control>}');
+    await user.click(link);
+    await user.keyboard('{/Control}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(link);
+    expect(screen.getByRole('dialog', { name: 'Comprovante' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'Comprovante de pagamento' })).toHaveAttribute('src', 'https://x/a.jpg');
+
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(link).toHaveFocus();
   });
 
   it('names a removed account instead of crashing', async () => {

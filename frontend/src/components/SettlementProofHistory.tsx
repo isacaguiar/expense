@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Box, Button, Collapse, Link, Stack, Typography } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import type { SettlementProofEntry } from '../hooks/useGroupCycle';
+import useProofViewer from '../hooks/useProofViewer';
 
 const KIND_LABEL: Record<SettlementProofEntry['kind'], string> = {
   replaced: 'Substituído',
@@ -34,6 +35,8 @@ type SettlementProofHistoryProps = {
  */
 const SettlementProofHistory: React.FC<SettlementProofHistoryProps> = ({ entries }) => {
   const [open, setOpen] = useState<boolean>(false);
+  // O comprovante abre num diálogo em vez de outra aba (feature 20261120-ver-comprovante-em-modal, TASK-657).
+  const { proofLinkProps, proofViewer } = useProofViewer();
 
   if (entries.length === 0) return null;
 
@@ -85,7 +88,7 @@ const SettlementProofHistory: React.FC<SettlementProofHistoryProps> = ({ entries
                   </Typography>
                 )}
                 {entry.proofUrl && (
-                  <Link href={entry.proofUrl} target="_blank" rel="noreferrer" variant="caption" underline="hover">
+                  <Link {...proofLinkProps(entry.proofUrl)} variant="caption" underline="hover">
                     Ver comprovante
                   </Link>
                 )}
@@ -94,6 +97,7 @@ const SettlementProofHistory: React.FC<SettlementProofHistoryProps> = ({ entries
           })}
         </Stack>
       </Collapse>
+      {proofViewer}
     </Box>
   );
 };
