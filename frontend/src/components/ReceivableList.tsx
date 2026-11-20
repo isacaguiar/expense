@@ -4,6 +4,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import HourglassEmptyOutlinedIcon from '@mui/icons-material/HourglassEmptyOutlined';
 import UserAvatar from './UserAvatar';
 import type { OverviewReceivable } from '../types/overview';
+import useProofViewer from '../hooks/useProofViewer';
 
 const formatMoney = (value: number): string =>
   value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -20,6 +21,9 @@ type ReceivableListProps = {
  * (docs/feature/concluidas/202610/20261010-painel-financeiro-pessoal/plan.md §2).
  */
 const ReceivableList: React.FC<ReceivableListProps> = ({ receivables }) => {
+  // O comprovante abre num diálogo em vez de outra aba (feature 20261120-ver-comprovante-em-modal, TASK-656).
+  const { proofLinkProps, proofViewer } = useProofViewer();
+
   if (receivables.length === 0) {
     return (
       <Typography variant="body2" color="text.secondary" py={1}>
@@ -61,9 +65,7 @@ const ReceivableList: React.FC<ReceivableListProps> = ({ receivables }) => {
                   {...(receivable.confirmed_proof_url
                     ? {
                         component: 'a',
-                        href: receivable.confirmed_proof_url,
-                        target: '_blank',
-                        rel: 'noreferrer',
+                        ...proofLinkProps(receivable.confirmed_proof_url),
                         clickable: true
                       }
                     : {})}
@@ -81,6 +83,7 @@ const ReceivableList: React.FC<ReceivableListProps> = ({ receivables }) => {
           </Card>
         );
       })}
+      {proofViewer}
     </Stack>
   );
 };
