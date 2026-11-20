@@ -4,7 +4,7 @@ ID: 158
 Origem: pedido dele em 2026-11-16 (conversa da feature `20261116-endurecer-upload-de-foto-de-perfil`); `frontend/src/components/PayableSettlementList.tsx:269-276` e `frontend/src/components/ReceivableList.tsx:57-67`
 Criado em: 2026-11-16
 Prioridade: MEDIA
-Status: Promovido para TASK-653 (feature 20261120-ver-comprovante-em-modal)
+Status: Concluído (feature 20261120-ver-comprovante-em-modal)
 
 ## Descrição
 Hoje o chip **"Comprovante enviado"** é um link (`component="a"`, `target="_blank"`) para a URL assinada do arquivo: abre o comprovante **em outra aba**, longe da tela de acertos. O pedido: ao clicar, abrir um **modal** que mostra o comprovante, sem sair da página.
@@ -38,3 +38,11 @@ A fechar no specify, se o item for promovido.
 Hoje cada conferência de comprovante tira a pessoa da tela de acertos, e em celular a nova aba fica empilhada ao app. Com o modal, ao fechar a pessoa continua exatamente onde estava (mesma lista, mesma rolagem), inclusive o credor, que decide logo em seguida entre Aceitar e Recusar.
 
 Tipo sugerido: frontend (sem mudança de backend)
+
+## Resolução
+Concluído em: 2026-11-20
+Feature: docs/feature/concluidas/202611/20261120-ver-comprovante-em-modal/
+Tasks: TASK-653 a TASK-662
+PRs: https://github.com/isacaguiar/expense/pull/293
+
+Componente `ProofViewerDialog` e hook `useProofViewer`: os 8 links de comprovante (chip "Comprovante enviado", "Ver comprovante recusado", histórico, coluna e detalhe de `ExpenseManager`, `ExpenseView`, `Payments`) abrem o comprovante em modal, com `href` mantido (ctrl+clique e botão do meio abrem nova aba) e tela cheia em telas estreitas; "Ver foto atual" do `PaymentProofDialog` ficou em nova aba (D5-A). Sem mudança de backend.
