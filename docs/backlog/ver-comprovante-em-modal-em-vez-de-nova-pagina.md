@@ -4,7 +4,7 @@ ID: 158
 Origem: pedido dele em 2026-11-16 (conversa da feature `20261116-endurecer-upload-de-foto-de-perfil`); `frontend/src/components/PayableSettlementList.tsx:269-276` e `frontend/src/components/ReceivableList.tsx:57-67`
 Criado em: 2026-11-16
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-653 (feature 20261120-ver-comprovante-em-modal)
 
 ## Descrição
 Hoje o chip **"Comprovante enviado"** é um link (`component="a"`, `target="_blank"`) para a URL assinada do arquivo: abre o comprovante **em outra aba**, longe da tela de acertos. O pedido: ao clicar, abrir um **modal** que mostra o comprovante, sem sair da página.
