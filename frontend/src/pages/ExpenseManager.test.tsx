@@ -2600,7 +2600,13 @@ describe('ExpenseManager - ordem e data das despesas', () => {
     { id: 28, description: 'Internet', value: 120, date: '2026-10-03', payerName: 'Isac', paid: true, isFixed: true },
   ];
   const cycle = { start: '2026-09-06', end: '2026-10-05' };
-  const NAMES = /^(Sofá 3\/6|Mercado|Luz|Internet)$/;
+  const NAMES = /^(Sofá 3\/6|Mercado|Luz|Internet|Aberta antiga|Paga recente)$/;
+  // Massa do item 160 com a busca: a em aberto é mais antiga que a paga, e uma terceira sai pelo filtro.
+  const comBusca: SummaryExpenseFixture[] = [
+    { id: 61, description: 'Aberta antiga', value: 80, date: '2026-09-20', payerName: 'Isac', paid: false },
+    { id: 62, description: 'Paga recente', value: 60, date: '2026-10-03', payerName: 'Isac', paid: true },
+    { id: 63, description: 'Luz', value: 40, date: '2026-10-04', payerName: 'Isac', paid: false },
+  ];
 
   const renderManager = () =>
     render(
@@ -2617,18 +2623,18 @@ describe('ExpenseManager - ordem e data das despesas', () => {
   });
 
   describe('tabela (desktop)', () => {
-    it('ordena por data da ocorrência decrescente, desempata pelo id e não prioriza pendentes', async () => {
+    it('ordena por data da ocorrência decrescente, desempata pelo id e põe as em aberto antes das pagas (item 160)', async () => {
       mockGetResponses(doBackend, cycle);
       renderManager();
 
       await screen.findByText('Mercado');
 
-      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
-      // Pendente e paga intercaladas: o status não decide a posição.
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
+      // Em aberto primeiro; dentro de cada grupo, a data mais recente antes.
       expect(screen.getAllByText(/^(Paga|Pendente)$/).map(chip => chip.textContent)).toEqual([
         'Pendente',
-        'Paga',
         'Pendente',
+        'Paga',
         'Paga',
       ]);
     });
@@ -2639,7 +2645,7 @@ describe('ExpenseManager - ordem e data das despesas', () => {
 
       await screen.findByText('Mercado');
 
-      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
     });
 
     it('não altera a lista recebida da API (o resumo é estado do hook)', async () => {
@@ -2656,7 +2662,7 @@ describe('ExpenseManager - ordem e data das despesas', () => {
 
       await screen.findByText('Mercado');
 
-      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
     });
 
     it('mantém a ordem com um filtro ativo', async () => {
@@ -2668,6 +2674,18 @@ describe('ExpenseManager - ordem e data das despesas', () => {
       await user.click(within(screen.getByRole('group', { name: 'Status' })).getByRole('button', { name: 'Pendentes' }));
 
       expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6']);
+    });
+
+    it('mantém em aberto primeiro com um filtro que deixa pagas e em aberto juntas (item 160)', async () => {
+      const user = userEvent.setup();
+      mockGetResponses(comBusca, cycle);
+      renderManager();
+
+      await screen.findByText('Paga recente');
+      // A busca "a" deixa a em aberto antiga e a paga recente; por data pura a paga viria antes.
+      await user.type(screen.getByLabelText('Buscar despesa'), 'a');
+
+      expect(shownOrder()).toEqual(['Aberta antiga', 'Paga recente']);
     });
 
     it('tem a coluna "Data" como primeira, com o dia e o mês de cada despesa', async () => {
@@ -2748,7 +2766,18 @@ describe('ExpenseManager - ordem e data das despesas', () => {
       await screen.findByText('Mercado');
 
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
-      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
+    });
+
+    it('mantém em aberto primeiro nos cards com um filtro que deixa pagas e em aberto juntas (item 160)', async () => {
+      const user = userEvent.setup();
+      mockGetResponses(comBusca, cycle);
+      renderManager();
+
+      await screen.findByText('Paga recente');
+      await user.type(screen.getByLabelText('Buscar despesa'), 'a');
+
+      expect(shownOrder()).toEqual(['Aberta antiga', 'Paga recente']);
     });
 
     it('mostra a linha "Data:" em cada card', async () => {
