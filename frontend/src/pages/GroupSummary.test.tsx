@@ -117,8 +117,9 @@ describe('GroupSummary', () => {
     expect(screen.getByText(/R\$ 550,00 a pagar/)).toBeInTheDocument();
   });
 
-  it('lists the cycle expenses by date, newest first, instead of the order the API sent', async () => {
-    // O mock entrega Geladeira (20/07) antes de Mercado (01/08).
+  it('lists the open expenses before the paid ones instead of the order the API sent (item 160)', async () => {
+    // O mock entrega Geladeira (20/07, em aberto) antes de Mercado (01/08, paga): por data pura o Mercado viria
+    // primeiro, então a ordem prova a regra.
     render(
       <MemoryRouter>
         <GroupSummary />
@@ -128,8 +129,8 @@ describe('GroupSummary', () => {
     await screen.findByText(/Geladeira/);
 
     expect(screen.getAllByText(/^(Geladeira|Mercado) — R\$/).map(item => item.textContent?.split(' — ')[0])).toEqual([
-      'Mercado',
-      'Geladeira'
+      'Geladeira',
+      'Mercado'
     ]);
   });
 

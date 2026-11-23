@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20261123
 
 ## 1. Desvios do fluxo padrão (se houver)
 
-- A TASK-663 incluiu o ajuste de três testes de tela (Home, Despesas, Pagamentos) que afirmavam a ordem antiga, para não deixar a suíte vermelha entre tasks. O teste de ordem do `ClosingReportPanel` também afirmava a ordem antiga e só foi corrigido na TASK-667: a suíte ficou vermelha nesse arquivo entre a 663 e a 667 (a 663 não rodou o arquivo). A suíte cheia do fechamento confirma que não sobrou outro caso.
+- A TASK-663 incluiu o ajuste de três testes de tela (Home, Despesas, Pagamentos) que afirmavam a ordem antiga, para não deixar a suíte vermelha entre tasks. O teste de ordem do `ClosingReportPanel` também afirmava a ordem antiga e só foi corrigido na TASK-667: a suíte ficou vermelha nesse arquivo entre a 663 e a 667 (a 663 não rodou o arquivo). A suíte cheia do fechamento achou mais um: `GroupSummary.test.tsx` (Geladeira em aberto de 20/07 e Mercado pago de 01/08) também afirmava a ordem antiga e foi corrigido num commit à parte, com mutante morto (a Home ordenando só por data derruba o teste); a suíte cheia foi rodada de novo no HEAD final.
 - O specify foi ampliado por ele em 2026-11-23 (regra nas quatro telas, D1-C), depois do item 160 pedir só a Home.
 
 ## 2. Log de implementação
