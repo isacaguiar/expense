@@ -12,7 +12,7 @@ Versão: 1.0 · Criado em: 20261123
 | TASK-666 | Cobrir Pagamentos (`Payments`) com teste de ordem sob filtro ativo e atualizar o comentário | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-667 | Cobrir o relatório de fechamento (`ClosingReportPanel`) com teste de ordem e atualizar o comentário | frontend | plan.md §2 | nenhum | Concluída |
 | TASK-668 | Documentar a regra em `05-context-frontend.md` e `01-specify.md` | doc | plan.md §3 | nenhum | Concluída |
-| TASK-669 | Conferir a ordem nas quatro telas na stack de validação | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-669 | Conferir a ordem nas quatro telas na stack de validação | frontend | plan.md §4 | nenhum | Concluída |
 
 Ordem: 663 primeiro (as demais dependem da regra nova); 664 a 667 são independentes entre si, nessa ordem de uso; 668 e 669 por último. A 663 inclui ajustar os três testes de tela que afirmam "não prioriza pendentes" (Home, Despesas, Pagamentos), porque a mudança da função os quebra: deixar a suíte vermelha entre tasks violaria o checklist de integração.
 
