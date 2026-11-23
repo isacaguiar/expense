@@ -48,7 +48,7 @@ const makeSettlement = (
 const CONFIRMED_AT = '2026-08-20T10:00:00-03:00';
 
 describe('sortExpensesByOccurrence', () => {
-  it('ordena pela data da ocorrência, da mais recente para a mais antiga, sem priorizar pendentes (§5.1)', () => {
+  it('põe as despesas em aberto antes das pagas e, dentro de cada grupo, a mais recente primeiro (item 160)', () => {
     // Ordem de hoje do backend: pendentes primeiro, data crescente.
     const doBackend = [
       makeExpense({ id: 25, description: 'Sofá 3/6', date: '2026-09-20', paid: false }),
@@ -59,16 +59,34 @@ describe('sortExpensesByOccurrence', () => {
 
     const ordenadas = sortExpensesByOccurrence(doBackend);
 
-    expect(ordenadas.map(exp => exp.description)).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
-    // Pagas e pendentes ficam intercaladas: o status não decide a posição.
-    expect(ordenadas.map(exp => exp.paid)).toEqual([false, true, false, true]);
+    expect(ordenadas.map(exp => exp.description)).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
+    expect(ordenadas.map(exp => exp.paid)).toEqual([false, false, true, true]);
+  });
+
+  it('põe a despesa em aberto mais antiga acima de uma paga mais recente', () => {
+    const ordenadas = sortExpensesByOccurrence([
+      makeExpense({ id: 2, description: 'Paga recente', date: '2026-10-30', paid: true }),
+      makeExpense({ id: 1, description: 'Aberta antiga', date: '2026-10-01', paid: false })
+    ]);
+
+    expect(ordenadas.map(exp => exp.description)).toEqual(['Aberta antiga', 'Paga recente']);
+  });
+
+  it('trata `paid` ausente (snapshot antigo) como em aberto', () => {
+    const semPaid = { ...makeExpense({ id: 1, description: 'Sem campo', date: '2026-10-01' }), paid: undefined };
+    const ordenadas = sortExpensesByOccurrence([
+      makeExpense({ id: 2, description: 'Paga', date: '2026-10-30', paid: true }),
+      semPaid as unknown as SummaryExpense
+    ]);
+
+    expect(ordenadas.map(exp => exp.description)).toEqual(['Sem campo', 'Paga']);
   });
 
   it('desempata a mesma data pelo id da despesa, do maior para o menor', () => {
     const ordenadas = sortExpensesByOccurrence([
-      makeExpense({ id: 3, date: '2026-10-03' }),
-      makeExpense({ id: 7, date: '2026-10-03' }),
-      makeExpense({ id: 5, date: '2026-10-03' })
+      makeExpense({ id: 3, date: '2026-10-03', paid: true }),
+      makeExpense({ id: 7, date: '2026-10-03', paid: true }),
+      makeExpense({ id: 5, date: '2026-10-03', paid: true })
     ]);
 
     expect(ordenadas.map(exp => exp.id)).toEqual([7, 5, 3]);

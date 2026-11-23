@@ -208,7 +208,8 @@ const ReportBody: React.FC<ReportBodyProps> = ({ report, grossId, settlementsId 
 
       <Box component="section" aria-label="Despesas do ciclo">
         {/* O snapshot de um ciclo selado está congelado em ordem crescente; a exibição reordena
-            pela data da ocorrência, mais recente primeiro, sem tocar nele. */}
+            (em aberto primeiro e, em cada grupo, data da ocorrência mais recente primeiro; item 160)
+            sem tocar nele. */}
         <CycleExpenseList expenses={sortExpensesByOccurrence(report.expenses)} />
       </Box>
     </>

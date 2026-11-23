@@ -34,8 +34,9 @@ const CycleDetailPanel: React.FC<CycleDetailPanelProps> = ({ summary, currentUse
 
     <Grid container spacing={3}>
       <Grid size={{ xs: 12, sm: 12, lg: 8 }}>
-        {/* Data da ocorrência, mais recente primeiro: a ordem da API (pendentes primeiro) e o
-            snapshot congelado de um ciclo selado ficam como estão, só a exibição reordena. */}
+        {/* Em aberto primeiro e, em cada grupo, data da ocorrência mais recente primeiro (item 160):
+            a ordem da API e o snapshot congelado de um ciclo selado ficam como estão, só a exibição
+            reordena. */}
         <CycleExpenseList expenses={sortExpensesByOccurrence(summary.expenses)} />
       </Grid>
 

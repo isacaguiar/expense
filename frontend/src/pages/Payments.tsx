@@ -251,8 +251,8 @@ const Payments: React.FC = () => {
 
   const expenses = summary?.expenses ?? [];
 
-  // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Substitui o
-  // "pendentes primeiro" que a API devolve; `expenses` (a lista da API, sem ordenar) segue
+  // Ordem de apresentação: em aberto antes das pagas e, em cada grupo, data da ocorrência
+  // decrescente, desempate por id (item 160); `expenses` (a lista da API, sem ordenar) segue
   // alimentando o estado vazio e a busca por id do popup de comprovante
   // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §5).
   const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);

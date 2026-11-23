@@ -103,13 +103,14 @@ describe('ClosingReportPanel', () => {
   });
 
   describe('expense list order', () => {
-    it('lists the expenses by date, newest first, even when the frozen snapshot arrives oldest first', async () => {
-      // `closingReport()` entrega Aluguel (05/09) antes de Luz (10/09), como um snapshot selado.
+    it('lists the open expenses before the paid ones, newest first inside each group, even when the frozen snapshot arrives oldest first (item 160)', async () => {
+      // `closingReport()` entrega Aluguel (05/09, em aberto) antes de Luz (10/09, paga), como um snapshot
+      // selado: por data pura a Luz viria primeiro, então a ordem prova a regra.
       await renderPanel();
 
       expect(screen.getAllByText(/^(Aluguel|Luz) — R\$/).map(item => item.textContent)).toEqual([
-        'Luz — R$ 90,00',
         'Aluguel — R$ 300,00',
+        'Luz — R$ 90,00',
       ]);
     });
   });

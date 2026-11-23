@@ -102,9 +102,9 @@ const ExpenseManager: React.FC = () => {
 
   const currentUserId = useCurrentUserId();
 
-  // Ordem de apresentação: data da ocorrência decrescente, desempate por id. Vale
-  // para cards e tabela e substitui o "pendentes primeiro" que a API devolve; a
-  // lista da API (`expenses`) segue intacta para as buscas por id abaixo
+  // Ordem de apresentação: em aberto antes das pagas e, em cada grupo, data da ocorrência
+  // decrescente, desempate por id (item 160). Vale para cards e tabela; a lista da API
+  // (`expenses`) segue intacta para as buscas por id abaixo
   // (docs/feature/concluidas/202610/20261026-organizacao-despesas-pagamentos/plan.md §5).
   const sortedExpenses = useMemo(() => sortExpensesByOccurrence(summary?.expenses ?? []), [summary]);
 
