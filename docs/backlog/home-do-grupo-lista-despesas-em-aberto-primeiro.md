@@ -4,7 +4,7 @@ ID: 160
 Origem: pedido dele em 2026-11-20 (conversa da feature `20261120-ver-comprovante-em-modal`); `frontend/src/components/CycleExpenseList.tsx`, `frontend/src/components/CycleDetailPanel.tsx:39`, `frontend/src/utils/cycleOrdering.ts:24`
 Criado em: 2026-11-20
 Prioridade: MEDIA
-Status: Aberto
+Status: Promovido para TASK-663 (feature 20261123-home-despesas-em-aberto-primeiro)
 
 ## Descrição
 Pedido dele, nas palavras: na página inicial do grupo, manter a ordenação atual, **mas priorizar as despesas não pagas**, para facilitar a visão do que está em aberto.
