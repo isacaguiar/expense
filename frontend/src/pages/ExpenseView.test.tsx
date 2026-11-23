@@ -477,6 +477,40 @@ describe('ExpenseView', () => {
     expect(link).toHaveAttribute('href', '/api/groups/1/proofs/quota/8?signature=stub');
   });
 
+  it('opens the latest proof in a viewer dialog on click (not on ctrl+click), with no new tab (TASK-659)', async () => {
+    const user = userEvent.setup();
+    mockGetResponses({
+      expense: {
+        ...expenseDetail,
+        quotas: [{ date_expected: '2026-08-01', paid: true, payment_proof_url: '/api/groups/1/proofs/quota/8?signature=stub' }],
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <ExpenseView />
+      </MemoryRouter>
+    );
+
+    const link = await screen.findByRole('link', { name: 'Ver comprovante' });
+    expect(link).not.toHaveAttribute('target');
+
+    await user.keyboard('{Control>}');
+    await user.click(link);
+    await user.keyboard('{/Control}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(link);
+    expect(screen.getByRole('img', { name: 'Comprovante de pagamento' })).toHaveAttribute(
+      'src',
+      '/api/groups/1/proofs/quota/8?signature=stub'
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(link).toHaveFocus();
+  });
+
   it('does not show "Ver comprovante" when no quota is paid with a proof', async () => {
     mockGetResponses({
       expense: {

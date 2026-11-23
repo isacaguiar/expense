@@ -48,8 +48,8 @@ describe('PayableSettlementList: motivo e comprovante recusado', () => {
     expect(screen.getByText('Motivo: a foto está cortada')).toBeInTheDocument();
     const link = screen.getByRole('link', { name: 'Ver comprovante recusado' });
     expect(link).toHaveAttribute('href', 'https://x/recusado.jpg');
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noreferrer');
+    // Abre num diálogo (TASK-655): sem `target`; o `href` segue para ctrl+clique e botão do meio.
+    expect(link).not.toHaveAttribute('target');
   });
 
   it('the creditor sees them too ("Você recusou o comprovante")', () => {

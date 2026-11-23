@@ -301,6 +301,44 @@ describe('Payments', () => {
     expect(screen.getAllByRole('link', { name: 'Ver comprovante' })).toHaveLength(1);
   });
 
+  it('opens the expense proof in a viewer dialog on click (not on ctrl+click), with no new tab (TASK-660)', async () => {
+    const user = userEvent.setup();
+    mockGetResponses([
+      {
+        id: 17,
+        description: 'Foto e texto',
+        date: '2026-08-11',
+        value: 100,
+        paid: true,
+        paymentNote: null,
+        paymentProofUrl: 'http://api/proofs/1',
+        userPayerId: 999,
+      },
+    ]);
+
+    render(
+      <MemoryRouter>
+        <Payments />
+      </MemoryRouter>
+    );
+
+    const link = await screen.findByRole('link', { name: 'Ver comprovante' });
+    expect(link).toHaveAttribute('href', 'http://api/proofs/1');
+    expect(link).not.toHaveAttribute('target');
+
+    await user.keyboard('{Control>}');
+    await user.click(link);
+    await user.keyboard('{/Control}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+
+    await user.click(link);
+    expect(screen.getByRole('img', { name: 'Comprovante de pagamento' })).toHaveAttribute('src', 'http://api/proofs/1');
+
+    await user.click(screen.getByRole('button', { name: 'Fechar' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(link).toHaveFocus();
+  });
+
   it('shows no payment note line when the expense has none, and renders markup as plain text', async () => {
     mockGetResponses([
       { id: 18, description: 'Sem nota', date: '2026-08-10', value: 100, paid: true, paymentNote: null, userPayerId: 999 },
