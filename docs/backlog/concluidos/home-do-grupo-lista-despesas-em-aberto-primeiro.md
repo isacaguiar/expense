@@ -4,7 +4,7 @@ ID: 160
 Origem: pedido dele em 2026-11-20 (conversa da feature `20261120-ver-comprovante-em-modal`); `frontend/src/components/CycleExpenseList.tsx`, `frontend/src/components/CycleDetailPanel.tsx:39`, `frontend/src/utils/cycleOrdering.ts:24`
 Criado em: 2026-11-20
 Prioridade: MEDIA
-Status: Promovido para TASK-663 (feature 20261123-home-despesas-em-aberto-primeiro)
+Status: Concluído (feature 20261123-home-despesas-em-aberto-primeiro)
 
 ## Descrição
 Pedido dele, nas palavras: na página inicial do grupo, manter a ordenação atual, **mas priorizar as despesas não pagas**, para facilitar a visão do que está em aberto.
@@ -29,3 +29,11 @@ A fechar no specify, se o item for promovido.
 Quem abre o grupo quer saber o que ainda falta pagar; com a ordem só por data, uma despesa em aberto de dias atrás fica soterrada sob as pagas mais recentes.
 
 Tipo sugerido: frontend (sem mudança de backend)
+
+## Resolução
+Concluído em: 2026-11-23
+Feature: docs/feature/concluidas/202611/20261123-home-despesas-em-aberto-primeiro/
+Tasks: TASK-663 a TASK-669
+PRs: https://github.com/isacaguiar/expense/pull/296
+
+`sortExpensesByOccurrence` passou a ordenar em aberto primeiro e, dentro de cada grupo, pela ordem de antes (data, `id`, parcela). A pedido dele a regra valeu nas quatro telas que usam a função (Home, Despesas, Pagamentos e relatório de fechamento), não só na Home, e em qualquer ciclo; sem separador visual. Reverte a R1 da feature de organização. Só frontend.
