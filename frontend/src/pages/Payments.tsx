@@ -27,6 +27,7 @@ import { usePaymentActions } from '../hooks/usePaymentActions';
 import { useCurrentUserId } from '../hooks/useCurrentUserId';
 import { useSettlementDecision, type SettlementDecisionAction } from '../hooks/useSettlementDecision';
 import { useSettlementComplement } from '../hooks/useSettlementComplement';
+import useProofViewer from '../hooks/useProofViewer';
 import SettlementComplementDialog from '../components/SettlementComplementDialog';
 import PaymentSettlementsPanel, { SettlementsTab } from '../components/PaymentSettlementsPanel';
 import PaymentProofDialog, { PaymentProofValue } from '../components/PaymentProofDialog';
@@ -60,6 +61,8 @@ type GroupMemberPix = {
 
 const Payments: React.FC = () => {
   const { id: groupId } = useParams<{ id: string }>();
+  // O comprovante abre num diálogo em vez de outra aba (feature 20261120-ver-comprovante-em-modal, TASK-660).
+  const { proofLinkProps, proofViewer } = useProofViewer();
   const { summary, loading, error, cyclesAgo, goToPreviousCycle, goToNextCycle, reload } = useGroupCycle(groupId);
 
   const currentUserId = useCurrentUserId();
@@ -355,7 +358,7 @@ const Payments: React.FC = () => {
 
                         {exp.paid && exp.paymentProofUrl && (
                           <Typography variant="body2" mt={1}>
-                            <a href={exp.paymentProofUrl} target="_blank" rel="noreferrer">
+                            <a {...proofLinkProps(exp.paymentProofUrl)}>
                               Ver comprovante
                             </a>
                           </Typography>
@@ -583,6 +586,7 @@ const Payments: React.FC = () => {
           {noPixWarning}
         </Alert>
       </Snackbar>
+      {proofViewer}
     </DespesasThemeScope>
   );
 };
