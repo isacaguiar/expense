@@ -50,24 +50,23 @@ describe('CycleDetailPanel', () => {
       userCreatorId: 1
     });
 
-    it('mostra as despesas por data da ocorrência, da mais recente para a mais antiga, com empate pelo id', () => {
+    it('mostra as em aberto antes das pagas e, em cada grupo, a mais recente primeiro, com empate pelo id (item 160)', () => {
       const withExpenses: Summary = {
         ...summary,
-        // Chegam como o backend entrega: pendentes primeiro, data crescente.
+        // Chegam como o backend entrega: data crescente.
         expenses: [
-          despesa(1, 'Aluguel', '2026-09-05'),
+          { ...despesa(1, 'Aluguel', '2026-09-05'), paid: true },
           despesa(3, 'Luz', '2026-09-10'),
-          despesa(2, 'Água', '2026-09-10')
+          despesa(2, 'Água', '2026-09-10'),
+          despesa(4, 'Internet', '2026-09-01')
         ]
       };
 
       render(<CycleDetailPanel summary={withExpenses} />);
 
-      expect(screen.getAllByText(/^(Aluguel|Luz|Água) — R\$/).map(item => item.textContent?.split(' — ')[0])).toEqual([
-        'Luz',
-        'Água',
-        'Aluguel'
-      ]);
+      expect(
+        screen.getAllByText(/^(Aluguel|Luz|Água|Internet) — R\$/).map(item => item.textContent?.split(' — ')[0])
+      ).toEqual(['Luz', 'Água', 'Internet', 'Aluguel']);
     });
   });
 

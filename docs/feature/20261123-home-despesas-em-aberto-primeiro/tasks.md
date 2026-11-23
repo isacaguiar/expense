@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20261123
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-663 | Ordenar as despesas em aberto primeiro em `sortExpensesByOccurrence` e ajustar os testes que afirmam a ordem antiga | frontend | plan.md §1 e §2 | nenhum | Pendente |
+| TASK-663 | Ordenar as despesas em aberto primeiro em `sortExpensesByOccurrence` e ajustar os testes que afirmam a ordem antiga | frontend | plan.md §1 e §2 | nenhum | Concluída |
 | TASK-664 | Cobrir a Home (`CycleDetailPanel`) com teste de em aberto primeiro e atualizar o comentário | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-665 | Cobrir Despesas (`ExpenseManager`) com teste de ordem sob filtro ativo e atualizar o comentário | frontend | plan.md §2 | nenhum | Pendente |
 | TASK-666 | Cobrir Pagamentos (`Payments`) com teste de ordem sob filtro ativo e atualizar o comentário | frontend | plan.md §2 | nenhum | Pendente |

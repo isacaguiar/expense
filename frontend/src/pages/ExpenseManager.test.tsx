@@ -2617,18 +2617,18 @@ describe('ExpenseManager - ordem e data das despesas', () => {
   });
 
   describe('tabela (desktop)', () => {
-    it('ordena por data da ocorrência decrescente, desempata pelo id e não prioriza pendentes', async () => {
+    it('ordena por data da ocorrência decrescente, desempata pelo id e põe as em aberto antes das pagas (item 160)', async () => {
       mockGetResponses(doBackend, cycle);
       renderManager();
 
       await screen.findByText('Mercado');
 
-      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
-      // Pendente e paga intercaladas: o status não decide a posição.
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
+      // Em aberto primeiro; dentro de cada grupo, a data mais recente antes.
       expect(screen.getAllByText(/^(Paga|Pendente)$/).map(chip => chip.textContent)).toEqual([
         'Pendente',
-        'Paga',
         'Pendente',
+        'Paga',
         'Paga',
       ]);
     });
@@ -2639,7 +2639,7 @@ describe('ExpenseManager - ordem e data das despesas', () => {
 
       await screen.findByText('Mercado');
 
-      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
     });
 
     it('não altera a lista recebida da API (o resumo é estado do hook)', async () => {
@@ -2656,7 +2656,7 @@ describe('ExpenseManager - ordem e data das despesas', () => {
 
       await screen.findByText('Mercado');
 
-      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
     });
 
     it('mantém a ordem com um filtro ativo', async () => {
@@ -2748,7 +2748,7 @@ describe('ExpenseManager - ordem e data das despesas', () => {
       await screen.findByText('Mercado');
 
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
-      expect(shownOrder()).toEqual(['Mercado', 'Internet', 'Sofá 3/6', 'Luz']);
+      expect(shownOrder()).toEqual(['Mercado', 'Sofá 3/6', 'Internet', 'Luz']);
     });
 
     it('mostra a linha "Data:" em cada card', async () => {

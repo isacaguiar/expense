@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-663 | Concluída | 2026-11-23 | Claude | RED: `npx vitest run src/utils/cycleOrdering.test.ts` com os testes novos (em aberto antes de pago, aberta antiga acima de paga recente, `paid` ausente) = 3 falhas, 30 passam. GREEN: 33 passam. Testes de tela ajustados (`CycleDetailPanel`, `ExpenseManager`, `Payments`): `npx vitest run` nos 4 arquivos com `--maxWorkers=1` = 4 arquivos, 227 testes passam; `npx tsc --noEmit` limpo. Mutantes mortos: sem o critério `paid` (4 falhas), sentido invertido (4 falhas); arquivo restaurado e conferido com `cmp`. | Primeira tentativa de mutante não gravou o arquivo (caminho `/tmp` no Windows) e passou sem mutação: descartada e refeita no próprio arquivo, com backup. Comentários de `CycleDetailPanel`, `ClosingReportPanel`, `ExpenseManager` e `Payments` ficam nas tasks 664 a 667. |

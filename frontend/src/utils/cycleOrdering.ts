@@ -15,14 +15,18 @@ const cents = (value: number): number => Math.round(value * 100) || 0;
 const byName = (a: string, b: string): number => a.localeCompare(b, 'pt-BR');
 
 /**
- * Despesas pela data da ocorrência na competência (`date`, 'YYYY-MM-DD'), da mais
- * recente para a mais antiga. Substitui o "pendentes primeiro" do backend: o
- * status não decide a posição. Empate: `id` da despesa decrescente e, quando a
- * mesma despesa tem duas parcelas na competência, o número da parcela
- * decrescente (ausente vale 0).
+ * Despesas em aberto (`paid` falso ou ausente) antes das pagas e, dentro de cada um
+ * dos dois grupos, pela data da ocorrência na competência (`date`, 'YYYY-MM-DD'), da
+ * mais recente para a mais antiga. Reverte a R1 da feature de organização (status não
+ * decidia a posição) a pedido dele: quem abre a lista quer ver o que falta pagar
+ * (docs/feature/20261123-home-despesas-em-aberto-primeiro/plan.md §1). Empate de data:
+ * `id` da despesa decrescente e, quando a mesma despesa tem duas parcelas na
+ * competência, o número da parcela decrescente (ausente vale 0). Devolve cópia.
  */
 export const sortExpensesByOccurrence = (expenses: readonly SummaryExpense[]): SummaryExpense[] =>
   [...expenses].sort((a, b) => {
+    // `Boolean`: snapshot antigo sem `paid` conta como em aberto.
+    if (Boolean(a.paid) !== Boolean(b.paid)) return Number(Boolean(a.paid)) - Number(Boolean(b.paid));
     // Comparação de texto: 'YYYY-MM-DD' ordena como data e evita o fuso de `new Date`.
     if (a.date !== b.date) return a.date < b.date ? 1 : -1;
     if (a.id !== b.id) return b.id - a.id;
