@@ -68,6 +68,32 @@ describe('CycleDetailPanel', () => {
         screen.getAllByText(/^(Aluguel|Luz|Água|Internet) — R\$/).map(item => item.textContent?.split(' — ')[0])
       ).toEqual(['Luz', 'Água', 'Internet', 'Aluguel']);
     });
+
+    // Item 160 (D4-A): a regra vale igual em ciclo aberto, fechado manualmente e fechado já acertado
+    // (snapshot selado), além do fechado comum do teste acima.
+    it.each([
+      ['aberto', { status: 'open' as const }],
+      ['fechado manualmente', { status: 'closed_manually' as const }],
+      ['fechado e acertado', { status: 'closed' as const, settled: true }]
+    ])('põe a despesa em aberto antiga acima das pagas recentes em ciclo %s', (_nome, cycle) => {
+      const withExpenses: Summary = {
+        ...summary,
+        cycle: { ...summary.cycle, ...cycle },
+        expenses: [
+          { ...despesa(1, 'Aluguel', '2026-09-28'), paid: true },
+          { ...despesa(2, 'Luz', '2026-09-20'), paid: true },
+          despesa(3, 'Internet', '2026-09-02')
+        ]
+      };
+
+      render(<CycleDetailPanel summary={withExpenses} />);
+
+      expect(screen.getAllByText(/^(Aluguel|Luz|Internet) — R\$/).map(item => item.textContent?.split(' — ')[0])).toEqual([
+        'Internet',
+        'Aluguel',
+        'Luz'
+      ]);
+    });
   });
 
   describe('aba Saldo', () => {
