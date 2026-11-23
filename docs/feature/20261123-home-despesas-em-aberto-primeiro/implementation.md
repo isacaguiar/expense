@@ -1,14 +1,15 @@
-# Implementation — <Nome da Feature>
+# Implementation — Despesas em aberto primeiro
 
 > Como as tasks de `tasks.md` viram código. O fluxo (branch, checklist pré-PR, gates) é o de `docs/sdd/04-implementation.md` — só documente aqui um desvio específico desta feature, se houver.
 
-Versão: 1.0 · Criado em: <AAAAMMDD>
+Versão: 1.0 · Criado em: 20261123
 
 ---
 
 ## 1. Desvios do fluxo padrão (se houver)
 
-<Deixe vazio/apague esta seção se a feature segue `04-implementation.md` sem exceção.>
+- A TASK-663 incluiu o ajuste de três testes de tela (Home, Despesas, Pagamentos) que afirmavam a ordem antiga, para não deixar a suíte vermelha entre tasks. O teste de ordem do `ClosingReportPanel` também afirmava a ordem antiga e só foi corrigido na TASK-667: a suíte ficou vermelha nesse arquivo entre a 663 e a 667 (a 663 não rodou o arquivo). A suíte cheia do fechamento confirma que não sobrou outro caso.
+- O specify foi ampliado por ele em 2026-11-23 (regra nas quatro telas, D1-C), depois do item 160 pedir só a Home.
 
 ## 2. Log de implementação
 
