@@ -43,19 +43,39 @@ class AvatarStorage
 
         $name = Str::uuid()->toString().'.'.$extension;
 
-        return $file->storeAs("avatares/{$userId}", $name, self::DISK);
+        $path = $file->storeAs("avatares/{$userId}", $name, self::DISK);
+
+        // O disco `local` tem `'throw' => false` (`config/filesystems.php`): numa falha de gravação (disco cheio,
+        // permissão) `storeAs` devolve `false`, e o tipo de retorno `string` sem `strict_types` o converteria em
+        // `''`, que `uploadPhoto` gravaria em `photo_path` (feature 20261123-avatar-delete-confinado-e-troca-de-foto-segura,
+        // TASK-674, D4-A). Aborta como `ProofStorage::store`.
+        if ($path === false) {
+            abort(500, 'Não foi possível gravar a foto.');
+        }
+
+        return $path;
     }
 
     /**
-     * Remove o arquivo do disco. Silencioso se o path é vazio ou o arquivo
-     * já não existe.
+     * Remove o arquivo do disco, só dentro de `avatares/` (feature
+     * 20261123-avatar-delete-confinado-e-troca-de-foto-segura, TASK-673, D1-A).
+     * Silencioso (no-op) se o path é vazio, se o arquivo já não existe, se o path
+     * não começa por `avatares/` ou se tem um segmento `..`: um `photo_path` que
+     * não venha do `store` não pode remover arquivo de outra área.
      */
     public static function delete(?string $path): void
     {
-        if (! $path) {
+        if (! $path || ! self::isInsideAvatars($path)) {
             return;
         }
 
         Storage::disk(self::DISK)->delete($path);
+    }
+
+    /** `avatares/...` sem segmento `..` (separado por `/` ou `\`); `foto..png` é nome válido. */
+    private static function isInsideAvatars(string $path): bool
+    {
+        return str_starts_with($path, 'avatares/')
+            && ! in_array('..', preg_split('#[/\\\\]#', $path), true);
     }
 }
