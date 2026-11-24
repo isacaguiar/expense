@@ -30,3 +30,9 @@ A fechar com ele antes do specify.
 O alerta atual lista só nomes soltos; dizer a quem cada pessoa deve e em linguagem direta ajuda a cobrar o acerto sem abrir a tela de Pagamentos.
 
 Tipo sugerido: frontend (sem mudança de backend; o `summary` já traz `settlements` e `balances`)
+
+## Resolução
+Concluído em: 2026-11-23
+Feature: docs/feature/concluidas/202611/20261123-aviso-ciclo-fechado-nomeia-quem-falta-acertar/   (a pasta migra para lá quando o PR da feature mergeia em `dev`, ADR-009)
+Tasks: TASK-670, TASK-671, TASK-672
+PRs: https://github.com/isacaguiar/expense/pull/299
