@@ -4,7 +4,7 @@ ID: 159
 Origem: feature `20261116-endurecer-upload-de-foto-de-perfil` (TASK-651, `security-reviewer`, 2 achados informativos); `backend/app/Support/AvatarStorage.php:53-60` e `backend/app/Http/Controllers/UserController.php:89-90`
 Criado em: 2026-11-20
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-673
 
 ## Descrição
 Dois achados informativos da revisão de segurança do delta da foto de perfil, sem exploração hoje:
