@@ -4,7 +4,7 @@ ID: 161
 Origem: pedido dele em 2026-11-20 (conversa da feature `20261120-ver-comprovante-em-modal`); `frontend/src/components/CycleClosingAlert.tsx:37-77`
 Criado em: 2026-11-20
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-670
 
 ## Descrição
 Pedido dele, nas palavras: acrescentar uma **mensagem informativa do fechamento do ciclo** que informe que falta o acerto, mostrando **o credor que não pagou**, com a sugestão de texto "<nome> não possui conta não paga ou em aberto", a avaliar qual é a mais adequada.
