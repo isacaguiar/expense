@@ -24,3 +24,9 @@ A fechar no specify, se o item for promovido.
 Nenhum dos dois é explorável hoje; são robustez: o primeiro impede que um dado ruim em `photo_path` apague arquivo alheio, o segundo evita perder a foto em falha de gravação.
 
 Tipo sugerido: backend (sem mudança de contrato nem migration)
+
+## Resolução
+Concluído em: 2026-11-23
+Feature: docs/feature/concluidas/202611/20261123-avatar-delete-confinado-e-troca-de-foto-segura/   (a pasta migra para lá quando o PR da feature mergeia em `dev`, ADR-009)
+Tasks: TASK-673, TASK-674, TASK-675
+PRs: https://github.com/isacaguiar/expense/pull/302
