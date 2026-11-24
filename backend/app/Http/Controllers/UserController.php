@@ -86,9 +86,12 @@ class UserController extends Controller
 
         $user = $request->user();
 
-        AvatarStorage::delete($user->photo_path);
+        // Grava a nova, salva o `photo_path` e só então apaga a antiga (TASK-674, D2-A): se a gravação falhar
+        // (`store` aborta), o usuário não perde a foto que já tinha.
+        $oldPath = $user->photo_path;
         $user->photo_path = AvatarStorage::store($request->file('foto'), $user->id);
         $user->save();
+        AvatarStorage::delete($oldPath);
 
         return response()->json(['avatar_url' => $user->avatar_url]);
     }

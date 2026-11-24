@@ -4,7 +4,7 @@ ID: 159
 Origem: feature `20261116-endurecer-upload-de-foto-de-perfil` (TASK-651, `security-reviewer`, 2 achados informativos); `backend/app/Support/AvatarStorage.php:53-60` e `backend/app/Http/Controllers/UserController.php:89-90`
 Criado em: 2026-11-20
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-673
 
 ## Descrição
 Dois achados informativos da revisão de segurança do delta da foto de perfil, sem exploração hoje:
@@ -24,3 +24,9 @@ A fechar no specify, se o item for promovido.
 Nenhum dos dois é explorável hoje; são robustez: o primeiro impede que um dado ruim em `photo_path` apague arquivo alheio, o segundo evita perder a foto em falha de gravação.
 
 Tipo sugerido: backend (sem mudança de contrato nem migration)
+
+## Resolução
+Concluído em: 2026-11-23
+Feature: docs/feature/concluidas/202611/20261123-avatar-delete-confinado-e-troca-de-foto-segura/   (a pasta migra para lá quando o PR da feature mergeia em `dev`, ADR-009)
+Tasks: TASK-673, TASK-674, TASK-675
+PRs: https://github.com/isacaguiar/expense/pull/302
