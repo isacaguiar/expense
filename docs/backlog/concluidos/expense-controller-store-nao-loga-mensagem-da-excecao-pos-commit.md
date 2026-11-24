@@ -4,7 +4,7 @@ ID: 163
 Origem: feature `20261124-notifier-nao-loga-sql-com-bindings` (decisão D2-A: o padrão do `Notifier::guard` foi corrigido e este ponto, igual, ficou para item próprio); `backend/app/Http/Controllers/ExpenseController.php:907`
 Criado em: 2026-11-24
 Prioridade: BAIXA
-Status: Aberto
+Status: Concluído
 
 ## Descrição
 No `store`, cada passo pós-commit roda dentro de um bloco que captura `\Throwable` e faz `Log::warning("store: falha no passo pós-commit ({$step})", ['exception' => $e->getMessage()])` (`ExpenseController.php:907`). É o mesmo padrão do `Notifier::guard` antes da TASK-676: numa `QueryException` a mensagem traz o SQL com os bindings (valores da despesa, nomes de usuário e do grupo), que vão para o `laravel.log` sem necessidade. O contexto usa a chave `exception`, mas com a mensagem, não com a classe.
@@ -23,3 +23,10 @@ A fechar no specify, se o item for promovido.
 Higiene de log: dado pessoal e valores financeiros em texto de SQL, sem uso para o diagnóstico. Nenhuma exploração hoje.
 
 Tipo sugerido: backend (sem mudança de contrato nem migration)
+
+## Resolução
+Concluído em: 2026-11-24
+Feature: docs/feature/concluidas/202611/20261124-expense-store-nao-loga-mensagem-da-excecao/   (a pasta migra para lá quando o PR da feature mergeia em `dev`, ADR-009)
+Tasks: TASK-678, TASK-679
+PRs: https://github.com/isacaguiar/expense/pull/309
+Nota: a varredura da feature gerou o item 165 (demais pontos de log com a mensagem da exceção, o primeiro a tratar é `ExpenseController.php:780`).
