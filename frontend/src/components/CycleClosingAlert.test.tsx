@@ -63,7 +63,7 @@ describe('CycleClosingAlert', () => {
     expect(screen.getByText(/Este ciclo fecha em/)).toBeInTheDocument();
   });
 
-  it('lists the debtors with a settlement still unconfirmed once the cycle is closed', () => {
+  it('lists one line per unconfirmed settlement, debtor and creditor, once the cycle is closed', () => {
     render(
       <CycleClosingAlert
         summary={closedSummary({
@@ -77,7 +77,12 @@ describe('CycleClosingAlert', () => {
         })}
       />
     );
-    expect(screen.getByText(/falta acertar: Ana, Bruno\./)).toBeInTheDocument();
+    expect(screen.getByText(/O ciclo fechou e ainda falta acertar:/)).toBeInTheDocument();
+    const lines = screen.getAllByRole('listitem').map(item => item.textContent);
+    expect(lines).toEqual([
+      'Ana ainda não pagou o acerto a Carla.',
+      'Bruno ainda não pagou o acerto a Carla.',
+    ]);
   });
 
   it('drops a debtor whose settlement was already confirmed, keeping only the pending ones', () => {
@@ -95,7 +100,7 @@ describe('CycleClosingAlert', () => {
         })}
       />
     );
-    expect(screen.getByText(/falta acertar: Bruno\./)).toBeInTheDocument();
+    expect(screen.getByText('Bruno ainda não pagou o acerto a Carla.')).toBeInTheDocument();
     expect(screen.queryByText(/Ana/)).not.toBeInTheDocument();
   });
 
@@ -130,7 +135,11 @@ describe('CycleClosingAlert', () => {
         })}
       />
     );
-    expect(screen.getByText(/falta acertar: Ana, Bruno, Carla\./)).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual([
+      'Ana ainda não pagou o acerto a Bruno.',
+      'Bruno ainda não pagou o acerto a Carla.',
+      'Carla ainda não pagou o acerto a Ana.',
+    ]);
   });
 
   it('lists a net creditor who still owes a third person', () => {
@@ -147,10 +156,13 @@ describe('CycleClosingAlert', () => {
         })}
       />
     );
-    expect(screen.getByText(/falta acertar: Ana, Bruno\./)).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual([
+      'Ana ainda não pagou o acerto a Carla.',
+      'Bruno ainda não pagou o acerto a Ana.',
+    ]);
   });
 
-  it('names a debtor once even when owing several creditors', () => {
+  it('gives a debtor who owes several creditors one line per creditor', () => {
     render(
       <CycleClosingAlert
         summary={closedSummary({
@@ -164,10 +176,13 @@ describe('CycleClosingAlert', () => {
         })}
       />
     );
-    expect(screen.getByText(/falta acertar: Ana\./)).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual([
+      'Ana ainda não pagou o acerto a Bruno.',
+      'Ana ainda não pagou o acerto a Carla.',
+    ]);
   });
 
-  it('falls back to "Desconhecido" for a debtor missing from the balances', () => {
+  it('falls back to "Desconhecido" for a debtor or a creditor missing from the balances', () => {
     render(
       <CycleClosingAlert
         summary={closedSummary({
@@ -177,7 +192,40 @@ describe('CycleClosingAlert', () => {
         })}
       />
     );
-    expect(screen.getByText(/falta acertar: Desconhecido\./)).toBeInTheDocument();
+    expect(screen.getByText('Desconhecido ainda não pagou o acerto a Carla.')).toBeInTheDocument();
+  });
+
+  it('falls back to "Desconhecido" for a creditor missing from the balances', () => {
+    render(
+      <CycleClosingAlert
+        summary={closedSummary({
+          balances: [{ ...ANA, balance: -30 }],
+          settlements: [settlement(1, 9)],
+          pending: 30,
+        })}
+      />
+    );
+    expect(screen.getByText('Ana ainda não pagou o acerto a Desconhecido.')).toBeInTheDocument();
+  });
+
+  it('keeps the order of the settlements, not the order of the balances', () => {
+    render(
+      <CycleClosingAlert
+        summary={closedSummary({
+          balances: [
+            { ...ANA, balance: -30 },
+            { ...BRUNO, balance: -10 },
+            { ...CARLA, balance: 40 },
+          ],
+          settlements: [settlement(2, 3), settlement(1, 3)],
+          pending: 40,
+        })}
+      />
+    );
+    expect(screen.getAllByRole('listitem').map(item => item.textContent)).toEqual([
+      'Bruno ainda não pagou o acerto a Carla.',
+      'Ana ainda não pagou o acerto a Carla.',
+    ]);
   });
 
   it('applies the same rule to a manually closed (reviewable) cycle', () => {
@@ -197,7 +245,7 @@ describe('CycleClosingAlert', () => {
         })}
       />
     );
-    expect(screen.getByText(/falta acertar: Bruno\./)).toBeInTheDocument();
+    expect(screen.getByText('Bruno ainda não pagou o acerto a Carla.')).toBeInTheDocument();
   });
 
   it('renders nothing once the cycle is settled', () => {

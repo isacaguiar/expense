@@ -4,7 +4,7 @@ ID: 161
 Origem: pedido dele em 2026-11-20 (conversa da feature `20261120-ver-comprovante-em-modal`); `frontend/src/components/CycleClosingAlert.tsx:37-77`
 Criado em: 2026-11-20
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-670
 
 ## Descrição
 Pedido dele, nas palavras: acrescentar uma **mensagem informativa do fechamento do ciclo** que informe que falta o acerto, mostrando **o credor que não pagou**, com a sugestão de texto "<nome> não possui conta não paga ou em aberto", a avaliar qual é a mais adequada.
@@ -30,3 +30,9 @@ A fechar com ele antes do specify.
 O alerta atual lista só nomes soltos; dizer a quem cada pessoa deve e em linguagem direta ajuda a cobrar o acerto sem abrir a tela de Pagamentos.
 
 Tipo sugerido: frontend (sem mudança de backend; o `summary` já traz `settlements` e `balances`)
+
+## Resolução
+Concluído em: 2026-11-23
+Feature: docs/feature/concluidas/202611/20261123-aviso-ciclo-fechado-nomeia-quem-falta-acertar/   (a pasta migra para lá quando o PR da feature mergeia em `dev`, ADR-009)
+Tasks: TASK-670, TASK-671, TASK-672
+PRs: https://github.com/isacaguiar/expense/pull/299
