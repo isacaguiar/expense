@@ -2,7 +2,7 @@
 
 > Documento **portátil** (markdown puro, sem nada específico de ferramenta): o que qualquer assistente de IA (ou dev) deve carregar antes de mexer na API. Contrato de portabilidade e relação com as skills: `README.md`, "Skills e portabilidade".
 
-Versão: 1.3 · Última atualização: 2026-11-23
+Versão: 1.4 · Última atualização: 2026-11-24
 
 ---
 
@@ -23,6 +23,7 @@ Carregue o contexto abaixo se ele ainda não estiver na conversa (não releia o 
 - Tabelas novas usam prefixo `ex_` (convenção já em uso).
 - `./vendor/bin/pint` limpo antes de commit; teste PHPUnit para toda regra de negócio nova ou alterada.
 - Arquivos enviados pelo usuário (comprovante em `ProofStorage`, foto de perfil em `AvatarStorage`) vão para o disco privado `local`, que tem `'throw' => false`: numa falha de gravação `storeAs` devolve `false`, então `store` precisa abortar com 500 em vez de devolver o `false` (ou um `''` convertido pelo tipo de retorno). `AvatarStorage::delete` só apaga dentro de `avatares/` e ignora caminho com segmento `..`; ao trocar um arquivo, grave o novo, salve o caminho e só então apague o antigo, para uma falha no meio não deixar o usuário sem arquivo (feature `docs/feature/concluidas/202611/20261123-avatar-delete-confinado-e-troca-de-foto-segura/`, item 159).
+- Log de falha de notificação: `Notifier::guard` registra só o `type` do aviso e a classe da exceção (`$e::class`), nunca `getMessage()`: numa `QueryException` a mensagem traz o SQL com os bindings (nomes de usuário e do grupo). Ao registrar uma exceção capturada em log, prefira a classe e o contexto próprio a repassar a mensagem (feature `docs/feature/20261124-notifier-nao-loga-sql-com-bindings/`, item 155, ponto 2).
 - Invariantes de segurança/arquitetura que nada pode contradizer (soft delete; rota que expõe dado financeiro/pessoal dentro do grupo `jwt.auth` + checagem de membership/ownership; integridade de rota `apiResource`): `00-constitution.md` §1, §2, §6 — digest em §6.0.
 
 ## Gates human-in-the-loop

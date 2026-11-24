@@ -472,6 +472,10 @@ class Notifier
      * best-effort e não pode quebrar a ação que a disparou. Devolve `false` quando
      * capturou uma exceção, para quem precisa saber se o aviso saiu; os demais métodos
      * ignoram o retorno.
+     *
+     * O log leva só o tipo do aviso e a classe da exceção, nunca a mensagem: numa `QueryException` ela traz o
+     * SQL com os bindings (nomes de usuário e do grupo). Feature 20261124-notifier-nao-loga-sql-com-bindings,
+     * TASK-676, D1-A.
      */
     private static function guard(string $type, callable $fn): bool
     {
@@ -482,7 +486,7 @@ class Notifier
         } catch (\Throwable $e) {
             Log::warning('Notifier: falha ao gravar notificação', [
                 'type' => $type,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             return false;
