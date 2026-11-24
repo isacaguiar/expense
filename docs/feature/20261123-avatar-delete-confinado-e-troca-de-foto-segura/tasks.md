@@ -8,7 +8,7 @@ Versão: 1.1 · Criado em: 20261123 · v1.1: D4-A na TASK-674
 |---|---|---|---|---|---|
 | TASK-673 | Confinar `AvatarStorage::delete` a `avatares/` e recusar `..` | backend | plan.md §1 | nenhum | Concluída |
 | TASK-674 | Gravar a nova foto e salvar o `photo_path` antes de apagar a antiga em `uploadPhoto`, e abortar com 500 quando a gravação falha | backend | plan.md §2 | nenhum | Concluída |
-| TASK-675 | Documentar a regra em `06-context-backend.md` e `01-specify.md` | doc | plan.md §3 | nenhum | Pendente |
+| TASK-675 | Documentar a regra em `06-context-backend.md` e `01-specify.md` | doc | plan.md §3 | nenhum | Concluída |
 
 Ordem: 673 primeiro (arquivo de teste novo, sem tocar nos testes existentes); 674 depois; 675 por último. As duas primeiras mexem em rota que apaga arquivo: rodar o `security-reviewer` no fechamento da feature (rota de upload e remoção de foto), como nas features de foto anteriores.
 
