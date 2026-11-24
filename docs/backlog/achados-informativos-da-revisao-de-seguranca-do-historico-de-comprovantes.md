@@ -4,7 +4,7 @@ ID: 155
 Origem: docs/feature/concluidas/202611/20261114-historico-de-comprovantes-e-justificativa/ (TASK-628, revisão do `security-reviewer`, achados INFO); nenhum bloqueia o PR
 Criado em: 2026-11-14
 Prioridade: BAIXA
-Status: Aberto
+Status: Aberto (ponto 2 promovido para TASK-676; pontos 1, 3 e 4 seguem abertos)
 
 ## Descrição
 Pontos menores, cada um com o arquivo e a sugestão; quem pegar o item decide quais valem uma task própria. O oráculo de existência de usuário em `exists:ex_users,id` antes do 403 e o `cycles_ago` sem teto, que o revisor também listou, **já estão no item 149** (pontos 1 e 2) e não se repetem aqui.
