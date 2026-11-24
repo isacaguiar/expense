@@ -2,7 +2,7 @@
 
 > Feature: endurecer a remoção e a troca da foto de perfil, dois achados informativos da revisão de segurança de `20261116-endurecer-upload-de-foto-de-perfil`. Origem: item 159 do backlog (`docs/backlog/avatar-storage-delete-sem-confinar-e-troca-de-foto-apaga-antes-de-gravar.md`).
 
-Versão: 1.0 · Criado em: 20261123
+Versão: 1.1 · Criado em: 20261123 · v1.1: D4-A (falha de gravação do `store` aborta com 500)
 
 ---
 
@@ -12,7 +12,7 @@ Nenhum dos dois achados é explorável hoje; são robustez de uma rota que apaga
 
 ## 2. Requisitos
 
-Decisões dele (2026-11-23): D1-A, D2-A, D3-A.
+Decisões dele (2026-11-23): D1-A, D2-A, D3-A e, achada na TASK-673, D4-A.
 
 ### 2.1 `AvatarStorage::delete` não confina o path (D1-A)
 
@@ -27,6 +27,7 @@ Conferido em `UserController.php:89-91` (`uploadPhoto`): `AvatarStorage::delete(
 
 - A ordem passa a ser: guardar o `photo_path` antigo, **gravar a nova** (`store`), **salvar** o novo `photo_path`, e só então **apagar a antiga**.
 - Se o `store` falhar, nada foi apagado e `photo_path` segue intacto. Se o `delete` da antiga falhar depois do `save`, sobra um arquivo órfão no disco, inofensivo e varrível (custo aceito na D2-A).
+- **Falha de gravação (D4-A):** o disco `local` tem `'throw' => false` (`config/filesystems.php`): numa falha (disco cheio, permissão) `storeAs` devolve `false`, e `AvatarStorage::store`, com tipo de retorno `string` e sem `strict_types`, o converte em `''` em vez de lançar. Sem tratar isso, a troca gravaria `photo_path = ''` e apagaria a foto antiga mesmo na ordem nova. `AvatarStorage::store` passa a abortar com 500 (`Não foi possível gravar a foto.`) quando `storeAs` devolve `false`, como já faz `ProofStorage::store`; nada é salvo nem apagado.
 - A remoção de foto (`deletePhoto`, linha 104) não muda de ordem; ela passa a herdar só o confinamento do 2.1.
 - Sem mudança de contrato da API (rota, corpo e resposta iguais) e sem migration.
 

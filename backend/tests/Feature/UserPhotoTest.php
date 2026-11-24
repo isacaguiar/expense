@@ -61,6 +61,31 @@ class UserPhotoTest extends TestCase
         Storage::disk('local')->assertExists($second);
     }
 
+    public function test_a_failed_write_keeps_the_previous_photo_and_its_file(): void
+    {
+        Storage::fake('local');
+        $user = User::factory()->create();
+        $token = $this->tokenFor($user);
+
+        $this->withToken($token)
+            ->post('/api/user/photo', ['foto' => UploadedFile::fake()->image('a.jpg')])
+            ->assertStatus(200);
+        $first = $user->fresh()->photo_path;
+
+        // O disco `local` tem `'throw' => false`: a gravação que falha devolve `false`, não lança. O mock
+        // embrulha o disco que já tem a foto antiga (não o recria) e só `putFileAs` passa a falhar.
+        $failing = \Mockery::mock(Storage::disk('local'));
+        $failing->shouldReceive('putFileAs')->andReturn(false);
+        Storage::set('local', $failing);
+
+        $this->withToken($token)
+            ->post('/api/user/photo', ['foto' => UploadedFile::fake()->image('b.jpg')])
+            ->assertStatus(500);
+
+        $this->assertSame($first, $user->fresh()->photo_path);
+        Storage::disk('local')->assertExists($first);
+    }
+
     public function test_delete_clears_the_photo_and_falls_back_to_the_google_avatar(): void
     {
         Storage::fake('local');

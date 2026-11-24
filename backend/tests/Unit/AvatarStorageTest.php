@@ -3,7 +3,10 @@
 namespace Tests\Unit;
 
 use App\Support\AvatarStorage;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpKernel\Exception\HttpException;
+use Tests\Concerns\FailsToWriteProofs;
 use Tests\TestCase;
 
 /**
@@ -13,6 +16,31 @@ use Tests\TestCase;
  */
 class AvatarStorageTest extends TestCase
 {
+    use FailsToWriteProofs;
+
+    public function test_store_aborta_com_500_quando_o_disco_nao_consegue_gravar(): void
+    {
+        $this->failProofWrites();
+
+        try {
+            AvatarStorage::store(UploadedFile::fake()->image('eu.jpg'), 7);
+            $this->fail('store deveria abortar quando o disco devolve false');
+        } catch (HttpException $e) {
+            $this->assertSame(500, $e->getStatusCode());
+            $this->assertSame('Não foi possível gravar a foto.', $e->getMessage());
+        }
+    }
+
+    public function test_store_grava_em_avatares_do_usuario_quando_o_disco_funciona(): void
+    {
+        Storage::fake('local');
+
+        $path = AvatarStorage::store(UploadedFile::fake()->image('eu.jpg'), 7);
+
+        $this->assertStringStartsWith('avatares/7/', $path);
+        Storage::disk('local')->assertExists($path);
+    }
+
     public function test_delete_apaga_o_arquivo_dentro_de_avatares(): void
     {
         Storage::fake('local');

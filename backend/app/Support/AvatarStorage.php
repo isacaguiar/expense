@@ -43,7 +43,17 @@ class AvatarStorage
 
         $name = Str::uuid()->toString().'.'.$extension;
 
-        return $file->storeAs("avatares/{$userId}", $name, self::DISK);
+        $path = $file->storeAs("avatares/{$userId}", $name, self::DISK);
+
+        // O disco `local` tem `'throw' => false` (`config/filesystems.php`): numa falha de gravação (disco cheio,
+        // permissão) `storeAs` devolve `false`, e o tipo de retorno `string` sem `strict_types` o converteria em
+        // `''`, que `uploadPhoto` gravaria em `photo_path` (feature 20261123-avatar-delete-confinado-e-troca-de-foto-segura,
+        // TASK-674, D4-A). Aborta como `ProofStorage::store`.
+        if ($path === false) {
+            abort(500, 'Não foi possível gravar a foto.');
+        }
+
+        return $path;
     }
 
     /**
