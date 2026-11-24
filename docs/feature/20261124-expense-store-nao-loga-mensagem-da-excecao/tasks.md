@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20261124
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-678 | `ExpenseController::afterCommit` registra só a classe da exceção, sem a mensagem | backend | plan.md §1 e §2 | nenhum | Concluída |
-| TASK-679 | Criar o item 165 do backlog (demais pontos com `getMessage()` em log) e a linha no README | doc | plan.md §3 | nenhum | Pendente |
+| TASK-679 | Criar o item 165 do backlog (demais pontos com `getMessage()` em log) e a linha no README | doc | plan.md §3 | nenhum | Concluída |
 
 Ordem: 678 primeiro (testes em RED, depois o código); 679 por último. Como a 678 mexe em log de dado pessoal, rodar o `security-reviewer` no fechamento da feature.
 
