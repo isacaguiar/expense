@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20261123
 |---|---|---|---|---|---|
 | TASK-670 | Mostrar uma linha "devedor ainda não pagou o acerto a credor" por acerto pendente no `CycleClosingAlert` e ajustar os testes que afirmam o texto antigo | frontend | plan.md §1 e §2 | nenhum | Concluída |
 | TASK-671 | Documentar a regra em `05-context-frontend.md` e `01-specify.md` | doc | plan.md §3 | nenhum | Concluída |
-| TASK-672 | Conferir o aviso na Home e em Despesas na stack de validação | frontend | plan.md §4 | nenhum | Pendente |
+| TASK-672 | Conferir o aviso na Home e em Despesas na stack de validação | frontend | plan.md §4 | nenhum | Concluída |
 
 Ordem: 670 primeiro (código e os testes que ele quebra, juntos, para não deixar a suíte vermelha entre tasks); 671 e 672 depois, nessa ordem.
 
