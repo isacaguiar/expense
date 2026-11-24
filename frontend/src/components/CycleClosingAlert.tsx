@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert } from '@mui/material';
+import { Alert, Box } from '@mui/material';
 import type { Summary } from '../hooks/useGroupCycle';
 
 // new Date('YYYY-MM-DD') é UTC-meia-noite e desloca 1 dia em fusos negativos —
@@ -18,21 +18,26 @@ const formatDayMonth = (dateStr: string): string =>
   parseLocalDate(dateStr).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 
 /**
- * Quem ainda deve um acerto: devedor de algum par de `settlements` sem
+ * Acertos que ainda não foram pagos: um por par de `settlements` sem
  * confirmação do comprovante (`confirmedAt`) — o mesmo critério par-a-par com
  * que o backend decide se o ciclo está quitado (`CycleSummaryService::
- * summaryIsFullySettled`). Não dá para usar `balances`: é o rateio líquido da
- * competência e não muda quando uma despesa é paga ou um acerto é confirmado
- * (e é 0 numa dívida circular, ou positivo para quem ainda deve a um terceiro).
- * O nome vem de `balances`; cada devedor aparece uma vez, na ordem dos acertos.
+ * summaryIsFullySettled`). Não dá para usar `balances` para decidir: é o rateio
+ * líquido da competência e não muda quando uma despesa é paga ou um acerto é
+ * confirmado (e é 0 numa dívida circular, ou positivo para quem ainda deve a um
+ * terceiro). Os nomes vêm de `balances` (devedor e credor); a ordem é a dos
+ * acertos e quem deve a mais de um credor aparece uma vez por credor.
  */
-const pendingDebtorNames = ({ balances, settlements }: Summary): string[] => {
+const pendingSettlementLines = ({ balances, settlements }: Summary) => {
   const nameById = new Map(balances.map(balance => [balance.user_id, balance.name]));
-  const debtorIds = new Set(
-    settlements.filter(settlement => !settlement.confirmedAt).map(settlement => settlement.from_user_id)
-  );
+  const nameOf = (userId: number): string => nameById.get(userId) ?? 'Desconhecido';
 
-  return [...debtorIds].map(userId => nameById.get(userId) ?? 'Desconhecido');
+  return settlements
+    .filter(settlement => !settlement.confirmedAt)
+    .map(settlement => ({
+      key: `${settlement.from_user_id}-${settlement.to_user_id}`,
+      debtor: nameOf(settlement.from_user_id),
+      creditor: nameOf(settlement.to_user_id),
+    }));
 };
 
 type CycleClosingAlertProps = { summary: Summary };
@@ -45,9 +50,11 @@ type CycleClosingAlertProps = { summary: Summary };
  *   fronteira (`cycle.end`) mas não chegou à data de corte (`cycle.closes_at`,
  *   = fronteira + carência de 5 dias) — janela em que o ciclo segue editável.
  * - PÓS-fechamento: depois que o ciclo fechou (`closed`/`closed_manually`),
- *   enquanto não está selado e ainda há acerto sem confirmação. Com todos os
- *   acertos confirmados e só despesas por marcar como pagas, o aviso some: não
- *   há mais devedor a cobrar (docs/bugfix/20261024-alerta-ciclo-fechado-apos-pagamento).
+ *   enquanto não está selado e ainda há acerto sem confirmação; mostra uma
+ *   linha "devedor ainda não pagou o acerto a credor" por acerto pendente
+ *   (docs/feature/20261123-aviso-ciclo-fechado-nomeia-quem-falta-acertar). Com
+ *   todos os acertos confirmados e só despesas por marcar como pagas, o aviso
+ *   some: não há mais devedor a cobrar (docs/bugfix/20261024-alerta-ciclo-fechado-apos-pagamento).
  *
  * As duas condições são disjuntas por `status`; fora delas não renderiza nada.
  */
@@ -68,12 +75,19 @@ const CycleClosingAlert: React.FC<CycleClosingAlertProps> = ({ summary }) => {
   }
 
   const cycleClosed = cycle.status === 'closed' || cycle.status === 'closed_manually';
-  const debtors = pendingDebtorNames(summary);
+  const pending = pendingSettlementLines(summary);
 
-  if (cycleClosed && !cycle.settled && debtors.length > 0) {
+  if (cycleClosed && !cycle.settled && pending.length > 0) {
     return (
       <Alert severity="warning" sx={{ mb: 2 }}>
-        O ciclo fechou e ainda falta acertar: {debtors.join(', ')}.
+        O ciclo fechou e ainda falta acertar:
+        <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
+          {pending.map(({ key, debtor, creditor }) => (
+            <li key={key}>
+              {debtor} ainda não pagou o acerto a {creditor}.
+            </li>
+          ))}
+        </Box>
       </Alert>
     );
   }

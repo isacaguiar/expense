@@ -2548,12 +2548,15 @@ describe('ExpenseManager - aviso de fechamento depois de pagar em ciclo fechado'
       </MemoryRouter>
     );
 
-    expect(await screen.findByText(/falta acertar: Ana, Bruno\./)).toBeInTheDocument();
+    expect(await screen.findByText('Ana ainda não pagou o acerto a Carla.')).toBeInTheDocument();
+    expect(screen.getByText('Bruno ainda não pagou o acerto a Carla.')).toBeInTheDocument();
 
     await payThroughDialog(user);
 
-    await waitFor(() => expect(screen.getByText(/falta acertar: Bruno\./)).toBeInTheDocument());
-    expect(screen.queryByText(/falta acertar: Ana/)).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText('Ana ainda não pagou o acerto a Carla.')).not.toBeInTheDocument()
+    );
+    expect(screen.getByText('Bruno ainda não pagou o acerto a Carla.')).toBeInTheDocument();
 
     // O pagamento e o refetch miram a competência navegada (cycles_ago 1), não a vigente.
     expect((vi.mocked(axios.post).mock.calls[0][1] as { cycles_ago: number }).cycles_ago).toBe(1);
