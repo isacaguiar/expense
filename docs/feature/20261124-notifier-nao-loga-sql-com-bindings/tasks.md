@@ -7,7 +7,7 @@ Versão: 1.0 · Criado em: 20261124
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
 | TASK-676 | `Notifier::guard` registra só o tipo do aviso e a classe da exceção, sem a mensagem | backend | plan.md §1 e §2 | nenhum | Concluída |
-| TASK-677 | Documentar a regra e atualizar o item 155 e o backlog do `ExpenseController.php:907` | doc | plan.md §3 | nenhum | Pendente |
+| TASK-677 | Documentar a regra e atualizar o item 155 e o backlog do `ExpenseController.php:907` | doc | plan.md §3 | nenhum | Concluída |
 
 Ordem: 676 primeiro (teste em RED, depois o código); 677 por último. Como a 676 mexe em log de dado pessoal, rodar o `security-reviewer` no fechamento da feature.
 
