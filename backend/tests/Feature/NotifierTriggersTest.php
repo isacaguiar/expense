@@ -196,6 +196,46 @@ class NotifierTriggersTest extends TestCase
         Log::shouldHaveReceived('warning')->atLeast()->once();
     }
 
+    public function test_notifier_guard_logs_the_exception_class_and_not_its_message(): void
+    {
+        Log::spy();
+
+        $group = Group::create(['name' => 'Grupo de teste']);
+        $creditor = User::factory()->create();
+
+        // Mesma falha do teste acima: o byte inválido em UTF-8 faz o json_encode do cast 'data' lançar.
+        Notifier::settlementConfirmed($group, $creditor->id, "Jo\xE3o", '10.00', '2026-08-01');
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context): bool {
+            return $message === 'Notifier: falha ao gravar notificação'
+                && ($context['type'] ?? null) === 'settlement_confirmed'
+                && ($context['exception'] ?? null) === \Illuminate\Database\Eloquent\JsonEncodingException::class
+                && ! array_key_exists('error', $context)
+                && array_keys($context) === ['type', 'exception'];
+        });
+    }
+
+    public function test_notifier_guard_does_not_leak_sql_bindings_into_the_log(): void
+    {
+        Log::spy();
+
+        $group = Group::create(['name' => 'Grupo Sigiloso do Teste']);
+
+        // Credor inexistente: a FK de ex_notifications.user_id recusa o insert e a QueryException traz o SQL
+        // com os bindings (inclusive o nome do ator e do grupo no JSON de `data`).
+        Notifier::settlementConfirmed($group, 99999999, 'Joana Sigilosa', '10.00', '2026-08-01');
+
+        $this->assertSame(0, Notification::where('user_id', 99999999)->count());
+        Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context): bool {
+            $logged = json_encode($context);
+
+            return ($context['exception'] ?? null) === \Illuminate\Database\QueryException::class
+                && ! str_contains($logged, 'Joana Sigilosa')
+                && ! str_contains($logged, 'Grupo Sigiloso do Teste')
+                && ! str_contains($logged, 'insert into');
+        });
+    }
+
     // --- cycle_settled (ExpenseController@sealCycleIfSettled) -------------
 
     /**
