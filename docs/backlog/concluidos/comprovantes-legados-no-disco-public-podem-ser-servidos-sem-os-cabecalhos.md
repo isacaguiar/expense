@@ -4,7 +4,7 @@ ID: 157
 Origem: docs/feature/concluidas/202611/20261116-endurecer-upload-de-comprovante/ (TASK-645, revisão do `security-reviewer`, achado médio fora do delta; **não confirmado em produção**)
 Criado em: 2026-11-16
 Prioridade: BAIXA
-Status: Aberto
+Status: Fechado sem feature (risco inexistente em produção)
 
 ## Descrição
 `ProofStorage::resolveDisk` manda para o disco `public` todo caminho que não segue o layout novo `comprovantes/<grupo>/...`: ou seja, os comprovantes **legados** `comprovantes/xxx` e `comprovantes-settlements/xxx`, gravados antes da convenção por grupo. `config/filesystems.php` aponta o disco `public` para `storage/app/public` e o `links` cria `public/storage` → `storage/app/public`.
@@ -30,3 +30,10 @@ Se a conferência 1 der 200: migrar os legados para o layout novo no disco priva
 O item 154 fecha o caminho do `ProofDownloadController`, que serve a maioria dos comprovantes. Os legados são o único conjunto que ainda pode passar por fora dele, e a verificação em produção é barata.
 
 Tipo sugerido: infra e backend (depois da conferência)
+
+## Resolução
+Concluído em: 2026-11-24
+Feature: nenhuma. Fechado sem implementação por decisão dele (opção A): o risco não existe hoje.
+Motivo: em produção `public/storage` não existe (`storage:link` nunca foi rodado; conferência dele em 2026-11-16), então o Apache não serve os comprovantes legados direto e eles só saem pelo `ProofDownloadController`, com URL assinada e os cabeçalhos do item 154.
+Gatilho que reabre o assunto: alguém rodar `php artisan storage:link` (ou criar o link `public/storage` no cPanel) em produção. Nesse caso, migrar os legados para o disco privado ou bloquear conteúdo ativo em `storage/app/public` passa a valer; abrir item novo citando este.
+PRs: ver o PR que moveu este arquivo para `concluidos/`.
