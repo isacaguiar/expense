@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20261123
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-673 | Confinar `AvatarStorage::delete` a `avatares/` e recusar `..` | backend | plan.md §1 | nenhum | Pendente |
+| TASK-673 | Confinar `AvatarStorage::delete` a `avatares/` e recusar `..` | backend | plan.md §1 | nenhum | Concluída |
 | TASK-674 | Gravar a nova foto e salvar o `photo_path` antes de apagar a antiga em `uploadPhoto` | backend | plan.md §2 | nenhum | Pendente |
 | TASK-675 | Documentar a regra em `06-context-backend.md` e `01-specify.md` | doc | plan.md §3 | nenhum | Pendente |
 
