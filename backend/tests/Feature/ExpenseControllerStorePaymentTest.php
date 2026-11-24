@@ -766,6 +766,52 @@ class ExpenseControllerStorePaymentTest extends TestCase
         $this->assertSame('Pago', $quota->payment_note);
     }
 
+    /**
+     * `afterCommit` é privado e os passos reais já são engolidos pelo `guard` do `Notifier` antes de
+     * chegar nele (por HTTP o `catch` não é alcançável): o teste chama o método por reflexão.
+     */
+    private function runAfterCommit(callable $fn): void
+    {
+        $method = new \ReflectionMethod(\App\Http\Controllers\ExpenseController::class, 'afterCommit');
+        $method->setAccessible(true);
+        $method->invoke(new \App\Http\Controllers\ExpenseController, 'passo de teste', $fn);
+    }
+
+    public function test_after_commit_logs_the_exception_class_and_not_its_message(): void
+    {
+        Log::spy();
+
+        $this->runAfterCommit(fn () => throw new \RuntimeException('mensagem sigilosa de Joana'));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context): bool {
+            return $message === 'store: falha no passo pós-commit (passo de teste)'
+                && array_keys($context) === ['exception']
+                && $context['exception'] === \RuntimeException::class
+                && ! str_contains(json_encode($context), 'sigilosa');
+        });
+    }
+
+    public function test_after_commit_does_not_leak_sql_bindings_into_the_log(): void
+    {
+        Log::spy();
+
+        // Credor inexistente: a FK de ex_notifications.user_id recusa o insert e a QueryException traz o SQL
+        // com os bindings (inclusive o nome reconhecível no JSON de `data`).
+        $this->runAfterCommit(fn () => Notification::create([
+            'user_id' => 99999999,
+            'type' => 'teste',
+            'data' => ['nome' => 'Joana Sigilosa'],
+        ]));
+
+        Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context): bool {
+            $logged = json_encode($context);
+
+            return ($context['exception'] ?? null) === \Illuminate\Database\QueryException::class
+                && ! str_contains($logged, 'Joana Sigilosa')
+                && ! str_contains($logged, 'insert into');
+        });
+    }
+
     // --- CA-12 e CA-14 também valem para a Parcelada -------------------------------------
 
     public function test_an_installment_expense_that_starts_in_a_future_competence_with_payment_is_refused(): void

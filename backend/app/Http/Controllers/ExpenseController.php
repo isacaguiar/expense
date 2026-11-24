@@ -898,13 +898,16 @@ class ExpenseController extends Controller
      * Executa um passo que vem DEPOIS do commit do `store()` (aviso, WhatsApp,
      * limpeza). Falha vira `Log::warning` e a resposta de sucesso segue: a despesa
      * já está criada, e o cliente não pode ver erro por causa de um aviso.
+     *
+     * O log leva só a classe da exceção, nunca `getMessage()`: numa `QueryException` a
+     * mensagem traz o SQL com os bindings (valores da despesa, nomes de usuário e do grupo).
      */
     private function afterCommit(string $step, callable $fn): void
     {
         try {
             $fn();
         } catch (\Throwable $e) {
-            Log::warning("store: falha no passo pós-commit ({$step})", ['exception' => $e->getMessage()]);
+            Log::warning("store: falha no passo pós-commit ({$step})", ['exception' => $e::class]);
         }
     }
 
