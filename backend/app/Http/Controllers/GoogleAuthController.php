@@ -129,7 +129,7 @@ class GoogleAuthController extends Controller
         } catch (QueryException $e) {
             Log::warning('[google-link] save falhou (QueryException) -> linked=error', [
                 'user_id' => $user->id,
-                'exception' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             return redirect()->away("{$frontendUrl}/profile?linked=error");
@@ -225,7 +225,7 @@ class GoogleAuthController extends Controller
             }
         } catch (QueryException $e) {
             Log::warning('[google-login] save falhou (QueryException) -> login error', [
-                'exception' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             return redirect()->away("{$frontendUrl}?google_error=1");
