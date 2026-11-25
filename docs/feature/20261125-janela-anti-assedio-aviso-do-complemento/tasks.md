@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20261125
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-687 | `Notifier::settlementComplementAdded` avisa no máximo uma vez por hora por autor, par e ciclo, e o controller passa os ids; o teste antigo vira o da janela | backend | plan.md §1, §2 e §3 (reescrita do teste) | nenhum | Pendente |
+| TASK-687 | `Notifier::settlementComplementAdded` avisa no máximo uma vez por hora por autor, par e ciclo, e o controller passa os ids; o teste antigo vira o da janela | backend | plan.md §1, §2 e §3 (reescrita do teste) | nenhum | Concluída |
 | TASK-688 | Cobrir a janela com os testes de borda (fim da janela, outro autor, outro ciclo, complemento intacto, falha do cache) e provar com mutantes | backend | plan.md §3 | nenhum | Pendente |
 | TASK-689 | Registrar a promoção parcial no item 155 (só o ponto 4) e no README do backlog | doc | plan.md §5 | nenhum | Pendente |
 

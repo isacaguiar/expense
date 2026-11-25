@@ -6,9 +6,9 @@ Versão: 1.0 · Criado em: 20261125
 
 ---
 
-## 1. Desvios do fluxo padrão (se houver)
+## 1. Desvios do fluxo padrão
 
-<Deixe vazio/apague esta seção se a feature segue `04-implementation.md` sem exceção.>
+Nenhum.
 
 ## 2. Log de implementação
 
@@ -16,4 +16,4 @@ Preenchido conforme as tasks de `tasks.md` são executadas. Uma linha por task. 
 
 | Task ID | Status | Data | Responsável | Comandos executados / resultado | Observações |
 |---|---|---|---|---|---|
-| — | — | — | — | — | (nenhuma task executada ainda) |
+| TASK-687 | Concluída | 2026-11-25 | Claude | RED: `phpunit --filter test_a_second_complement_within_the_window` falhou com "4 is identical to 2". Depois do código: `phpunit SettlementComplementTest SettlementHistoryAuthorizationMatrixTest NotifierTriggersTest` → OK (180 testes, 734 asserções); `pint --test` → PASS 275 arquivos | `Notifier::settlementComplementAdded` usa `oncePer` (1 h) com `complementNoticeKey`; controller passa `$debtorId`, `$creditorId`, `$callerId`. Mutantes e testes de borda ficam na TASK-688 |

@@ -555,14 +555,17 @@ class SettlementComplementTest extends TestCase
         }
     }
 
-    public function test_a_second_complement_notifies_again(): void
+    // Feature 20261125-janela-anti-assedio-aviso-do-complemento (TASK-687): o complemento é gravado sempre, mas
+    // o aviso do mesmo autor, no mesmo par e ciclo, sai uma vez por hora (antes: um par de avisos por complemento).
+    public function test_a_second_complement_within_the_window_does_not_notify_again(): void
     {
         $w = $this->world();
 
         $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertCreated();
         $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'], ['justificativa' => 'segunda justificativa'])->assertCreated();
 
-        $this->assertSame(4, $this->notices()->count(), 'cada complemento é um fato novo: dois avisos por vez');
+        $this->assertSame(2, $this->entries($w['group'])->count(), 'os dois complementos ficam no histórico');
+        $this->assertSame(2, $this->notices()->count(), 'só o primeiro avisa: um aviso para o credor e outro para o devedor');
     }
 
     public function test_a_notifier_failure_is_logged_and_the_complement_still_succeeds(): void
