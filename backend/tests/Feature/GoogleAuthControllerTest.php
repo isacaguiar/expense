@@ -3,8 +3,11 @@
 namespace Tests\Feature;
 
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\User as SocialiteUser;
@@ -286,6 +289,70 @@ class GoogleAuthControllerTest extends TestCase
         $token = Cache::get("google_login_code:{$code}");
 
         $this->withToken($token)->getJson('/api/me')->assertJsonPath('id', $existing->id);
+    }
+
+    private function failNextUserSaveWithSql(): void
+    {
+        Event::listen('eloquent.saving: '.User::class, fn () => throw new QueryException(
+            'mysql',
+            'update ex_users set name = ? where id = ?',
+            ['Joana Sigilosa', 1],
+            new \Exception('falha forçada'),
+        ));
+    }
+
+    private function assertLoggedOnlyTheExceptionClass(string $message, array $expectedContext): void
+    {
+        Log::shouldHaveReceived('warning')->once()->withArgs(function ($logMessage, $context) use ($message, $expectedContext) {
+            if ($logMessage !== $message) {
+                return false;
+            }
+
+            $this->assertSame($expectedContext, $context);
+            $encoded = json_encode($context);
+            $this->assertStringNotContainsString('Joana Sigilosa', $encoded);
+            $this->assertStringNotContainsString('update ex_users', $encoded);
+
+            return true;
+        });
+    }
+
+    public function test_link_callback_logs_only_the_exception_class_when_the_save_fails(): void
+    {
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
+        Socialite::fake('google', $this->fakeGoogleUser('google-123'));
+
+        $user = User::factory()->create();
+        $state = $this->linkState($user->id);
+        $this->failNextUserSaveWithSql();
+        Log::spy();
+
+        $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
+
+        $response->assertRedirect('http://localhost:3000/app/profile?linked=error');
+        $this->assertLoggedOnlyTheExceptionClass(
+            '[google-link] save falhou (QueryException) -> linked=error',
+            ['user_id' => $user->id, 'exception' => QueryException::class],
+        );
+    }
+
+    public function test_login_callback_logs_only_the_exception_class_when_the_save_fails(): void
+    {
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
+        Socialite::fake('google', $this->fakeGoogleUser('google-new-3'));
+
+        $state = $this->loginState();
+        $this->failNextUserSaveWithSql();
+        Log::spy();
+
+        $response = $this->get('/api/auth/google/callback?state='.urlencode($state));
+
+        $response->assertRedirect('http://localhost:3000/app?google_error=1');
+        $this->assertDatabaseMissing('ex_users', ['google_id' => 'google-new-3']);
+        $this->assertLoggedOnlyTheExceptionClass(
+            '[google-login] save falhou (QueryException) -> login error',
+            ['exception' => QueryException::class],
+        );
     }
 
     public function test_login_callback_redirects_with_error_when_socialite_fails(): void
