@@ -4,7 +4,7 @@ ID: 165
 Origem: varredura de `getMessage()` dentro de `Log::` em `backend/app`, feita na promoção do item 163 (feature `20261124-expense-store-nao-loga-mensagem-da-excecao`, D2-A)
 Criado em: 2026-11-24
 Prioridade: BAIXA
-Status: Promovido para TASK-683 e TASK-684 (feature 20261125-log-sem-mensagem-da-excecao-restantes); TASK-680 e 681 (PR #312) já resolveram 780, 132 e 228
+Status: Concluído (TASK-680 e 681 no PR #312; TASK-683 e 684 na feature 20261125-log-sem-mensagem-da-excecao-restantes)
 
 ## Descrição
 O `Notifier::guard` (TASK-676) e o `ExpenseController::afterCommit` (TASK-678) passaram a registrar só a classe da exceção. A varredura achou mais sete pontos com o mesmo padrão, sem item próprio, e o `security-reviewer` da feature achou um oitavo, que a busca por `getMessage()` não pegava (o `WhatsAppNotifier.php:146`, que é o item 164). Os três pontos de `QueryException` (SQL com bindings) já foram resolvidos (ver a nota abaixo); restam os cinco abaixo, de falha de e-mail e do Socialite, sem SQL:
@@ -36,3 +36,11 @@ A fechar no specify, se o item for promovido.
 Higiene de log: dado pessoal (e-mail, nomes) e SQL com bindings em texto livre, sem uso para o diagnóstico. Nenhuma exploração hoje.
 
 Tipo sugerido: backend (sem mudança de contrato nem migration)
+
+## Resolução
+
+Concluído em: 2026-11-25
+Feature: docs/feature/concluidas/202611/20261125-log-sem-mensagem-da-excecao-restantes/   (a pasta migra para lá quando o PR da feature mergeia em `dev`, ADR-009)
+Tasks: TASK-683 (`GroupInvitationService`, `InvitationController` com `user_id` no lugar do e-mail, `PreRegistrationService`) e TASK-684 (`GoogleAuthController` linhas 116 e 180); antes, TASK-680 e 681 (PR #312) trataram `ExpenseController.php:780`, `GoogleAuthController.php:132` e `:228`
+PRs: PR_A_PREENCHER
+Nota: a varredura de segurança da feature deixou dois informativos fora do escopo (e-mail em claro nos logs de login e logout do `AuthController`; `GroupController.php:51` grava o model `User` inteiro) e a decisão pendente sobre o item 166 (`catch (\Throwable)` que relançam).
