@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20261125
 |---|---|---|---|---|---|
 | TASK-687 | `Notifier::settlementComplementAdded` avisa no máximo uma vez por hora por autor, par e ciclo, e o controller passa os ids; o teste antigo vira o da janela | backend | plan.md §1, §2 e §3 (reescrita do teste) | nenhum | Concluída |
 | TASK-688 | Cobrir a janela com os testes de borda (fim da janela, outro autor, outro ciclo, complemento intacto, falha do cache) e provar com mutantes | backend | plan.md §3 | nenhum | Concluída |
-| TASK-689 | Registrar a promoção parcial no item 155 (só o ponto 4) e no README do backlog | doc | plan.md §5 | nenhum | Pendente |
+| TASK-689 | Registrar a promoção parcial no item 155 (só o ponto 4) e no README do backlog | doc | plan.md §5 | nenhum | Concluída |
 
 Ordem: 687 em RED antes do código (o teste reescrito falha com o `Notifier` atual); 688 depois; 689 por último (código antes de doc). A 687 junta o `Notifier` e o chamador porque a assinatura nova quebra o controller. No fechamento da feature rodar a suíte cheia, o `security-reviewer` e o `pr-readiness-checker`. O item 155 passa a "Parcialmente promovido para TASK-687" na aprovação destas tasks e continua em `docs/backlog/` (pontos 1 e 3 abertos) mesmo depois da 689.
 
