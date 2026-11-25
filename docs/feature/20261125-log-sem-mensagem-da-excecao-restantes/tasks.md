@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20261125
 |---|---|---|---|---|---|
 | TASK-683 | Os três pontos de envio de e-mail (`GroupInvitationService`, `InvitationController::forgotPassword`, `PreRegistrationService::sendCode`) registram só a classe da exceção | backend | plan.md §1 (2.1 a 2.3) e §2 | nenhum | Concluída |
 | TASK-684 | `GoogleAuthController` registra só a classe da exceção nos `catch` do Socialite (vínculo e login) | backend | plan.md §1 (2.4 e 2.5) e §2 | nenhum | Concluída |
-| TASK-685 | `WhatsAppNotifier` registra só a classe da exceção na falha de envio | backend | plan.md §1 (2.6) e §2 | nenhum | Pendente |
+| TASK-685 | `WhatsAppNotifier` registra só a classe da exceção na falha de envio | backend | plan.md §1 (2.6) e §2 | nenhum | Concluída |
 | TASK-686 | Fechar os itens 164 e 165 do backlog (movê-los para `concluidos/` com a Resolução) | doc | plan.md §3 | nenhum | Pendente |
 
 Ordem: 683, 684 e 685 cada uma com o teste em RED antes do código; 686 por último (código antes de doc). A 683 agrupa três pontos do mesmo tipo (e-mail) e do mesmo padrão de teste; se algum ponto pedir mudança de abordagem, vira task própria. No fechamento da feature rodar a suíte cheia, o `security-reviewer` e o `pr-readiness-checker`. Os itens 164 e 165 passam a "Promovido para TASK-683" na aprovação destas tasks e continuam em `docs/backlog/` até a 686.

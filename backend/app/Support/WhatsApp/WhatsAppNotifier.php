@@ -143,7 +143,7 @@ class WhatsAppNotifier
                 Log::warning('WhatsApp: falha ao enviar notificação', [
                     'user_id' => $user->id,
                     'template' => $template,
-                    'error' => $e->getMessage(),
+                    'exception' => $e::class,
                 ]);
             }
         }
