@@ -42,5 +42,5 @@ Tipo sugerido: backend (sem mudança de contrato nem migration)
 Concluído em: 2026-11-25
 Feature: docs/feature/concluidas/202611/20261125-log-sem-mensagem-da-excecao-restantes/   (a pasta migra para lá quando o PR da feature mergeia em `dev`, ADR-009)
 Tasks: TASK-683 (`GroupInvitationService`, `InvitationController` com `user_id` no lugar do e-mail, `PreRegistrationService`) e TASK-684 (`GoogleAuthController` linhas 116 e 180); antes, TASK-680 e 681 (PR #312) trataram `ExpenseController.php:780`, `GoogleAuthController.php:132` e `:228`
-PRs: PR_A_PREENCHER
+PRs: https://github.com/isacaguiar/expense/pull/315
 Nota: a varredura de segurança da feature deixou dois informativos fora do escopo (e-mail em claro nos logs de login e logout do `AuthController`; `GroupController.php:51` grava o model `User` inteiro) e a decisão pendente sobre o item 166 (`catch (\Throwable)` que relançam).
