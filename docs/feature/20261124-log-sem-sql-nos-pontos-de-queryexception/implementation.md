@@ -30,3 +30,14 @@ Executado em 2026-11-24 na branch da feature, depois das TASK-680 a 682.
 | `./vendor/bin/pint --test` | PASS (275 files) |
 | `security-reviewer` | 0 crítico, 0 alto, 0 médio, 0 baixo. Os três pontos sem vazamento de SQL nem de dado pessoal; resposta e fluxo inalterados; todo outro log com exceção já está no backlog 164 ou 165. 3 informativos: (1) `InvitationController.php:97` grava o e-mail em claro (já na D3 do item 165); (2) as exceções relançadas pelos `catch (\Throwable)` que apagam arquivo órfão (`ExpenseController.php` 1698 e 1850, `SettlementDecisionController.php:198`) caem no reporter padrão do Laravel e podem levar SQL com bindings, fora do escopo e sem item; (3) conferido: `docs/sdd/` não afirma mais que "a mensagem fica no log". |
 | `pr-readiness-checker` | Pronto para PR: escopo só backend e docs, sem migration, Pint e os dois arquivos de teste (73 tests, 324 assertions) verdes, rastreabilidade das 3 tasks, backlog 165 coerente, sem edição em `docs/sdd/`, sem segredo no diff. |
+
+## 4. Validação local (delegada a mim, "valide por mim", 2026-11-24)
+
+Sem tela: a mudança é só de log. Validei com uma falha **real** do MySQL, não montada à mão: `GET /api/auth/google/callback` (login) com `Socialite::fake` e um nome de 400 caracteres, que estoura a coluna `name` (`SQLSTATE[22001] ... 1406 Data too long`), com o log num arquivo temporário.
+
+| Código | Redirect | Log |
+|---|---|---|
+| Atual | 302 para `?google_error=1` | `[google-login] save falhou (QueryException) -> login error {"exception":"Illuminate\Database\QueryException"}`; sem o e-mail, sem `insert into` |
+| Linha 228 com o mutante `getMessage()` (comparação) | igual | traz `SQLSTATE[22001] ... SQL: insert into ex_users (...)`, com o e-mail do usuário |
+
+Nenhum usuário foi criado. Mutante revertido e conferido com `cmp`. O ponto do `store` (linha 782) e o do vínculo (132) ficam cobertos pelos testes da TASK-680 e 681, com `QueryException` montada à mão; não repeti a falha real neles.
