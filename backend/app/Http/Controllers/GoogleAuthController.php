@@ -113,7 +113,7 @@ class GoogleAuthController extends Controller
         } catch (Throwable $e) {
             Log::warning('[google-link] Socialite falhou ao obter usuario Google -> linked=error', [
                 'user_id' => $user->id,
-                'exception' => get_class($e).': '.$e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             return redirect()->away("{$frontendUrl}/profile?linked=error");
@@ -177,7 +177,7 @@ class GoogleAuthController extends Controller
             $googleUser = Socialite::driver('google')->stateless()->user();
         } catch (Throwable $e) {
             Log::warning('[google-login] Socialite falhou ao obter usuario Google -> login error', [
-                'exception' => get_class($e).': '.$e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             return redirect()->away("{$frontendUrl}?google_error=1");
