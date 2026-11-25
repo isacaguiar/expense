@@ -4,7 +4,7 @@ ID: 165
 Origem: varredura de `getMessage()` dentro de `Log::` em `backend/app`, feita na promoção do item 163 (feature `20261124-expense-store-nao-loga-mensagem-da-excecao`, D2-A)
 Criado em: 2026-11-24
 Prioridade: BAIXA
-Status: Parcialmente promovido para TASK-680 (feature 20261124-log-sem-sql-nos-pontos-de-queryexception: pontos 780, 132 e 228); restam 5 pontos
+Status: Parcialmente resolvido (TASK-680 e 681, PR #312: pontos 780, 132 e 228); restam 5 pontos
 
 ## Descrição
 O `Notifier::guard` (TASK-676) e o `ExpenseController::afterCommit` (TASK-678) passaram a registrar só a classe da exceção. A varredura achou mais sete pontos com o mesmo padrão, sem item próprio, e o `security-reviewer` da feature achou um oitavo, que a busca por `getMessage()` não pegava (o `WhatsAppNotifier.php:146`, que é o item 164). Os três pontos de `QueryException` (SQL com bindings) já foram resolvidos (ver a nota abaixo); restam os cinco abaixo, de falha de e-mail e do Socialite, sem SQL:
@@ -18,7 +18,7 @@ O `Notifier::guard` (TASK-676) e o `ExpenseController::afterCommit` (TASK-678) p
 | `backend/app/Http/Controllers/GoogleAuthController.php:180` | `get_class($e).': '.$e->getMessage()` | falha do Socialite no login |
 
 ## Já resolvido
-Feature `docs/feature/20261124-log-sem-sql-nos-pontos-de-queryexception/` (TASK-680 e TASK-681): `ExpenseController.php:780` (que logava a exceção inteira; o comentário do item 080/D10 foi revisto), `GoogleAuthController.php:132` (vínculo) e `:228` (login) passaram a registrar só `$e::class`. Os três eram os que vazavam SQL com bindings.
+Feature `docs/feature/concluidas/202611/20261124-log-sem-sql-nos-pontos-de-queryexception/` (PR #312) (TASK-680 e TASK-681): `ExpenseController.php:780` (que logava a exceção inteira; o comentário do item 080/D10 foi revisto), `GoogleAuthController.php:132` (vínculo) e `:228` (login) passaram a registrar só `$e::class`. Os três eram os que vazavam SQL com bindings.
 
 Não entram: os `getMessage()` devolvidos na resposta 422 de exceções de domínio (`PurchaseUndoRefused`, `MemberResponsibleRefused`, `SettlementDecisionRefused`, `PreRegistrationThrottled`), que são texto próprio da aplicação e não de log; e a checagem de `isDuplicateRequestKey` (`ExpenseController.php:894`), que lê a mensagem para reconhecer o índice único e não a registra.
 
