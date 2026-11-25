@@ -4,7 +4,7 @@ ID: 164
 Origem: `security-reviewer` no fechamento da feature `20261124-notifier-nao-loga-sql-com-bindings` (informativo 1); `backend/app/Support/WhatsApp/WhatsAppNotifier.php:143-147`
 Criado em: 2026-11-24
 Prioridade: BAIXA
-Status: Aberto
+Status: Promovido para TASK-685 (feature 20261125-log-sem-mensagem-da-excecao-restantes)
 
 ## Descrição
 No envio por WhatsApp, o bloco que captura `\Throwable` faz `Log::warning('WhatsApp: falha ao enviar notificação', ['user_id' => ..., 'template' => ..., 'error' => $e->getMessage()])`. A falha vem de `MetaCloudClient::sendTemplate` (chamada HTTP): a mensagem pode trazer o corpo da resposta da Meta ou a URL, e o telefone do destinatário é dado pessoal. É o mesmo padrão corrigido no `Notifier::guard` (TASK-676), com vazamento menos provável que o de SQL com bindings.

@@ -4,7 +4,7 @@ ID: 165
 Origem: varredura de `getMessage()` dentro de `Log::` em `backend/app`, feita na promoção do item 163 (feature `20261124-expense-store-nao-loga-mensagem-da-excecao`, D2-A)
 Criado em: 2026-11-24
 Prioridade: BAIXA
-Status: Parcialmente resolvido (TASK-680 e 681, PR #312: pontos 780, 132 e 228); restam 5 pontos
+Status: Promovido para TASK-683 e TASK-684 (feature 20261125-log-sem-mensagem-da-excecao-restantes); TASK-680 e 681 (PR #312) já resolveram 780, 132 e 228
 
 ## Descrição
 O `Notifier::guard` (TASK-676) e o `ExpenseController::afterCommit` (TASK-678) passaram a registrar só a classe da exceção. A varredura achou mais sete pontos com o mesmo padrão, sem item próprio, e o `security-reviewer` da feature achou um oitavo, que a busca por `getMessage()` não pegava (o `WhatsAppNotifier.php:146`, que é o item 164). Os três pontos de `QueryException` (SQL com bindings) já foram resolvidos (ver a nota abaixo); restam os cinco abaixo, de falha de e-mail e do Socialite, sem SQL:
