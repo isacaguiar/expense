@@ -27,6 +27,6 @@ Tipo sugerido: backend (sem mudança de contrato nem migration)
 ## Resolução
 
 Concluído em: 2026-11-25
-Feature: docs/feature/concluidas/202611/20261125-log-sem-mensagem-da-excecao-restantes/   (a pasta migra para lá quando o PR da feature mergeia em `dev`, ADR-009)
+Feature: docs/feature/concluidas/202611/20261125-log-sem-mensagem-da-excecao-restantes/
 Tasks: TASK-685 (`WhatsAppNotifier` registra `exception => $e::class` no lugar de `error => getMessage()`, com teste de falha real da Meta e 3 mutantes derrubados)
-PRs: https://github.com/isacaguiar/expense/pull/315
+PRs: https://github.com/isacaguiar/expense/pull/315 (mergeado em `dev`, 2026-11-25)
