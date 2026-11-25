@@ -174,4 +174,44 @@ class WhatsAppNotifierTest extends TestCase
         Http::assertSent(fn ($request) => $request['to'] === '5511900000003');
         Log::shouldHaveReceived('warning')->withArgs(fn ($msg) => str_contains($msg, 'inválido'))->once();
     }
+
+    /**
+     * Backlog 164 (TASK-685): a falha do envio (HTTP não-2xx da Meta) vai para o log só com a classe
+     * da exceção; a mensagem da `RequestException` traz o corpo da resposta da Meta.
+     */
+    public function test_falha_no_envio_loga_so_a_classe_da_excecao(): void
+    {
+        Http::swap(new \Illuminate\Http\Client\Factory);
+        Http::fake(['graph.facebook.com/*' => Http::response(['error' => ['message' => 'sentinela da Meta']], 400)]);
+        Log::spy();
+
+        $credor = $this->user(1, 'Ana', '(11) 90000-0001', true);
+        $pagador = $this->user(3, 'Caio', '(11) 90000-0003', true);
+
+        $expense = (new Expense)->forceFill([
+            'id' => 50, 'group_id' => 9, 'description' => 'Mercado',
+            'expense_type' => 'IN_CASH', 'user_payer_id' => 1,
+        ]);
+        $expense->setRelation('payer', $credor);
+        $expense->setRelation('payers', collect([$credor, $pagador]));
+
+        WhatsAppNotifier::expenseProofPaid($this->quota($expense, 10.0, '2026-09-10'));
+
+        $logged = null;
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function ($message, $context = []) use (&$logged) {
+                if ($message !== 'WhatsApp: falha ao enviar notificação') {
+                    return false;
+                }
+                $logged = $context;
+
+                return $context === [
+                    'user_id' => 3,
+                    'template' => 'tpl_e',
+                    'exception' => \Illuminate\Http\Client\RequestException::class,
+                ];
+            })
+            ->once();
+        $this->assertStringNotContainsString('sentinela', json_encode($logged));
+    }
 }

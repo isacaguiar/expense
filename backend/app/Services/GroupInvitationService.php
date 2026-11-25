@@ -251,7 +251,7 @@ class GroupInvitationService
             Log::warning('GroupInvitationService: falha ao enviar o e-mail de convite', [
                 'group_id' => $group->id,
                 'user_id' => $user->id,
-                'error' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
         }
     }
