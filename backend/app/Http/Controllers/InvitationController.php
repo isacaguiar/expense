@@ -93,8 +93,8 @@ class InvitationController extends Controller
             });
         } catch (\Throwable $e) {
             Log::error('Falha ao enviar e-mail de recuperação de senha', [
-                'email' => $user->email,
-                'exception' => $e->getMessage(),
+                'user_id' => $user->id,
+                'exception' => $e::class,
             ]);
 
             return response()->json([

@@ -6,7 +6,7 @@ Versão: 1.0 · Criado em: 20261125
 
 | ID | Título | Tipo | Plan ref | Gate humano | Status |
 |---|---|---|---|---|---|
-| TASK-683 | Os três pontos de envio de e-mail (`GroupInvitationService`, `InvitationController::forgotPassword`, `PreRegistrationService::sendCode`) registram só a classe da exceção | backend | plan.md §1 (2.1 a 2.3) e §2 | nenhum | Pendente |
+| TASK-683 | Os três pontos de envio de e-mail (`GroupInvitationService`, `InvitationController::forgotPassword`, `PreRegistrationService::sendCode`) registram só a classe da exceção | backend | plan.md §1 (2.1 a 2.3) e §2 | nenhum | Concluída |
 | TASK-684 | `GoogleAuthController` registra só a classe da exceção nos `catch` do Socialite (vínculo e login) | backend | plan.md §1 (2.4 e 2.5) e §2 | nenhum | Pendente |
 | TASK-685 | `WhatsAppNotifier` registra só a classe da exceção na falha de envio | backend | plan.md §1 (2.6) e §2 | nenhum | Pendente |
 | TASK-686 | Fechar os itens 164 e 165 do backlog (movê-los para `concluidos/` com a Resolução) | doc | plan.md §3 | nenhum | Pendente |

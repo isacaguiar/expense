@@ -537,6 +537,39 @@ class GroupInvitationCreateTest extends TestCase
         Mail::assertSent(UserInvitedMail::class, 1);
     }
 
+    /**
+     * Backlog 165 (TASK-683): a falha do SMTP no e-mail de ativação vai para o log só com a classe
+     * da exceção. A mensagem do transporte pode trazer o destinatário e não serve ao diagnóstico.
+     */
+    public function test_a_failed_activation_mail_logs_only_the_exception_class(): void
+    {
+        Log::spy();
+        Mail::shouldReceive('to')->andThrow(new \RuntimeException('smtp: sentinela-ana@example.com recusou'));
+        [$group, $member] = $this->groupWithMember();
+        $newEmail = 'novo.'.uniqid().'@example.com';
+
+        app(GroupInvitationService::class)->invite($group, $newEmail, $member);
+        app()->terminate();
+
+        $invitee = User::where('email', $newEmail)->firstOrFail();
+        $logged = [];
+        Log::shouldHaveReceived('warning')
+            ->withArgs(function ($message, $context = []) use (&$logged, $group, $invitee) {
+                if ($message !== 'GroupInvitationService: falha ao enviar o e-mail de convite') {
+                    return false;
+                }
+                $logged = $context;
+
+                return $context === [
+                    'group_id' => $group->id,
+                    'user_id' => $invitee->id,
+                    'exception' => \RuntimeException::class,
+                ];
+            })
+            ->once();
+        $this->assertStringNotContainsString('sentinela', json_encode($logged));
+    }
+
     public function test_an_invited_account_without_a_password_can_still_be_activated_and_log_in(): void
     {
         Mail::fake();
