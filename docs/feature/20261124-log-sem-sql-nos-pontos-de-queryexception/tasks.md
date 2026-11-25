@@ -8,7 +8,7 @@ Versão: 1.0 · Criado em: 20261124
 |---|---|---|---|---|---|
 | TASK-680 | `ExpenseController::store` registra só a classe da exceção no log do commit e reescreve o comentário do item 080/D10 | backend | plan.md §1 e §3 | nenhum | Concluída |
 | TASK-681 | `GoogleAuthController` registra só a classe da exceção nos `catch (QueryException)` do vínculo e do login | backend | plan.md §2 e §3 | nenhum | Concluída |
-| TASK-682 | Reduzir o item 165 do backlog aos 5 pontos que restam | doc | plan.md §4 | nenhum | Pendente |
+| TASK-682 | Reduzir o item 165 do backlog aos 5 pontos que restam | doc | plan.md §4 | nenhum | Concluída |
 
 Ordem: 680 primeiro (teste em RED, depois o código), 681 em seguida (mesma regra), 682 por último (código antes de doc). Como as duas primeiras mexem em log de dado pessoal, rodar o `security-reviewer` no fechamento da feature. O item 165 passa a "Parcialmente promovido para TASK-680" na aprovação destas tasks e continua em `docs/backlog/` (não vai para `concluidos/`).
 
