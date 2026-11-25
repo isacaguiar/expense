@@ -30,3 +30,16 @@ Executado em 2026-11-25 na branch da feature, depois das TASK-683 a 685 (a TASK-
 | `./vendor/bin/pint --test` | PASS (275 files) |
 | `security-reviewer` | 0 crítico, 0 alto, 0 médio. Os 6 pontos só gravam ids, nome do template e a classe; respostas, redirects e fluxos inalterados; nenhum outro `Log::*` com `getMessage()` ou exceção inteira em `backend/app`. Informativos fora do escopo (candidatos a backlog): `AuthController.php` (linhas 20-22, 31, 37, 45-48 e 72-75) grava o e-mail em claro em logs de login/logout, e `GroupController.php:51` grava o model `User` inteiro. |
 | `pr-readiness-checker` | Pronto para PR, depois da validação humana e da TASK-686: 17 arquivos (5 de `backend/app`, 5 de teste, 3 de backlog, 4 da feature), 5 arquivos de teste tocados OK (88 tests, 381 assertions), rastreabilidade das 3 tasks, sem migration, sem edição em `docs/sdd/`, sem segredo no diff (só sentinelas de teste). |
+
+## 4. Validação local (delegada a mim, "valide por mim", 2026-11-25)
+
+Sem tela: a mudança é só de log. Validei com falhas de transporte **reais**, num script que sobe o app no ambiente de teste (log num arquivo temporário), com um usuário, um grupo e um pré-cadastro criados e apagados no fim (0 sobras conferidas). O SMTP foi apontado para `127.0.0.1:1` (conexão recusada de verdade). O WhatsApp usou `Http::fake` com 400 e um corpo da Meta de sentinela, para não chamar a Meta de verdade. Comparei o código atual com o de `origin/dev` (`git checkout origin/dev -- backend/app`, depois `git checkout HEAD -- backend/app`; árvore conferida limpa).
+
+| Ponto | Código atual | `origin/dev` (comparação) |
+|---|---|---|
+| Recuperação de senha | 500; `{"user_id":…,"exception":"Symfony\Component\Mailer\Exception\TransportException"}` | `{"email":"<e-mail do usuário>","exception":"Connection could not be established with host \"127.0.0.1:1\" …"}` |
+| Convite (após a resposta) | `{"group_id":…,"user_id":…,"exception":"…TransportException"}` | `"error":"Connection could not be established with host …"` |
+| Pré-cadastro | exceção relançada (`TransportException`); `{"pre_create_id":…,"exception":"…TransportException"}` | `"exception":"Connection could not be established …"` |
+| WhatsApp (Meta 400) | `{"user_id":…,"template":"tpl_e","exception":"Illuminate\Http\Client\RequestException"}` | `"error":"HTTP request returned status code 400: …"` com o corpo da Meta |
+
+No código atual o log não contém o e-mail do usuário, o host nem a porta do SMTP, nem o corpo da Meta; no antigo contém os três. Os dois `catch` do Socialite (vínculo e login) ficam cobertos só pelos testes da TASK-684: provocar a falha real exigiria chamar o Google.
