@@ -12,9 +12,11 @@ use App\Models\SettlementProofEntry;
 use App\Models\User;
 use App\Services\CycleSealingService;
 use App\Services\SettlementConfirmationService;
+use App\Support\Notifier;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -566,6 +568,102 @@ class SettlementComplementTest extends TestCase
 
         $this->assertSame(2, $this->entries($w['group'])->count(), 'os dois complementos ficam no histórico');
         $this->assertSame(2, $this->notices()->count(), 'só o primeiro avisa: um aviso para o credor e outro para o devedor');
+    }
+
+    // TASK-688: bordas da janela de 1 h.
+    public function test_after_the_window_the_next_complement_notifies_again(): void
+    {
+        $w = $this->world();
+        Carbon::setTestNow('2026-08-21 15:30:00');
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertCreated();
+
+        Carbon::setTestNow('2026-08-21 16:29:00');
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'], ['justificativa' => 'aos 59 minutos'])->assertCreated();
+        $this->assertSame(2, $this->notices()->count(), 'aos 59 minutos a janela ainda vale');
+
+        Carbon::setTestNow('2026-08-21 16:31:00');
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'], ['justificativa' => 'aos 61 minutos'])->assertCreated();
+        $this->assertSame(4, $this->notices()->count(), 'aos 61 minutos avisa de novo, credor e devedor');
+        $this->assertSame(3, $this->entries($w['group'])->count());
+    }
+
+    public function test_another_author_is_not_silenced_by_the_first(): void
+    {
+        $w = $this->world();
+        $second = User::factory()->create();
+        $w['group']->members()->attach($second->id);
+        GroupMemberResponsible::create([
+            'group_id' => $w['group']->id,
+            'user_id' => $w['debtor']->id,
+            'responsible_user_id' => $second->id,
+        ]);
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertCreated();
+        $this->complement($second, $w['group'], $w['debtor'], $w['creditor'], ['justificativa' => 'do segundo responsável'])->assertCreated();
+
+        $this->assertSame(4, $this->notices()->count(), 'a janela é por autor: o segundo responsável também avisa');
+        $this->assertSame(
+            [$w['responsible']->name, $w['responsible']->name, $second->name, $second->name],
+            $this->notices()->orderBy('id')->get()->pluck('data.actorName')->all()
+        );
+    }
+
+    // O cenário só tem um ciclo com comprovante, então a chave por ciclo é provada pelo `Notifier` direto.
+    public function test_another_cycle_is_not_silenced(): void
+    {
+        $w = $this->world();
+        $send = fn (string $cycleStart) => Notifier::settlementComplementAdded(
+            $w['group'],
+            [$w['creditor']->id, $w['debtor']->id],
+            $w['responsible']->name,
+            $w['debtor']->name,
+            '100.00',
+            $cycleStart,
+            $w['debtor']->id,
+            $w['creditor']->id,
+            $w['responsible']->id
+        );
+
+        $send('2026-08-01');
+        $send('2026-08-01');
+        $this->assertSame(2, $this->notices()->count(), 'o mesmo ciclo avisa uma vez');
+
+        $send('2026-07-01');
+        $this->assertSame(4, $this->notices()->count(), 'outro ciclo do mesmo autor e par avisa de novo');
+        $this->assertEqualsCanonicalizing(['agosto/2026', 'agosto/2026', 'julho/2026', 'julho/2026'], $this->notices()->get()->pluck('data.cycleLabel')->all());
+    }
+
+    public function test_the_window_never_blocks_the_complement_itself(): void
+    {
+        $w = $this->world();
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])->assertCreated();
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'], ['justificativa' => 'dentro da janela'])
+            ->assertCreated()
+            ->assertExactJson(['message' => 'Justificativa e comprovante enviados.']);
+
+        $this->assertSame(['a foto anterior era de outro mês', 'dentro da janela'], $this->entries($w['group'])->pluck('note')->all());
+        $this->assertCount(3, $this->files($w['group']), 'o atual e os dois complementos, com a janela aberta');
+    }
+
+    public function test_a_cache_failure_still_returns_201_and_logs(): void
+    {
+        Log::spy();
+        $w = $this->world();
+        // O JWT resolve o cache na primeira vez que emite um token: resolver antes de trocar o cache por um mock.
+        $this->tokenFor($w['responsible']);
+        Cache::partialMock()->shouldReceive('add')->andThrow(new RuntimeException('cache fora do ar'));
+
+        $this->complement($w['responsible'], $w['group'], $w['debtor'], $w['creditor'])
+            ->assertCreated()
+            ->assertExactJson(['message' => 'Justificativa e comprovante enviados.']);
+
+        $this->assertSame(1, $this->entries($w['group'])->count(), 'a entrada ficou gravada');
+        $this->assertSame(0, $this->notices()->count(), 'sem o cache não há aviso (o assédio pesa mais que um aviso perdido)');
+        Log::shouldHaveReceived('warning')
+            ->withArgs(fn ($message, $context = []) => ($context['type'] ?? null) === 'settlement_complement_added')
+            ->once();
     }
 
     public function test_a_notifier_failure_is_logged_and_the_complement_still_succeeds(): void
