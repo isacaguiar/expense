@@ -9,6 +9,7 @@ use App\Models\Quota;
 use App\Models\User;
 use App\Services\CycleSummaryService;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
@@ -748,6 +749,36 @@ class ExpenseControllerStorePaymentTest extends TestCase
         $response->assertStatus(500)->assertJsonPath('error', 'Erro ao criar despesa');
         $response->assertJsonMissingPath('details');
         $this->assertSame($before, $this->counts());
+    }
+
+    public function test_a_query_failure_at_the_commit_logs_only_the_exception_class_and_not_the_sql(): void
+    {
+        ['group' => $group, 'creditor' => $creditor, 'debtor' => $debtor] = $this->scenario();
+        $before = $this->counts();
+
+        Event::listen('eloquent.creating: '.Quota::class, fn () => throw new QueryException(
+            'mysql',
+            'insert into ex_quotas (description) values (?)',
+            ['Joana Sigilosa'],
+            new \Exception('falha forçada'),
+        ));
+        Log::spy();
+
+        $response = $this->withToken($this->token($creditor))
+            ->postJson('/api/expenses', $this->body($group, $creditor, $creditor, $debtor));
+
+        $response->assertStatus(500)->assertJsonPath('error', 'Erro ao criar despesa');
+        $this->assertSame($before, $this->counts());
+
+        Log::shouldHaveReceived('error')->once()->withArgs(function ($message, $context) {
+            $this->assertSame('Erro ao criar despesa', $message);
+            $this->assertSame(['exception' => QueryException::class], $context);
+            $encoded = json_encode($context);
+            $this->assertStringNotContainsString('Joana Sigilosa', $encoded);
+            $this->assertStringNotContainsString('insert into', $encoded);
+
+            return true;
+        });
     }
 
     public function test_a_failure_in_a_step_after_the_commit_keeps_the_expense_and_the_payment(): void
