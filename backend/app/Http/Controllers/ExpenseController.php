@@ -775,9 +775,11 @@ class ExpenseController extends Controller
                 return $this->replayResponse($existing, $fingerprint);
             }
 
-            // A mensagem da exceção fica no log e nunca na resposta (item 080 do backlog;
-            // feature 20261027-pagamento-no-cadastro-despesa, D10).
-            Log::error('Erro ao criar despesa', ['exception' => $e]);
+            // Nem a resposta nem o log levam a mensagem da exceção: numa `QueryException` ela traz o
+            // SQL com os bindings (valores, descrição, nomes). O log registra só a classe. Isso
+            // reverte a premissa de que "a mensagem fica no log" (item 080 do backlog; feature
+            // 20261027-pagamento-no-cadastro-despesa, D10; backlog 165).
+            Log::error('Erro ao criar despesa', ['exception' => $e::class]);
 
             return response()->json(['error' => 'Erro ao criar despesa'], 500);
         }
