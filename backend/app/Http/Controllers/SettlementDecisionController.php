@@ -217,7 +217,10 @@ class SettlementDecisionController extends Controller
             auth()->user()->name,
             $entry->fromUser?->name,
             $entry->amount,
-            $entry->cycle_start
+            $entry->cycle_start,
+            $debtorId,
+            $creditorId,
+            $callerId
         );
 
         return response()->json(['message' => 'Justificativa e comprovante enviados.'], 201);

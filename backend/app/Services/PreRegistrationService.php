@@ -282,10 +282,11 @@ class PreRegistrationService
         } catch (Throwable $e) {
             $preCreate->forceFill(['last_sent_at' => $previousSentAt])->save();
 
-            // Sem o código e sem o e-mail no log -- só o que dá para agir.
+            // Sem o código, sem o e-mail e sem a mensagem da exceção no log (a do transporte pode
+            // trazê-los) -- só a classe e o id, que é o que dá para agir.
             Log::error('Falha ao enviar o código de pré-cadastro.', [
                 'pre_create_id' => $preCreate->id,
-                'exception' => $e->getMessage(),
+                'exception' => $e::class,
             ]);
 
             throw $e;

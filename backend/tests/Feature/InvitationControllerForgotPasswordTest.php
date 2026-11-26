@@ -30,6 +30,31 @@ class InvitationControllerForgotPasswordTest extends TestCase
         $this->assertFalse(Cache::has('password-reset-rate:'.$user->email));
     }
 
+    /** Backlog 165 (TASK-683): o log leva o `user_id` e só a classe da exceção, sem o e-mail nem a mensagem. */
+    public function test_mail_failure_logs_user_id_and_only_the_exception_class(): void
+    {
+        $user = User::factory()->create();
+
+        Log::spy();
+        Mail::shouldReceive('send')->once()->andThrow(new \Exception('smtp: sentinela-recusou '.$user->email));
+
+        $this->postJson('/api/forgot-password', ['email' => $user->email])->assertStatus(500);
+
+        $logged = [];
+        Log::shouldHaveReceived('error')
+            ->withArgs(function ($message, $context = []) use (&$logged, $user) {
+                if ($message !== 'Falha ao enviar e-mail de recuperação de senha') {
+                    return false;
+                }
+                $logged = $context;
+
+                return $context === ['user_id' => $user->id, 'exception' => \Exception::class];
+            })
+            ->once();
+        $this->assertStringNotContainsString('sentinela', json_encode($logged));
+        $this->assertStringNotContainsString($user->email, json_encode($logged));
+    }
+
     public function test_successful_send_keeps_password_unchanged_and_sets_rate_limit(): void
     {
         $user = User::factory()->create(['password' => 'senha-original']);

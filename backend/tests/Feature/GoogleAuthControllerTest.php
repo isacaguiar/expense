@@ -355,6 +355,62 @@ class GoogleAuthControllerTest extends TestCase
         );
     }
 
+    private function failNextSocialiteUserCall(): void
+    {
+        Socialite::shouldReceive('driver->stateless->user')
+            ->andThrow(new \RuntimeException('google: sentinela do token recusado para ana@example.com'));
+    }
+
+    private function assertSocialiteFailureLoggedOnlyTheClass(string $message, array $expectedContext): void
+    {
+        $logged = null;
+        Log::shouldHaveReceived('warning')->once()->withArgs(function ($logMessage, $context) use ($message, $expectedContext, &$logged) {
+            if ($logMessage !== $message) {
+                return false;
+            }
+            $logged = $context;
+
+            return $context === $expectedContext;
+        });
+        $this->assertStringNotContainsString('sentinela', json_encode($logged));
+        $this->assertStringNotContainsString('ana@example.com', json_encode($logged));
+    }
+
+    /** Backlog 165 (TASK-684): a falha do Socialite no vínculo registra só a classe da exceção. */
+    public function test_link_callback_logs_only_the_exception_class_when_socialite_fails(): void
+    {
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
+        $user = User::factory()->create();
+        $state = $this->linkState($user->id);
+        $this->failNextSocialiteUserCall();
+        Log::spy();
+
+        $this->get('/api/auth/google/callback?state='.urlencode($state))
+            ->assertRedirect('http://localhost:3000/app/profile?linked=error');
+
+        $this->assertSocialiteFailureLoggedOnlyTheClass(
+            '[google-link] Socialite falhou ao obter usuario Google -> linked=error',
+            ['user_id' => $user->id, 'exception' => \RuntimeException::class],
+        );
+    }
+
+    /** Backlog 165 (TASK-684): a falha do Socialite no login registra só a classe da exceção. */
+    public function test_login_callback_logs_only_the_exception_class_when_socialite_fails(): void
+    {
+        config(['services.frontend_app_url' => 'http://localhost:3000/app']);
+        $state = $this->loginState();
+        $this->failNextSocialiteUserCall();
+        Log::spy();
+
+        $this->get('/api/auth/google/callback?state='.urlencode($state))
+            ->assertRedirect('http://localhost:3000/app?google_error=1');
+
+        $this->assertSocialiteFailureLoggedOnlyTheClass(
+            '[google-login] Socialite falhou ao obter usuario Google -> login error',
+            ['exception' => \RuntimeException::class],
+        );
+    }
+
     public function test_login_callback_redirects_with_error_when_socialite_fails(): void
     {
         config(['services.frontend_app_url' => 'http://localhost:3000/app']);

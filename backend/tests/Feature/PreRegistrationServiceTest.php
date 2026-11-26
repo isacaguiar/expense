@@ -8,6 +8,7 @@ use App\Models\UserPreCreate;
 use App\Services\PreRegistrationService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
@@ -346,6 +347,39 @@ class PreRegistrationServiceTest extends TestCase
         $this->assertSame('', $preCreate->password);
         $this->assertSame('', $preCreate->code_hash);
         $this->assertSame('', $preCreate->handle_hash);
+    }
+
+    /** Backlog 165 (TASK-683): o log do envio que falhou leva só a classe, não a mensagem do transporte. */
+    public function test_falha_no_envio_loga_so_a_classe_da_excecao(): void
+    {
+        Log::spy();
+        Mail::shouldReceive('to')->andThrow(new \RuntimeException('smtp: sentinela-maria@example.com recusou'));
+
+        $data = $this->payload();
+
+        try {
+            $this->service->start($data);
+            $this->fail('Esperava a exceção do envio.');
+        } catch (\RuntimeException) {
+            // a exceção continua subindo
+        }
+
+        $preCreate = UserPreCreate::where('email', $data['email'])->firstOrFail();
+        $logged = [];
+        Log::shouldHaveReceived('error')
+            ->withArgs(function ($message, $context = []) use (&$logged, $preCreate) {
+                if ($message !== 'Falha ao enviar o código de pré-cadastro.') {
+                    return false;
+                }
+                $logged = $context;
+
+                return $context === [
+                    'pre_create_id' => $preCreate->id,
+                    'exception' => \RuntimeException::class,
+                ];
+            })
+            ->once();
+        $this->assertStringNotContainsString('sentinela', json_encode($logged));
     }
 
     public function test_falha_no_envio_nao_prende_a_pessoa_no_cooldown(): void

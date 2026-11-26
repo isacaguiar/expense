@@ -36,6 +36,13 @@ class Notifier
     private const LINK_NOTICE_WINDOW_MINUTES = 24 * 60;
 
     /**
+     * Janela em que o aviso do complemento não se repete para o mesmo autor, devedor, credor e ciclo: 1 h
+     * (feature 20261125-janela-anti-assedio-aviso-do-complemento, D3). Menor que a do vínculo porque o
+     * complemento é uma ação de trabalho, e 24 h esconderia do credor uma segunda justificativa do mesmo dia.
+     */
+    private const COMPLEMENT_NOTICE_WINDOW_MINUTES = 60;
+
+    /**
      * Uma despesa foi criada (`ExpenseController@store`) → avisa os pagadores
      * dela, menos quem a criou.
      */
@@ -389,6 +396,11 @@ class Notifier
      * 20261114-historico-de-comprovantes-e-justificativa, R10 e R12). **A justificativa não vai no
      * `data`**: ela só aparece no histórico, para quem é parte (D8).
      *
+     * Não se repete em 1 h (`COMPLEMENT_NOTICE_WINDOW_MINUTES`) para o mesmo autor, devedor, credor e ciclo
+     * (item 155, ponto 4): quem paga pelo devedor não enche o sino do credor e do devedor com avisos iguais.
+     * Só o **aviso** é contido: o complemento já foi gravado e o teto de 10 não muda. Os dois avisos (credor e
+     * devedor) saem juntos ou ficam juntos de fora. `$debtorId`, `$creditorId` e `$authorId` entram na chave.
+     *
      * @param  array<int, int>  $recipientIds
      */
     public static function settlementComplementAdded(
@@ -397,17 +409,24 @@ class Notifier
         ?string $authorName,
         ?string $debtorName,
         float|string $amount,
-        mixed $cycleStart
+        mixed $cycleStart,
+        int $debtorId,
+        int $creditorId,
+        int $authorId
     ): void {
-        self::guard('settlement_complement_added', function () use ($group, $recipientIds, $authorName, $debtorName, $amount, $cycleStart) {
-            self::fanOut($recipientIds, 'settlement_complement_added', $group->id, [
-                'actorName' => $authorName,
-                'debtorName' => $debtorName,
-                'groupId' => $group->id,
-                'groupName' => $group->name,
-                'amount' => self::amount($amount),
-                'cycleLabel' => self::cycleLabel($cycleStart),
-            ]);
+        self::guard('settlement_complement_added', function () use ($group, $recipientIds, $authorName, $debtorName, $amount, $cycleStart, $debtorId, $creditorId, $authorId) {
+            self::oncePer(
+                self::complementNoticeKey($group, $cycleStart, $debtorId, $creditorId, $authorId),
+                self::COMPLEMENT_NOTICE_WINDOW_MINUTES,
+                fn () => self::fanOut($recipientIds, 'settlement_complement_added', $group->id, [
+                    'actorName' => $authorName,
+                    'debtorName' => $debtorName,
+                    'groupId' => $group->id,
+                    'groupName' => $group->name,
+                    'amount' => self::amount($amount),
+                    'cycleLabel' => self::cycleLabel($cycleStart),
+                ])
+            );
         });
     }
 
@@ -436,6 +455,18 @@ class Notifier
     private static function linkNoticeKey(Group $group, int $debtorId, int $responsibleId, string $type): string
     {
         return "payment-responsible:{$group->id}:{$debtorId}:{$responsibleId}:{$type}";
+    }
+
+    /**
+     * A chave da janela do aviso do complemento: um por (grupo, ciclo, devedor, credor, autor). O autor
+     * entra para que um segundo responsável legítimo não seja calado pelo primeiro; o ciclo, para que o
+     * ciclo seguinte do mesmo par não fique mudo. O prefixo próprio não colide com o dos avisos de vínculo.
+     */
+    private static function complementNoticeKey(Group $group, mixed $cycleStart, int $debtorId, int $creditorId, int $authorId): string
+    {
+        $cycle = Carbon::parse($cycleStart)->toDateString();
+
+        return "settlement-complement:{$group->id}:{$cycle}:{$debtorId}:{$creditorId}:{$authorId}";
     }
 
     /**
